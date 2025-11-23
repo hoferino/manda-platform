@@ -1,0 +1,29 @@
+# Check IRL Status - Workflow Configuration
+name: "check-irl-status"
+description: "Quick status check of IRL checklist completion"
+author: "M&A Deal Intelligence Platform"
+
+# Configuration
+config_source: "{module-root}/config.yaml"
+output_folder: "{config_source}:output_folder"
+user_name: "{config_source}:user_name"
+communication_language: "{config_source}:communication_language"
+date: system-generated
+
+# Module paths
+installed_path: "{module-root}/workflows/check-irl-status"
+
+# Variables
+data_room_path: "{config_source}:data_room_path"
+irl_checklist_path: "{data_room_path}/irl/irl-checklist.yaml"
+
+# This is an action workflow
+template: false
+instructions: "{installed_path}/instructions.md"
+
+standalone: true
+
+# Metadata
+version: "1.0.0"
+category: "utility"
+tags: ["irl", "status", "reporting", "quick-check"]

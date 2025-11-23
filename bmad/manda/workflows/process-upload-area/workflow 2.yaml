@@ -1,0 +1,50 @@
+# Process Upload Area - Workflow Configuration
+name: "process-upload-area"
+description: "Intelligent batch processing of uploaded documents with automatic classification and routing"
+author: "M&A Deal Intelligence Platform"
+
+# Configuration
+config_source: "{module-root}/config.yaml"
+output_folder: "{config_source}:output_folder"
+user_name: "{config_source}:user_name"
+communication_language: "{config_source}:communication_language"
+date: system-generated
+
+# Module paths
+installed_path: "{module-root}/workflows/process-upload-area"
+
+# Variables
+data_room_path: "{config_source}:data_room_path"
+upload_path: "{data_room_path}/upload"
+irl_checklist_path: "{data_room_path}/irl/irl-checklist.yaml"
+
+# This is an action workflow
+template: false
+instructions: "{installed_path}/instructions.md"
+
+standalone: true
+
+# Metadata
+version: "1.0.0"
+category: "automation"
+tags: ["upload", "classification", "automation", "document-processing"]
+
+# Processing configuration
+processing:
+  confidence_auto_move: 0.90
+  confidence_suggest: 0.70
+  batch_size: 50
+  supported_formats:
+    - "pdf"
+    - "xlsx"
+    - "xls"
+    - "csv"
+    - "docx"
+    - "doc"
+    - "pptx"
+    - "ppt"
+    - "jpg"
+    - "jpeg"
+    - "png"
+    - "tiff"
+    - "zip"

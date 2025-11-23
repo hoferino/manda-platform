@@ -1,0 +1,1170 @@
+# Architecture Document
+# Manda - M&A Intelligence Platform
+
+**Document Status:** Final
+**Created:** 2025-11-19
+**Last Updated:** 2025-11-23
+**Owner:** Max
+**Architects:** Max, Claude (Architecture Workflow)
+**Version:** 2.1 (Integrated CIM v3 workflow: 14-phase interactive workflow, dedicated CIM Builder UI, extreme visual precision, RAG integration, 3 new agent tools)
+
+---
+
+## Executive Summary
+
+Manda is a **conversational knowledge synthesizer** for M&A intelligence—a platform that combines the organizational capabilities of a data room with the analytical power of a specialized AI agent. This architecture document defines the technical foundation for building a system that transforms how M&A analysts work with complex deal information.
+
+**Core Innovation:** Background processing builds a persistent knowledge base that the conversational agent queries—creating a lightweight, responsive chat interface backed by deep, continuous analysis.
+
+**Key Architectural Principles:**
+- **Tightly Integrated Platform-Agent:** Comprehensive platform with conversational agent as primary interface
+- **Tool-Based Integration:** Agent accesses platform services through well-defined tools (12 core tools)
+- **Event-Driven Processing:** Heavy analysis happens asynchronously in background
+- **Human-in-the-Loop:** LangGraph workflows enable collaborative document creation
+- **Multi-Model Strategy:** Route tasks to optimal LLM (Gemini 3.0 Pro for extraction, Claude for conversation)
+- **Containerized Development:** Docker Compose for consistent dev environment and production parity
+
+---
+
+## Decision Summary
+
+| Decision Area | Choice | Rationale |
+|--------------|--------|-----------|
+| **Backend Framework** | FastAPI (Python) | Native integration with Docling, LangGraph, LLM libraries; eliminates Node.js ↔ Python bridge |
+| **Primary Database** | Supabase PostgreSQL 15+ | Managed service with pgvector extension, auth built-in, storage included, RLS for data isolation |
+| **Vector Search** | pgvector | Semantic search for findings; single database simplifies operations |
+| **Graph Database** | Neo4j | Cross-domain pattern relationships, contradiction tracking, source attribution chains |
+| **Document Parser** | Docling | RAG-optimized, preserves Excel formulas, table extraction, OCR built-in |
+| **Job Queue** | pg-boss | Postgres-based for MVP simplicity; can migrate to Redis+Bull if needed |
+| **LLM Gateway** | Pydantic AI Gateway | Type-safe LLM abstraction with retry, caching, cost tracking, observability |
+| **Workflow Orchestration** | LangGraph | Human-in-the-loop interrupts for Q&A co-creation, CIM generation |
+| **Primary LLM (Extraction)** | Gemini 3.0 Pro | 2M context window, thinking mode for transparency, cost-effective |
+| **Primary LLM (Conversation)** | Claude Sonnet 4.5 | Latest model, proven M&A/banking domain, excellent instruction following |
+| **Primary LLM (Speed Tasks)** | Claude Haiku 4 | Fast, cost-effective for simple queries and lightweight tasks |
+| **Embeddings** | OpenAI text-embedding-3-large | Industry-leading quality for semantic search |
+| **Authentication** | Supabase Auth | OAuth, magic links, MFA out of the box; RLS for multi-tenant security |
+| **File Storage** | Supabase Storage | Integrated with auth, signed URLs, same infrastructure |
+| **Frontend** | Next.js 16 (React) | Turbopack stable (10x faster dev, 2-5x faster builds), mature ecosystem, shadcn/ui |
+| **Development Environment** | Docker Compose | Local Supabase + Neo4j + Next.js orchestration, production parity |
+| **Starter Template** | Nextbase Lite | Next.js 16 + Supabase + TypeScript + Tailwind + Testing suite pre-configured |
+
+---
+
+## Technology Stack - Complete
+
+```yaml
+Backend:
+  framework: FastAPI 0.104+
+  language: Python 3.11+
+  validation: Pydantic v2
+  async: asyncio + httpx
+
+Frontend:
+  framework: Next.js 16 (App Router)
+  bundler: Turbopack (stable)
+  ui_library: React 19.2+
+  styling: Tailwind CSS 4
+  components: shadcn/ui
+  state_management: Zustand
+  data_fetching: TanStack Query (React Query)
+  websockets: Supabase Realtime
+  starter_template: Nextbase Lite (imbhargav5/nextbase-nextjs-supabase-starter)
+
+Data Layer:
+  primary_database: Supabase PostgreSQL 15+
+  vector_extension: pgvector 0.5+
+  graph_database: Neo4j 5+
+  auth_database: Supabase Auth (built-in)
+  file_storage: Supabase Storage
+
+Document Processing:
+  parser: Docling (IBM open source)
+  supported_formats:
+    - Excel (.xlsx, .xls) with formula preservation
+    - PDF (native + scanned with OCR)
+    - Word (.docx, .doc)
+    - Images (PNG, JPG) with OCR
+
+Background Processing:
+  job_queue: pg-boss (Postgres-based)
+  task_runner: Python worker processes
+
+Intelligence Layer:
+  llm_gateway: Pydantic AI Gateway
+  workflow_orchestration: LangGraph (Python)
+
+  models:
+    extraction: gemini-3.0-pro
+    pattern_detection: gemini-3.0-pro
+    conversational: claude-sonnet-4-5-20250929
+    generation: claude-sonnet-4-5-20250929
+    speed_tasks: claude-haiku-4-20250514
+    deep_analysis: claude-3-opus-20240229
+    embeddings: text-embedding-3-large
+
+Authentication & Authorization:
+  provider: Supabase Auth
+  methods:
+    - Email/Password
+    - Magic Links
+    - OAuth (Google, Microsoft)
+    - MFA (optional)
+  security: Row-Level Security (RLS)
+
+Development & Deployment:
+  container_orchestration: Docker Compose
+  local_development:
+    - Supabase (PostgreSQL + Auth + Storage + Realtime)
+    - Neo4j 5+ (Community Edition)
+    - Next.js 16 dev server with Turbopack
+  testing:
+    - Jest (unit tests)
+    - Playwright (e2e tests)
+    - React Testing Library
+  code_quality:
+    - ESLint
+    - Prettier
+    - Husky (pre-commit hooks)
+    - Commitizen (conventional commits)
+```
+
+---
+
+## System Architecture
+
+### High-Level Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         FRONTEND LAYER                          │
+│  Next.js 16 (Turbopack) + React 19 + Tailwind 4 + shadcn/ui  │
+│  - Chat Interface (LangGraph interrupt UI)                     │
+│  - Document Upload & Data Room (IRL-driven workflow)          │
+│  - Knowledge Base Browser                                      │
+│  - CIM Editor                                                  │
+│  - Collaborative Analysis Interface                            │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │ HTTPS + WebSocket
+┌─────────────────────▼───────────────────────────────────────────┐
+│                        API GATEWAY                              │
+│  FastAPI + Pydantic Validation                                 │
+│  - REST API endpoints                                          │
+│  - WebSocket for real-time updates                            │
+│  - Authentication middleware (Supabase)                        │
+│  - Rate limiting & request validation                          │
+└─────────────┬───────────────────┬───────────────────────────────┘
+              │                   │
+    ┌─────────▼─────────┐  ┌─────▼─────────┐
+    │  PLATFORM LAYER   │  │  AGENT LAYER  │
+    │  (Services)       │  │  (Intelligence)│
+    └─────────┬─────────┘  └─────┬─────────┘
+              │                   │
+┌─────────────▼───────────────────▼───────────────────────────────┐
+│                       DATA LAYER                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
+│  │   Supabase   │  │    Neo4j     │  │   Supabase   │         │
+│  │   Postgres   │  │  (Graph DB)  │  │   Storage    │         │
+│  │  + pgvector  │  │              │  │  (Documents) │         │
+│  └──────────────┘  └──────────────┘  └──────────────┘         │
+└─────────────────────────────────────────────────────────────────┘
+              │
+┌─────────────▼───────────────────────────────────────────────────┐
+│                   PROCESSING LAYER                              │
+│  Background Workers (Python)                                    │
+│  - Document parsing (Docling)                                  │
+│  - Embedding generation (OpenAI)                               │
+│  - LLM analysis (Gemini 3.0 Pro)                              │
+│  - Pattern detection (Phase 3)                                 │
+│  - Graph updates (Neo4j)                                       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Document Processing Flow
+
+```
+User uploads document
+  ↓
+API Gateway → Supabase Storage (file saved)
+  ↓
+Create document record in Postgres
+  ↓
+Emit event: document_uploaded
+  ↓
+pg-boss enqueues job: parse_document
+  ↓
+Background Worker picks up job
+  ↓
+Docling parses document
+  - Extracts text, tables, formulas
+  - Generates semantic chunks
+  ↓
+pg-boss enqueues job: generate_embeddings
+  ↓
+Worker generates embeddings (OpenAI)
+  ↓
+Store chunks in Postgres with embeddings (pgvector)
+  ↓
+pg-boss enqueues job: analyze_document
+  ↓
+Worker analyzes with Gemini 3.0 Pro (thinking: high)
+  - Extracts key findings
+  - Identifies insights
+  - Detects potential contradictions
+  ↓
+Store findings and insights in Postgres
+  ↓
+pg-boss enqueues job: update_graph
+  ↓
+Worker updates Neo4j relationships
+  - Finding → Document links
+  - Cross-domain pattern edges
+  - Contradiction relationships
+  ↓
+Emit event: document_processed
+  ↓
+WebSocket notification to frontend
+  ↓
+User sees: "Financial statements analyzed. 12 findings extracted."
+```
+
+---
+
+## Project Structure
+
+```
+manda/
+├── apps/
+│   ├── api/                      # FastAPI backend
+│   │   ├── main.py
+│   │   ├── routers/             # API endpoints
+│   │   ├── services/            # Business logic
+│   │   ├── middleware/
+│   │   └── config.py
+│   │
+│   ├── workers/                  # Background processing
+│   │   ├── main.py
+│   │   ├── handlers/            # Job handlers
+│   │   └── config.py
+│   │
+│   └── web/                      # Next.js frontend
+│       ├── app/                  # App router
+│       ├── components/
+│       ├── lib/
+│       └── hooks/
+│
+├── packages/                     # Shared libraries
+│   ├── database/                # DB clients
+│   ├── docling/                 # Document processing
+│   ├── llm/                     # LLM abstraction
+│   ├── workflows/               # LangGraph workflows
+│   ├── knowledge/               # Knowledge base service
+│   └── shared/                  # Common utilities
+│
+├── docs/
+├── docker/
+├── scripts/
+├── tests/
+└── .github/workflows/
+```
+
+---
+
+## Data Architecture
+
+### PostgreSQL Schema
+
+Complete schema with all tables, indexes, and RLS policies documented in full architecture document.
+
+**Key Tables:**
+- `deals` - Deal metadata
+- `documents` - Document tracking
+- `findings` - Extracted facts with embeddings (pgvector)
+- `insights` - Analyzed patterns
+- `conversations` - Chat history with LangGraph state
+- `messages` - Chat messages
+- `irls` - Information Request Lists
+- `qa_lists` - Q&A lists
+- `cims` - CIM versions
+
+**Security:**
+- Row-Level Security (RLS) on all tables
+- Users can only access their own deals
+- Database enforces isolation
+
+### Neo4j Graph Schema
+
+**Nodes:**
+- `Deal`, `Document`, `Finding`, `Insight`
+
+**Relationships:**
+- `EXTRACTED_FROM` - Finding → Document
+- `CONTRADICTS` - Finding → Finding
+- `SUPPORTS` - Finding → Finding
+- `PATTERN_DETECTED` - Finding → Finding (cross-domain)
+- `BASED_ON` - Insight → Finding
+
+---
+
+## Intelligence Layer
+
+### Multi-Model Strategy
+
+| Task | Model | Rationale |
+|------|-------|-----------|
+| Document Extraction | Gemini 3.0 Pro | 2M context, thinking mode, cost-effective |
+| Pattern Detection | Gemini 3.0 Pro | Cross-domain analysis, reasoning transparency |
+| Chat (User-Facing) | Claude Sonnet 4.5 | Latest model, proven M&A domain, excellent instruction following |
+| CIM Narrative | Claude Sonnet 4.5 | Latest model, best long-form narrative quality |
+| Speed Tasks | Claude Haiku 4 | Fast, cost-effective for simple queries and lightweight tasks |
+| Deep Analysis | Claude Opus 3 | Most capable for complex reasoning (use sparingly) |
+| Embeddings | OpenAI text-embedding-3-large | Industry-leading semantic search quality |
+
+### Agent Tools (15 Core Tools - Updated for CIM v3)
+
+**Knowledge Management:**
+1. `query_knowledge_base(query, filters)` - Semantic search across findings
+2. `update_knowledge_base(finding, source, confidence)` - Store analyst-provided findings
+3. `update_knowledge_graph(finding_id, relationships)` - Create relationships between findings
+4. `validate_finding(finding, context)` - Check finding against existing knowledge for contradictions
+
+**Document Operations:**
+5. `get_document_info(doc_id)` - Retrieve document details
+6. `trigger_analysis(doc_id, analysis_type)` - Request processing
+
+**Workflow Management:**
+7. `create_irl(deal_type)` - Generate IRL from template
+8. `suggest_questions(topic)` - Generate Q&A suggestions
+9. `add_to_qa(question, answer, sources)` - Add question/answer to Q&A list
+
+**Content Generation:**
+10. `generate_cim_section(section, filters)` - Create CIM content (legacy, replaced by CIM v3 tools)
+
+**Intelligence:**
+11. `detect_contradictions(topic)` - Find inconsistencies
+12. `find_gaps(category)` - Identify missing information
+
+**CIM v3 Workflow Tools (NEW):**
+13. `suggest_narrative_outline(buyer_persona, context)` - Propose story arc for CIM Company Overview
+14. `validate_idea_coherence(narrative, proposed_idea)` - Check narrative alignment against established story
+15. `generate_slide_blueprint(slide_topic, narrative_context, content_elements)` - Create slide guidance with extreme visual precision
+
+---
+
+## CIM v3 Workflow Implementation
+
+### Overview
+
+**What:** 14-phase deeply interactive workflow for creating Company Overview CIM chapters
+**Where:** Dedicated CIM Builder UI at `/projects/[id]/cim-builder`
+**How:** LangGraph workflow with human-in-the-loop interrupts + RAG knowledge integration
+**Scope:** Company Overview chapter ONLY in MVP (other chapters in Phase 2)
+
+### Architecture Components
+
+**Frontend (CIM Builder UI):**
+```
+/projects/[id]/cim-builder
+├── Left Sidebar: Workflow Progress (14 phases)
+│   ├── Phase indicator (current, completed, pending)
+│   ├── Narrative structure tree view
+│   └── Navigation controls (jump, back, special commands)
+├── Main Content Area: Conversational Interaction
+│   ├── AI messages with options/suggestions
+│   ├── User input and decisions
+│   ├── Content preview (slides being built)
+│   └── Visual concept previews
+└── Right Panel: Context
+    ├── Buyer persona summary
+    ├── Investment thesis
+    ├── Current section info
+    └── Quick actions
+```
+
+**Backend (LangGraph Workflow):**
+```python
+# Workflow structure
+class CIMv3Workflow:
+    nodes: 14 phases
+    checkpoints: Human approval at each phase
+    state: Persisted in cim_workflow_states table
+    tools: 3 CIM-specific + 12 platform tools
+```
+
+### 14-Phase Structure
+
+**Phase 1: Understand Buyer Context**
+- **Type:** Conversational discovery
+- **Checkpoint:** Buyer persona confirmation
+- **State Stored:** buyer_type, motivations, concerns, story_hero
+- **Tools Used:** None (pure conversation)
+
+**Phase 2: Investment Thesis Development**
+- **Type:** AI proposes 3 options based on RAG queries
+- **Checkpoint:** Thesis selection/modification approval
+- **State Stored:** investment_thesis (Asset, Timing, Opportunity)
+- **Tools Used:** `query_knowledge_base()` for thesis grounding
+
+**Phase 3: Discover Structure Together**
+- **Type:** AI suggests section structure with flow reasoning
+- **Checkpoint:** Section order confirmation
+- **State Stored:** sections[] (name, purpose, order)
+- **Tools Used:** `suggest_narrative_outline(buyer_persona, context)`
+
+**Phases 4-11: Build Sections (Iterative)**
+- **Type:** Two-step per slide (content → visual)
+- **Checkpoints:**
+  1. Content approval (before visual phase)
+  2. Visual concept approval (before locking slide)
+- **State Stored:**
+  - slides[] per section
+  - content_elements[] with sources
+  - visual_concept{} with extreme precision specs
+- **Tools Used:**
+  - `query_knowledge_base()` - Get relevant findings for slide content
+  - `validate_idea_coherence()` - Check content fits narrative
+  - `generate_slide_blueprint()` - Create visual concept
+
+**Content Phase Logic:**
+```python
+def build_slide_content(section, slide_topic):
+    # 1. Query RAG for relevant findings
+    findings = query_knowledge_base(
+        query=slide_topic,
+        filters={section: section, deal_id: current_deal}
+    )
+
+    # 2. Present 3 content options
+    options = generate_content_options(findings, buyer_persona, narrative)
+
+    # 3. Human checkpoint
+    selected = await human_input("Select option or suggest alternative")
+
+    # 4. Generate slide content with sources
+    content = create_slide_content(selected, findings)
+
+    return content
+```
+
+**Visual Phase Logic:**
+```python
+def build_visual_concept(content_elements):
+    # 1. Generate visual concept with extreme precision
+    visual = generate_slide_blueprint(
+        slide_topic=current_slide.topic,
+        narrative_context={buyer_persona, section, investment_thesis},
+        content_elements=content_elements
+    )
+
+    # Validates: ALL content elements positioned
+    assert len(visual.positioned_elements) == len(content_elements)
+
+    # 2. Human checkpoint with modification capability
+    approved = await human_input(
+        "Approve visual or request changes",
+        allow_modifications=True
+    )
+
+    if approved.modifications:
+        visual = regenerate_visual(visual, approved.modifications)
+        approved = await human_input("Approve updated visual")
+
+    return visual
+```
+
+**Balance Check Logic (After Each Section):**
+```python
+def balance_check(completed_sections):
+    analysis = {
+        "completed": [s.name for s in completed_sections],
+        "slide_counts": {s.name: len(s.slides) for s in completed_sections},
+        "emphasis_eval": evaluate_emphasis(completed_sections, buyer_persona),
+        "pending": [s for s in all_sections if s not in completed_sections]
+    }
+
+    await human_input(
+        f"We've emphasized {analysis['emphasis_eval']} - does that feel right?",
+        allow_adjustments=True
+    )
+```
+
+**Phase 12: Coherence & Risk Assessment**
+- **Type:** AI reviews from buyer's POV
+- **Checkpoint:** Accept suggestions or proceed
+- **State Stored:** coherence_assessment{}, suggested_improvements[]
+- **Tools Used:**
+  - `validate_idea_coherence()` - Check full narrative
+  - `detect_contradictions()` - Find issues
+  - `find_gaps()` - Identify missing elements
+
+**Phase 13: Deck Optimization**
+- **Type:** AI analyzes complete deck structure
+- **Checkpoint:** Optimization approval
+- **State Stored:** optimization_suggestions[]
+- **Tools Used:** None (analyzes existing state)
+
+**Phase 14: Export**
+- **Type:** Multi-format generation
+- **Checkpoint:** Format selection
+- **State Stored:** export_metadata{formats, timestamp, version}
+- **Output:** 4 files to `/projects/[id]/cim-outputs/`
+
+### RAG Integration
+
+**Knowledge Base Queries Throughout Workflow:**
+
+```python
+# Phase 2: Investment Thesis Development
+findings = query_knowledge_base(
+    query="key value drivers, competitive advantages, growth potential",
+    filters={deal_id: current_deal},
+    limit=20
+)
+
+# Phases 4-11: Slide Content Building
+findings = query_knowledge_base(
+    query=slide_topic,  # e.g., "founding story", "management team"
+    filters={
+        deal_id: current_deal,
+        section: current_section,
+        confidence: ">70%"
+    },
+    limit=10
+)
+
+# Source attribution
+for element in slide.content_elements:
+    element.source = findings[element.source_id].citation
+    # Returns: "company-background.pdf, page 2" (from PostgreSQL findings table)
+```
+
+**pgvector Semantic Search:**
+- Embeddings generated during document processing (OpenAI text-embedding-3-large)
+- Stored in findings table (pgvector column)
+- Semantic search finds relevant findings even without exact keyword match
+
+**Neo4j Source Attribution:**
+- `EXTRACTED_FROM` relationships track Finding → Document
+- `SUPPORTS` relationships track Finding → Finding for corroboration
+- Citation chains preserved for transparency
+
+### State Management
+
+**Database Schema:**
+
+```sql
+CREATE TABLE cim_workflow_states (
+    id UUID PRIMARY KEY,
+    deal_id UUID REFERENCES deals(id),
+    user_id UUID REFERENCES users(id),
+    current_phase INT NOT NULL,  -- 1-14
+    completed_phases INT[],
+    buyer_persona JSONB,  -- {type, motivations, concerns, story_hero}
+    investment_thesis JSONB,  -- {asset, timing, opportunity}
+    sections JSONB[],  -- [{name, purpose, order, slides[]}]
+    conversation_history JSONB[],
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    version INT DEFAULT 1
+);
+
+CREATE TABLE cim_slides (
+    id UUID PRIMARY KEY,
+    workflow_state_id UUID REFERENCES cim_workflow_states(id),
+    section_name TEXT,
+    slide_number INT,
+    topic TEXT,
+    content_elements JSONB[],  -- [{text, source_finding_id, position}]
+    visual_concept JSONB,  -- {type, layout, positioned_elements[], colors, hierarchy}
+    content_approved BOOLEAN DEFAULT FALSE,
+    visual_approved BOOLEAN DEFAULT FALSE,
+    locked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Resume Capability:**
+```python
+def resume_workflow(deal_id, user_id):
+    state = load_workflow_state(deal_id, user_id)
+
+    if state:
+        workflow.restore_state(state)
+        return f"Resuming from Phase {state.current_phase}"
+    else:
+        return "Starting new CIM workflow"
+```
+
+### Special Commands Implementation
+
+**Command Parser in UI:**
+```typescript
+// Frontend command handler
+function handleCommand(input: string) {
+    if (input.startsWith('/')) {
+        const [cmd, ...args] = input.slice(1).split(' ')
+
+        switch(cmd) {
+            case 'undo': return workflow.undo()
+            case 'history': return workflow.showHistory()
+            case 'explain': return workflow.explain(args[0])
+            case 'balance-check': return workflow.balanceCheck()
+            // ... etc
+        }
+    }
+}
+```
+
+**Backend Command Execution:**
+```python
+def execute_command(command: str, args: list, workflow_state: CIMWorkflowState):
+    commands = {
+        "undo": lambda: workflow_state.revert_last_change(),
+        "restart": lambda section: workflow_state.jump_to_phase(section),
+        "history": lambda: workflow_state.get_decision_history(),
+        "save_version": lambda name: workflow_state.save_version(name),
+        "show_structure": lambda: workflow_state.get_structure_tree(),
+        "explain": lambda topic: educational_moment(topic),
+        "balance_check": lambda: evaluate_balance(workflow_state),
+        # ... etc
+    }
+
+    return commands[command](*args)
+```
+
+### Visual Precision Validation
+
+**Ensures ALL content elements are positioned:**
+
+```python
+def validate_visual_concept(visual_concept, content_elements):
+    """Validates extreme precision requirement"""
+    positioned = set(visual_concept.positioned_elements.keys())
+    required = set([e.id for e in content_elements])
+
+    missing = required - positioned
+    if missing:
+        raise ValidationError(
+            f"Visual concept missing positioning for: {missing}\n"
+            f"ALL {len(required)} content elements must be positioned."
+        )
+
+    # Validate each positioned element has required specs
+    for element_id, specs in visual_concept.positioned_elements.items():
+        assert 'position' in specs  # e.g., "top left"
+        assert 'format' in specs    # e.g., "callout box"
+        assert 'styling' in specs   # e.g., "bold, 18pt, #333"
+        # icon/graphic optional but validated if present
+```
+
+### Cross-Domain Patterns (Phase 3)
+
+11 sophisticated patterns:
+1. Financial × Operational Efficiency
+2. Growth × Quality
+3. Contracts × Financial Projections
+4. M&A History × Synergy Claims
+5. Key Person × Technical Risks
+6. Market × Valuation
+7. Compliance × Financial Reserves
+8. Technical Debt × Growth Capacity
+9. Customer Concentration × Contract Flexibility
+10. Supply Chain × Geopolitical
+11. Valuation Multiple × Growth Maturity
+
+---
+
+## Docker Architecture & Development Environment
+
+### Local Development with Docker Compose
+
+**Philosophy:** Single command setup (`docker-compose up`) provides consistent development environment with production parity.
+
+### Docker Compose Configuration
+
+```yaml
+# docker-compose.dev.yml
+version: '3.8'
+
+services:
+  # Supabase Local Stack
+  postgres:
+    image: supabase/postgres:15.8.1.085
+    container_name: manda-postgres
+    environment:
+      POSTGRES_DB: manda_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Neo4j Knowledge Graph
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: manda-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    ports:
+      - "7474:7474"  # HTTP Browser
+      - "7687:7687"  # Bolt Protocol
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ${NEO4J_PASSWORD} 'RETURN 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    container_name: manda-api
+    volumes:
+      - ./apps/api:/app
+      - /app/__pycache__
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/manda_dev
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Background Workers
+  worker:
+    build:
+      context: ./apps/workers
+      dockerfile: Dockerfile.dev
+    container_name: manda-worker
+    volumes:
+      - ./apps/workers:/app
+      - /app/__pycache__
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/manda_dev
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    command: python main.py
+
+  # Next.js 16 Frontend (Turbopack)
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    container_name: manda-web
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    depends_on:
+      - api
+    command: npm run dev  # Uses Turbopack by default in Next.js 16
+
+volumes:
+  postgres-data:
+  neo4j-data:
+  neo4j-logs:
+```
+
+### Dockerfile Examples
+
+**Frontend (Next.js 16 with Turbopack):**
+```dockerfile
+# apps/web/Dockerfile.dev
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy source
+COPY . .
+
+# Turbopack enabled by default in Next.js 16
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
+```
+
+**Production Frontend:**
+```dockerfile
+# apps/web/Dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### Environment Variables
+
+```bash
+# .env.example
+# Databases
+POSTGRES_PASSWORD=your_postgres_password
+NEO4J_PASSWORD=your_neo4j_password
+
+# Supabase
+SUPABASE_URL=http://localhost:54321
+SUPABASE_KEY=your_supabase_anon_key
+SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# LLM API Keys
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+GOOGLE_API_KEY=your_google_key
+```
+
+### Development Workflow
+
+**Setup:**
+```bash
+# Clone the Nextbase Lite starter
+git clone https://github.com/imbhargav5/nextbase-nextjs-supabase-starter manda-platform
+cd manda-platform
+
+# Copy environment variables
+cp .env.example .env
+
+# Start all services
+docker-compose -f docker-compose.dev.yml up
+```
+
+**Services Available:**
+- Frontend: http://localhost:3000 (Next.js 16 with Turbopack)
+- API: http://localhost:8000 (FastAPI with auto-reload)
+- Neo4j Browser: http://localhost:7474
+- PostgreSQL: localhost:5432
+
+**Key Benefits:**
+1. **One Command Setup:** `docker-compose up` starts entire stack
+2. **Production Parity:** Same containers in dev and production
+3. **Consistent Environment:** Every developer has identical setup
+4. **Isolated Services:** Database, graph, API, frontend all containerized
+5. **Easy CI/CD:** Docker images deploy directly to production
+6. **Turbopack Performance:** 10x faster dev builds with Next.js 16
+
+### Production Deployment
+
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEO4J_URI=${NEO4J_URI}
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./apps/workers
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEO4J_URI=${NEO4J_URI}
+    restart: unless-stopped
+```
+
+**Production Infrastructure:**
+- **Managed Supabase:** Cloud-hosted PostgreSQL + Auth + Storage
+- **Neo4j AuraDB:** Cloud-hosted graph database (or self-hosted)
+- **Container Platform:** Docker Compose, AWS ECS, Google Cloud Run, or Kubernetes
+- **CDN:** Vercel Edge Network or Cloudflare for Next.js assets
+
+---
+
+## Deployment Architecture
+
+### Development Environment (Docker Compose)
+
+**Stack:**
+- Supabase local (PostgreSQL 15 + pgvector + Auth + Storage)
+- Neo4j 5 Community Edition
+- FastAPI (hot reload)
+- Next.js 16 dev server (Turbopack enabled)
+- Background workers (Python)
+
+**Advantages:**
+- Single `docker-compose up` command
+- Live code updates (volume mounts)
+- Consistent across team
+- No cloud dependencies for development
+
+### Staging/Production Environment
+
+**Option 1: Managed Services (Recommended for MVP)**
+- **Frontend:** Vercel (Next.js optimized, Edge CDN, automatic deploys)
+- **Backend API:** Railway, Render, or AWS ECS (containerized FastAPI)
+- **Database:** Supabase Cloud (managed PostgreSQL + Auth + Storage)
+- **Graph:** Neo4j AuraDB Professional (managed graph database)
+- **Workers:** Same platform as API (background container)
+
+**Option 2: Fully Containerized**
+- **Orchestration:** Docker Compose or Kubernetes
+- **Infrastructure:** AWS, Google Cloud, or Azure
+- **Database:** Self-hosted Supabase (docker-compose)
+- **Graph:** Self-hosted Neo4j
+- **CDN:** Cloudflare for Next.js static assets
+
+### Initialization Command
+
+**Clone Nextbase Lite Starter:**
+```bash
+git clone https://github.com/imbhargav5/nextbase-nextjs-supabase-starter manda-platform
+cd manda-platform
+npm install
+```
+
+**What Nextbase Lite Provides:**
+- Next.js 16 with App Router
+- Turbopack (stable) for development
+- Supabase integration (auth, database, storage)
+- TypeScript configuration
+- Tailwind CSS 4
+- Testing suite (Jest + Playwright)
+- Code quality tools (ESLint, Prettier, Husky, Commitizen)
+- VSCode settings
+- React Query for data fetching
+
+**What We Add:**
+- FastAPI backend (replace/augment Supabase functions)
+- Neo4j integration
+- Document processing pipeline (Docling)
+- LLM integration (Gemini, Claude, OpenAI)
+- Agent tools (12 core tools)
+- LangGraph workflows
+- Background workers
+- IRL-driven workflow logic
+- Collaborative analysis features
+- Learning loop implementation
+
+---
+
+## Implementation Roadmap
+
+### Phase 0: Foundation (Week 1-2)
+- Set up infrastructure
+- Configure databases
+- Initialize monorepo
+
+### Phase 1: Core Platform (Week 3-6)
+- Document processing pipeline
+- Knowledge base services
+- Semantic search
+
+### Phase 2: Intelligence Layer (Week 7-10)
+- LLM integration
+- Conversational agent
+- Tool calling
+
+### Phase 3: Workflows (Week 11-14)
+- Q&A workflow (LangGraph)
+- CIM generation workflow
+- IRL creation workflow
+
+### Phase 4: Frontend (Week 15-18)
+- User interface
+- Chat with interrupts
+- Knowledge browser
+
+### Phase 5: Cross-Domain Intelligence (Week 19-22)
+- Pattern detection
+- Proactive insights
+- Your competitive moat!
+
+### Phase 6: Polish & Launch (Week 23-24)
+- Security audit
+- Performance optimization
+- Beta launch
+
+---
+
+## Decision Rationale
+
+### Why Next.js 16 over Next.js 15/14?
+**Turbopack Stable:** 10x faster dev builds, 2-5x faster production builds. Document-heavy platform benefits from speed. React 19.2 support brings latest features.
+
+### Why Nextbase Lite Starter?
+**Comprehensive Tooling:** Next.js 16 + Supabase + TypeScript + Tailwind 4 + Testing (Jest, Playwright) + Code quality (ESLint, Prettier, Husky) pre-configured. Saves weeks of setup.
+
+### Why Docker Compose?
+**Consistency + Parity:** Single command setup (`docker-compose up`). Every developer has identical environment. Production parity ensures fewer deployment surprises. Easy CI/CD.
+
+### Why FastAPI over Node.js?
+**Native Python Stack:** Docling, LangGraph, Pydantic AI Gateway all Python. No bridge complexity. Type safety with Pydantic v2.
+
+### Why Supabase?
+**Auth + Database + Storage:** Integrated platform, RLS for security, managed service. pgvector for semantic search. OAuth providers out of the box.
+
+### Why Pydantic AI Gateway?
+**Production-Ready:** Retry, caching, cost tracking built-in. Don't reinvent the wheel. Type-safe LLM abstraction.
+
+### Why LangGraph over Genkit?
+**Human-in-the-Loop:** LangGraph's interrupt pattern is perfect for Q&A/CIM workflows. Genkit too new for production.
+
+### Why Postgres + Neo4j Hybrid?
+**Complementary:** Postgres for structured data + vector search (pgvector), Neo4j for cross-domain relationships and contradiction tracking (your competitive moat).
+
+### Why pg-boss over Redis+Bull?
+**MVP Simplicity:** One less infrastructure component. Postgres-based queue. Can upgrade to Redis+Bull later if needed.
+
+### Why Multi-Model Strategy?
+**Cost + Quality:** Gemini 3.0 Pro for volume (2M context, thinking mode, cost-effective), Claude Sonnet 4.5 for conversation (quality, M&A domain), OpenAI for embeddings (best quality).
+
+### Why 12 Agent Tools (expanded from 8)?
+**Collaborative Workflow Support:** New PRD requirements (v1.1) added collaborative analysis, finding capture/validation, learning loop. Tools enable: `update_knowledge_base`, `update_knowledge_graph`, `validate_finding`, `add_to_qa`.
+
+---
+
+## Open Questions
+
+1. **Job Queue Migration Trigger:** At what point migrate from pg-boss to Redis+Bull? (Monitor queue performance in MVP)
+2. **Neo4j vs Graphiti:** Add Graphiti for temporal facts in Phase 3? (Evaluate after MVP launch)
+3. **Gemini Quality:** Test Gemini 3.0 Pro against Claude on M&A documents (Week 8 of implementation)
+4. **Phase 1 Patterns:** Include basic contradictions in MVP? (Yes - PRD v1.1 includes contradiction detection in MVP)
+5. **CIM Export:** Word only or add Google Docs support? (Start with Word, add Google Docs in Phase 2)
+6. **Docker in Production:** Managed services (Vercel, Railway) or fully containerized (Kubernetes)? (Start with managed, migrate if needed)
+7. **Supabase Local vs Cloud:** Use local Supabase in development, when to switch to cloud for staging? (Switch at end of Phase 1)
+
+---
+
+## Future Considerations (Phase 2+)
+
+- Multi-tenant / team features
+- Deal precedent database
+- External data integration (Bloomberg, SharePoint)
+- Advanced analytics (football field, sensitivity tables)
+- Real-time collaboration
+- Mobile app
+
+---
+
+## References
+
+- [Manda PRD](./manda-prd.md)
+- [Brainstorming Session](./brainstorming-session-results-2025-11-19.md)
+- [Docling](https://docling-project.github.io/docling/)
+- [LangGraph](https://docs.langchain.com/oss/python/langgraph/)
+- [Pydantic AI Gateway](https://pydantic.dev/ai-gateway)
+- [Supabase](https://supabase.com/docs)
+- [pgvector](https://github.com/pgvector/pgvector)
+- [Neo4j](https://neo4j.com/docs/)
+
+---
+
+**This architecture document is a living document and will be updated as decisions are made and the system evolves.**
+
+---
+
+## Changelog
+
+### Version 2.0 (2025-11-21)
+**Major Updates:**
+- **Next.js 16 Upgrade:** Migrated from Next.js 14 to Next.js 16 with Turbopack stable (10x faster dev, 2-5x faster prod builds)
+- **Docker Integration:** Added comprehensive Docker Compose configuration for development and production
+- **Starter Template:** Selected Nextbase Lite (Next.js 16 + Supabase + comprehensive tooling)
+- **Agent Tools Expansion:** Increased from 8 to 12 core tools to support collaborative workflow (PRD v1.1)
+- **PRD Alignment:** Updated to align with PRD v1.1 requirements:
+  - Collaborative document analysis workflow
+  - Finding capture & validation (3 methods: chat, notes upload, collaborative)
+  - Learning loop implementation (MVP, not Phase 3)
+  - IRL-driven folder auto-generation
+  - Smart classification (Phase 2, with user approval workflow)
+- **React 19.2 Support:** Updated to latest React with View Transitions, useEffectEvent
+- **Tailwind CSS 4:** Updated styling framework to latest version
+- **Architecture Clarification:** Changed "Platform-Agent Separation" to "Tightly Integrated Platform-Agent"
+
+**Technology Updates:**
+- Frontend: Next.js 16, React 19.2, Tailwind CSS 4, Turbopack stable
+- Development: Docker Compose orchestration (Postgres, Neo4j, FastAPI, Next.js, Workers)
+- Testing: Jest, Playwright, React Testing Library (from Nextbase Lite)
+- Code Quality: ESLint, Prettier, Husky, Commitizen (from Nextbase Lite)
+
+### Version 1.0 (2025-11-19)
+**Initial Architecture:**
+- Platform-agent architecture defined
+- Technology stack selection (FastAPI, Supabase, Neo4j, Next.js 14)
+- Multi-model LLM strategy (Gemini, Claude, OpenAI)
+- 8 core agent tools
+- Cross-domain intelligence patterns (Phase 3)
+- Implementation roadmap (6 phases, 24 weeks)
+
+---
+
+*Generated using BMAD Method architecture workflow*
+*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21*

@@ -1,0 +1,140 @@
+# M&A Deal Intelligence Platform - Installation Configuration
+# This file defines both interactive installation prompts AND static configuration values
+
+# Module metadata
+code: manda
+name: 'M&A Deal Intelligence Platform'
+default_selected: false
+
+# Welcome message during installation
+prompt:
+  - 'Welcome to the M&A Deal Intelligence Platform!'
+  - 'This module provides intelligent agent framework for investment bankers and M&A advisors.'
+  - 'Features: Storyline-first CIM creation, due diligence automation, inconsistency detection, and quick information retrieval.'
+  - ''
+  - 'Let\'s configure your M&A workspace...'
+
+# Core values automatically inherited from main installer:
+## user_name
+## communication_language
+## document_output_language
+## output_folder
+
+# ============================================================
+# INTERACTIVE FIELDS (User is prompted during installation)
+# ============================================================
+
+data_room_path:
+  prompt: 'Where is your deal data room located?'
+  default: 'data/deals'
+  result: '{project-root}/{value}'
+  help: 'This is where you store all deal documents, due diligence materials, and company information.'
+
+output_location:
+  prompt: 'Where should generated documents (CIMs, teasers, memos) be saved?'
+  default: 'output/manda'
+  result: '{project-root}/{value}'
+  help: 'All module outputs including CIMs, teasers, analysis reports, and storylines will be saved here.'
+
+knowledge_base_path:
+  prompt: 'Where is your M&A knowledge base located?'
+  default: 'data/manda-kb'
+  result: '{project-root}/{value}'
+  help: 'Reference materials, templates, market data, and industry benchmarks for validation and analysis.'
+
+template_preference:
+  prompt: 'Which document template style do you prefer?'
+  default: 'professional'
+  result: '{value}'
+  single-select:
+    - value: 'professional'
+      label: 'Professional - Clean, traditional investment banking style'
+    - value: 'modern'
+      label: 'Modern - Contemporary design with visual elements'
+    - value: 'minimal'
+      label: 'Minimal - Text-focused, maximum information density'
+  help: 'This sets the visual style for all generated documents (CIMs, teasers, reports).'
+
+inconsistency_sensitivity:
+  prompt: 'How sensitive should inconsistency detection be?'
+  default: 'standard'
+  result: '{value}'
+  single-select:
+    - value: 'relaxed'
+      label: 'Relaxed - Only flag clear contradictions'
+    - value: 'standard'
+      label: 'Standard - Balanced detection (recommended)'
+    - value: 'strict'
+      label: 'Strict - Flag any potential inconsistencies for review'
+  help: 'Controls how aggressively the system identifies contradictions across documents.'
+
+# ============================================================
+# STATIC FIELDS (No prompt - hardcoded configuration values)
+# ============================================================
+
+module_version:
+  result: '1.0.0'
+
+module_code:
+  result: 'manda'
+
+module_name:
+  result: 'M&A Deal Intelligence Platform'
+
+agents_path:
+  result: '{module-root}/agents'
+
+workflows_path:
+  result: '{module-root}/workflows'
+
+tasks_path:
+  result: '{module-root}/tasks'
+
+templates_path:
+  result: '{module-root}/templates'
+
+data_path:
+  result: '{module-root}/data'
+
+# Agent configuration
+agents:
+  result:
+    - code: 'deal-orchestrator'
+      name: 'Deal Orchestrator'
+      type: 'module'
+      description: 'Primary interface - coordinates all specialist agents'
+    - code: 'information-vault'
+      name: 'Information Vault'
+      type: 'service'
+      description: 'Backend data retrieval engine'
+    - code: 'company-analyst'
+      name: 'Company Analyst'
+      type: 'expert'
+      description: 'Business intelligence specialist'
+    - code: 'finance-analyst'
+      name: 'Finance Analyst'
+      type: 'expert'
+      description: 'Financial analysis and valuation expert'
+    - code: 'story-architect'
+      name: 'Story Architect'
+      type: 'expert'
+      description: 'Narrative development specialist'
+
+# MVP workflows
+workflows:
+  result:
+    - code: 'data-room-audit'
+      name: 'Data Room Audit'
+      description: 'Comprehensive data room analysis with inconsistency detection'
+    - code: 'investment-storyline-workshop'
+      name: 'Investment Storyline Workshop'
+      description: 'Interactive storyline development for CIMs'
+
+# Feature flags
+features:
+  result:
+    inconsistency_detection: true
+    assumption_validation: true
+    storyline_first_cim: true
+    quick_info_retrieval: true
+    auto_categorization: true

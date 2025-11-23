@@ -1,0 +1,213 @@
+# TechCorp Inc. - Company Overview Document
+
+## Company Background
+
+**Founding Story**
+
+TechCorp was founded in January 2015 by Jane Smith and John Doe, both former senior engineers at Google Cloud. Jane had spent 15 years at Google leading the Cloud AI infrastructure team, while John spent 12 years building Google's distributed systems architecture.
+
+The founders identified a critical gap in the market: enterprise companies were struggling to deploy and manage AI models at scale. Existing solutions were either too complex for non-technical teams or too simplistic for enterprise needs.
+
+They started TechCorp in a garage in Palo Alto with $500K of their own savings and a clear vision: make AI infrastructure as easy to use as turning on a light switch.
+
+**Key Milestones**
+
+- **2015**: Founded TechCorp, launched initial beta product
+- **2016**: Secured first enterprise customer (Fortune 500 retailer)
+- **2017**: Reached $2M ARR, raised $5M Seed from Sequoia Capital
+- **2018**: Strategic pivot from consulting model to SaaS platform
+- **2020**: Acquired DataFlow Inc. for $8M to expand data engineering capabilities
+- **2022**: Crossed $25M ARR, achieved operational profitability
+- **2024 March**: Raised $30M Series B led by Andreessen Horowitz
+- **2024 June**: Hired Sarah Chen as CFO (ex-Salesforce, 20 years finance experience)
+- **2024 September**: Launched v3.0 platform with advanced monitoring features
+- **2024 October**: Crossed $50M ARR milestone
+
+**Mission & Vision**
+
+Mission: Empower every enterprise to harness the full potential of AI through simple, scalable infrastructure.
+
+Vision: To become the standard platform for AI operations in global enterprises by 2028.
+
+## Corporate Structure
+
+**Legal Entities**
+
+TechCorp operates through a three-entity structure:
+
+1. **TechCorp Inc.** (Parent Company)
+   - Delaware C-Corporation
+   - Incorporated: January 15, 2015
+   - EIN: 98-7654321
+   - Intellectual property holding company
+   - Employs R&D team (45 engineers)
+
+2. **TechCorp Services LLC** (Operating Subsidiary)
+   - Delaware LLC, wholly owned by TechCorp Inc.
+   - All customer contracts flow through this entity
+   - Employs sales, customer success, and operations teams (30 employees)
+   - Revenue-generating entity
+
+3. **DataFlow Technologies Inc.** (Acquired Subsidiary)
+   - California C-Corporation, acquired October 2020
+   - Operates semi-independently with separate brand
+   - Focuses on data engineering market segment
+   - 15 employees, generates ~$5M ARR
+
+**Ownership Structure**
+
+As of November 2024:
+- Founders: 60% total
+  - Jane Smith (CEO): 35%
+  - John Doe (CTO): 25%
+- Institutional Investors: 30%
+  - Sequoia Capital (Seed, 2017): 10%
+  - Andreessen Horowitz (Series B, 2024): 20%
+- Employee Stock Option Pool: 10%
+  - Allocated to ~50 employees
+  - Avg vesting: 4 years with 1-year cliff
+
+**Board of Directors**
+
+- Jane Smith (CEO) - Executive seat
+- John Doe (CTO) - Executive seat
+- Michael Chen - Sequoia Capital partner
+- Lisa Johnson - Andreessen Horowitz partner
+- David Williams - Independent director, former CTO of Salesforce
+
+## Management Team
+
+**Jane Smith - Chief Executive Officer**
+- 15 years at Google (2000-2015), most recently VP of Cloud AI Infrastructure
+- Led team of 500+ engineers, scaled Google Cloud AI from $0 to $2B revenue
+- BS Computer Science, Stanford University; MBA, Harvard Business School
+- Patents: 8 issued patents in distributed systems and AI orchestration
+
+**John Doe - Chief Technology Officer**
+- 12 years at Google (2003-2015), Staff Engineer in distributed systems
+- Architected core infrastructure powering Google Search and Ads
+- BS & MS Computer Science, MIT
+- Patents: 12 issued patents in distributed systems architecture
+
+**Sarah Chen - Chief Financial Officer** (Joined June 2024)
+- 20 years finance experience, most recently VP Finance at Salesforce ($30B company)
+- Led Salesforce IPO process in 2004, managed investor relations for 15 years
+- Prior: CFO at 3 successful SaaS companies (2 exits, 1 IPO)
+- CPA, MBA from Wharton
+
+**Michael Torres - VP of Sales**
+- 10 years enterprise software sales experience
+- Previously: Regional VP at Snowflake, closed $50M+ in ARR
+- Built TechCorp's sales team from 2 to 15 reps
+- BA Business, UC Berkeley
+
+**Amy Liu - VP of Engineering**
+- 8 years at Amazon Web Services, Principal Engineer
+- Led development of AWS Lambda serverless platform
+- Manages TechCorp's 45-person engineering team
+- BS Computer Science, Carnegie Mellon; MS from Stanford
+
+## Geographic Footprint
+
+**Headquarters**
+- San Francisco, California (Financial District)
+- 15,000 sq ft office space
+- Houses: Executive team, Engineering (30), Product (10)
+
+**Regional Offices**
+
+1. **New York, NY**
+   - 5,000 sq ft in Manhattan
+   - Sales team: 10 people
+   - Focus: East Coast enterprise customers
+
+2. **Austin, Texas**
+   - 8,000 sq ft office
+   - Customer Success & Support: 15 people
+   - 24/7 support operations center
+
+3. **London, United Kingdom**
+   - 3,000 sq ft in Shoreditch
+   - Sales & Customer Success: 5 people
+   - Focus: European expansion (opened 2023)
+
+**Total Footprint**
+- 4 locations across 2 countries
+- 90 total employees distributed:
+  - San Francisco (HQ): 55 employees (61%)
+  - Austin: 15 employees (17%)
+  - New York: 10 employees (11%)
+  - London: 10 employees (11%)
+
+## Business Model
+
+**Product Offerings**
+
+1. **TechCorp AI Platform (Core Product)**
+   - SaaS platform for deploying, monitoring, and managing AI models
+   - Supports all major AI frameworks (TensorFlow, PyTorch, JAX)
+   - Features: Auto-scaling, version control, A/B testing, monitoring
+
+2. **TechCorp DataFlow (Acquired Product Line)**
+   - Data engineering and ETL platform
+   - Complements AI Platform with data preparation capabilities
+   - Separate brand and go-to-market
+
+**Revenue Model**
+
+- **Subscription-based (Annual Contracts)**: 90% of revenue
+  - Tiered pricing: Starter ($50K/year), Professional ($150K/year), Enterprise ($500K+/year)
+  - Average contract size: $330K per year
+  - Payment terms: Annual prepayment (80% of customers) or quarterly (20%)
+
+- **Professional Services**: 10% of revenue
+  - Implementation, training, custom integrations
+  - Typical project: $50K-$200K
+  - Delivered by Customer Success team
+
+**Customer Base**
+
+- 150+ enterprise customers as of November 2024
+- 8 Fortune 500 companies including:
+  - Global retailer (largest customer, $2M+ ARR)
+  - Major financial services firm ($1.5M ARR)
+  - Healthcare technology company ($1M ARR)
+
+**Customer Metrics**
+- Net Revenue Retention: 120% (2024)
+- Gross Revenue Retention: 95% (annual churn: 5%)
+- Average Customer Lifetime: 4+ years
+- Customer Acquisition Cost (CAC): $80K
+- Lifetime Value (LTV): $1.3M
+- LTV/CAC Ratio: 16:1
+
+**Go-to-Market Strategy**
+
+- **Direct Enterprise Sales**: Primary channel
+  - 15-person sales team
+  - Avg sales cycle: 6 months
+  - Target: Companies with 1,000+ employees, existing AI initiatives
+
+- **Product-Led Growth**: Secondary channel (launched 2024)
+  - Free trial for Starter tier
+  - Self-service sign-up
+  - ~20% of new customers start here, upsell to Enterprise
+
+- **Channel Partners**: Emerging channel (2025 focus)
+  - System integrators (Deloitte, Accenture partnerships in discussion)
+  - Cloud marketplaces (AWS, Azure, GCP listings planned)
+
+**Financial Snapshot**
+
+- ARR (Nov 2024): $50M
+- ARR Growth: 100% YoY (from $25M in Nov 2023)
+- Gross Margin: 85%
+- EBITDA Margin: 15% (achieved profitability in 2022)
+- Cash Position: $35M (post-Series B)
+- Monthly Burn: Break-even to slightly positive
+
+---
+
+**Document Prepared By:** TechCorp Corporate Development Team
+**Date:** November 2024
+**Confidentiality:** For M&A Discussion Purposes Only
