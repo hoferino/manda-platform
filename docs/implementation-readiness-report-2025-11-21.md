@@ -158,7 +158,7 @@ This readiness check validates that all planning artifacts (PRD, UX, Architectur
 **NO CONTRADICTIONS DETECTED** between PRD requirements and architectural approach.
 
 **ARCHITECTURAL ADDITIONS (Beyond PRD Scope):**
-- ✅ **Pydantic AI Gateway**: Type-safe LLM abstraction with retry/caching - beneficial addition
+- ✅ **LangChain/LangGraph + Pydantic v2**: Type-safe LLM abstraction with workflow orchestration, retry/caching - beneficial addition
 - ✅ **Docker Compose Dev Environment**: Not explicitly required but supports NFR-MAINT-004 (deployment)
 - ✅ **Multi-Model Strategy**: PRD doesn't prescribe specific models - architecture makes smart choices
 
@@ -357,7 +357,7 @@ Add two stories to Epic 1:
 **MINIMAL GOLD-PLATING - WELL-CONTROLLED SCOPE**
 
 **Appropriate Technical Additions (Not Gold-Plating):**
-- ✅ **Pydantic AI Gateway**: Adds type safety and retry logic - architectural best practice, not scope creep
+- ✅ **LangChain/LangGraph + Pydantic v2**: Adds type safety, workflow orchestration, and retry logic - architectural best practice, not scope creep
 - ✅ **Docker Compose**: Supports NFR-MAINT-004 (deployment), improves developer experience
 - ✅ **Multi-Model LLM Strategy**: Smart optimization, not over-engineering
 
@@ -385,7 +385,7 @@ Add two stories to Epic 1:
 **Controllability (Can we control inputs for testing?):**
 - ✅ **Good**: API-based architecture allows test data injection
 - ✅ **Good**: Supabase RLS can be tested with test users/deals
-- ✅ **Good**: LLM responses can be mocked via Pydantic AI Gateway
+- ✅ **Good**: LLM responses can be mocked via LangChain chat model wrappers
 - ⚠️ **Concern**: Docling parsing behavior may have limited control (document-dependent)
 
 **Observability (Can we observe system behavior?):**

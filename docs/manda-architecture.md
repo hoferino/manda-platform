@@ -6,7 +6,7 @@
 **Last Updated:** 2025-11-23
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 2.1 (Integrated CIM v3 workflow: 14-phase interactive workflow, dedicated CIM Builder UI, extreme visual precision, RAG integration, 3 new agent tools)
+**Version:** 2.2 (Updated to latest stable versions + model-agnostic LLM configuration)
 
 ---
 
@@ -30,21 +30,23 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 
 | Decision Area | Choice | Rationale |
 |--------------|--------|-----------|
-| **Backend Framework** | FastAPI (Python) | Native integration with Docling, LangGraph, LLM libraries; eliminates Node.js ↔ Python bridge |
-| **Primary Database** | Supabase PostgreSQL 15+ | Managed service with pgvector extension, auth built-in, storage included, RLS for data isolation |
-| **Vector Search** | pgvector | Semantic search for findings; single database simplifies operations |
-| **Graph Database** | Neo4j | Cross-domain pattern relationships, contradiction tracking, source attribution chains |
+| **Backend Framework** | FastAPI 0.121+ (Python 3.11+) | Native integration with Docling, LangGraph, LLM libraries; eliminates Node.js ↔ Python bridge |
+| **Primary Database** | PostgreSQL 18 (Supabase) | Latest stable, pgvector 0.8+ support, auth built-in, storage included, RLS for data isolation |
+| **Vector Search** | pgvector 0.8+ | Latest semantic search with improved filtering; single database simplifies operations |
+| **Graph Database** | Neo4j 2025.01 | Latest stable with Java 21; cross-domain pattern relationships, contradiction tracking |
 | **Document Parser** | Docling | RAG-optimized, preserves Excel formulas, table extraction, OCR built-in |
 | **Job Queue** | pg-boss | Postgres-based for MVP simplicity; can migrate to Redis+Bull if needed |
-| **LLM Gateway** | Pydantic AI Gateway | Type-safe LLM abstraction with retry, caching, cost tracking, observability |
-| **Workflow Orchestration** | LangGraph | Human-in-the-loop interrupts for Q&A co-creation, CIM generation |
-| **Primary LLM (Extraction)** | Gemini 3.0 Pro | 2M context window, thinking mode for transparency, cost-effective |
-| **Primary LLM (Conversation)** | Claude Sonnet 4.5 | Latest model, proven M&A/banking domain, excellent instruction following |
-| **Primary LLM (Speed Tasks)** | Claude Haiku 4 | Fast, cost-effective for simple queries and lightweight tasks |
-| **Embeddings** | OpenAI text-embedding-3-large | Industry-leading quality for semantic search |
+| **AI Agent Framework** | LangChain 1.0 + LangGraph 1.0 | Stable v1.0 releases; workflow orchestration with human-in-the-loop interrupts, state management |
+| **Type Safety & Validation** | Pydantic v2.12+ | Latest stable; structured outputs, data validation, type-safe tool definitions |
+| **LLM Integration** | LangChain LLM Adapters | Model-agnostic interface for multiple providers (Anthropic, Google, OpenAI, etc.) with retry, fallback |
+| **LLM Provider (Default)** | Configurable | Provider-agnostic configuration (Anthropic Claude, Google Gemini, OpenAI GPT, etc.) |
+| **Conversation Model** | Configurable | Default: Claude Sonnet 4.5 or Gemini 2.0 Pro; easily swappable via config |
+| **Extraction Model** | Configurable | Default: Gemini 2.0 Pro (2M context) or Claude Opus 3; long-context document processing |
+| **Speed Tasks Model** | Configurable | Default: Claude Haiku 4 or Gemini 2.0 Flash; fast, cost-effective queries |
+| **Embeddings** | Configurable | Default: OpenAI text-embedding-3-large; industry-leading semantic search quality |
 | **Authentication** | Supabase Auth | OAuth, magic links, MFA out of the box; RLS for multi-tenant security |
 | **File Storage** | Supabase Storage | Integrated with auth, signed URLs, same infrastructure |
-| **Frontend** | Next.js 16 (React) | Turbopack stable (10x faster dev, 2-5x faster builds), mature ecosystem, shadcn/ui |
+| **Frontend** | Next.js 15 (React 19.2) | Latest stable with Turbopack beta; proven production-ready, mature ecosystem, shadcn/ui |
 | **Development Environment** | Docker Compose | Local Supabase + Neo4j + Next.js orchestration, production parity |
 | **Starter Template** | Nextbase Lite | Next.js 16 + Supabase + TypeScript + Tailwind + Testing suite pre-configured |
 
@@ -54,26 +56,26 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 
 ```yaml
 Backend:
-  framework: FastAPI 0.104+
-  language: Python 3.11+
-  validation: Pydantic v2
+  framework: FastAPI 0.121+
+  language: Python 3.11+ (3.13 compatible)
+  validation: Pydantic v2.12+
   async: asyncio + httpx
 
 Frontend:
-  framework: Next.js 16 (App Router)
-  bundler: Turbopack (stable)
-  ui_library: React 19.2+
+  framework: Next.js 15 (App Router)
+  bundler: Turbopack (beta in Next.js 15)
+  ui_library: React 19.2
   styling: Tailwind CSS 4
   components: shadcn/ui
   state_management: Zustand
   data_fetching: TanStack Query (React Query)
   websockets: Supabase Realtime
-  starter_template: Nextbase Lite (imbhargav5/nextbase-nextjs-supabase-starter)
+  starter_template: Nextbase Lite (Next.js 15 + Supabase)
 
 Data Layer:
-  primary_database: Supabase PostgreSQL 15+
-  vector_extension: pgvector 0.5+
-  graph_database: Neo4j 5+
+  primary_database: PostgreSQL 18 (Supabase managed)
+  vector_extension: pgvector 0.8+
+  graph_database: Neo4j 2025.01 (Community Edition)
   auth_database: Supabase Auth (built-in)
   file_storage: Supabase Storage
 
@@ -90,17 +92,32 @@ Background Processing:
   task_runner: Python worker processes
 
 Intelligence Layer:
-  llm_gateway: Pydantic AI Gateway
-  workflow_orchestration: LangGraph (Python)
+  ai_framework: LangChain 1.0 + LangGraph 1.0
+  type_safety: Pydantic v2.12+
+  llm_integration: LangChain LLM adapters (model-agnostic)
 
-  models:
-    extraction: gemini-3.0-pro
-    pattern_detection: gemini-3.0-pro
-    conversational: claude-sonnet-4-5-20250929
-    generation: claude-sonnet-4-5-20250929
-    speed_tasks: claude-haiku-4-20250514
-    deep_analysis: claude-3-opus-20240229
-    embeddings: text-embedding-3-large
+  model_configuration:
+    provider_agnostic: true  # Easily swap between providers via environment config
+
+    default_providers:
+      conversational: anthropic  # or google, openai
+      extraction: google  # or anthropic, openai
+      speed_tasks: anthropic  # or google
+      embeddings: openai
+
+    example_models:
+      anthropic:
+        conversation: claude-sonnet-4-5-20250929
+        speed: claude-haiku-4-20250514
+        deep_analysis: claude-3-opus-20240229
+      google:
+        conversation: gemini-2.0-pro
+        extraction: gemini-2.0-pro  # 2M context window
+        speed: gemini-2.0-flash
+      openai:
+        conversation: gpt-4-turbo
+        embeddings: text-embedding-3-large
+        speed: gpt-4-mini
 
 Authentication & Authorization:
   provider: Supabase Auth
@@ -307,17 +324,478 @@ Complete schema with all tables, indexes, and RLS policies documented in full ar
 
 ## Intelligence Layer
 
-### Multi-Model Strategy
+### Pydantic + LangGraph Integration Strategy
 
-| Task | Model | Rationale |
-|------|-------|-----------|
-| Document Extraction | Gemini 3.0 Pro | 2M context, thinking mode, cost-effective |
-| Pattern Detection | Gemini 3.0 Pro | Cross-domain analysis, reasoning transparency |
-| Chat (User-Facing) | Claude Sonnet 4.5 | Latest model, proven M&A domain, excellent instruction following |
-| CIM Narrative | Claude Sonnet 4.5 | Latest model, best long-form narrative quality |
-| Speed Tasks | Claude Haiku 4 | Fast, cost-effective for simple queries and lightweight tasks |
-| Deep Analysis | Claude Opus 3 | Most capable for complex reasoning (use sparingly) |
-| Embeddings | OpenAI text-embedding-3-large | Industry-leading semantic search quality |
+**Architecture Decision:** We use **Pydantic v2 for type safety and validation** combined with **LangChain/LangGraph for agent orchestration**. This is a complementary hybrid approach, not competing frameworks.
+
+#### How They Work Together
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MANDA AGENT LAYER                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │         LangGraph Workflows (Orchestration)          │  │
+│  │  - CIM v3 Workflow (14 phases)                      │  │
+│  │  - Q&A Co-Creation Workflow                         │  │
+│  │  - Document Analysis Workflow                       │  │
+│  │  - Human-in-the-loop interrupts                     │  │
+│  │  - State management & checkpoints                   │  │
+│  └────────────┬─────────────────────────────────────────┘  │
+│               │                                              │
+│  ┌────────────▼─────────────────────────────────────────┐  │
+│  │      Agent Tools (Type-Safe with Pydantic)          │  │
+│  │  - query_knowledge_base() → KnowledgeQueryInput     │  │
+│  │  - suggest_narrative_outline() → NarrativeRequest   │  │
+│  │  - generate_slide_blueprint() → SlideRequest        │  │
+│  │  - All inputs/outputs validated with Pydantic models│  │
+│  └────────────┬─────────────────────────────────────────┘  │
+│               │                                              │
+│  ┌────────────▼─────────────────────────────────────────┐  │
+│  │    LangChain LLM Integration (Multi-Provider)       │  │
+│  │  - ChatAnthropic (Claude models)                    │  │
+│  │  - ChatGoogleGenerativeAI (Gemini models)           │  │
+│  │  - ChatOpenAI (GPT models for embeddings)           │  │
+│  │  - Retry logic, fallback, cost tracking             │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Role Separation
+
+**LangGraph (Workflow Orchestration):**
+- Manages complex multi-step workflows with state
+- Provides human-in-the-loop interrupts (crucial for CIM v3, Q&A workflows)
+- Handles routing between nodes (phases)
+- Persists workflow state to PostgreSQL for resume capability
+- Enables conditional branching and iteration
+
+**Pydantic v2 (Type Safety & Validation):**
+- Defines structured schemas for all tool inputs/outputs
+- Validates LLM-generated content against schemas
+- Ensures data integrity at API boundaries
+- Provides runtime type checking and validation errors
+- Serialization/deserialization for database storage
+
+**LangChain (LLM Integration):**
+- Unified interface for multiple LLM providers (Anthropic, Google, OpenAI)
+- Built-in retry logic and error handling
+- Fallback mechanisms if primary LLM fails
+- Cost tracking and observability hooks
+- Tool/function calling abstractions
+
+#### Code Example: Pydantic + LangGraph Integration
+
+```python
+from pydantic import BaseModel, Field, validator
+from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.postgres import PostgresSaver
+from typing import Annotated, TypedDict
+
+# ============================================================
+# PYDANTIC MODELS (Type Safety & Validation)
+# ============================================================
+
+class KnowledgeQueryInput(BaseModel):
+    """Input schema for query_knowledge_base tool"""
+    query: str = Field(..., min_length=3, description="Search query")
+    filters: dict[str, str] = Field(default_factory=dict)
+    limit: int = Field(default=10, ge=1, le=50)
+
+    @validator('query')
+    def validate_query(cls, v):
+        if len(v.split()) < 2:
+            raise ValueError("Query must contain at least 2 words")
+        return v
+
+class Finding(BaseModel):
+    """Structured finding from RAG"""
+    text: str
+    source_document: str
+    page_number: int | None = None
+    confidence: float = Field(ge=0.0, le=1.0)
+    embedding: list[float] | None = None
+
+class KnowledgeQueryOutput(BaseModel):
+    """Output schema for query_knowledge_base tool"""
+    findings: list[Finding]
+    total_count: int
+    query_time_ms: float
+
+class NarrativeOutlineRequest(BaseModel):
+    """Input for suggest_narrative_outline tool"""
+    buyer_persona: str = Field(..., regex="^(strategic|financial|custom)$")
+    investment_thesis: dict[str, str]
+    context: str
+
+class NarrativeSection(BaseModel):
+    """Single section in narrative outline"""
+    name: str
+    purpose: str
+    order: int
+    estimated_slides: int = Field(ge=1, le=10)
+
+class NarrativeOutlineOutput(BaseModel):
+    """Output from suggest_narrative_outline"""
+    sections: list[NarrativeSection]
+    flow_reasoning: str
+    buyer_alignment: str
+
+class SlideContentElement(BaseModel):
+    """Single content element in a slide"""
+    id: str
+    text: str
+    source_finding_id: str
+    element_type: str = Field(regex="^(headline|body|callout|metric)$")
+
+class VisualPositioning(BaseModel):
+    """Visual specs for a content element (extreme precision)"""
+    position: str  # "top left", "center", "bottom right", etc.
+    format: str    # "callout box", "bullet", "chart", etc.
+    styling: str   # "bold, 18pt, #333", etc.
+    icon: str | None = None
+
+class SlideBlueprint(BaseModel):
+    """Complete slide visual concept"""
+    slide_topic: str
+    layout_type: str
+    positioned_elements: dict[str, VisualPositioning]  # element_id -> specs
+    background_color: str = "#FFFFFF"
+
+    @validator('positioned_elements')
+    def validate_all_elements_positioned(cls, v, values):
+        # This validator ensures extreme visual precision
+        # In practice, you'd pass content_elements to compare
+        if not v:
+            raise ValueError("All content elements must be positioned")
+        return v
+
+# ============================================================
+# AGENT TOOLS (Pydantic-Validated Functions)
+# ============================================================
+
+async def query_knowledge_base(
+    input: KnowledgeQueryInput
+) -> KnowledgeQueryOutput:
+    """
+    Semantic search across findings using pgvector.
+    Input/output validated by Pydantic models.
+    """
+    # Pydantic validates input automatically
+    # Generate embedding
+    from openai import OpenAI
+    client = OpenAI()
+
+    embedding = client.embeddings.create(
+        model="text-embedding-3-large",
+        input=input.query
+    ).data[0].embedding
+
+    # Vector search in PostgreSQL
+    from db import get_db
+    async with get_db() as db:
+        results = await db.execute(
+            """
+            SELECT text, source_document, page_number, confidence,
+                   1 - (embedding <=> $1::vector) AS similarity
+            FROM findings
+            WHERE deal_id = $2
+              AND ($3::jsonb IS NULL OR metadata @> $3)
+            ORDER BY embedding <=> $1::vector
+            LIMIT $4
+            """,
+            embedding,
+            input.filters.get('deal_id'),
+            input.filters,
+            input.limit
+        )
+
+    findings = [
+        Finding(
+            text=r['text'],
+            source_document=r['source_document'],
+            page_number=r['page_number'],
+            confidence=r['confidence']
+        )
+        for r in results
+    ]
+
+    # Pydantic validates output automatically
+    return KnowledgeQueryOutput(
+        findings=findings,
+        total_count=len(findings),
+        query_time_ms=42.5  # Placeholder
+    )
+
+async def suggest_narrative_outline(
+    input: NarrativeOutlineRequest
+) -> NarrativeOutlineOutput:
+    """
+    Generate CIM narrative outline using LLM + RAG.
+    Input/output validated by Pydantic models.
+    """
+    # Query knowledge base for context
+    knowledge = await query_knowledge_base(
+        KnowledgeQueryInput(
+            query="company overview, value drivers, competitive advantages",
+            filters={"deal_id": input.context},
+            limit=20
+        )
+    )
+
+    # Use LangChain LLM with structured output
+    from langchain_anthropic import ChatAnthropic
+
+    llm = ChatAnthropic(
+        model="claude-sonnet-4-5-20250929",
+        temperature=0.7
+    )
+
+    # Use Pydantic model as structured output schema
+    structured_llm = llm.with_structured_output(NarrativeOutlineOutput)
+
+    prompt = f"""
+    Create a Company Overview narrative outline for a {input.buyer_persona} buyer.
+
+    Investment Thesis:
+    {input.investment_thesis}
+
+    Key Findings from Knowledge Base:
+    {[f.text for f in knowledge.findings[:10]]}
+
+    Generate 5-8 sections with clear flow and buyer alignment.
+    """
+
+    # LLM output is automatically validated against Pydantic schema
+    outline = await structured_llm.ainvoke(prompt)
+
+    return outline  # Already a NarrativeOutlineOutput instance
+
+# ============================================================
+# LANGGRAPH WORKFLOW (Orchestration with State Management)
+# ============================================================
+
+class CIMWorkflowState(TypedDict):
+    """State for CIM v3 workflow (14 phases)"""
+    deal_id: str
+    current_phase: int
+    buyer_persona: str | None
+    investment_thesis: dict | None
+    narrative_outline: NarrativeOutlineOutput | None
+    sections: list[dict]
+    conversation_history: list[dict]
+    human_input: str | None
+
+# Define workflow nodes
+async def phase1_understand_buyer(state: CIMWorkflowState):
+    """Phase 1: Conversational buyer discovery"""
+    llm = ChatAnthropic(model="claude-sonnet-4-5-20250929")
+
+    response = await llm.ainvoke(
+        "Ask about buyer type and motivations"
+    )
+
+    return {
+        **state,
+        "conversation_history": [
+            *state["conversation_history"],
+            {"role": "assistant", "content": response.content}
+        ],
+        "current_phase": 1
+    }
+
+async def phase2_investment_thesis(state: CIMWorkflowState):
+    """Phase 2: Develop investment thesis with RAG"""
+    # Use Pydantic-validated tool
+    outline = await suggest_narrative_outline(
+        NarrativeOutlineRequest(
+            buyer_persona=state["buyer_persona"],
+            investment_thesis=state["investment_thesis"],
+            context=state["deal_id"]
+        )
+    )
+
+    return {
+        **state,
+        "narrative_outline": outline.dict(),  # Serialize Pydantic model
+        "current_phase": 2
+    }
+
+async def phase3_discover_structure(state: CIMWorkflowState):
+    """Phase 3: AI suggests section structure"""
+    # Access validated narrative outline
+    outline = NarrativeOutlineOutput(**state["narrative_outline"])
+
+    # Present to user with human-in-the-loop interrupt
+    return {
+        **state,
+        "sections": [s.dict() for s in outline.sections],
+        "current_phase": 3,
+        # LangGraph will interrupt here for human approval
+    }
+
+# Build workflow graph
+workflow = StateGraph(CIMWorkflowState)
+
+# Add nodes (phases)
+workflow.add_node("phase1", phase1_understand_buyer)
+workflow.add_node("phase2", phase2_investment_thesis)
+workflow.add_node("phase3", phase3_discover_structure)
+# ... add phases 4-14
+
+# Define edges with conditional routing
+workflow.add_edge("phase1", "phase2")
+workflow.add_edge("phase2", "phase3")
+
+# Set entry point
+workflow.set_entry_point("phase1")
+
+# Configure PostgreSQL checkpointer for state persistence
+from langgraph.checkpoint.postgres import PostgresSaver
+checkpointer = PostgresSaver.from_conn_string("postgresql://...")
+
+# Compile workflow with checkpointer
+app = workflow.compile(
+    checkpointer=checkpointer,
+    interrupt_before=["phase3", "phase4", ...]  # Human-in-the-loop
+)
+
+# ============================================================
+# USAGE: Running the Workflow
+# ============================================================
+
+async def run_cim_workflow(deal_id: str, user_id: str):
+    """Execute CIM v3 workflow with state persistence"""
+
+    # Initial state
+    initial_state = CIMWorkflowState(
+        deal_id=deal_id,
+        current_phase=0,
+        buyer_persona=None,
+        investment_thesis=None,
+        narrative_outline=None,
+        sections=[],
+        conversation_history=[],
+        human_input=None
+    )
+
+    # Run with thread_id for checkpoint persistence
+    config = {"configurable": {"thread_id": f"{user_id}_{deal_id}"}}
+
+    # Execute until first interrupt (phase3)
+    result = await app.ainvoke(initial_state, config)
+
+    # Workflow paused at phase3, waiting for human approval
+    return result
+
+async def resume_workflow(deal_id: str, user_id: str, human_input: str):
+    """Resume workflow after human input"""
+    config = {"configurable": {"thread_id": f"{user_id}_{deal_id}"}}
+
+    # Update state with human input
+    current_state = await app.aget_state(config)
+    current_state.values["human_input"] = human_input
+
+    # Resume execution
+    result = await app.ainvoke(current_state.values, config)
+
+    return result
+```
+
+#### Key Benefits of This Approach
+
+**1. Type Safety Throughout:**
+- Pydantic validates all tool inputs/outputs
+- Compile-time type checking with Python type hints
+- Runtime validation catches errors early
+- Structured LLM outputs prevent hallucination drift
+
+**2. Workflow Orchestration:**
+- LangGraph manages complex 14-phase CIM workflow
+- State persistence enables resume from any checkpoint
+- Human-in-the-loop interrupts for collaborative creation
+- Conditional branching based on user decisions
+
+**3. Multi-LLM Flexibility:**
+- LangChain adapters support Anthropic, Google, OpenAI
+- Easy to switch models for different tasks
+- Fallback mechanisms if primary LLM fails
+- Cost optimization through model routing
+
+**4. Production Readiness:**
+- Both Pydantic and LangChain are battle-tested
+- Active communities and extensive documentation
+- Enterprise adoption validates approach
+- Clear separation of concerns (validation vs orchestration)
+
+#### Alternative Considered: Pydantic AI Framework
+
+We evaluated using Pydantic AI (the full agent framework) instead of LangChain, but decided against it because:
+
+- **Pydantic AI** is newer (released late 2024) with smaller ecosystem
+- **LangGraph's human-in-the-loop** pattern is critical for our CIM/Q&A workflows
+- **LangChain's maturity** provides more integrations and community support
+- **Pydantic library** gives us type safety without locking into the Pydantic AI framework
+
+However, we keep Pydantic AI on our radar for future evaluation as it matures.
+
+### Multi-Model Strategy (Provider-Agnostic)
+
+**Architecture Principle:** The system is **model-agnostic** and uses LangChain adapters to easily swap between providers (Anthropic, Google, OpenAI, etc.) via environment configuration.
+
+| Task | Requirements | Default Provider | Alternative Options |
+|------|--------------|------------------|---------------------|
+| **Document Extraction** | Long context (100K+ tokens), structured output | Gemini 2.0 Pro (2M context) | Claude Opus 3, GPT-4 Turbo |
+| **Pattern Detection** | Cross-domain reasoning, transparency | Gemini 2.0 Pro (thinking mode) | Claude Sonnet 4.5, GPT-4 |
+| **Chat (User-Facing)** | Conversational, domain knowledge | Claude Sonnet 4.5 | Gemini 2.0 Pro, GPT-4 Turbo |
+| **CIM Narrative** | Long-form generation, coherence | Claude Sonnet 4.5 | Gemini 2.0 Pro, GPT-4 Turbo |
+| **Speed Tasks** | Fast, cost-effective, simple queries | Claude Haiku 4 | Gemini 2.0 Flash, GPT-4 Mini |
+| **Deep Analysis** | Complex reasoning (use sparingly) | Claude Opus 3 | GPT-4, Gemini 2.0 Pro |
+| **Embeddings** | Semantic search quality | OpenAI text-embedding-3-large | Cohere embed-v3, Voyage AI |
+
+**Configuration Example:**
+
+```python
+# config/llm_config.py
+from pydantic import BaseModel
+from enum import Enum
+
+class LLMProvider(str, Enum):
+    ANTHROPIC = "anthropic"
+    GOOGLE = "google"
+    OPENAI = "openai"
+
+class LLMConfig(BaseModel):
+    # Task-specific provider configuration
+    conversational_provider: LLMProvider = LLMProvider.ANTHROPIC
+    conversational_model: str = "claude-sonnet-4-5-20250929"
+
+    extraction_provider: LLMProvider = LLMProvider.GOOGLE
+    extraction_model: str = "gemini-2.0-pro"
+
+    speed_provider: LLMProvider = LLMProvider.ANTHROPIC
+    speed_model: str = "claude-haiku-4-20250514"
+
+    embeddings_provider: str = "openai"
+    embeddings_model: str = "text-embedding-3-large"
+
+# Easily swap providers via environment variables
+llm_config = LLMConfig(
+    conversational_provider=os.getenv("CONV_PROVIDER", "anthropic"),
+    conversational_model=os.getenv("CONV_MODEL", "claude-sonnet-4-5-20250929"),
+    # ... etc
+)
+```
+
+**Benefits:**
+- ✅ **Easy Testing**: Compare providers for your specific use case
+- ✅ **Cost Optimization**: Mix and match based on price/performance
+- ✅ **Vendor Independence**: No lock-in to single provider
+- ✅ **Fallback Support**: LangChain provides automatic fallback if primary fails
 
 ### Agent Tools (15 Core Tools - Updated for CIM v3)
 
@@ -1071,8 +1549,8 @@ npm install
 ### Why Supabase?
 **Auth + Database + Storage:** Integrated platform, RLS for security, managed service. pgvector for semantic search. OAuth providers out of the box.
 
-### Why Pydantic AI Gateway?
-**Production-Ready:** Retry, caching, cost tracking built-in. Don't reinvent the wheel. Type-safe LLM abstraction.
+### Why Pydantic v2 with LangChain?
+**Type Safety + Flexibility:** Pydantic v2 provides strict validation for structured outputs and tool definitions, while LangChain offers mature ecosystem with multiple LLM providers, retry logic, and fallback mechanisms. This combination is production-tested and widely adopted.
 
 ### Why LangGraph over Genkit?
 **Human-in-the-Loop:** LangGraph's interrupt pattern is perfect for Q&A/CIM workflows. Genkit too new for production.
@@ -1119,8 +1597,10 @@ npm install
 - [Manda PRD](./manda-prd.md)
 - [Brainstorming Session](./brainstorming-session-results-2025-11-19.md)
 - [Docling](https://docling-project.github.io/docling/)
-- [LangGraph](https://docs.langchain.com/oss/python/langgraph/)
-- [Pydantic AI Gateway](https://pydantic.dev/ai-gateway)
+- [LangChain](https://python.langchain.com/docs/)
+- [LangGraph](https://langchain-ai.github.io/langgraph/)
+- [Pydantic v2](https://docs.pydantic.dev/latest/)
+- [LangChain LLM Adapters](https://python.langchain.com/docs/integrations/chat/)
 - [Supabase](https://supabase.com/docs)
 - [pgvector](https://github.com/pgvector/pgvector)
 - [Neo4j](https://neo4j.com/docs/)
@@ -1132,6 +1612,51 @@ npm install
 ---
 
 ## Changelog
+
+### Version 2.2 (2025-11-23)
+**Latest Stable Versions + Model-Agnostic Configuration:**
+- **Updated All Tech Stack to Latest Stable Versions:**
+  - PostgreSQL 18.1 (latest stable, Nov 2025)
+  - Neo4j 2025.01 (new calendar versioning)
+  - pgvector 0.8+ (improved filtering)
+  - FastAPI 0.121+ (latest stable)
+  - LangChain 1.0 + LangGraph 1.0 (stable releases, Nov 2025)
+  - Pydantic v2.12+ (latest stable, Oct 2025)
+  - Next.js 15 with React 19.2 (Next.js 16 still in beta)
+  - Python 3.11+ with 3.13 compatibility
+- **Model-Agnostic LLM Configuration:**
+  - Replaced provider-specific model selections with configurable defaults
+  - Added provider comparison table (Anthropic, Google, OpenAI)
+  - Included configuration example with environment variable support
+  - Emphasized easy provider swapping for testing and cost optimization
+  - Documented fallback support via LangChain
+- **Clarified Nextbase Lite Template:** Updated to Next.js 15 + Supabase
+
+**Why This Matters:**
+- Ensures production-ready versions across the entire stack
+- Provides flexibility to test different LLM providers without code changes
+- Avoids vendor lock-in with model-agnostic architecture
+- Aligns with Nov 2025 stable releases for long-term support
+
+### Version 2.1 (2025-11-23)
+**Pydantic + LangGraph Integration Clarification:**
+- **Clarified AI Framework Stack:** Replaced ambiguous "Pydantic AI Gateway" with clear separation:
+  - **LangChain/LangGraph** for workflow orchestration and human-in-the-loop patterns
+  - **Pydantic v2** for type safety, validation, and structured outputs
+  - **LangChain LLM Adapters** for multi-provider LLM integration
+- **Added Comprehensive Integration Section:** New "Pydantic + LangGraph Integration Strategy" section with:
+  - Architecture diagram showing role separation
+  - Detailed explanation of how Pydantic and LangGraph complement each other
+  - Complete code example demonstrating integration patterns
+  - Rationale for choosing this hybrid approach over Pydantic AI framework
+- **Updated Decision Summary Table:** Clarified technology choices with accurate terminology
+- **Updated References:** Added proper links to LangChain, LangGraph, and Pydantic documentation
+
+**Why This Matters:**
+- Eliminates confusion between Pydantic library vs Pydantic AI framework
+- Provides clear implementation guidance for developers
+- Validates architecture decision with production-tested patterns
+- Establishes type safety as first-class concern throughout the system
 
 ### Version 2.0 (2025-11-21)
 **Major Updates:**
@@ -1167,4 +1692,4 @@ npm install
 ---
 
 *Generated using BMAD Method architecture workflow*
-*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21*
+*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23*

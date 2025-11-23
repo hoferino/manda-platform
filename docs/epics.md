@@ -87,9 +87,9 @@ This document breaks down the Manda M&A Intelligence Platform into epics and sto
 - Sidebar Navigation
 
 **Technical Foundation:**
-- Next.js 16 app structure (Turbopack stable)
+- Next.js 15 app structure (React 19.2, Turbopack beta)
 - Supabase Auth setup
-- PostgreSQL schema (deals table)
+- PostgreSQL 18 schema (deals table)
 - RLS policies for data isolation
 - Docker Compose development environment
 
@@ -2550,14 +2550,16 @@ And the export completes within 10 seconds
 - Collaborative Analysis Mode
 
 **Technical Components:**
-- Claude Sonnet 4.5 via Pydantic AI Gateway
+- Claude Sonnet 4.5 via LangChain ChatAnthropic adapter
+- LangGraph for conversation workflow orchestration
+- Pydantic v2 for type-safe tool definitions and structured outputs
 - Tool calling framework (12 agent tools - expanded from 8 for PRD v1.1)
   - Knowledge: query_knowledge_base, update_knowledge_base, update_knowledge_graph, validate_finding
   - Documents: get_document_info, trigger_analysis
   - Workflows: create_irl, suggest_questions, add_to_qa
   - Content: generate_cim_section
   - Intelligence: detect_contradictions, find_gaps
-- Conversation state management
+- Conversation state management with LangGraph checkpoints
 - WebSocket for real-time responses
 - Real-time finding validation during chat
 
@@ -2573,40 +2575,46 @@ And the export completes within 10 seconds
 
 ### Stories
 
-#### Story E5.1: Integrate Claude Sonnet 4.5 via Pydantic AI Gateway
+#### Story E5.1: Integrate Claude Sonnet 4.5 via LangChain
 
 **As a** developer
-**I want** Claude Sonnet 4.5 integrated via Pydantic AI Gateway
-**So that** we have a production-ready LLM interface for conversation
+**I want** Claude Sonnet 4.5 integrated via LangChain ChatAnthropic adapter
+**So that** we have a production-ready LLM interface for conversation with type safety
 
 **Description:**
-Set up Pydantic AI Gateway configuration for Claude Sonnet 4.5, implement basic chat completion endpoint, configure retry/timeout/cost tracking, and create LLM client wrapper for the application.
+Set up LangChain ChatAnthropic adapter for Claude Sonnet 4.5, implement basic chat completion endpoint with Pydantic v2 structured outputs, configure retry/timeout logic, and create type-safe LLM client wrapper for the application.
 
 **Technical Details:**
-- Install and configure Pydantic AI Gateway
-- Add Claude Sonnet 4.5 model configuration
+- Install LangChain core and langchain-anthropic packages
+- Configure ChatAnthropic with Claude Sonnet 4.5 model (claude-sonnet-4-5-20250929)
+- Set up Pydantic v2 models for structured outputs using `with_structured_output()`
 - Implement LLM client wrapper with type safety
-- Configure retry logic (3 attempts with exponential backoff)
-- Enable cost tracking and logging
+- Configure retry logic (built-in LangChain retry with exponential backoff)
+- Enable cost tracking via LangSmith or custom callback handlers
 - Set up observability hooks
 
 **Acceptance Criteria:**
 
 ```gherkin
-Given Pydantic AI Gateway is configured
+Given LangChain ChatAnthropic is configured
 When I send a chat completion request
 Then Claude Sonnet 4.5 responds with generated text
 And the response time is logged
 
 Given the API fails on first attempt
 When the request is made
-Then it automatically retries with exponential backoff
+Then LangChain automatically retries with exponential backoff
 And succeeds on the second attempt
 
 Given I make multiple LLM calls
 When I check the cost tracker
 Then I can see total tokens used and estimated cost
 And each request is logged with model and tokens
+
+Given I use structured output with Pydantic models
+When I call the LLM with a Pydantic schema
+Then the response is validated and parsed into the Pydantic model
+And invalid outputs raise validation errors
 
 Given I use the LLM client wrapper
 When I call it with invalid parameters
@@ -2618,17 +2626,19 @@ And I receive a clear type error message
 - FR-ARCH-002: Tool-Based Agent Integration
 - FR-CONV-004: Response Quality (retry ensures reliability)
 
-**Architecture Reference:** Intelligence Layer - Multi-Model Strategy
+**Architecture Reference:** Intelligence Layer - Pydantic + LangGraph Integration Strategy
 
 **Definition of Done:**
-- [ ] Pydantic AI Gateway installed and configured
-- [ ] Claude Sonnet 4.5 model accessible
+- [ ] LangChain and langchain-anthropic installed
+- [ ] ChatAnthropic configured with Claude Sonnet 4.5
+- [ ] Pydantic v2 structured output working
 - [ ] LLM client wrapper with type safety
-- [ ] Retry logic implemented (3 attempts)
-- [ ] Cost tracking enabled
+- [ ] Retry logic implemented (LangChain built-in)
+- [ ] Cost tracking enabled (LangSmith or callbacks)
 - [ ] Logging and observability working
 - [ ] Basic chat completion tested
 - [ ] Error handling for API failures
+- [ ] Structured output validation tested
 
 ---
 
@@ -2642,8 +2652,8 @@ And I receive a clear type error message
 Create the tool calling framework and implement all 8 core tools that the agent uses to query the knowledge base, detect contradictions, generate content, and retrieve information.
 
 **Technical Details:**
-- Tool framework using Pydantic AI Gateway tool calling
-- Implement 8 tools:
+- Tool framework using LangChain tool calling with Pydantic v2 schemas
+- Implement 8 tools (each with Pydantic input/output validation):
   1. `query_knowledge_base(query, filters)` - Semantic search
   2. `detect_contradictions(topic)` - Find inconsistencies
   3. `generate_cim_section(section, filters)` - Trigger CIM generation

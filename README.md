@@ -156,24 +156,25 @@ This project is built using the **BMAD Framework** (Build Mad Agentic Delivery) 
 ## 🛠️ Technology Stack
 
 ### Backend
-- **Framework:** FastAPI (Python)
-- **Database:** PostgreSQL 17 (with pgvector for embeddings)
-- **Graph DB:** Neo4j (knowledge graph, source attribution)
-- **Workflow Engine:** LangGraph (state management, checkpoints)
-- **AI Gateway:** Pydantic AI Gateway (type-safe LLM abstraction)
+- **Framework:** FastAPI 0.121+ (Python 3.11+)
+- **Database:** PostgreSQL 18 (Supabase) with pgvector 0.8+
+- **Graph DB:** Neo4j 2025.01 (knowledge graph, source attribution)
+- **AI Framework:** LangChain 1.0 + LangGraph 1.0 (workflow orchestration, human-in-the-loop)
+- **Type Safety:** Pydantic v2.12+ (structured outputs, validation)
+- **LLM Integration:** LangChain adapters (model-agnostic, multi-provider support)
 
 ### Frontend
-- **Framework:** Next.js 15.1 (App Router)
-- **UI:** React 19, Tailwind CSS, shadcn/ui
+- **Framework:** Next.js 15 (App Router) with React 19.2
+- **UI:** Tailwind CSS 4, shadcn/ui
 - **State:** Zustand + React Query
 - **Real-time:** WebSockets (chat), SSE (background processing)
 
-### AI/ML
-- **Document Extraction:** Gemini 3.0 Pro (2M context, thinking mode)
-- **User-Facing Chat:** Claude Sonnet 4.5 (latest model, best quality)
-- **CIM Narrative:** Claude Sonnet 4.5 (long-form content generation)
-- **Speed Tasks:** Claude Haiku 4 (fast, cost-effective)
-- **Embeddings:** OpenAI text-embedding-3-large (semantic search)
+### AI/ML (Model-Agnostic Configuration)
+- **Conversation:** Configurable (default: Claude Sonnet 4.5 or Gemini 2.0 Pro)
+- **Document Extraction:** Configurable (default: Gemini 2.0 Pro 2M context or Claude Opus 3)
+- **Speed Tasks:** Configurable (default: Claude Haiku 4 or Gemini 2.0 Flash)
+- **Embeddings:** Configurable (default: OpenAI text-embedding-3-large)
+- **Provider Support:** Anthropic Claude, Google Gemini, OpenAI GPT, and more via LangChain
 
 ### Infrastructure
 - **Deployment:** Docker Compose (development), Kubernetes (production)
