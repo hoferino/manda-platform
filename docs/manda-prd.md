@@ -3,10 +3,10 @@
 
 **Document Status:** In Review
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-11-24
 **Owner:** Max
 **Contributors:** PM John
-**Version:** 1.3 (Integrated CIM v3 workflow from POC: 14-phase interactive workflow with dedicated CIM Builder UI, extreme visual precision, and RAG integration)
+**Version:** 1.4 (Strategic refinements: flexible cross-domain pattern library, Financial Model Integration elevated to MVP, IRL workflow refocused on extraction, CIM phase count flexible, confidence scoring risk documented, live preview added)
 
 ---
 
@@ -24,7 +24,7 @@ Manda is a comprehensive M&A intelligence platform that transforms how analysts 
 
 **The Intelligent Agent Layer:**
 - **Conversational Interface**: Natural language interaction that queries the knowledge base and guides the analyst
-- **Cross-Domain Analysis**: Sophisticated pattern detection across financial, operational, market, and strategic dimensions
+- **Cross-Domain Analysis**: Sophisticated pattern detection across financial, operational, market, and strategic dimensions with configurable pattern library
 - **Proactive Intelligence**: System initiates insights when it detects patterns, not just responding to queries
 - **Continuous Learning**: Builds cumulative understanding over time, never starting fresh
 
@@ -47,7 +47,7 @@ Unlike generic AI assistants that start fresh each conversation, or traditional 
 - **Persistent Memory**: Builds cumulative knowledge across all conversations and documents - never forgets previous insights, contradictions, or analyst decisions
 - **Background Intelligence**: Continuously processes new information, performs cross-domain analysis, and synthesizes insights even when analysts aren't actively engaged
 - **Proactive + Reactive**: Surfaces insights bi-directionally (system initiates "I noticed..." alongside analyst queries)
-- **Domain Expertise Built-In**: 11+ sophisticated M&A-specific cross-domain intelligence patterns (Financial × Operational, Growth × Quality, Contracts × Projections, etc.) that transform raw data into actionable insights
+- **Domain Expertise Built-In**: Configurable M&A-specific cross-domain intelligence pattern library (Financial × Operational, Growth × Quality, Contracts × Projections, Market × Valuation, and more) that transforms raw data into actionable insights
 - **Source Attribution**: Every finding traced to source with confidence scoring - critical for banking credibility
 - **Platform Integration**: Combines conversational interface with data room organization, IRL tracking, Q&A co-creation, and CIM generation in one unified experience
 
@@ -302,9 +302,11 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 **Core Features:**
 
 1. **IRL-Driven Workflow**
-   - Upload IRL (Excel) and auto-generate folder structure in Data Room
-   - Manual drag & drop document organization into folders
-   - IRL checklist auto-updates as documents placed in folders
+   - **Upload and Extract IRL**: Upload IRL (Excel) and system extracts structure, categories, and requested items
+   - **Auto-Generate Data Room**: Automatically create folder structure in Data Room based on extracted IRL
+   - **Document Organization**: Manual drag & drop document organization into folders
+   - **IRL Checklist Tracking**: IRL checklist auto-updates as documents placed in folders, showing coverage and gaps
+   - **Gap Identification**: System identifies missing items and suggests follow-up requests
    - Template library for common M&A deal types
    - Progress tracking and status indicators
 
@@ -341,8 +343,17 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
    - Narrative coherence validation against established story arc
    - Export as unstyled PowerPoint blueprint or LLM prompt
    - Visual style template extraction and application
+   - **Live preview capability** for visual concepts and slide layouts
 
-7. **Basic Insight Surfacing**
+7. **Financial Model Integration**
+   - Extract key financial metrics from Excel models (revenue, EBITDA, cash flow, balance sheet items)
+   - Parse formula dependencies and calculation logic
+   - Identify projection assumptions and growth drivers
+   - Store financial time series data in knowledge base with source attribution
+   - Support queries about financial metrics ("What was Q3 2023 EBITDA?")
+   - Cross-validate financial data across multiple documents
+
+8. **Basic Insight Surfacing**
    - Simple pattern detection (e.g., missing data, inconsistencies)
    - Contradiction detection with confidence thresholds
    - Reactive insights (answers to analyst questions)
@@ -350,11 +361,13 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 
 **Out of Scope for MVP:**
 - Smart Document Classification & Organization (AI-assisted classification with user approval - Phase 2)
-- Complex cross-domain intelligence patterns (11+ M&A patterns - Phase 3)
+- Complex cross-domain intelligence patterns (extensive pattern library - Phase 3)
 - Proactive insight surfacing (system initiates insights - Phase 3)
 - Deal-type specific configurations
 - External data source integration
 - Advanced analytics and visualization
+- Comparable company analysis (Phase 2)
+- Deal-breaker detection (might do - Phase 3)
 
 ### Growth Features (Phase 2): Platform Enhancement
 
@@ -671,17 +684,20 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 
 **FR-CIM-001: CIM Builder UI and Workflow Interface (Platform Service)**
 - Dedicated CIM Builder interface at `/projects/[id]/cim-builder`
-- Visual workflow progress indicator showing 14 phases
+- Visual workflow progress indicator showing current phase structure (typically 14 phases, but flexible)
 - Current phase highlighted with completion status
 - Sidebar showing narrative structure being built
 - Main content area for conversational interaction
 - Buyer persona selection (Strategic Buyer, Financial Buyer, Custom)
 - Drag-and-drop slide reordering within sections
 - Non-linear navigation (jump to any phase, go back, reorder)
+- **Live preview capability** for visual concepts being designed
 - Auto-save workflow state continuously
 - Resume capability from any checkpoint
 
-**FR-CIM-002: 14-Phase Interactive Workflow (Agent + Platform)**
+**FR-CIM-002: Structured Interactive Workflow (Agent + Platform)**
+
+**Note on Phase Count**: The workflow is designed with ~14 phases as the established structure, but the system can adapt the phase count based on complexity and user preference. The key is **comprehensive guidance** through the narrative building process, not a fixed phase count. The agent guides the analyst through all critical steps regardless of how phases are organized.
 
 **Phase 1: Understand Buyer Context**
 - Conversational buyer persona discovery (not template selection)
@@ -1526,6 +1542,21 @@ M&A transactions involve analyzing companies across multiple dimensions to asses
   - Don't fail on partial issues
   - User can override/correct system findings
   - Clear indication of data quality issues
+
+**RISK-009: Confidence Scoring and Contradiction Resolution Complexity**
+- Risk: System flags too many false positive contradictions, or misses real ones, causing analysts to either ignore the system or lose trust
+- Severity: HIGH (undermines core value proposition)
+- Context: The "Complexity of Truth" - balancing sensitivity vs specificity in contradiction detection
+- Mitigation:
+  - **Learning Loop (Epic 7) is CRITICAL**: System must learn from analyst corrections to calibrate thresholds
+  - Conservative initial thresholds (fewer false positives, prioritize precision over recall)
+  - Confidence calibration based on analyst validation/rejection patterns
+  - Clear categorization of contradictions (hard conflict vs discrepancy vs context difference)
+  - User control over sensitivity settings (can adjust threshold based on preference)
+  - Track false positive rate and tune detection algorithms
+  - Provide clear context for why system flagged contradiction (don't just say "conflict")
+  - Allow analyst to mark contradictions as "acceptable difference" vs "real issue"
+  - Regular review of contradiction detection quality metrics
 
 ---
 

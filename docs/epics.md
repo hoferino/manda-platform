@@ -2,9 +2,9 @@
 
 **Document Status:** Complete (MVP Epics E1-E9)
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-11-24
 **Owner:** Max
-**Version:** 2.0 (Integrated CIM v3 workflow from POC: 14-phase interactive workflow with dedicated CIM Builder UI, replaced E9 stories 4-9)
+**Version:** 2.1 (Strategic refinements: Added Neo4j/pg-boss setup stories to E1, Financial Model Integration story to E3, updated IRL and CIM epics for flexibility and live preview)
 
 ---
 
@@ -646,6 +646,139 @@ Then logs older than 1 year are archived
 - [ ] IP address and user agent captured
 - [ ] RLS prevents users from seeing others' logs
 - [ ] Retention policy documented
+
+---
+
+#### Story E1.8: Set up Neo4j Database for Knowledge Graph
+
+**As a** developer
+**I want** Neo4j database configured for knowledge graph storage
+**So that** we can model relationships between findings, documents, and cross-domain patterns
+
+**Description:**
+Set up Neo4j database instance (Docker or Neo4j Aura), configure connection from backend, create initial node and relationship schemas for knowledge graph, and implement basic CRUD operations for graph data.
+
+**Technical Details:**
+- Set up Neo4j 2025.01 instance (Docker Compose for dev, Neo4j Aura for prod)
+- Configure Neo4j connection in backend (`neo4j` Python driver)
+- Define node types: Finding, Document, Entity, Pattern, Contradiction
+- Define relationship types: SOURCED_FROM, CONTRADICTS, RELATED_TO, VALIDATES
+- Create indexes on key properties (finding_id, document_id)
+- Implement graph service layer (`packages/knowledge/graph.py`)
+
+**Acceptance Criteria:**
+
+```gherkin
+Given Neo4j is running
+When I connect from the backend
+Then the connection succeeds
+And I can execute Cypher queries
+
+Given I create a Finding node
+When I link it to a Document node with SOURCED_FROM relationship
+Then the relationship is created
+And I can query the graph to find document sources
+
+Given I have two contradicting findings
+When I create a CONTRADICTS relationship between them
+Then the contradiction is stored in the graph
+And I can query for all contradictions
+
+Given the graph service is implemented
+When I call create_finding(data, source_doc_id)
+Then a Finding node is created
+And it's linked to the Document node
+And the operation is idempotent
+```
+
+**Related FR:**
+- FR-KB-001: Structured Knowledge Storage
+- FR-KB-002: Source Attribution
+- FR-KB-004: Cross-Document Analysis
+
+**Architecture Reference:** Data Architecture - Neo4j Knowledge Graph
+
+**Definition of Done:**
+- [ ] Neo4j 2025.01 instance running (Docker Compose)
+- [ ] Neo4j connection configured in backend
+- [ ] Node types defined (Finding, Document, Entity, Pattern, Contradiction)
+- [ ] Relationship types defined (SOURCED_FROM, CONTRADICTS, RELATED_TO, VALIDATES)
+- [ ] Indexes created on key properties
+- [ ] Graph service layer implemented (`create_node`, `create_relationship`, `query_graph`)
+- [ ] Environment variables documented
+- [ ] Connection tested and working
+- [ ] Basic CRUD operations tested
+
+---
+
+#### Story E1.9: Set up pg-boss Background Job Queue
+
+**As a** developer
+**I want** pg-boss configured for background job processing
+**So that** document processing and analysis can happen asynchronously
+
+**Description:**
+Install and configure pg-boss (PostgreSQL-backed job queue), set up worker infrastructure, create initial job types for document processing, and implement job monitoring and retry logic.
+
+**Technical Details:**
+- Install `pg-boss` npm package in backend
+- Configure pg-boss to use existing PostgreSQL database
+- Create job queues: `parse_document`, `generate_embeddings`, `analyze_document`, `update_graph`
+- Set up worker process (`apps/workers/main.py`)
+- Implement job handlers for each queue
+- Configure retry logic (3 retries with exponential backoff)
+- Add job monitoring endpoint (`/api/jobs/status`)
+
+**Acceptance Criteria:**
+
+```gherkin
+Given pg-boss is configured
+When I enqueue a job
+Then the job is stored in PostgreSQL
+And I receive a job ID
+
+Given a worker is running
+When a job is enqueued
+Then the worker picks it up
+And executes the job handler
+And marks it complete
+
+Given a job fails
+When the failure occurs
+Then the job is retried
+And retry count increments
+And after 3 failures, job is marked as failed
+
+Given I query job status
+When I call /api/jobs/status/{job_id}
+Then I see job state (queued, active, completed, failed)
+And I see retry count and error messages if failed
+
+Given multiple jobs are queued
+When workers process them
+Then jobs are processed in priority order
+And I can see queue depth and processing rate
+```
+
+**Related FR:**
+- FR-BG-001: Event-Driven Architecture
+- FR-BG-002: Processing Pipeline
+- FR-BG-003: Autonomous Intelligence
+- FR-BG-004: Processing Transparency
+
+**Architecture Reference:** Background Processing Architecture
+
+**Definition of Done:**
+- [ ] pg-boss installed and configured
+- [ ] Job queues created (parse_document, generate_embeddings, analyze_document, update_graph)
+- [ ] Worker process implemented (`apps/workers/main.py`)
+- [ ] Job handlers implemented for each queue
+- [ ] Retry logic configured (3 retries, exponential backoff)
+- [ ] Job monitoring endpoint (`/api/jobs/status`) implemented
+- [ ] Error handling and logging implemented
+- [ ] Worker can be started/stopped cleanly
+- [ ] Jobs persist across worker restarts
+- [ ] Queue depth and processing metrics available
 
 ---
 
@@ -1817,6 +1950,81 @@ And processing continues (graph update is not blocking)
 - [ ] Graph traversal queries tested
 - [ ] Error handling for Neo4j unavailable
 - [ ] Job retry logic works
+
+---
+
+#### Story E3.6: Financial Model Integration - Extract and Query Financial Metrics
+
+**As an** analyst
+**I want** financial metrics extracted from Excel models and queryable through chat
+**So that** I can quickly access financial data without manually searching through spreadsheets
+
+**Description:**
+Implement financial data extraction from Excel models with formula preservation, store metrics in a dedicated financial_metrics table, integrate with knowledge base for cross-validation, and enable agent queries for financial data (e.g., "What was Q3 2023 EBITDA?").
+
+**Technical Details:**
+- Create `financial_metrics` table in PostgreSQL
+- Implement `FinancialModelExtractor` service (`packages/financial-extraction/extractor.py`)
+- Extract key metrics: revenue (by period, segment), EBITDA, cash flow, balance sheet items, projections, assumptions
+- Parse Excel formulas and identify calculation dependencies
+- Store metrics with source attribution (sheet name, cell reference)
+- Create Neo4j nodes for financial metrics with SOURCED_FROM relationships
+- Add agent tool: `query_financial_metric(metric_type, period)`
+- Implement cross-validation logic to detect contradictions across documents
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I upload a financial model Excel file
+When the document processing completes
+Then financial metrics are extracted
+And stored in the financial_metrics table
+And I see: "Financial model processed. Extracted revenue, EBITDA, and cash flow data for 12 periods."
+
+Given financial metrics are extracted
+When I ask "What was Q3 2023 revenue?"
+Then the agent queries the financial_metrics table
+And responds with the value and source
+And shows: "Q3 2023 revenue was $5.2M (source: financial_model.xlsx, sheet 'P&L', cell B15)"
+
+Given I upload a second document with conflicting revenue data
+When the cross-validation runs
+Then a contradiction is detected
+And flagged in the knowledge graph
+And the agent notifies: "Contradiction detected: Q3 2023 revenue shows $5.2M in financial_model.xlsx but $4.8M in management_presentation.pptx"
+
+Given formulas are extracted
+When I query formula dependencies
+Then I can see calculation logic
+And understand how metrics are derived
+
+Given financial metrics span multiple periods
+When I ask "Show revenue growth from Q1 to Q4 2023"
+Then the agent retrieves all relevant periods
+And calculates growth percentage
+And cites sources for each period
+```
+
+**Related FR:**
+- FR-DOC-004: Document Processing (formula extraction)
+- FR-KB-001: Structured Knowledge Storage
+- FR-KB-002: Source Attribution
+- FR-KB-004: Cross-Document Analysis (cross-validation)
+- FR-CONV-002: Query Capabilities
+
+**Architecture Reference:** Financial Model Integration section
+
+**Definition of Done:**
+- [ ] `financial_metrics` table created with indexes
+- [ ] `FinancialModelExtractor` service implemented
+- [ ] Extraction logic for revenue, EBITDA, cash flow, balance sheet items
+- [ ] Formula parsing and dependency tracking
+- [ ] Source attribution stored (sheet, cell reference)
+- [ ] Neo4j integration for financial metric nodes
+- [ ] Agent tool `query_financial_metric` implemented
+- [ ] Cross-validation logic detects contradictions
+- [ ] Integration tested with sample financial models
+- [ ] Agent can answer financial queries with sources
 
 ---
 
@@ -3033,9 +3241,9 @@ And explains the range
 
 ## Epic 6: IRL Management & Auto-Generation
 
-**User Value:** Users can create IRLs from templates, upload Excel IRLs to auto-generate Data Room folder structures, and track document fulfillment
+**User Value:** Users can upload Excel IRLs to extract structure and auto-generate Data Room folders, track document fulfillment, and identify gaps
 
-**Description:** Implements the IRL (Information Request List) creation, auto-generation, tracking, and management features. Users can select from templates for different deal types, upload an IRL Excel file to automatically generate matching Data Room folder structure, customize IRL items, track fulfillment status as documents are placed in folders, and link received documents to IRL items. The IRL checklist auto-updates when documents are placed in IRL-linked folders.
+**Description:** Implements the IRL (Information Request List) workflow focused on: (1) **Upload and Extract IRL**: Upload IRL Excel file and system extracts structure, categories, and requested items, (2) **Auto-Generate Data Room**: Automatically create hierarchical folder structure based on extracted IRL, (3) **Track Fulfillment**: IRL checklist auto-updates as documents are placed in folders, showing coverage and gaps, (4) **Gap Identification**: System identifies missing items and suggests follow-up requests. Users can also select from templates for different deal types and customize IRL items as needed.
 
 **Functional Requirements Covered:**
 - FR-IRL-001: IRL Creation
@@ -4119,23 +4327,25 @@ And questions have source footnotes
 
 ## Epic 9: CIM Company Overview Creation (CIM v3 Workflow)
 
-**User Value:** Users can create professional-grade Company Overview chapters through 14-phase deeply interactive workflow with AI guidance
+**User Value:** Users can create professional-grade Company Overview chapters through structured interactive workflow with comprehensive AI guidance and live preview
 
-**Description:** Implements the proven CIM v3 workflow from POC into the full platform. Enables analysts to create Company Overview chapters through a deeply conversational, iterative 14-phase process in a dedicated CIM Builder UI at `/projects/[id]/cim-builder`. The workflow:
+**Description:** Implements the proven CIM v3 workflow from POC into the full platform. Enables analysts to create Company Overview chapters through a deeply conversational, iterative process (typically ~14 phases, adaptable based on complexity) in a dedicated CIM Builder UI at `/projects/[id]/cim-builder` with **live preview capability** for visual concepts. The workflow:
 1. Discovers buyer context and narrative approach organically (not template-driven)
 2. Builds investment thesis collaboratively (3-part: Asset, Timing, Opportunity)
 3. Creates narrative outline with logical flow reasoning
-4. Builds slides one at a time (content-first, then visual concepts)
+4. Builds slides one at a time (content-first, then visual concepts with **live preview**)
 5. Validates narrative coherence continuously with balance checks after each section
 6. Provides extreme visual precision (position, format, styling for EVERY element)
 7. Supports non-linear workflow (jump between sections, go back, reorder)
 8. Exports comprehensive outputs (content markdown, slide blueprints, guide, LLM prompt template)
 
+**Note on Phase Structure:** The workflow is designed with ~14 phases as the established structure, but can adapt based on complexity and user needs. The critical aspect is **comprehensive guidance** through buyer persona discovery, narrative development, content creation, and visual design—not a fixed phase count.
+
 **Scope:** Company Overview chapter ONLY (other CIM chapters in Phase 2/E13)
 
 **Functional Requirements Covered:**
-- FR-CIM-001: CIM Builder UI and Workflow Interface
-- FR-CIM-002: 14-Phase Interactive Workflow
+- FR-CIM-001: CIM Builder UI and Workflow Interface (with live preview)
+- FR-CIM-002: Structured Interactive Workflow (adaptive phase count)
 - FR-CIM-003: Agent Intelligence and Tools
 - FR-CIM-004: Workflow State Management
 - FR-CIM-005: Special Commands

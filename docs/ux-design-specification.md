@@ -1,6 +1,8 @@
 # Manda UX Design Specification
 
 _Created on 2025-11-19 by Max_
+_Last Updated: 2025-11-24_
+_Version: 1.1 (Added Financial Model Integration and live preview features)_
 _Generated through collaborative UX design discussion_
 
 ---
@@ -330,6 +332,56 @@ Each bucket card shows:
 4. **Status updates** in real-time (WebSocket)
 5. **Notification** when complete: "Financial statements analyzed. 12 findings extracted."
 
+#### Financial Model Integration (MVP Feature)
+
+**Purpose:** Extract and analyze financial data from Excel models
+
+**Upload Flow:**
+1. User uploads Excel file (.xlsx) containing financial model
+2. System detects financial model patterns (revenue projections, EBITDA, cash flow, balance sheet)
+3. **Processing notification:** "Analyzing financial model structure..."
+4. **Extraction results:** "Extracted 24 key metrics, 15 assumptions, 8 formula dependencies"
+
+**UX Components:**
+
+**Financial Model Card (in Data Room):**
+- **Header:** File name + "Financial Model" badge
+- **Preview Stats:**
+  - Time period coverage (e.g., "2021-2026")
+  - Key metrics count (24 metrics)
+  - Assumptions identified (15)
+  - Formula dependencies mapped (8)
+- **Actions:**
+  - View metrics dashboard
+  - Explore assumptions
+  - Query financial data
+  - Link to findings
+
+**Financial Metrics Dashboard (Modal or dedicated view):**
+
+**Layout:**
+- **Time Series Chart:** Revenue, EBITDA, Cash Flow over projection period
+- **Metrics Table:**
+  | Metric | 2023A | 2024E | 2025E | 2026E | CAGR |
+  |--------|-------|-------|-------|-------|------|
+  | Revenue | $50M | $65M | $82M | $98M | 25% |
+  | EBITDA | $12M | $16M | $21M | $27M | 31% |
+
+- **Assumptions Panel:**
+  - Revenue growth rate: 30% → 20% → 15%
+  - Gross margin: 75% steady state
+  - OpEx as % revenue: 45% → 40%
+
+**Query Integration:**
+- Chat can answer: "What was Q3 2023 EBITDA?"
+- Knowledge Explorer shows financial metrics as findings
+- Cross-validation alerts: "EBITDA mismatch: Excel shows $12M, CIM states $14M (confidence: high)"
+
+**Visual Indicators:**
+- 📊 Icon for financial model files
+- Different badge color for financial documents
+- Metric sparklines in search results
+
 ### 5.3 Knowledge Explorer ⭐ (ANALYSIS WORKSPACE)
 
 **Purpose:** Analyst's primary workspace for reviewing, validating, and exploring extracted intelligence
@@ -644,6 +696,78 @@ Each bucket card shows:
 - Save drafts
 - Compare versions
 - Restore previous versions
+
+#### Live Preview Capability (MVP Feature)
+
+**Purpose:** Visual preview of CIM content, slide layouts, and styling before final export
+
+**Live Preview Panel (Toggle):**
+
+**Layout:**
+- **Split View:** Editor (left) + Live Preview (right)
+- **Toggle Button:** "Show Preview" / "Hide Preview" in editor toolbar
+- **Preview Modes:**
+  - Document view (continuous scroll, Word-like)
+  - Slide view (paginated, PowerPoint-like)
+  - Print preview (PDF layout)
+
+**Visual Concept Preview:**
+
+When generating sections like "Company Overview" or "Market Analysis":
+1. **AI generates content** with suggested visual concepts
+2. **Live preview shows:**
+   - Formatted text with selected typography
+   - Placeholder visuals (charts, diagrams, images) with labels
+   - Slide layout options (title + content, 2-column, image-heavy, etc.)
+3. **User can toggle layouts:** Click alternate layout thumbnails
+4. **Real-time updates:** Edits reflect immediately in preview
+
+**Slide Layout Options:**
+
+**Layout Templates (Visual thumbnails in sidebar):**
+- **Title Slide:** Large heading, subtitle, logo placement
+- **Executive Summary:** 3-column key points with icons
+- **Financial Overview:** Chart + bullet points (2-column)
+- **Market Analysis:** Full-width chart + caption
+- **Risk Factors:** Icon grid with descriptions
+- **Custom:** User-defined layouts
+
+**Per-Section Preview:**
+- Shows section heading styled
+- Body text formatted (fonts, spacing, alignment)
+- Visual elements positioned (charts, tables, diagrams)
+- Page breaks indicated
+- Footer/header preview
+
+**Interactive Preview Controls:**
+- **Zoom:** 50% / 75% / 100% / 125% / Fit width
+- **Navigate:** Previous/Next section buttons
+- **Layout switcher:** Dropdown to change section layout
+- **Style:** Apply visual style template (professional blue, modern minimal, bold corporate)
+
+**Style Template Preview:**
+
+**Visual Style Options (thumbnails):**
+1. **Professional Blue:** Blues/grays, conservative, banking-appropriate
+2. **Modern Minimal:** Clean whites, subtle accents, lots of whitespace
+3. **Bold Corporate:** High contrast, strong brand colors, impactful
+
+**Preview shows:**
+- Color scheme applied to headings, accents, charts
+- Typography hierarchy visible
+- Visual weight and spacing
+- Overall aesthetic feel
+
+**Export with Preview Confidence:**
+- What you see in preview = what exports to Word/PDF
+- No surprises in final output
+- Iterate quickly on visual presentation
+
+**Benefits:**
+- Analysts see exactly what CIM will look like
+- Catch formatting issues before export
+- Try multiple visual approaches quickly
+- Confidence in final deliverable appearance
 
 ---
 

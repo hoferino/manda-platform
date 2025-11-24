@@ -3,10 +3,10 @@
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-11-24
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 2.2 (Updated to latest stable versions + model-agnostic LLM configuration)
+**Version:** 2.3 (Strategic refinements: flexible cross-domain pattern library, Financial Model Integration elevated to MVP, CIM workflow phase flexibility, live preview feature added)
 
 ---
 
@@ -242,6 +242,75 @@ Emit event: document_processed
 WebSocket notification to frontend
   ↓
 User sees: "Financial statements analyzed. 12 findings extracted."
+```
+
+### Financial Model Integration (MVP Feature)
+
+**Purpose:** Extract, parse, and query financial data from Excel models with formula preservation and cross-validation.
+
+**Architecture Components:**
+
+```python
+# packages/financial-extraction/extractor.py
+class FinancialModelExtractor:
+    """Extracts financial metrics from Excel models"""
+
+    def extract_financial_data(self, excel_file):
+        """
+        Extract key financial metrics:
+        - Revenue (by period, by segment)
+        - EBITDA and margins
+        - Cash flow statements
+        - Balance sheet items (working capital, debt, assets)
+        - Projections and assumptions
+        - Formula dependencies
+        """
+        return {
+            'time_series': [...],      # Revenue, EBITDA, etc. over time
+            'formulas': [...],         # Formula logic and dependencies
+            'assumptions': [...],      # Growth rates, drivers
+            'cross_refs': [...]        # Sheet/cell references
+        }
+
+    def store_financial_data(self, metrics, deal_id, doc_id):
+        """Store in financial_metrics table with source attribution"""
+        # Creates entries in financial_metrics table
+        # Links to knowledge graph via Neo4j
+        # Enables queries: "What was Q3 2023 EBITDA?"
+```
+
+**Database Schema Addition:**
+```sql
+CREATE TABLE financial_metrics (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    deal_id uuid REFERENCES deals(id),
+    document_id uuid REFERENCES documents(id),
+    metric_type text NOT NULL,  -- 'revenue', 'ebitda', 'cash_flow', etc.
+    period date NOT NULL,        -- Quarter or year
+    value numeric,
+    unit text,                   -- 'USD', 'millions', etc.
+    formula text,                -- Excel formula if extracted
+    assumptions jsonb,           -- Related assumptions
+    source_reference text,       -- Sheet name, cell reference
+    created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_financial_metrics_deal ON financial_metrics(deal_id);
+CREATE INDEX idx_financial_metrics_type ON financial_metrics(metric_type, period);
+```
+
+**Integration with Knowledge Base:**
+- Financial metrics stored as specialized findings
+- Cross-validated against other document sources
+- Queryable via agent tools: `query_financial_metric(metric, period)`
+- Contradiction detection for inconsistent financial data across documents
+
+**Processing Flow:**
+```
+Excel upload → Docling parse → Financial extractor identifies sheets →
+Extract metrics + formulas → Store in financial_metrics table →
+Create Neo4j nodes for metrics → Link to source document →
+Enable queries: "What was Q3 EBITDA growth?" → Agent retrieves with source
 ```
 
 ---
@@ -832,17 +901,19 @@ llm_config = LLMConfig(
 
 ### Overview
 
-**What:** 14-phase deeply interactive workflow for creating Company Overview CIM chapters
+**What:** Structured interactive workflow (typically ~14 phases) for creating Company Overview CIM chapters with comprehensive analyst guidance
 **Where:** Dedicated CIM Builder UI at `/projects/[id]/cim-builder`
-**How:** LangGraph workflow with human-in-the-loop interrupts + RAG knowledge integration
+**How:** LangGraph workflow with human-in-the-loop interrupts + RAG knowledge integration + live preview capability
 **Scope:** Company Overview chapter ONLY in MVP (other chapters in Phase 2)
+
+**Note on Phase Structure:** The workflow is designed with ~14 phases as the established structure, but can adapt based on complexity and user needs. The critical aspect is **comprehensive guidance** through buyer persona discovery, narrative development, content creation, and visual design—not a fixed phase count.
 
 ### Architecture Components
 
 **Frontend (CIM Builder UI):**
 ```
 /projects/[id]/cim-builder
-├── Left Sidebar: Workflow Progress (14 phases)
+├── Left Sidebar: Workflow Progress (adaptive phase count)
 │   ├── Phase indicator (current, completed, pending)
 │   ├── Narrative structure tree view
 │   └── Navigation controls (jump, back, special commands)
@@ -851,12 +922,20 @@ llm_config = LLMConfig(
 │   ├── User input and decisions
 │   ├── Content preview (slides being built)
 │   └── Visual concept previews
-└── Right Panel: Context
+└── Right Panel: Live Preview & Context
+    ├── **Live slide preview** (real-time visual concept rendering)
     ├── Buyer persona summary
     ├── Investment thesis
     ├── Current section info
     └── Quick actions
 ```
+
+**Live Preview Feature (High-Value Add):**
+- Real-time rendering of visual concepts as analyst makes decisions
+- Preview updates dynamically during visual phase
+- Shows layout, positioning, color scheme, graphics
+- Enables immediate visual feedback before approval
+- Technical implementation: React component library + CSS-in-JS for slide rendering
 
 **Backend (LangGraph Workflow):**
 ```python
@@ -1136,7 +1215,9 @@ def validate_visual_concept(visual_concept, content_elements):
 
 ### Cross-Domain Patterns (Phase 3)
 
-11 sophisticated patterns:
+**Configurable Pattern Library** - The system includes an extensible library of M&A-specific cross-domain intelligence patterns. The initial set includes common patterns, but the library is designed to be configurable and expandable:
+
+**Example Patterns:**
 1. Financial × Operational Efficiency
 2. Growth × Quality
 3. Contracts × Financial Projections
@@ -1148,6 +1229,12 @@ def validate_visual_concept(visual_concept, content_elements):
 9. Customer Concentration × Contract Flexibility
 10. Supply Chain × Geopolitical
 11. Valuation Multiple × Growth Maturity
+
+**Pattern Configuration:**
+- Patterns can be enabled/disabled per deal type
+- Custom patterns can be added via configuration
+- Confidence thresholds adjustable per pattern
+- Learning loop improves pattern detection over time
 
 ---
 
@@ -1612,6 +1699,36 @@ npm install
 ---
 
 ## Changelog
+
+### Version 2.3 (2025-11-24)
+**Strategic Refinements - MVP Scope Adjustments:**
+- **Flexible Cross-Domain Pattern Library:**
+  - Updated from fixed "11 patterns" to configurable pattern library approach
+  - Added pattern configuration section (enable/disable, custom patterns, adjustable thresholds)
+  - Emphasized extensibility and deal-type specific customization
+  - Learning loop improves pattern detection over time
+- **Financial Model Integration Elevated to MVP:**
+  - Added comprehensive Financial Model Integration section with architecture components
+  - New `financial_metrics` table schema for storing extracted financial data
+  - FinancialModelExtractor service for parsing Excel models with formula preservation
+  - Integration with knowledge base and Neo4j for cross-validation
+  - Agent tool support for financial metric queries
+- **CIM Workflow Phase Flexibility:**
+  - Updated from rigid "14-phase" to "typically ~14 phases" with adaptive structure
+  - Emphasized comprehensive guidance over fixed phase count
+  - Added note on workflow adaptability based on complexity
+  - Maintains quality while allowing flexibility
+- **Live Preview Feature Added:**
+  - Updated CIM Builder UI with live preview panel
+  - Real-time visual concept rendering during visual design phase
+  - Technical implementation notes (React components + CSS-in-JS)
+  - Identified as high-value feature for immediate visual feedback
+
+**Why This Matters:**
+- Aligns architecture with user feedback and strategic priorities
+- Elevates financial data extraction to core MVP value proposition
+- Provides flexibility while maintaining established workflow quality
+- Adds critical visual feedback capability for CIM creation
 
 ### Version 2.2 (2025-11-23)
 **Latest Stable Versions + Model-Agnostic Configuration:**
