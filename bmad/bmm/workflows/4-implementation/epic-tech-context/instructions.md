@@ -111,25 +111,8 @@ Continuing to regenerate tech spec...
 
   <step n="6" goal="Dependencies and integrations">
     <action>Scan repository for dependency manifests (e.g., package.json, pyproject.toml, go.mod, Unity Packages/manifest.json).</action>
-
-    <!-- NEW: MCP Documentation Lookup -->
-    <action>For each major framework/library identified in the Architecture document (e.g., Next.js, FastAPI, LangChain, Supabase, Neo4j):
-      1. Check if Context7 MCP server is available (ListMcpResourcesTool)
-      2. If available, query Context7 for official documentation of the library/framework
-      3. Extract relevant best practices, version-specific guidance, and integration patterns
-      4. Fall back to WebSearch if MCP unavailable or doesn't have the library
-      5. Prioritize official documentation over third-party sources
-    </action>
-
-    <note>MCP Context7 provides curated, up-to-date documentation for popular libraries. Use it to validate architecture choices against current best practices.</note>
-
     <template-output file="{default_output_file}">
-      Replace {{dependencies_integrations}} with:
-      - Structured list of dependencies with version constraints
-      - Integration points with other services
-      - Official documentation references (from MCP/web lookup)
-      - Best practices and patterns from official sources
-      - Known compatibility issues or version requirements
+      Replace {{dependencies_integrations}} with a structured list of dependencies and integration points with version or commit constraints when known
     </template-output>
   </step>
 

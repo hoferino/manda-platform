@@ -1,0 +1,64 @@
+# Data Room Audit Workflow
+# Comprehensive analysis of uploaded deal documents with inconsistency detection
+
+name: Data Room Audit
+code: data-room-audit
+version: 1.0.0
+
+description: |
+  Scans all uploaded deal documents against standard M&A due diligence checklist.
+  Identifies what's present, what's missing, and flags any inconsistencies.
+  Provides red/yellow/green status report with recommendations.
+
+# Configuration
+config_source: '{module-root}/config.yaml'
+output_folder: "{config_source}:output_folder"
+user_name: "{config_source}:user_name"
+communication_language: "{config_source}:communication_language"
+date: system-generated
+
+# Module paths
+installed_path: "{module-root}/workflows/data-room-audit"
+
+# Input parameters
+inputs:
+  scope:
+    description: 'Audit scope - full or specific categories'
+    type: 'string'
+    default: 'full'
+    options:
+      - 'full'
+      - 'financials'
+      - 'legal'
+      - 'operational'
+      - 'commercial'
+
+  run_inconsistency_check:
+    description: 'Run inconsistency detection during audit'
+    type: 'boolean'
+    default: true
+
+# Workflow instructions
+instructions: '{installed_path}/instructions.md'
+
+# Output template
+template: '{installed_path}/template.md'
+
+# Output location
+default_output_file: "{output_folder}/reports/data-room-audit-report-{{date}}.md"
+
+# Workflow metadata
+metadata:
+  category: 'due-diligence'
+  estimated_duration: '10-15 minutes'
+  agents_involved:
+    - 'information-vault'
+    - 'finance-analyst'
+    - 'company-analyst'
+  prerequisites:
+    - 'Documents uploaded to data room'
+  outputs:
+    - 'Comprehensive audit report'
+    - 'Gap analysis'
+    - 'Inconsistency flags (if enabled)'
+    - 'Actionable recommendations'

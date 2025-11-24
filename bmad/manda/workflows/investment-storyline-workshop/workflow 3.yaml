@@ -1,0 +1,119 @@
+# Investment Storyline Workshop Workflow
+# Interactive storyline development for M&A CIM creation
+# Story-first approach: Narrative before slides
+
+name: Investment Storyline Workshop
+code: investment-storyline-workshop
+description: 'Interactive workshop to develop compelling investment storyline and narrative-first CIM'
+
+# Configuration
+config_source: '{module-root}/config.yaml'
+output_folder: "{config_source}:output_folder"
+user_name: "{config_source}:user_name"
+communication_language: "{config_source}:communication_language"
+date: system-generated
+
+# Module paths
+installed_path: "{module-root}/workflows/investment-storyline-workshop"
+instructions: '{installed_path}/instructions.md'
+template: '{installed_path}/template.md'
+
+# Output location
+default_output_file: "{output_folder}/storylines/storyline-brief-{{date}}.md"
+
+# Workflow type
+type: interactive  # Highly conversational and collaborative
+
+# Primary agent
+primary_agent: story-architect
+
+# Supporting agents (called as needed)
+supporting_agents:
+  - information-vault
+  - finance-analyst
+  - company-analyst
+
+# Workflow inputs
+inputs:
+  target_buyer_type:
+    type: 'string'
+    prompt: 'Who is the primary target buyer type?'
+    default: 'strategic'
+    options:
+      - value: 'strategic'
+        label: 'Strategic Buyers (corporations seeking synergies)'
+      - value: 'financial'
+        label: 'Financial Buyers (PE/growth equity seeking returns)'
+      - value: 'international'
+        label: 'International Buyers (market entry focused)'
+      - value: 'competitor'
+        label: 'Competitors (consolidation focused)'
+      - value: 'mixed'
+        label: 'Mixed Audience (multiple buyer types)'
+
+  storyline_depth:
+    type: 'string'
+    prompt: 'How much detail do you want in this workshop?'
+    default: 'standard'
+    options:
+      - value: 'quick'
+        label: 'Quick (30 min) - Core thesis and key themes only'
+      - value: 'standard'
+        label: 'Standard (60 min) - Complete storyline development'
+      - value: 'comprehensive'
+        label: 'Comprehensive (90+ min) - Full storyline with teaser and CIM outline'
+
+  include_teaser:
+    type: 'boolean'
+    prompt: 'Generate investment teaser at the end?'
+    default: true
+
+  include_cim_outline:
+    type: 'boolean'
+    prompt: 'Generate narrative CIM outline at the end?'
+    default: true
+
+# Workflow outputs
+outputs:
+  - storyline_brief  # Core storyline document with thesis, themes, narrative arc
+  - investment_thesis  # Standalone investment thesis statement
+  - teaser  # One-page investment teaser (optional)
+  - cim_narrative_outline  # Prose CIM outline (optional)
+  - evidence_map  # Mapping of claims to sources
+
+# Workflow execution mode
+execution_mode: guided  # Step-by-step with user collaboration
+
+# Estimated duration
+duration:
+  quick: '30 minutes'
+  standard: '60 minutes'
+  comprehensive: '90+ minutes'
+
+# Prerequisites
+prerequisites:
+  required:
+    - 'Basic company information in data room'
+    - 'At least preliminary financial data'
+
+  recommended:
+    - 'Completed data room audit'
+    - 'Financial analysis performed'
+    - 'Company analysis performed'
+
+# Success criteria
+success_criteria:
+  - 'Clear investment thesis statement developed'
+  - 'Core storyline themes identified and validated'
+  - 'Narrative arc structured (opening to resolution)'
+  - 'All claims mapped to supporting evidence'
+  - 'User confirms storyline resonates'
+
+# Configuration
+config:
+  max_themes: 5  # Maximum number of core themes
+  evidence_required: true  # All claims must have supporting data
+  buyer_validation: true  # Test storyline against buyer personas
+  collaborative_mode: true  # Interactive refinement with user
+
+version: 1.0.0
