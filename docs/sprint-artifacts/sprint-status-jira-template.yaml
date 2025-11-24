@@ -1,0 +1,86 @@
+# Sprint Status - Manda Platform Implementation with Jira Integration
+# This is a TEMPLATE showing how to add Jira IDs to sprint-status.yaml
+# After running create-epic1-jira.sh or create_epic1_jira.py, update the actual sprint-status.yaml
+
+# HOW TO USE:
+# 1. Run the Jira creation script
+# 2. Copy the Epic and Story keys from the output
+# 3. Add the jira_id fields to your actual sprint-status.yaml file
+# 4. Example shown below with placeholder IDs
+
+generated: 2025-11-24
+project: Manda
+project_key: manda-platform
+tracking_system: jira  # Changed from 'file-system' to 'jira'
+jira_project_key: MANDA  # Add this field
+story_location: docs/sprint-artifacts
+
+development_status:
+  # Epic 1: Project Foundation (9 stories)
+  epic-1: contexted
+  epic-1-jira-id: MANDA-123  # ADD THIS - Replace with actual Epic key from script output
+
+  e1-1-set-up-nextjs-15-project-with-shadcnui: ready-for-dev
+  e1-1-jira-id: MANDA-124  # ADD THIS - Replace with actual Story key
+
+  e1-2-configure-supabase-auth-and-database-connection: ready-for-dev
+  e1-2-jira-id: MANDA-125  # ADD THIS
+
+  e1-3-create-postgresql-schema-with-rls-policies: ready-for-dev
+  e1-3-jira-id: MANDA-126  # ADD THIS
+
+  e1-4-build-projects-overview-screen-landing: ready-for-dev
+  e1-4-jira-id: MANDA-127  # ADD THIS
+
+  e1-5-implement-project-creation-wizard: ready-for-dev
+  e1-5-jira-id: MANDA-128  # ADD THIS
+
+  e1-6-build-project-workspace-shell-with-navigation: ready-for-dev
+  e1-6-jira-id: MANDA-129  # ADD THIS
+
+  e1-7-configure-neo4j-graph-database: ready-for-dev
+  e1-7-jira-id: MANDA-130  # ADD THIS
+
+  e1-8-configure-pg-boss-job-queue: ready-for-dev
+  e1-8-jira-id: MANDA-131  # ADD THIS
+
+  e1-9-implement-audit-logging-for-security-events: ready-for-dev
+  e1-9-jira-id: MANDA-132  # ADD THIS
+
+  epic-1-retrospective: optional
+
+  # Epic 2: Document Ingestion & Storage (8 stories)
+  epic-2: backlog
+  # epic-2-jira-id: MANDA-XXX  # Will be added when Epic 2 is created
+
+  e2-1-implement-document-upload-to-supabase-storage: backlog
+  # e2-1-jira-id: MANDA-XXX  # Will be added when story is created
+
+  # ... rest of epics remain unchanged until they're created in Jira
+
+# JIRA SYNC NOTES:
+# ================
+# - Jira Status Mapping:
+#   - backlog -> Backlog
+#   - drafted -> To Do
+#   - ready-for-dev -> To Do
+#   - in-progress -> In Progress
+#   - review -> In Review / Code Review
+#   - done -> Done
+#
+# - When status changes in Jira, update this file to keep in sync
+# - Consider using Jira API or webhooks for automated sync
+# - The jira_id fields are the source of truth for linking local stories to Jira
+
+# EXAMPLE: After running the script and getting output like:
+# Epic Key: MANDA-150
+# Story Keys:
+#   E1.1: MANDA-151
+#   E1.2: MANDA-152
+#   ...
+#
+# You would update the actual sprint-status.yaml:
+#   epic-1-jira-id: MANDA-150
+#   e1-1-jira-id: MANDA-151
+#   e1-2-jira-id: MANDA-152
+#   etc.
