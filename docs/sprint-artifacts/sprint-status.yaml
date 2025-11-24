@@ -45,9 +45,9 @@ development_status:
   # Epic 1: Project Foundation (9 stories)
   epic-1: contexted
   epic-1-jira-id: SCRUM-10
-  e1-1-set-up-nextjs-15-project-with-shadcnui: ready-for-dev
+  e1-1-set-up-nextjs-15-project-with-shadcnui: done
   e1-1-jira-id: SCRUM-11
-  e1-2-configure-supabase-auth-and-database-connection: ready-for-dev
+  e1-2-configure-supabase-auth-and-database-connection: in-progress
   e1-2-jira-id: SCRUM-12
   e1-3-create-postgresql-schema-with-rls-policies: ready-for-dev
   e1-3-jira-id: SCRUM-13
