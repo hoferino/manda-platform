@@ -1,0 +1,261 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1</storyId>
+    <title>Set up Next.js 15 Project with shadcn/ui and Tailwind CSS 4</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e1-1-set-up-nextjs-15-project-with-shadcnui.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>a properly configured Next.js 15 project with shadcn/ui, React 19.2, and Tailwind CSS 4</iWant>
+    <soThat>I have a solid foundation for building the Manda M&A Intelligence Platform frontend</soThat>
+    <tasks>
+- [ ] Task 1: Initialize Next.js 15 Project (AC: #1, #2, #5)
+  - [ ] Run `npx create-next-app@latest manda-platform --typescript --tailwind --app --turbopack --use-npm`
+  - [ ] Verify Next.js 15.5+ and React 19.2+ are installed
+  - [ ] Configure `next.config.ts` for Turbopack and optimization settings
+  - [ ] Test dev server starts and renders default page
+  - [ ] Verify HMR works by editing `app/page.tsx`
+
+- [ ] Task 2: Configure TypeScript Strict Mode (AC: #5)
+  - [ ] Update `tsconfig.json` with strict mode settings
+  - [ ] Add `tsc --noEmit` as `npm run type-check` script
+  - [ ] Verify type errors are caught
+
+- [ ] Task 3: Upgrade to Tailwind CSS 4 and Configure Theme (AC: #3)
+  - [ ] Install Tailwind CSS 4: `npm install tailwindcss@next @tailwindcss/postcss@next`
+  - [ ] Update `tailwind.config.ts` to use @theme directive with OKLCH colors
+  - [ ] Configure content paths
+  - [ ] Import Tailwind in `app/globals.css`
+  - [ ] Test utility classes render correctly
+  - [ ] Verify production build purges unused CSS
+
+- [ ] Task 4: Install and Configure shadcn/ui for Tailwind 4 (AC: #4)
+  - [ ] Run `npx shadcn@latest init` (Tailwind 4 compatibility mode)
+  - [ ] Configure components.json (Style: "new-york", Base color: "neutral", CSS variables: true)
+  - [ ] Install base components: button, input, card, badge, label
+  - [ ] Verify components use data-slot attributes
+  - [ ] Test components render with Tailwind 4 styling
+
+- [ ] Task 5: Create Project Structure (AC: #6)
+  - [ ] Create `components/` directory
+  - [ ] Verify `components/ui/` exists (created by shadcn/ui)
+  - [ ] Create `lib/` directory with `utils.ts`
+  - [ ] Create `hooks/` directory
+  - [ ] Create `styles/` directory (optional)
+  - [ ] Verify `public/` directory exists
+  - [ ] Document folder structure in project README
+
+- [ ] Task 6: Create Test Page to Verify Integration (AC: #1-4, #7)
+  - [ ] Create `app/test-components/page.tsx` with Server and Client Components
+  - [ ] Test all 5 shadcn/ui components (Button, Input, Card, Badge, Label)
+  - [ ] Verify Tailwind utility classes work
+  - [ ] Test interactive components
+  - [ ] Verify OKLCH theme colors demonstration
+
+- [ ] Task 7: Production Build and Optimization (AC: #8)
+  - [ ] Run `npm run build` and verify no errors
+  - [ ] Check bundle sizes
+  - [ ] Verify initial bundle <300KB gzipped
+  - [ ] Test production server
+  - [ ] Run Lighthouse audit (target: >90 performance score)
+
+- [ ] Task 8: Documentation (AC: All)
+  - [ ] Create `README.md` with setup instructions
+  - [ ] Document required Node.js version (20 LTS)
+  - [ ] Add scripts documentation
+  - [ ] Document folder structure and conventions
+  - [ ] Add `.env.example` file
+  - [ ] Document shadcn/ui usage and theme customization
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Next.js 15 Project Initialization
+**Given** I have Node.js 20 LTS installed
+**When** I run `npm run dev`
+**Then** the Next.js dev server starts on `localhost:3000`
+**And** Turbopack builds complete within 5 seconds (initial compile)
+**And** I see a basic landing page rendered
+**And** Hot module replacement (HMR) works when I edit files
+
+### AC2: React 19.2 Integration
+**Given** React 19.2 is installed
+**When** I create a Server Component in `app/page.tsx`
+**Then** the component renders without errors
+**And** React DevTools shows React 19.2
+**And** Server Components and Client Components interoperate correctly
+
+### AC3: Tailwind CSS 4 Configuration
+**Given** Tailwind CSS 4 is configured with @theme directive
+**When** I apply Tailwind utility classes to elements
+**Then** styles are applied correctly
+**And** OKLCH color space is available for theming
+**And** Production build purges unused CSS (<50KB gzipped)
+**And** Tailwind IntelliSense works in VS Code
+
+### AC4: shadcn/ui Component Library
+**Given** shadcn/ui is installed with Tailwind 4 compatibility
+**When** I import and use Button, Input, Card, Badge, and Label components
+**Then** all components render with proper styling
+**And** Components use data-slot attributes for customization
+**And** Components follow shadcn/ui design patterns
+**And** Theme customization via @theme directive works
+
+### AC5: TypeScript Strict Mode
+**Given** TypeScript is configured with strict mode enabled
+**When** I introduce a type error in code
+**Then** the build fails with a clear error message
+**And** VS Code highlights the error inline
+**And** All config files use TypeScript (next.config.ts, tailwind.config.ts)
+
+### AC6: Project Structure
+**Given** the project is initialized
+**When** I inspect the folder structure
+**Then** I see the following directories: app/, components/, components/ui/, lib/, hooks/, styles/, public/
+**And** the structure matches the documented architecture
+
+### AC7: Development Experience
+**Given** the project is set up
+**When** I run `npm run dev`
+**Then** Turbopack compiles changes in <100ms
+**And** Console shows no errors or warnings
+**And** Browser devtools show no console errors
+**And** TypeScript errors are displayed clearly in terminal
+
+### AC8: Build and Type Checking
+**Given** the project has no errors
+**When** I run `npm run build`
+**Then** the production build completes successfully
+**And** Static pages are pre-rendered
+**And** Bundle size is reasonable (<300KB initial JS gzipped)
+**When** I run `npm run type-check`
+**Then** TypeScript compilation succeeds with no errors
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Technology Stack - Frontend</section>
+        <snippet>Next.js 15.5 with React 19.2, Tailwind CSS 4, shadcn/ui, Turbopack (beta in Next.js 15) for 10x faster dev builds. Project Foundation layer establishing the frontend framework with App Router, SSR, and component library.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>System Architecture Alignment</section>
+        <snippet>Frontend: Next.js 15 (App Router) + React 19.2 + Tailwind CSS 4 + shadcn/ui. Decision: Architecture Section - Technology Stack. Performance targets: Initial bundle <300KB gzipped, dev compile <5s initial, <100ms hot reload.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>Dependencies - Frontend Framework</section>
+        <snippet>Next.js 15.5 (^15.5.0) - Server-side rendering, App Router, Turbopack dev builds. React 19.2 (^19.2.0) - Component-based UI, Server Components. Tailwind CSS 4 (^4.0.0) - Utility-first CSS. shadcn/ui - Accessible components with data-slot attributes.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Project Structure</section>
+        <snippet>manda-platform/ with apps/web/ for Next.js frontend, including app/ (App Router), components/, lib/, hooks/, public/. Monorepo structure with packages for shared code.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <!-- No existing code artifacts - this is the first story establishing the codebase -->
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="next" version="^15.5.0" />
+        <package name="react" version="^19.2.0" />
+        <package name="react-dom" version="^19.2.0" />
+        <package name="tailwindcss" version="^4.0.0" />
+        <package name="@tailwindcss/postcss" version="@next" />
+        <package name="typescript" version="^5" />
+        <package name="shadcn/ui" version="latest" note="Components via CLI, not npm package" />
+      </frontend>
+      <devDependencies>
+        <package name="@types/node" version="^20" />
+        <package name="@types/react" version="^19" />
+        <package name="@types/react-dom" version="^19" />
+        <package name="eslint" version="^8" />
+        <package name="eslint-config-next" version="15.5" />
+      </devDependencies>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Use Next.js 15 App Router exclusively (no Pages Router)
+- Server Components by default; use 'use client' directive only when needed (interactivity, hooks, browser APIs)
+- TypeScript strict mode must be enabled
+- All styling via Tailwind CSS 4 utility classes
+- No custom CSS files except globals.css for Tailwind imports
+- Follow shadcn/ui conventions: components/ui/ for shadcn components, components/ for custom components
+- Node.js 20 LTS required
+- Turbopack for dev mode only (production uses standard Next.js build)
+- Bundle size must stay under 300KB gzipped for initial load
+  </constraints>
+
+  <interfaces>
+    <!-- No external interfaces in this foundational story -->
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing standards per Epic 1 Tech Spec: Jest for unit tests, Playwright for E2E tests, React Testing Library for component tests. Unit test coverage target: >70%. Component test coverage: >80%. Test utility functions, custom hooks, and UI components. Verify SSR rendering, HMR functionality, and build outputs.
+    </standards>
+    <locations>
+- Unit tests: `__tests__/` or `*.test.ts` files colocated with source
+- Component tests: `components/__tests__/` or `*.test.tsx`
+- E2E tests: `tests/e2e/` using Playwright
+- Test utilities: `lib/test-utils.ts`
+    </locations>
+    <ideas>
+      <test ac_id="AC1">
+- Test: Dev server starts successfully and serves on port 3000
+- Test: HMR updates component on file change
+- Test: Turbopack initial build completes within 5s
+      </test>
+      <test ac_id="AC2">
+- Test: Server Component renders without 'use client' directive
+- Test: Client Component with 'use client' renders correctly
+- Test: Server and Client Components can compose together
+      </test>
+      <test ac_id="AC3">
+- Test: Tailwind utility classes apply styles correctly
+- Test: OKLCH color variables are available
+- Test: Production build purges unused CSS
+- Test: Bundle size is under 50KB for CSS
+      </test>
+      <test ac_id="AC4">
+- Test: All 5 shadcn/ui components (Button, Input, Card, Badge, Label) render
+- Test: Components have data-slot attributes
+- Test: Theme customization via @theme directive works
+      </test>
+      <test ac_id="AC5">
+- Test: TypeScript strict mode catches type errors
+- Test: npm run type-check passes with no errors
+- Test: Config files (next.config.ts, tailwind.config.ts) are TypeScript
+      </test>
+      <test ac_id="AC6">
+- Test: All required directories exist (app/, components/, lib/, hooks/, public/)
+- Test: shadcn/ui components are in components/ui/
+- Test: utils.ts exists in lib/
+      </test>
+      <test ac_id="AC7">
+- Test: HMR updates in under 100ms
+- Test: No console errors in dev mode
+- Test: TypeScript errors display in terminal
+      </test>
+      <test ac_id="AC8">
+- Test: Production build succeeds
+- Test: Bundle size is under 300KB gzipped
+- Test: Static pages are pre-rendered
+- Test: Lighthouse performance score >90
+      </test>
+    </ideas>
+  </tests>
+</story-context>

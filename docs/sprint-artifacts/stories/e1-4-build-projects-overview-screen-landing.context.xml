@@ -1,0 +1,171 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/e1-4" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.4</storyId>
+    <title>Build Projects Overview Screen (Landing)</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e1-4-build-projects-overview-screen-landing.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>a Projects Overview screen showing all my projects in card and table views</iWant>
+    <soThat>I can quickly see my active projects, their status, and navigate to specific projects</soThat>
+    <tasks>
+- [ ] Task 1: Create Projects Overview Page (AC: #1)
+- [ ] Task 2: Implement Data Fetching (AC: #1, #9)
+- [ ] Task 3: Create Card Grid View Component (AC: #2, #8)
+- [ ] Task 4: Create Table View Component (AC: #3, #8)
+- [ ] Task 5: Implement View Toggle (AC: #1, #2, #3)
+- [ ] Task 6: Create Empty State (AC: #4)
+- [ ] Task 7: Implement Filtering (AC: #5)
+- [ ] Task 8: Implement Search (AC: #6)
+- [ ] Task 9: Add Loading Skeletons (AC: #9)
+- [ ] Task 10: Implement Error Handling (AC: #9)
+- [ ] Task 11: Add "+ New Project" Button (AC: #1)
+- [ ] Task 12: Implement Responsive Design (AC: #8)
+- [ ] Task 13: Add Timestamp Formatting (AC: #2)
+- [ ] Task 14: Testing (AC: All)
+- [ ] Task 15: Documentation (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Projects Overview Page Route
+**Given** I am an authenticated user
+**When** I navigate to `/projects`
+**Then** I see the Projects Overview screen
+**And** The page title shows "Projects"
+**And** I see a "+ New Project" button in the top-right corner
+**And** I see view toggle buttons (Card/Table)
+
+### AC2: Card Grid View (Default)
+**Given** I am on the Projects Overview screen
+**When** the page loads
+**Then** I see my projects displayed as cards in a responsive grid
+**And** Each card shows: Project name, Company name, Deal type, Status badge, Progress indicator, Last activity timestamp
+**And** Cards are sorted by last activity (most recent first)
+**And** Cards have hover effects indicating clickability
+
+### AC3: Table View
+**Given** I am on the Projects Overview screen
+**When** I click the "Table" view toggle
+**Then** I see my projects displayed in a table format
+**And** Table columns show: Project Name, Company, Industry, Deal Type, Status, Progress, Last Activity, Actions
+**And** Table is sortable by clicking column headers
+**And** Table rows highlight on hover
+
+### AC4: Empty State
+**Given** I am a new user with no projects
+**When** I navigate to `/projects`
+**Then** I see an empty state illustration
+**And** I see text: "No projects yet. Create your first project to get started."
+**And** I see a prominent "+ Create Project" button
+**And** The empty state is centered and visually appealing
+
+### AC5-AC10: [See source story for complete AC details]
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Frontend Components</section>
+        <snippet>shadcn/ui: Pre-built accessible components (Card, Badge, Button, Input, Table, Skeleton). Tailwind CSS 4: Utility-first styling with custom design tokens. Next.js 15: React Server Components for fast initial page loads, Client Components for interactivity. date-fns: Timestamp formatting and date utilities.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>AC-1: Project Creation and Management</section>
+        <snippet>Projects Overview Screen: Card grid view (default) and table view toggle. Filter by status (All, Active, On-Hold, Archived). Search by project name or company. Real-time sorting and filtering. "+ New Project" button navigates to wizard (E1.5). Click project → navigate to workspace (E1.6).</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>NFR-PERF-001: Page Load Performance</section>
+        <snippet>Deal list view (Projects Overview) loads within 1 second (typical: 10-50 deals per user). Client-side navigation under 200ms. Supabase REST API responses under 500ms. Use React Server Components for initial data fetch, then hydrate to interactive components.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <!-- To be created in this story -->
+      <file path="app/projects/page.tsx" description="Server Component for Projects Overview" />
+      <file path="components/projects/ProjectCard.tsx" description="Card view component" />
+      <file path="components/projects/ProjectTable.tsx" description="Table view component" />
+      <file path="lib/api/deals.ts" description="Data fetching functions" />
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="shadcn/ui" note="Card, Badge, Button, Input, Table, Skeleton components" />
+        <package name="lucide-react" note="Icons: Plus, Search, Grid, Table" />
+        <package name="date-fns" note="Timestamp formatting (formatDistanceToNow)" />
+      </frontend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Use Next.js 15 Server Components for data fetching
+- RLS policies enforce user can only see their own projects
+- Card view default, table view toggle persisted in localStorage
+- Responsive: desktop (3-4 cards/row), tablet (2 cards/row), mobile (1 card/row)
+- Loading state: skeleton loaders while data fetches
+- Empty state for users with 0 projects
+- Page loads within 1 second (NFR-PERF-001)
+- Search and filter run client-side (no additional DB queries)
+  </constraints>
+
+  <interfaces>
+    <api>
+      <endpoint>GET /api/deals (via Supabase client)</endpoint>
+      <description>Fetch all deals for authenticated user</description>
+      <request>None (user_id from auth context)</request>
+      <response>Array of Deal objects with id, name, company_name, deal_type, status, progress, updated_at</response>
+    </api>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing standards per Epic 1 Tech Spec: Jest for unit tests, React Testing Library for component tests, Playwright for E2E tests. Component tests render with mock data. E2E tests verify full user flows. Security tests verify RLS isolation.
+    </standards>
+    <locations>
+- Component tests: `app/projects/__tests__/page.test.tsx`
+- E2E tests: `tests/e2e/projects-overview.spec.ts`
+- Unit tests: `lib/api/__tests__/deals.test.ts`
+    </locations>
+    <ideas>
+      <test ac_id="AC1">
+- Test: Navigate to /projects → page renders
+- Test: Page title shows "Projects"
+- Test: "+ New Project" button visible
+- Test: View toggle buttons visible
+      </test>
+      <test ac_id="AC2">
+- Test: Projects displayed in card grid
+- Test: Each card shows all metadata fields
+- Test: Cards sorted by last activity
+- Test: Cards have hover effects
+      </test>
+      <test ac_id="AC3">
+- Test: Click table toggle → table view renders
+- Test: Table columns match specification
+- Test: Click column header → table sorts
+- Test: Table rows highlight on hover
+      </test>
+      <test ac_id="AC4">
+- Test: User with 0 projects sees empty state
+- Test: Empty state shows illustration and text
+- Test: "+ Create Project" button visible
+      </test>
+      <test ac_id="AC5-AC10">
+- Test: Filter by status updates list
+- Test: Search by name filters projects
+- Test: Click project → navigate to workspace
+- Test: Responsive design on different screen sizes
+- Test: Loading skeletons shown while fetching
+- Test: Error state shown on failure
+      </test>
+    </ideas>
+  </tests>
+</story-context>

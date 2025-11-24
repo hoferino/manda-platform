@@ -1,0 +1,117 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/e1-9" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.9</storyId>
+    <title>Implement Audit Logging for Security Events</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e1-9-implement-audit-logging-for-security-events.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>security-conscious platform owner</asA>
+    <iWant>comprehensive audit logging for all security-relevant events</iWant>
+    <soThat>I can track user authentication, data access, and detect suspicious activity for compliance and security monitoring</soThat>
+    <tasks>
+- [ ] Task 1: Create Audit Logs Table (AC: #1, #7)
+- [ ] Task 2: Define Event Types (AC: #2-5)
+- [ ] Task 3: Create Audit Logging Service (AC: #9, #10)
+- [ ] Task 4: Implement IP Address and User Agent Capture (AC: #9)
+- [ ] Task 5: Integrate Audit Logging in Authentication (AC: #2, #3)
+- [ ] Task 6: Integrate Audit Logging in Data Access (AC: #4)
+- [ ] Task 7: Implement Security Event Logging (AC: #5)
+- [ ] Task 8: Create Audit Log Query API (AC: #6)
+- [ ] Task 9: Test Tamper-Proof Logs (AC: #7)
+- [ ] Task 10: Test Audit Logging End-to-End (AC: #2-5)
+- [ ] Task 11: Prepare for Log Retention (AC: #8)
+- [ ] Task 12: Performance Testing (AC: #6)
+- [ ] Task 13: Documentation (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Audit Logs Table Creation
+**Given** the database schema is deployed
+**When** I inspect the database
+**Then** I see an `audit_logs` table with: id, event_type, user_id, timestamp, ip_address, user_agent, metadata (JSONB), success (boolean)
+**And** The table is append-only (no UPDATE or DELETE allowed)
+**And** Indexes exist on: user_id, event_type, timestamp
+
+### AC2-AC10: [See source story for complete AC details]
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>AC-9: Audit Logging for Security Events</section>
+        <snippet>Audit logs table: event_type, user_id, timestamp, ip_address, user_agent, metadata (JSONB), success. Event types: auth_login, auth_logout, auth_signup, project_created, project_accessed, access_denied. Append-only: triggers prevent UPDATE/DELETE. Indexed on user_id, event_type, timestamp for fast queries.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Observability</section>
+        <snippet>Audit logging: All authentication events, data access, security events logged to audit_logs table. Tamper-proof (append-only via triggers). IP address and user agent captured. JSONB metadata for event-specific data. Compliance: SOC 2, GDPR, HIPAA ready.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <file path="supabase/migrations/00011_create_audit_logs_table.sql" description="Audit logs table and triggers" />
+      <file path="lib/audit/event-types.ts" description="Audit event type constants" />
+      <file path="lib/audit/logger.ts" description="Audit logging service" />
+      <file path="lib/audit/request-context.ts" description="IP and user agent capture" />
+    </code>
+    <dependencies>
+      <database>
+        <table name="audit_logs" description="Append-only audit log storage" />
+      </database>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Table: audit_logs (append-only, no UPDATE/DELETE)
+- Triggers prevent modification of logs
+- Event types: auth_login, auth_logout, auth_signup, auth_email_confirmed, password_changed, project_created, project_accessed, access_denied, rls_violation
+- IP address captured from x-forwarded-for or x-real-ip headers
+- User agent captured from user-agent header
+- Metadata: JSONB for event-specific data (project_id, error details, etc.)
+- Never log: passwords, credit cards, sensitive PII
+- Indexes: user_id, event_type, timestamp
+- Retention: 90 days default (archival in Phase 2)
+  </constraints>
+
+  <interfaces>
+    <api>
+      <endpoint>Internal: createAuditLog()</endpoint>
+      <description>Create audit log entry</description>
+      <request>{ event_type, user_id?, ip_address?, user_agent?, metadata?, success? }</request>
+      <response>void (async, non-blocking)</response>
+    </api>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing: Unit tests for audit logger function, integration tests for event logging, E2E tests for full flows, security tests for tamper-proof enforcement.
+    </standards>
+    <locations>
+- Unit tests: `lib/audit/__tests__/`
+- Integration tests: `__tests__/integration/audit/`
+- Scripts: `scripts/test-audit-logs.ts`
+    </locations>
+    <ideas>
+      <test ac_id="AC1-AC10">
+- Test: Audit logs table created with correct schema
+- Test: Triggers block UPDATE and DELETE
+- Test: Sign up creates auth_signup log
+- Test: Login creates auth_login log (success/failure)
+- Test: Project creation creates project_created log
+- Test: Access denied creates access_denied log
+- Test: IP address and user agent captured
+- Test: Query logs by user_id (<500ms)
+- Test: Query logs by event_type (<500ms)
+- Test: Query logs by timestamp range (<500ms)
+      </test>
+    </ideas>
+  </tests>
+</story-context>

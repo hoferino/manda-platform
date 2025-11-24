@@ -1,0 +1,112 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/e1-6" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.6</storyId>
+    <title>Build Project Workspace Shell with Navigation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e1-6-build-project-workspace-shell-with-navigation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>a project workspace with top navigation and sidebar showing all 5 main sections</iWant>
+    <soThat>I can navigate between Dashboard, Data Room, Knowledge Explorer, Chat, and Deliverables within a project</soThat>
+    <tasks>
+- [ ] Task 1: Create Project Workspace Layout (AC: #1, #7)
+- [ ] Task 2: Build Top Navigation Bar (AC: #2, #9)
+- [ ] Task 3: Build Sidebar Navigation (AC: #3, #6)
+- [ ] Task 4: Implement Section Routes (AC: #4)
+- [ ] Task 5: Create Placeholder Content (AC: #5)
+- [ ] Task 6: Fetch Project Data (AC: #8, #10)
+- [ ] Task 7: Implement Error Pages (AC: #8)
+- [ ] Task 8: Implement Responsive Sidebar (AC: #7)
+- [ ] Task 9: Add Loading Skeletons (AC: #10)
+- [ ] Task 10: Active State Highlighting (AC: #6)
+- [ ] Task 11: Add Project Actions Menu (AC: #2)
+- [ ] Task 12: Implement Breadcrumb Navigation (AC: #9)
+- [ ] Task 13: Testing (AC: All)
+- [ ] Task 14: Styling and Polish (AC: #2, #3)
+- [ ] Task 15: Documentation (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Project Workspace Route and Layout
+**Given** I am an authenticated user with access to a project
+**When** I navigate to `/projects/[id]/dashboard`
+**Then** I see the project workspace layout
+**And** The top navigation bar shows the project name
+**And** The sidebar shows 5 navigation sections
+**And** The main content area loads the Dashboard section (default)
+
+### AC2-AC10: [See source story for complete AC details]
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>AC-4: Project Workspace Navigation</section>
+        <snippet>Workspace shell with top nav (project name, breadcrumb) and sidebar (5 sections: Dashboard, Data Room, Knowledge Explorer, Chat, Deliverables). Dynamic route: /projects/[id]/ with nested routes for each section. Sidebar responsive: always visible desktop, collapsible mobile. Active section highlighted.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <file path="app/projects/[id]/layout.tsx" description="Shared workspace layout" />
+      <file path="components/workspace/TopNav.tsx" description="Top navigation component" />
+      <file path="components/workspace/Sidebar.tsx" description="Sidebar navigation" />
+      <file path="app/projects/[id]/dashboard/page.tsx" description="Dashboard section (placeholder)" />
+      <file path="lib/api/deals.ts" description="getDealById function" />
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="shadcn/ui" note="DropdownMenu, Skeleton" />
+        <package name="lucide-react" note="Icons: Home, Folder, Brain, MessageSquare, FileText, Menu" />
+        <package name="zustand" note="Sidebar state management (optional)" />
+      </frontend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Route pattern: /projects/[id]/{dashboard|data-room|knowledge-explorer|chat|deliverables}
+- RLS enforces user can only access their own projects
+- Sidebar: fixed 240px desktop, collapsible mobile
+- Top nav: sticky, shows project name and breadcrumb
+- 5 sections with placeholder content (actual features in later epics)
+- Active section highlighted in sidebar
+- 404 if project not found, 403 if RLS blocks access (show as 404)
+  </constraints>
+
+  <interfaces>
+    <api>
+      <endpoint>GET /api/deals/:id (via Supabase client)</endpoint>
+      <description>Fetch project by ID</description>
+      <request>id: uuid</request>
+      <response>Deal object with id, name, company_name, status, etc.</response>
+    </api>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing: Component tests for layout rendering, E2E tests for navigation, security tests for RLS enforcement. Verify active state highlighting, responsive sidebar, and error states (404, 403).
+    </standards>
+    <locations>
+- Component tests: `app/projects/[id]/__tests__/`
+- E2E tests: `tests/e2e/workspace-navigation.spec.ts`
+    </locations>
+    <ideas>
+      <test ac_id="AC1-AC10">
+- Test: Navigate to workspace → layout renders
+- Test: Sidebar shows 5 navigation items
+- Test: Click sidebar item → active state updates
+- Test: Top nav shows project name
+- Test: Breadcrumb navigates to projects overview
+- Test: RLS blocks access to other user's project
+- Test: Invalid project ID shows 404
+- Test: Responsive sidebar toggles on mobile
+      </test>
+    </ideas>
+  </tests>
+</story-context>

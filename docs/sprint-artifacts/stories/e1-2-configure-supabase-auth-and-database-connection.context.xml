@@ -1,0 +1,286 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/e1-2" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.2</storyId>
+    <title>Configure Supabase Auth and Database Connection</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e1-2-configure-supabase-auth-and-database-connection.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>Supabase Auth and PostgreSQL database properly configured with secure connection handling</iWant>
+    <soThat>users can authenticate and the application can securely access the database with Row-Level Security enforced</soThat>
+    <tasks>
+- [ ] Task 1: Create Supabase Project (AC: #1)
+  - [ ] Sign up for Supabase account (or use existing)
+  - [ ] Create new project: "manda-platform-dev"
+  - [ ] Choose region closest to primary users
+  - [ ] Wait for project provisioning (PostgreSQL 18)
+  - [ ] Note project URL, copy anon key and service role key
+  - [ ] Enable pgvector extension in Database > Extensions
+
+- [ ] Task 2: Configure Environment Variables (AC: #2)
+  - [ ] Create `.env.local` with Supabase URL and keys
+  - [ ] Update `.env.example` with placeholder values
+  - [ ] Verify `.env.local` in `.gitignore`
+  - [ ] Document environment variables in README
+
+- [ ] Task 3: Install Supabase Client SDK (AC: #2)
+  - [ ] Install `@supabase/supabase-js` and `@supabase/auth-helpers-nextjs`
+  - [ ] Verify package versions compatible with Next.js 15 and React 19.2
+
+- [ ] Task 4: Create Supabase Client Utility (AC: #2, #8)
+  - [ ] Create `lib/supabase/client.ts` for browser client
+  - [ ] Create `lib/supabase/server.ts` for server-side client
+  - [ ] Create `lib/supabase/middleware.ts` for middleware client
+  - [ ] Add TypeScript types for database schema
+
+- [ ] Task 5: Implement Authentication Pages (AC: #3, #4, #5)
+  - [ ] Create `app/login/page.tsx` with email/password and magic link
+  - [ ] Create `app/signup/page.tsx` with email/password signup
+  - [ ] Create `app/auth/callback/route.ts` for OAuth redirects
+  - [ ] Add Google OAuth button and form validation
+  - [ ] Style forms with shadcn/ui components
+
+- [ ] Task 6: Configure OAuth Providers (AC: #5)
+  - [ ] Enable Google in Supabase Dashboard > Authentication > Providers
+  - [ ] Create Google OAuth app in Google Cloud Console
+  - [ ] Configure authorized redirect URIs
+  - [ ] Add Client ID and Secret to Supabase
+  - [ ] Test OAuth flow
+
+- [ ] Task 7: Implement Session Management (AC: #6)
+  - [ ] Create auth context provider
+  - [ ] Implement `useAuth()` hook
+  - [ ] Add session listener for auth state changes
+  - [ ] Implement sign out functionality
+  - [ ] Test session persistence and token refresh
+
+- [ ] Task 8: Create Authentication Middleware (AC: #7)
+  - [ ] Create `middleware.ts` in project root
+  - [ ] Implement route protection for `/projects/*`
+  - [ ] Add redirect logic and preserve original URL
+  - [ ] Test middleware with protected/public routes
+
+- [ ] Task 9: Database Connection Testing (AC: #8)
+  - [ ] Create health check API route
+  - [ ] Implement health check query: `SELECT 1`
+  - [ ] Verify RLS is enabled
+  - [ ] Test query performance (<500ms)
+
+- [ ] Task 10: Email Confirmation Configuration (AC: #3)
+  - [ ] Customize confirmation email in Supabase Dashboard
+  - [ ] Set confirmation URL redirect
+  - [ ] Test email confirmation flow
+
+- [ ] Task 11: Documentation and Testing (AC: All)
+  - [ ] Document authentication flows in README
+  - [ ] Create manual test plan
+  - [ ] Test all auth methods end-to-end
+  - [ ] Verify no credentials exposed in browser
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Supabase Project Setup
+**Given** I have a Supabase account
+**When** I create a new Supabase project
+**Then** the project is initialized with PostgreSQL 18
+**And** I can access the project dashboard
+**And** I have the project URL and anon key
+**And** I have the service role key (stored securely, never exposed to client)
+
+### AC2: Supabase Client Configuration
+**Given** Supabase environment variables are configured
+**When** the Next.js application initializes
+**Then** the Supabase client is created with correct credentials
+**And** The client uses the project URL and anon key
+**And** The client is configured for client-side auth helpers
+**And** TypeScript types for Supabase are generated and available
+
+### AC3: Email/Password Authentication
+**Given** a new user visits the signup page
+**When** they enter email and password and submit
+**Then** a user account is created in `auth.users` table
+**And** a confirmation email is sent to the user
+**When** the user clicks the confirmation link
+**Then** their email is marked as confirmed
+**And** they can sign in with their credentials
+
+### AC4: Magic Link Authentication
+**Given** a user chooses magic link authentication
+**When** they enter their email and submit
+**Then** a magic link is sent to their email
+**When** they click the magic link
+**Then** they are authenticated and redirected to the application
+**And** a session is established with JWT token
+
+### AC5: OAuth Authentication (Google)
+**Given** Google OAuth is configured in Supabase
+**When** a user clicks "Sign in with Google"
+**Then** they are redirected to Google OAuth consent screen
+**When** they authorize the application
+**Then** they are redirected back to the application
+**And** a user account is created or linked
+**And** they are authenticated with a valid session
+
+### AC6: Session Management
+**Given** a user is authenticated
+**When** they navigate between pages
+**Then** their session persists across page loads
+**And** the JWT access token is automatically refreshed before expiry (1 hour)
+**And** the session is restored from localStorage on browser restart
+**When** the user signs out
+**Then** the session is terminated
+**And** all tokens are cleared from storage
+
+### AC7: Authentication Middleware
+**Given** authentication middleware is configured
+**When** an unauthenticated user tries to access `/projects`
+**Then** they are redirected to `/login`
+**And** the original URL is preserved for post-login redirect
+**When** an authenticated user accesses a protected route
+**Then** they can view the page
+**And** their user information is available in the request context
+
+### AC8: Database Connection Health
+**Given** the Supabase client is configured
+**When** the application makes a database query
+**Then** the connection succeeds
+**And** queries execute within 500ms (NFR-PERF-002)
+**And** Connection pooling is handled by Supabase
+**And** RLS policies are enforced on all queries
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Authentication & Authorization</section>
+        <snippet>Supabase Auth: JWT-based authentication with OAuth, magic links, MFA support. Session Management: Access token valid for 1 hour, refresh token valid for 7 days. RLS policies enforce data isolation at database level.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>Dependencies - Authentication & Database</section>
+        <snippet>Supabase Auth for JWT-based authentication with OAuth, magic links, MFA support. PostgreSQL 18 managed by Supabase with pgvector extension. Supabase Client SDK (@supabase/supabase-js + @supabase/auth-helpers-nextjs) for Next.js 15 integration.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>NFR-SEC-001: Authentication & Authorization</section>
+        <snippet>Supabase Auth JWT tokens expire after 1 hour. Refresh tokens stored securely in httpOnly cookies. MFA support available (optional for MVP). OAuth providers verified (Google, Microsoft). Password requirements: min 8 chars, complexity enforced.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>Workflows - Authentication State Management</section>
+        <snippet>User signs in → Supabase returns JWT access token + refresh token → Frontend stores tokens in localStorage (Supabase client handles) → All API requests include Authorization header → Access token expires after 1 hour → Supabase client auto-refreshes using refresh token → If refresh fails, redirect to login.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <!-- No existing code artifacts - E1.1 must be completed first -->
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="@supabase/supabase-js" version="latest" />
+        <package name="@supabase/auth-helpers-nextjs" version="latest" />
+        <package name="@supabase/ssr" version="latest" />
+      </frontend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Use Supabase Auth exclusively (no custom auth)
+- Never expose service role key to client
+- Use anon key for client-side operations
+- RLS policies enforce data isolation (E1.3)
+- HTTPS required for production OAuth
+- JWT tokens expire after 1 hour with automatic refresh
+- Middleware protects all routes under `/projects/*`
+- Session persistence via localStorage (Supabase client handles)
+  </constraints>
+
+  <interfaces>
+    <api>
+      <endpoint>POST /auth/v1/signup</endpoint>
+      <description>Supabase Auth signup endpoint</description>
+      <request>{ email: string, password: string }</request>
+      <response>{ user: User, session: Session }</response>
+    </api>
+    <api>
+      <endpoint>POST /auth/v1/token?grant_type=password</endpoint>
+      <description>Supabase Auth login endpoint</description>
+      <request>{ email: string, password: string }</request>
+      <response>{ access_token: string, refresh_token: string, user: User }</response>
+    </api>
+    <api>
+      <endpoint>POST /auth/v1/token?grant_type=magic_link</endpoint>
+      <description>Supabase Auth magic link endpoint</description>
+      <request>{ email: string }</request>
+      <response>{ /* magic link sent */ }</response>
+    </api>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing standards per Epic 1 Tech Spec: Jest for unit tests, Playwright for E2E tests, React Testing Library for component tests. Unit test coverage target: >70%. Component test coverage: >80%. Test authentication flows, session management, middleware protection, and RLS enforcement.
+    </standards>
+    <locations>
+- Unit tests: `__tests__/` or `*.test.ts` files colocated with source
+- Component tests: `app/__tests__/` or `*.test.tsx`
+- E2E tests: `tests/e2e/` using Playwright
+- Auth test utilities: `lib/test-utils/auth.ts`
+    </locations>
+    <ideas>
+      <test ac_id="AC1">
+- Test: Supabase project URL and keys are configured
+- Test: pgvector extension is enabled
+- Test: Database connection succeeds
+      </test>
+      <test ac_id="AC2">
+- Test: Supabase client initializes with correct credentials
+- Test: TypeScript types are generated and available
+- Test: Client uses anon key (not service role key)
+      </test>
+      <test ac_id="AC3">
+- Test: Signup creates user in auth.users table
+- Test: Confirmation email is sent
+- Test: Email confirmation marks email as confirmed
+- Test: User can sign in after confirmation
+      </test>
+      <test ac_id="AC4">
+- Test: Magic link is sent to email
+- Test: Magic link authenticates user
+- Test: Session is established after magic link click
+      </test>
+      <test ac_id="AC5">
+- Test: OAuth redirect to Google works
+- Test: OAuth callback creates or links user account
+- Test: User is authenticated after OAuth flow
+      </test>
+      <test ac_id="AC6">
+- Test: Session persists across page reloads
+- Test: JWT token is automatically refreshed before expiry
+- Test: Session restored from localStorage on browser restart
+- Test: Sign out clears all tokens
+      </test>
+      <test ac_id="AC7">
+- Test: Unauthenticated users redirected to /login
+- Test: Original URL preserved for post-login redirect
+- Test: Authenticated users can access protected routes
+- Test: User information available in request context
+      </test>
+      <test ac_id="AC8">
+- Test: Database connection succeeds
+- Test: Health check query returns success
+- Test: Query performance <500ms
+- Test: RLS policies are enforced
+      </test>
+    </ideas>
+  </tests>
+</story-context>

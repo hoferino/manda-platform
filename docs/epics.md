@@ -2765,11 +2765,10 @@ And the export completes within 10 seconds
 - Claude Sonnet 4.5 via LangChain ChatAnthropic adapter
 - LangGraph for conversation workflow orchestration
 - Pydantic v2 for type-safe tool definitions and structured outputs
-- Tool calling framework (12 agent tools - expanded from 8 for PRD v1.1)
+- Tool calling framework (11 chat tools - CIM v3 tools are in separate workflow agent)
   - Knowledge: query_knowledge_base, update_knowledge_base, update_knowledge_graph, validate_finding
   - Documents: get_document_info, trigger_analysis
   - Workflows: create_irl, suggest_questions, add_to_qa
-  - Content: generate_cim_section
   - Intelligence: detect_contradictions, find_gaps
 - Conversation state management with LangGraph checkpoints
 - WebSocket for real-time responses
@@ -2779,7 +2778,7 @@ And the export completes within 10 seconds
 - ✅ User can ask questions in natural language
 - ✅ Agent provides answers with source citations
 - ✅ Conversation history persists across sessions
-- ✅ Agent can call all 12 tools to access platform services
+- ✅ Agent can call all 11 chat tools to access platform services
 - ✅ Responses include confidence indicators
 - ✅ Follow-up questions maintain context
 - ✅ User can capture findings via chat and system validates in real-time
@@ -2904,11 +2903,6 @@ Given the agent needs document metadata
 When it calls `get_document_info(doc_id="123")`
 Then the tool retrieves document from database
 And returns name, type, upload date, processing status
-
-Given the agent is asked to generate a CIM section
-When it calls `generate_cim_section(section="executive_summary")`
-Then the tool triggers the CIM generation workflow
-And returns a draft section with sources
 
 Given a tool call fails
 When an error occurs

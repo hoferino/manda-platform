@@ -1,0 +1,127 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/e1-5" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.5</storyId>
+    <title>Implement Project Creation Wizard</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e1-5-implement-project-creation-wizard.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>a guided 3-step wizard to create new projects with project type and IRL template selection</iWant>
+    <soThat>I can quickly set up new deals with appropriate templates and organization</soThat>
+    <tasks>
+- [ ] Task 1: Create Wizard Route and Layout (AC: #1, #9)
+- [ ] Task 2: Implement Step 1 - Basic Information (AC: #2, #5)
+- [ ] Task 3: Implement Step 2 - Project Type Selection (AC: #3)
+- [ ] Task 4: Implement Step 3 - IRL Template Selection (AC: #4)
+- [ ] Task 5: Implement Wizard State Management (AC: #6)
+- [ ] Task 6: Implement Form Submission (AC: #7, #8)
+- [ ] Task 7: Add Loading and Error States (AC: #8)
+- [ ] Task 8: Implement Toast Notifications (AC: #4, #8)
+- [ ] Task 9: Add Validation (AC: #5)
+- [ ] Task 10: Implement Responsive Design (AC: #9)
+- [ ] Task 11: Add Icons and Styling (AC: #3)
+- [ ] Task 12: Testing (AC: All)
+- [ ] Task 13: Documentation (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Wizard Route and Layout
+**Given** I am an authenticated user
+**When** I navigate to `/projects/new`
+**Then** I see the project creation wizard
+**And** I see a progress indicator showing "Step 1 of 3"
+**And** I see a "Cancel" button to return to Projects Overview
+**And** I see a "Next" button (disabled until form is valid)
+
+### AC2: Step 1 - Basic Information
+**Given** I am on Step 1 of the wizard
+**When** I enter project details
+**Then** I see input fields for: Project Name (required), Company Name (optional), Industry (dropdown)
+**When** I fill in the Project Name field
+**Then** the "Next" button becomes enabled
+**When** I click "Next"
+**Then** I proceed to Step 2
+
+### AC3-AC10: [See source story for complete AC details]
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>AC-1: Project Creation and Management - Wizard Flow</section>
+        <snippet>3-step wizard: (1) Basic Information (name, company, industry), (2) Project Type (Tech M&amp;A, Industrial, Pharma, Custom), (3) IRL Template (auto-suggested). Upon completion, deal record created in database with status 'active'. User redirected to project workspace (/projects/[id]/dashboard).</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>Data Models - Deals Table</section>
+        <snippet>Deals table schema: id uuid, user_id uuid, name text NOT NULL, company_name text, industry text, deal_type text, status text DEFAULT 'active', irl_template text, created_at timestamptz, updated_at timestamptz. RLS policy: auth.uid() = user_id enforces isolation.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <file path="app/projects/new/page.tsx" description="Wizard main route" />
+      <file path="components/wizard/WizardLayout.tsx" description="Wizard layout with progress" />
+      <file path="components/wizard/Step1BasicInfo.tsx" description="Step 1 form component" />
+      <file path="components/wizard/Step2ProjectType.tsx" description="Step 2 type selection" />
+      <file path="components/wizard/Step3IRLTemplate.tsx" description="Step 3 template selection" />
+      <file path="lib/api/deals.ts" description="createDeal function" />
+    </code>
+    <dependencies>
+      <frontend>
+        <package name="shadcn/ui" note="Input, Label, Select, Button, Card, Toast" />
+        <package name="lucide-react" note="Icons: Laptop, Factory, Pill, Settings" />
+      </frontend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Wizard route: /projects/new
+- 3 steps: Basic Info → Project Type → IRL Template
+- State preserved when navigating back/forward
+- Validation: Project Name required (max 100 chars)
+- Form submission creates deal record with RLS-enforced user_id
+- Success: redirect to /projects/[id]/dashboard with toast
+- Error: show toast, preserve form data, allow retry
+- Responsive: max-width 800px desktop, full-width mobile
+  </constraints>
+
+  <interfaces>
+    <api>
+      <endpoint>POST (Supabase) /deals</endpoint>
+      <description>Create new deal record</description>
+      <request>{ name: string, company_name?: string, industry?: string, deal_type: string, irl_template: string, status: 'active' }</request>
+      <response>{ id: uuid, ...deal_fields, created_at: timestamp }</response>
+    </api>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing: Jest unit tests for form logic, React Testing Library for component tests, Playwright E2E for full wizard flow. Test validation, navigation, state preservation, and RLS enforcement.
+    </standards>
+    <locations>
+- Component tests: `app/projects/new/__tests__/`
+- E2E tests: `tests/e2e/project-creation.spec.ts`
+- Unit tests: `lib/api/__tests__/deals.test.ts`
+    </locations>
+    <ideas>
+      <test ac_id="AC1-AC10">
+- Test: Wizard renders with Step 1 of 3
+- Test: Step 1 validation (name required)
+- Test: Navigate through all 3 steps
+- Test: Back button preserves data
+- Test: Form submission creates deal
+- Test: Success redirects to workspace
+- Test: Error shows toast and preserves form
+- Test: RLS sets correct user_id
+      </test>
+    </ideas>
+  </tests>
+</story-context>

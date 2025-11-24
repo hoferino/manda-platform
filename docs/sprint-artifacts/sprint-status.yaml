@@ -44,15 +44,15 @@ story_location: docs/sprint-artifacts
 development_status:
   # Epic 1: Project Foundation (9 stories)
   epic-1: contexted
-  e1-1-set-up-nextjs-14-project-with-shadcnui: backlog
-  e1-2-configure-supabase-auth-and-database-connection: backlog
-  e1-3-create-postgresql-schema-with-rls-policies: backlog
-  e1-4-build-projects-overview-screen-landing: backlog
-  e1-5-implement-project-creation-wizard: backlog
-  e1-6-build-project-workspace-shell-with-navigation: backlog
-  e1-7-configure-neo4j-graph-database: backlog
-  e1-8-configure-pg-boss-job-queue: backlog
-  e1-9-implement-audit-logging-for-security-events: backlog
+  e1-1-set-up-nextjs-15-project-with-shadcnui: ready-for-dev
+  e1-2-configure-supabase-auth-and-database-connection: ready-for-dev
+  e1-3-create-postgresql-schema-with-rls-policies: ready-for-dev
+  e1-4-build-projects-overview-screen-landing: ready-for-dev
+  e1-5-implement-project-creation-wizard: ready-for-dev
+  e1-6-build-project-workspace-shell-with-navigation: ready-for-dev
+  e1-7-configure-neo4j-graph-database: ready-for-dev
+  e1-8-configure-pg-boss-job-queue: ready-for-dev
+  e1-9-implement-audit-logging-for-security-events: ready-for-dev
   epic-1-retrospective: optional
 
   # Epic 2: Document Ingestion & Storage (8 stories)

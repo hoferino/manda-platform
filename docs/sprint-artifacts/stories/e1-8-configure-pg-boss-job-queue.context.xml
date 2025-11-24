@@ -1,0 +1,125 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/e1-8" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.8</storyId>
+    <title>Configure pg-boss Job Queue</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e1-8-configure-pg-boss-job-queue.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>pg-boss job queue configured for background processing</iWant>
+    <soThat>the platform can handle asynchronous tasks like document parsing and LLM analysis without blocking user requests</soThat>
+    <tasks>
+- [ ] Task 1: Install pg-boss (AC: #1)
+- [ ] Task 2: Create pg-boss Client Utility (AC: #1, #2)
+- [ ] Task 3: Define Job Types (AC: #4)
+- [ ] Task 4: Create Job Handlers (AC: #3, #4)
+- [ ] Task 5: Register Job Handlers (AC: #4)
+- [ ] Task 6: Create Job Enqueue API (AC: #3)
+- [ ] Task 7: Test Job Enqueue and Processing (AC: #3, #5)
+- [ ] Task 8: Create Job Status API Endpoint (AC: #6)
+- [ ] Task 9: Implement Graceful Shutdown (AC: #8)
+- [ ] Task 10: Configure Environment Variables (AC: #10)
+- [ ] Task 11: Test Retry Logic (AC: #5, #7)
+- [ ] Task 12: Test Priority and Scheduling (AC: #9)
+- [ ] Task 13: Performance Testing (AC: #6)
+- [ ] Task 14: Documentation (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: pg-boss Installation and Configuration
+**Given** the PostgreSQL database is running (E1.3)
+**When** I install pg-boss
+**Then** the package is installed: `pg-boss`
+**And** pg-boss tables are created in a dedicated schema (e.g., `pgboss`)
+**And** The job queue is initialized with default configuration
+**And** Connection uses the existing Supabase PostgreSQL database
+
+### AC2-AC10: [See source story for complete AC details]
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>AC-7: Background Job Queue (pg-boss)</section>
+        <snippet>pg-boss: PostgreSQL-based job queue (no Redis needed for MVP). Job types: document-parse, generate-embeddings, analyze-document, update-graph. Retry logic: 3 attempts with exponential backoff. Job priority and scheduling support. Exactly-once delivery semantics via PostgreSQL SKIP LOCKED.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Background Processing</section>
+        <snippet>pg-boss: PostgreSQL-based job queue using SKIP LOCKED for efficient job distribution. No Redis dependency for MVP. Job states: created, active, retry, completed, failed, expired. Worker concurrency configurable per job type. Used for document parsing, embedding generation, LLM analysis.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <file path="lib/pgboss/client.ts" description="pg-boss client initialization" />
+      <file path="lib/pgboss/jobs.ts" description="Job type definitions" />
+      <file path="lib/pgboss/handlers/test-job.ts" description="Test job handler" />
+      <file path="lib/pgboss/register-handlers.ts" description="Handler registration" />
+      <file path="lib/pgboss/enqueue.ts" description="Job enqueue functions" />
+    </code>
+    <dependencies>
+      <backend>
+        <package name="pg-boss" version="^8.4.2+" />
+        <package name="@types/pg-boss" version="latest" />
+      </backend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Uses existing PostgreSQL database (no Redis for MVP)
+- Schema: pgboss (separate from application tables)
+- Job types: document-parse, generate-embeddings, analyze-document, update-graph, test-job
+- Retry logic: 3 attempts, exponential backoff (1s, 2s, 4s)
+- Connection pooling: max 10 connections
+- Graceful shutdown: complete current jobs before stopping
+- Job expiration: 24 hours default
+- Worker concurrency: 5 concurrent jobs default (configurable per type)
+  </constraints>
+
+  <interfaces>
+    <api>
+      <endpoint>POST /api/jobs/enqueue</endpoint>
+      <description>Enqueue a background job</description>
+      <request>{ type: JobType, data: JobPayload }</request>
+      <response>{ jobId: string }</response>
+    </api>
+    <api>
+      <endpoint>GET /api/jobs/:jobId</endpoint>
+      <description>Get job status</description>
+      <response>{ id, name, state, created_at, started_at, completed_at, retry_count, error }</response>
+    </api>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing: Unit tests for job enqueue/handler logic, integration tests for full job lifecycle, performance tests for throughput, retry tests for failure scenarios.
+    </standards>
+    <locations>
+- Unit tests: `lib/pgboss/__tests__/`
+- Integration tests: `__tests__/integration/pgboss/`
+- Scripts: `scripts/test-pgboss.ts`
+    </locations>
+    <ideas>
+      <test ac_id="AC1-AC10">
+- Test: pg-boss initializes and creates tables
+- Test: Enqueue job → job appears in database
+- Test: Worker picks up and processes job
+- Test: Failed job retries 3 times
+- Test: Exponential backoff (1s, 2s, 4s)
+- Test: Failed job marked as failed after retries
+- Test: Graceful shutdown completes current jobs
+- Test: Priority jobs processed first
+- Test: Scheduled jobs processed at correct time
+- Test: Performance (100 jobs in <2 seconds)
+      </test>
+    </ideas>
+  </tests>
+</story-context>

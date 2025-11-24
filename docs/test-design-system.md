@@ -34,7 +34,7 @@ This document provides a **system-level testability assessment** for the Manda M
    - Tool-based integration provides natural mock points
 
 2. **Mockable Interfaces**
-   - Agent's 15 tools are Pydantic-validated functions
+   - Agent's 14 tools (11 chat + 3 CIM workflow) are Pydantic-validated functions
    - Can stub platform responses for agent testing
    - LangChain LLM adapters are mockable
 
@@ -410,7 +410,7 @@ This document provides a **system-level testability assessment** for the Manda M
    - Verify error handling (invalid inputs, service failures)
 
 **Acceptance Criteria:**
-- ✅ All 15 tools pass contract tests
+- ✅ All 14 tools pass contract tests
 - ✅ Invalid inputs rejected with clear error messages (Pydantic validation)
 - ✅ Tool integration tests pass against test database
 

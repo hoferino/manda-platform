@@ -925,13 +925,13 @@ llm_config = LLMConfig(
 - ✅ **Vendor Independence**: No lock-in to single provider
 - ✅ **Fallback Support**: LangChain provides automatic fallback if primary fails
 
-### Agent Tools (15 Core Tools - Updated for CIM v3)
+### Agent Tools (14 Total: 11 Chat + 3 CIM Workflow)
 
 **Knowledge Management:**
 1. `query_knowledge_base(query, filters)` - Semantic search across findings
-2. `update_knowledge_base(finding, source, confidence)` - Store analyst-provided findings
+2. `update_knowledge_base(finding, source, confidence, date_referenced)` - Store analyst-provided findings with temporal metadata
 3. `update_knowledge_graph(finding_id, relationships)` - Create relationships between findings
-4. `validate_finding(finding, context)` - Check finding against existing knowledge for contradictions
+4. `validate_finding(finding, context, date_referenced)` - Check finding against existing knowledge with temporal validation
 
 **Document Operations:**
 5. `get_document_info(doc_id)` - Retrieve document details
@@ -1015,7 +1015,7 @@ async def query_knowledge_base_tool(query: str, filters: dict, limit: int) -> st
 
     return f"Found {result.total_count} findings:\n{findings_text}"
 
-# Define all 15 tools similarly...
+# Define all 11 chat tools similarly (CIM v3 tools are in separate agent)...
 ```
 
 **Agent Setup:**

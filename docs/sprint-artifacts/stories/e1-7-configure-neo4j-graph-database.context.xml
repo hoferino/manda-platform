@@ -1,0 +1,124 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/e1-7" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.7</storyId>
+    <title>Configure Neo4j Graph Database</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e1-7-configure-neo4j-graph-database.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>Neo4j graph database configured and connected to the application</iWant>
+    <soThat>the platform can store knowledge graph relationships for cross-domain pattern detection and source attribution</soThat>
+    <tasks>
+- [ ] Task 1: Add Neo4j to Docker Compose (AC: #1, #10)
+- [ ] Task 2: Configure Environment Variables (AC: #9)
+- [ ] Task 3: Install Neo4j JavaScript Driver (AC: #2)
+- [ ] Task 4: Create Neo4j Client Utility (AC: #2, #7)
+- [ ] Task 5: Create Schema Initialization Script (AC: #3, #4)
+- [ ] Task 6: Define Node Schemas (AC: #3, #6)
+- [ ] Task 7: Define Relationship Schemas (AC: #4)
+- [ ] Task 8: Implement Basic CRUD Operations (AC: #5)
+- [ ] Task 9: Create Health Check Endpoint (AC: #8)
+- [ ] Task 10: Implement Error Handling and Retry Logic (AC: #7)
+- [ ] Task 11: Test Temporal Metadata Queries (AC: #6)
+- [ ] Task 12: Performance Testing (AC: #8)
+- [ ] Task 13: Documentation (AC: All)
+- [ ] Task 14: Integration Testing (AC: All)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+### AC1: Neo4j Installation and Configuration
+**Given** I have Docker installed
+**When** I run `docker-compose up`
+**Then** Neo4j Community Edition 5.x+ starts successfully
+**And** I can access Neo4j Browser at `http://localhost:7474`
+**And** I can connect using Bolt protocol at `bolt://localhost:7687`
+**And** The database is initialized with authentication
+
+### AC2-AC10: [See source story for complete AC details]
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Graph Database</section>
+        <snippet>Neo4j 5.x+ (Community Edition) for knowledge graph. Nodes: Deal, Document, Finding (with temporal metadata: date_referenced, date_extracted), Insight. Relationships: EXTRACTED_FROM (source attribution), CONTRADICTS (with temporal awareness), SUPERSEDES (newer data), SUPPORTS (corroboration), PATTERN_DETECTED (cross-domain), BASED_ON (insight derivation).</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>AC-6: Neo4j Graph Database</section>
+        <snippet>Neo4j Community Edition 5.15+ via Docker. Node labels: Deal, Document, Finding, Insight. Relationship types: EXTRACTED_FROM, CONTRADICTS, SUPERSEDES, SUPPORTS, PATTERN_DETECTED, BASED_ON. Temporal metadata on findings: date_referenced (data refers to) and date_extracted (when extracted). Constraints on unique IDs, indexes on temporal properties.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <file path="docker-compose.dev.yml" description="Neo4j service definition" />
+      <file path="lib/neo4j/client.ts" description="Neo4j driver client" />
+      <file path="lib/neo4j/schemas.ts" description="Node and relationship type definitions" />
+      <file path="lib/neo4j/operations.ts" description="CRUD helper functions" />
+      <file path="scripts/init-neo4j-schema.ts" description="Schema initialization script" />
+    </code>
+    <dependencies>
+      <database>
+        <service name="neo4j" version="5.15-community" />
+      </database>
+      <backend>
+        <package name="neo4j-driver" version="latest" />
+        <package name="@types/neo4j-driver" version="latest" />
+      </backend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+- Neo4j Community Edition 5.15+ via Docker
+- Connection: Bolt protocol (bolt://localhost:7687)
+- Authentication required (change default password)
+- Node labels: Deal, Document, Finding, Insight
+- Relationship types: EXTRACTED_FROM, CONTRADICTS, SUPERSEDES, SUPPORTS, PATTERN_DETECTED, BASED_ON
+- Temporal metadata: date_referenced, date_extracted on findings
+- Unique constraints on node IDs
+- Application-level isolation via user_id (no built-in multi-tenancy in Community Edition)
+- Connection pooling: max 50 connections
+  </constraints>
+
+  <interfaces>
+    <database>
+      <query>CREATE (f:Finding { id: $id, text: $text, date_referenced: $date_referenced })</query>
+      <description>Create Finding node with temporal metadata</description>
+    </database>
+    <database>
+      <query>MATCH (f:Finding)-[:EXTRACTED_FROM]->(d:Document) WHERE f.id = $id RETURN f, d</query>
+      <description>Traverse relationship for source attribution</description>
+    </database>
+  </interfaces>
+
+  <tests>
+    <standards>
+Testing: Unit tests for Neo4j client connection, integration tests for CRUD operations, performance tests for query times, security tests for isolation enforcement.
+    </standards>
+    <locations>
+- Unit tests: `lib/neo4j/__tests__/`
+- Integration tests: `__tests__/integration/neo4j/`
+- Scripts: `scripts/test-neo4j-temporal.ts`
+    </locations>
+    <ideas>
+      <test ac_id="AC1-AC10">
+- Test: Docker Compose starts Neo4j successfully
+- Test: Connection to Bolt protocol succeeds
+- Test: Health check query returns success
+- Test: Create node and retrieve by ID
+- Test: Create relationship and traverse
+- Test: Temporal metadata queries work
+- Test: UPDATE/DELETE blocked (if needed)
+- Test: Performance <100ms for simple queries
+      </test>
+    </ideas>
+  </tests>
+</story-context>
