@@ -1,0 +1,158 @@
+# Sprint Status - Manda Platform Implementation
+# Generated: 2025-11-24
+# Project: Manda
+# Tracking System: file-system
+# Story Location: docs/sprint-artifacts
+
+# generated: 2025-11-24
+# project: Manda
+# project_key: manda-platform
+# tracking_system: file-system
+# story_location: docs/sprint-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic exists in epic file but not contexted
+#   - contexted: Epic tech context created (required before drafting stories)
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story file created in stories folder
+#   - ready-for-dev: Draft approved and story context created
+#   - in-progress: Developer actively working on implementation
+#   - review: Under SM review (via code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epics should be 'contexted' before stories can be 'drafted'
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically drafts next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', SM reviews, then Dev moves to 'done'
+
+generated: 2025-11-24
+project: Manda
+project_key: manda-platform
+tracking_system: file-system
+story_location: docs/sprint-artifacts
+
+development_status:
+  # Epic 1: Project Foundation (9 stories)
+  epic-1: contexted
+  e1-1-set-up-nextjs-14-project-with-shadcnui: backlog
+  e1-2-configure-supabase-auth-and-database-connection: backlog
+  e1-3-create-postgresql-schema-with-rls-policies: backlog
+  e1-4-build-projects-overview-screen-landing: backlog
+  e1-5-implement-project-creation-wizard: backlog
+  e1-6-build-project-workspace-shell-with-navigation: backlog
+  e1-7-configure-neo4j-graph-database: backlog
+  e1-8-configure-pg-boss-job-queue: backlog
+  e1-9-implement-audit-logging-for-security-events: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Document Ingestion & Storage (8 stories)
+  epic-2: backlog
+  e2-1-implement-document-upload-to-supabase-storage: backlog
+  e2-2-build-data-room-folder-structure-view: backlog
+  e2-3-build-data-room-buckets-view-category-based: backlog
+  e2-4-implement-view-toggle-and-user-preference: backlog
+  e2-5-create-document-metadata-management: backlog
+  e2-6-implement-document-actions-view-download-delete: backlog
+  e2-7-build-upload-progress-indicators-and-websocket-updates: backlog
+  e2-8-implement-irl-integration-with-document-tracking: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Intelligent Document Processing (9 stories)
+  epic-3: backlog
+  e3-1-set-up-fastapi-backend-with-pg-boss-job-queue: backlog
+  e3-2-integrate-docling-for-document-parsing: backlog
+  e3-3-implement-document-parsing-job-handler: backlog
+  e3-4-generate-embeddings-for-semantic-search: backlog
+  e3-5-implement-llm-analysis-with-gemini-30-pro: backlog
+  e3-6-create-processing-status-tracking-and-websocket-updates: backlog
+  e3-7-implement-processing-queue-visibility: backlog
+  e3-8-implement-retry-logic-for-failed-processing: backlog
+  e3-9-financial-model-integration-extract-and-query-financial-metrics: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Collaborative Knowledge Workflow (14 stories)
+  epic-4: backlog
+  e4-1-build-knowledge-explorer-ui-main-interface: backlog
+  e4-2-implement-findings-tab-with-filtering-and-validation: backlog
+  e4-3-implement-entities-tab-for-named-entity-browsing: backlog
+  e4-4-implement-patterns-tab-for-cross-domain-intelligence: backlog
+  e4-5-implement-contradictions-tab-with-conflict-resolution: backlog
+  e4-6-build-finding-detail-view-with-source-attribution: backlog
+  e4-7-implement-chat-based-finding-capture: backlog
+  e4-8-implement-excel-word-notes-upload-for-finding-extraction: backlog
+  e4-9-implement-collaborative-analysis-mode-analyst-reads-tells-agent: backlog
+  e4-10-implement-finding-validation-workflow: backlog
+  e4-11-implement-contradiction-detection-and-flagging: backlog
+  e4-12-build-bulk-actions-for-finding-management: backlog
+  e4-13-implement-export-findings-feature: backlog
+  e4-14-build-real-time-knowledge-graph-updates: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Conversational Assistant (8 stories)
+  epic-5: backlog
+  e5-1-build-chat-interface-ui-with-message-history: backlog
+  e5-2-implement-langgraph-agent-orchestration: backlog
+  e5-3-implement-12-agent-tools-for-knowledge-querying: backlog
+  e5-4-implement-streaming-response-with-websocket: backlog
+  e5-5-implement-conversation-persistence-and-history: backlog
+  e5-6-implement-source-citation-in-responses: backlog
+  e5-7-build-suggested-questions-feature: backlog
+  e5-8-implement-chat-export-functionality: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: IRL Management & Auto-Generation (8 stories)
+  epic-6: backlog
+  e6-1-build-irl-builder-ui-with-template-selection: backlog
+  e6-2-implement-irl-creation-and-editing: backlog
+  e6-3-implement-ai-assisted-irl-auto-generation-from-documents: backlog
+  e6-4-implement-data-room-folder-structure-auto-generation-from-irl: backlog
+  e6-5-implement-irl-document-linking-and-progress-tracking: backlog
+  e6-6-build-irl-export-functionality-excel-csv: backlog
+  e6-7-implement-irl-templates-library: backlog
+  e6-8-build-irl-checklist-progress-visualization: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Learning Loop (6 stories)
+  epic-7: backlog
+  e7-1-implement-feedback-capture-mechanism: backlog
+  e7-2-build-feedback-storage-and-analysis-pipeline: backlog
+  e7-3-implement-prompt-optimization-based-on-feedback: backlog
+  e7-4-build-feedback-analytics-dashboard: backlog
+  e7-5-implement-pattern-recognition-from-corrections: backlog
+  e7-6-build-feedback-export-for-model-fine-tuning: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: Q&A Co-Creation Workflow (8 stories)
+  epic-8: backlog
+  e8-1-build-qa-list-builder-ui: backlog
+  e8-2-implement-ai-assisted-question-generation: backlog
+  e8-3-implement-answer-drafting-with-source-citations: backlog
+  e8-4-build-collaborative-qa-editing-workflow: backlog
+  e8-5-implement-qa-organization-and-categorization: backlog
+  e8-6-build-qa-export-word-pdf: backlog
+  e8-7-implement-qa-version-control: backlog
+  e8-8-build-qa-templates-library: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: CIM Company Overview Creation (CIM v3 Workflow) (9 stories)
+  epic-9: backlog
+  e9-1-cim-workflow-database-schema-and-state-management: backlog
+  e9-2-cim-builder-ui-with-workflow-progress-visualization-and-live-preview: backlog
+  e9-3-agent-tool-suggest-narrative-outline: backlog
+  e9-4-langgraph-cim-v3-workflow-implementation-14-phases: backlog
+  e9-5-content-first-then-visual-workflow: backlog
+  e9-6-extreme-visual-precision-generation-and-validation: backlog
+  e9-7-continuous-balance-checks-and-coherence-validation: backlog
+  e9-8-non-linear-workflow-and-special-commands: backlog
+  e9-9-multi-format-export-with-rag-source-citations: backlog
+  epic-9-retrospective: optional

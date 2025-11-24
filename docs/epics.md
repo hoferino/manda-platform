@@ -35,13 +35,13 @@ This document breaks down the Manda M&A Intelligence Platform into epics and sto
 | E2 | Document Ingestion & Storage | Users can upload, organize, and track documents | 8 | P0 |
 | E3 | Intelligent Document Processing | Users get automated analysis and findings from documents | 9 | P0 |
 | E4 | Collaborative Knowledge Workflow | Users can capture, validate, and manage findings collaboratively with AI | 14 | P0 |
-| E5 | Conversational Assistant | Users can query knowledge through natural language (12 agent tools) | 8 | P0 |
+| E5 | Conversational Assistant | Users can query knowledge through natural language (11 chat tools) | 9 | P0 |
 | E6 | IRL Management & Auto-Generation | Users can create IRLs and auto-generate Data Room folder structures | 8 | P0 |
 | E7 | Learning Loop | System learns from analyst corrections and feedback to improve over time | 6 | P0 |
 | E8 | Q&A Co-Creation Workflow | Users can collaboratively build Q&A lists with AI assistance | 8 | P1 |
 | E9 | CIM Company Overview Creation (CIM v3 Workflow) | Users can create Company Overview chapters through 14-phase deeply interactive workflow | 9 | P1 |
 
-**Total Stories (MVP):** 79
+**Total Stories (MVP):** 80
 
 ### Phase 2: Enhancement Epics (Platform Enhancement)
 
@@ -1339,6 +1339,8 @@ And storage is cleaned up
 
 **Description:** Implements the background processing pipeline that automatically parses uploaded documents, extracts structured data, generates embeddings for semantic search, performs initial AI analysis, and stores findings in the knowledge base. This epic transforms raw documents into queryable intelligence.
 
+**Processing Approach:** Uses **pg-boss queue jobs** for background processing (NOT LangGraph workflows). LangGraph is reserved for human-in-the-loop workflows (CIM v3, Q&A Co-Creation), while document processing is fully automated background work orchestrated through job queues.
+
 **Functional Requirements Covered:**
 - FR-DOC-004: Document Processing
 - FR-KB-001: Structured Knowledge Storage
@@ -1352,7 +1354,7 @@ And storage is cleaned up
 - pg-boss job queue
 - Docling document parser
 - OpenAI embeddings API
-- Gemini 3.0 Pro for extraction
+- Configurable LLM for extraction (default: Gemini 2.0 Pro, swappable via env variable)
 - PostgreSQL + pgvector for storage
 - WebSocket for status updates
 
@@ -2739,9 +2741,11 @@ And the export completes within 10 seconds
 
 ## Epic 5: Conversational Assistant
 
-**User Value:** Users can query knowledge through natural language and get instant answers with source attribution (12 agent tools)
+**User Value:** Users can query knowledge through natural language and get instant answers with source attribution (11 chat tools)
 
-**Description:** Implements the Chat interface with Claude Sonnet 4.5 as the conversational agent. Users can ask questions about their deal, request summaries, compare across documents, and drill down into specific findings. The agent uses tool calling (12 core tools) to query the knowledge base, update findings, validate contradictions, and provide accurate, source-attributed answers. Supports collaborative analysis workflows and real-time finding capture.
+**Description:** Implements the Analysis/Chat interface with Claude Sonnet 4.5 as the conversational agent using LangChain's tool-calling agent framework. Users can ask questions about their deal, request summaries, compare across documents, drill down into specific findings, upload documents directly in chat, and capture findings collaboratively. The agent uses native function calling with 11 specialized tools to dynamically select and invoke platform services: query the knowledge base, update findings, validate contradictions, detect uncertainty and suggest Q&A items, and provide accurate, source-attributed answers. Supports collaborative analysis workflows and real-time finding capture with temporal validation.
+
+**Note:** CIM v3 tools (suggest_narrative_outline, validate_idea_coherence, generate_slide_blueprint) are NOT available in chat - they belong to the separate CIM Builder workflow agent (Epic 9).
 
 **Functional Requirements Covered:**
 - FR-CONV-001: Chat Interface
@@ -2850,28 +2854,36 @@ And I receive a clear type error message
 
 ---
 
-#### Story E5.2: Implement Agent Tool Framework (8 Core Tools)
+#### Story E5.2: Implement LangChain Agent with 11 Chat Tools
 
 **As a** developer
-**I want** to implement the 8 core agent tools
-**So that** the conversational agent can interact with the knowledge base
+**I want** to implement LangChain tool-calling agent with 11 chat-specific agent tools
+**So that** the conversational agent can dynamically select and invoke tools during conversation
 
 **Description:**
-Create the tool calling framework and implement all 8 core tools that the agent uses to query the knowledge base, detect contradictions, generate content, and retrieve information.
+Create the LangChain tool-calling agent framework using `create_tool_calling_agent()` and implement 11 chat agent tools. The agent uses native function calling (Claude/Gemini) to dynamically select which tools to invoke based on user queries. CIM v3 tools are NOT included here - they belong to the separate CIM Builder workflow agent.
 
 **Technical Details:**
-- Tool framework using LangChain tool calling with Pydantic v2 schemas
-- Implement 8 tools (each with Pydantic input/output validation):
-  1. `query_knowledge_base(query, filters)` - Semantic search
-  2. `detect_contradictions(topic)` - Find inconsistencies
-  3. `generate_cim_section(section, filters)` - Trigger CIM generation
-  4. `get_document_info(doc_id)` - Retrieve metadata
-  5. `trigger_analysis(doc_id, analysis_type)` - Request processing
-  6. `create_irl(deal_type)` - Generate IRL from template
-  7. `suggest_questions(topic)` - Generate Q&A suggestions
-  8. `find_gaps(category)` - Identify missing information
-- Each tool returns structured JSON
+- **Agent Pattern:** LangChain `create_tool_calling_agent()` with `AgentExecutor`
+- **Tool Framework:** LangChain `@tool` decorator with Pydantic v2 schemas for validation
+- **Streaming:** `astream_events()` for token-by-token streaming with tool call indicators
+- **Security:** System prompt and tool metadata never exposed to frontend
+- **Implement 11 tools** (each with Pydantic input/output validation):
+  1. `query_knowledge_base(query, filters)` - Semantic search across findings
+  2. `update_knowledge_base(finding, source, confidence, date_referenced)` - Store analyst-provided findings with temporal metadata
+  3. `update_knowledge_graph(finding_id, relationships)` - Create relationships between findings
+  4. `validate_finding(finding, context, date_referenced)` - Check finding against existing knowledge with temporal validation (prevents false contradictions)
+  5. `get_document_info(doc_id)` - Retrieve document details
+  6. `trigger_analysis(doc_id, analysis_type)` - Request processing
+  7. `create_irl(deal_type)` - Generate IRL from template
+  8. `suggest_questions(topic, max_count=10)` - Generate Q&A suggestions (hard cap at 10)
+  9. `add_to_qa(question, answer, sources, priority)` - Add question/answer to Q&A list
+  10. `detect_contradictions(topic)` - Find inconsistencies (temporal-aware)
+  11. `find_gaps(category)` - Identify missing information
+- Each tool returns formatted string for LLM consumption
 - Tools access platform services via API calls
+- **Key Pattern:** Tools wrap Pydantic-validated functions and format results for LLM
+- **Uncertainty Detection:** Agent detects phrases like "I'm not sure" and suggests adding to Q&A list
 
 **Acceptance Criteria:**
 
@@ -2908,17 +2920,24 @@ And tells the user what went wrong
 - FR-CONV-002: Query Capabilities
 - FR-ARCH-002: Tool-Based Agent Integration
 
-**Architecture Reference:** Agent Tools (Intelligence Layer section)
+**Architecture Reference:**
+- Agent Tools (Intelligence Layer section)
+- **Conversational Agent Implementation (Real-Time Chat)** section (NEW - added 2025-11-24)
 
 **Definition of Done:**
-- [ ] Tool framework implemented
-- [ ] All 8 core tools created
-- [ ] Each tool has Pydantic schema
-- [ ] Tools call platform services correctly
-- [ ] Structured JSON responses
-- [ ] Error handling in tools
+- [ ] LangChain `create_tool_calling_agent()` implemented with AgentExecutor
+- [ ] All 11 chat agent tools created with `@tool` decorator
+- [ ] Each tool has Pydantic schema for input validation
+- [ ] Temporal metadata (date_referenced) integrated in update_knowledge_base and validate_finding
+- [ ] Tools wrap Pydantic-validated functions and format results for LLM
+- [ ] Agent executor configured with streaming (`astream_events`)
+- [ ] Tool selection works dynamically (LLM decides which tools to call)
+- [ ] Uncertainty detection triggers Q&A suggestion
+- [ ] Security: System prompt never exposed to frontend
+- [ ] Error handling in tools (graceful failures)
 - [ ] Tools tested independently
-- [ ] Documentation for each tool
+- [ ] Agent integration tested with sample conversations
+- [ ] Documentation for each tool (docstrings + architecture doc)
 
 ---
 
@@ -3236,6 +3255,112 @@ And explains the range
 - [ ] Low confidence triggers caveats
 - [ ] Missing information handled gracefully
 - [ ] Badge displays correctly in messages
+
+---
+
+#### Story E5.8: Implement Chat Export Functionality
+
+**As an** M&A analyst
+**I want** to export chat conversations
+**So that** I can share insights with colleagues or save for records
+
+**Description:**
+Enable users to export chat conversations in multiple formats (Markdown, PDF, Word) with all messages, sources, and timestamps preserved.
+
+**Technical Details:**
+- Export button in chat interface
+- Format options: Markdown, PDF, Word
+- Include: all messages, timestamps, source citations, confidence scores
+- Preserve formatting and structure
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I have an active conversation
+When I click "Export Conversation"
+Then I see format options (Markdown, PDF, Word)
+
+Given I select Markdown format
+When export completes
+Then I download a .md file with full conversation history
+And all source links are preserved
+
+Given the conversation has 50+ messages
+When I export to PDF
+Then the document is properly paginated
+And formatting is preserved
+```
+
+**Related FR:**
+- FR-CONV-001: Chat Interface
+
+**Definition of Done:**
+- [ ] Export button in chat UI
+- [ ] Markdown export works
+- [ ] PDF export works
+- [ ] Word export works
+- [ ] Source citations preserved
+- [ ] Timestamps included
+- [ ] Formatting maintained
+
+---
+
+#### Story E5.9: Implement Document Upload via Chat Interface
+
+**As an** M&A analyst
+**I want** to upload documents directly in the chat
+**So that** I can quickly add files without leaving the conversation
+
+**Description:**
+Add drag-and-drop and file picker support to chat interface for document uploads. Uploaded files automatically trigger the same processing pipeline as Data Room uploads.
+
+**Technical Details:**
+- File picker button in chat input area
+- Drag-and-drop support on chat window
+- Accepted formats: PDF, Excel, Word, images
+- Upload triggers E3 processing pipeline
+- Status updates via chat message ("Analyzing document...")
+- Post-processing notification ("12 findings extracted from financials.xlsx")
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I'm in the chat interface
+When I click the file upload button
+Then I see file picker dialog
+
+Given I select a PDF document
+When upload completes
+Then I see "Uploading financials.pdf..." message
+And processing status updates in chat
+And final notification "Analysis complete - 12 findings extracted"
+
+Given I drag and drop an Excel file onto chat
+When file is dropped
+Then upload and processing begins automatically
+And I see progress updates in chat
+
+Given upload or processing fails
+When error occurs
+Then I see clear error message in chat
+And suggested actions to resolve
+```
+
+**Related FR:**
+- FR-DOC-001: Document Upload
+- FR-BG-001: Event-Driven Architecture
+
+**UX Reference:** Chat Interface (Section 5.4)
+
+**Definition of Done:**
+- [ ] File picker button in chat input
+- [ ] Drag-and-drop support
+- [ ] Upload triggers processing pipeline
+- [ ] Status updates via chat messages
+- [ ] Post-processing notification
+- [ ] Error handling with user-friendly messages
+- [ ] Multiple file formats supported
+- [ ] Upload integrated with Data Room storage
 
 ---
 
@@ -3666,6 +3791,8 @@ And the export date
 
 **Description:** Implements the learning loop where the system learns from analyst interactions - corrections to findings, validations/rejections, edits to agent responses, and general feedback. The system updates confidence scores, improves extraction patterns, stores analyst edits as examples for future generations, and maintains a feedback database to identify systematic issues. Moved from Phase 3 to MVP in PRD v1.1 to enable continuous improvement from day one.
 
+**Learning Approach (MVP):** Uses **prompt optimization with few-shot examples** - system stores corrections in database and dynamically includes relevant correction patterns in agent system prompts. Future phases may explore fine-tuning or RAG-based learning enhancements.
+
 **Functional Requirements Covered:**
 - FR-LEARN-001: Finding Corrections
 - FR-LEARN-002: Confidence Score Learning
@@ -4053,7 +4180,11 @@ And I see a summary: "This correction affects 5 Q&A answers and 2 CIM sections"
 
 **User Value:** Users can collaboratively build comprehensive Q&A lists with AI assistance
 
-**Description:** Enables analysts to create, organize, and collaboratively answer questions with AI assistance. The system suggests questions based on knowledge base analysis, generates draft answers with sources, and supports iterative refinement through conversational interface.
+**Description:** Enables analysts to create, organize, and collaboratively answer questions with AI assistance. The system suggests questions (max 10 at a time) based on knowledge base analysis, generates draft answers with sources, and supports iterative refinement through conversational interface.
+
+**Q&A Format:** Excel spreadsheet with columns: Question | Priority | Answer | Date Answered. User can modify format or request agent to create alternative formats (Word, PDF).
+
+**Workflow Simplification:** Streamlined to 2-3 phases - user requests suggestions (max 10), agent drafts answers, user edits and exports. No complex multi-phase orchestration needed.
 
 **Functional Requirements Covered:**
 - FR-QA-001: Question List Management
@@ -4157,18 +4288,25 @@ Then I see only answered questions
 **So that** I don't miss important areas of inquiry
 
 **Technical Details:**
-- New agent tool: `suggest_questions(topic: string, count?: number)`
+- New agent tool: `suggest_questions(topic: string, max_count: int = 10)`
 - Queries Neo4j knowledge graph for findings
 - Identifies information gaps
 - Returns structured array with rationale
+- **Hard cap at 10 suggestions** to prevent overwhelming user
 
 **Acceptance Criteria:**
 
 ```gherkin
 Given the knowledge base has findings about "Revenue Model"
 When I ask "Suggest questions about revenue"
-Then the agent returns 5 relevant questions with rationale
+Then the agent returns up to 10 relevant questions with rationale
 And questions target information gaps in the KB
+And suggestions are prioritized by importance
+
+Given I request more than 10 suggestions
+When the agent processes my request
+Then exactly 10 questions are returned (capped)
+And agent explains "showing top 10 most critical questions"
 ```
 
 **Related FR:** FR-QA-002

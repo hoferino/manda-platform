@@ -43,9 +43,9 @@ workflow_status:
   # PHASE 2: Solutioning
   create-architecture: docs/manda-architecture.md
   create-epics-and-stories-final: docs/epics.md
-  test-design: recommended
+  test-design: docs/test-design-system.md
   validate-architecture: optional
-  implementation-readiness: docs/implementation-readiness-report-2025-11-21.md
+  implementation-readiness: docs/implementation-readiness-report-2025-11-24.md
 
   # PHASE 3: Implementation
-  sprint-planning: required
+  sprint-planning: docs/sprint-artifacts/sprint-status.yaml

@@ -380,14 +380,73 @@ Complete schema with all tables, indexes, and RLS policies documented in full ar
 ### Neo4j Graph Schema
 
 **Nodes:**
-- `Deal`, `Document`, `Finding`, `Insight`
+```cypher
+// Deal node
+(:Deal {
+    id: UUID,
+    name: String,
+    user_id: UUID
+})
+
+// Document node
+(:Document {
+    id: UUID,
+    name: String,
+    upload_date: DateTime,
+    doc_type: String
+})
+
+// Finding node (with temporal metadata)
+(:Finding {
+    id: UUID,
+    text: String,
+    confidence: Float,
+    date_referenced: DateTime,  // Date of the data (e.g., "Q3 2024" → 2024-09-30)
+    date_extracted: DateTime,   // When finding was extracted
+    source_document_id: UUID,
+    source_location: String     // "Page 5", "Cell B15", etc.
+})
+
+// Insight node
+(:Insight {
+    id: UUID,
+    text: String,
+    insight_type: String        // "pattern", "contradiction", "gap"
+})
+```
 
 **Relationships:**
-- `EXTRACTED_FROM` - Finding → Document
-- `CONTRADICTS` - Finding → Finding
-- `SUPPORTS` - Finding → Finding
-- `PATTERN_DETECTED` - Finding → Finding (cross-domain)
-- `BASED_ON` - Insight → Finding
+```cypher
+// Source attribution
+(:Finding)-[:EXTRACTED_FROM {page: Int, cell: String}]->(:Document)
+
+// Temporal contradiction (critical for date-aware validation)
+(:Finding {date_referenced: "2024-Q3"})-[:CONTRADICTS {detected_at: DateTime}]->(:Finding {date_referenced: "2024-Q2"})
+
+// Supersession (newer data replaces older)
+(:Finding {date_referenced: "2024-Q3"})-[:SUPERSEDES]->(:Finding {date_referenced: "2024-Q2"})
+
+// Supporting evidence
+(:Finding)-[:SUPPORTS {strength: Float}]->(:Finding)
+
+// Cross-domain patterns (e.g., financial × operational)
+(:Finding)-[:PATTERN_DETECTED {pattern_type: String}]->(:Finding)
+
+// Insight derivation
+(:Insight)-[:BASED_ON {relevance: Float}]->(:Finding)
+```
+
+**Temporal Intelligence (Critical Feature):**
+- **date_referenced:** The date the data refers to (e.g., "Q3 2024 revenue" → 2024-09-30)
+- **date_extracted:** When the finding was extracted from documents
+- **Why This Matters:** Prevents false contradictions (Q2 vs Q3 data are different time periods, not contradictions)
+- **Validation Logic:** When user says "Q3 revenue is $5.5M", agent checks:
+  1. Is there existing Q3 revenue finding? (SUPERSEDES if newer source)
+  2. Is there Q2 revenue finding? (NOT a contradiction - different time period)
+  3. Is there conflicting Q3 revenue? (TRUE contradiction - same time period, different values)
+
+**Phase 2 Enhancement (Research):**
+- **Graphiti by Zep:** Temporal knowledge graph library for advanced time-aware entity resolution and deduplication
 
 ---
 
@@ -880,20 +939,362 @@ llm_config = LLMConfig(
 
 **Workflow Management:**
 7. `create_irl(deal_type)` - Generate IRL from template
-8. `suggest_questions(topic)` - Generate Q&A suggestions
+8. `suggest_questions(topic, max_count=10)` - Generate Q&A suggestions (capped at 10)
 9. `add_to_qa(question, answer, sources)` - Add question/answer to Q&A list
 
-**Content Generation:**
-10. `generate_cim_section(section, filters)` - Create CIM content (legacy, replaced by CIM v3 tools)
-
 **Intelligence:**
-11. `detect_contradictions(topic)` - Find inconsistencies
-12. `find_gaps(category)` - Identify missing information
+10. `detect_contradictions(topic)` - Find inconsistencies
+11. `find_gaps(category)` - Identify missing information
 
-**CIM v3 Workflow Tools (NEW):**
-13. `suggest_narrative_outline(buyer_persona, context)` - Propose story arc for CIM Company Overview
-14. `validate_idea_coherence(narrative, proposed_idea)` - Check narrative alignment against established story
-15. `generate_slide_blueprint(slide_topic, narrative_context, content_elements)` - Create slide guidance with extreme visual precision
+**CIM v3 Workflow Tools (Separate CIM Agent - Not in Chat):**
+12. `suggest_narrative_outline(buyer_persona, context)` - Propose story arc for CIM Company Overview
+13. `validate_idea_coherence(narrative, proposed_idea)` - Check narrative alignment against established story
+14. `generate_slide_blueprint(slide_topic, narrative_context, content_elements)` - Create slide guidance with extreme visual precision
+
+**Note:** Legacy `generate_cim_section()` tool removed - CIM creation now exclusively handled by dedicated CIM v3 workflow agent (Epic 9)
+
+---
+
+## Conversational Agent Implementation (Real-Time Chat)
+
+### Overview
+
+**Purpose:** Enable real-time conversational interaction where the analyst asks questions and the agent selects and invokes appropriate tools to answer.
+
+**Pattern:** LangChain Tool-Calling Agent with Native Function Calling
+
+**Key Distinction:**
+- **LangGraph:** For multi-step WORKFLOWS with state persistence and human-in-the-loop (CIM v3, Q&A Co-Creation)
+- **LangChain Agent:** For real-time CONVERSATION with dynamic tool selection and invocation
+
+### Why LangChain Tool-Calling Agent?
+
+**Rationale:**
+1. **Native Function Calling:** Claude Sonnet 4.5 and Gemini 2.0 Pro support native function calling (more reliable than ReAct prompting)
+2. **Automatic Tool Selection:** LLM decides which tools to call based on user query
+3. **Streaming Support:** LangChain's `astream_events()` enables token-by-token streaming while executing tool calls
+4. **Proven Pattern:** Battle-tested approach used in production by many LangChain applications
+5. **Multi-Turn Context:** Agent executor maintains conversation history automatically
+
+**Alternative Considered:** LangChain ReAct Agent
+- **Rejected because:** ReAct uses prompting for tool selection (less reliable than native function calling)
+- **Native function calling** leverages Claude/Gemini's built-in tool-use capabilities
+
+### Architecture Components
+
+**Tool Definition Pattern:**
+
+```python
+from langchain_core.tools import tool
+from pydantic import BaseModel, Field
+
+# Define Pydantic schema for tool input (type safety)
+class KnowledgeQueryInput(BaseModel):
+    """Input schema for query_knowledge_base tool"""
+    query: str = Field(..., min_length=3, description="Search query")
+    filters: dict[str, str] = Field(default_factory=dict, description="Optional filters (e.g., deal_id)")
+    limit: int = Field(default=10, ge=1, le=50, description="Max results to return")
+
+# Define tool with Pydantic schema for LangChain
+@tool("query_knowledge_base", args_schema=KnowledgeQueryInput)
+async def query_knowledge_base_tool(query: str, filters: dict, limit: int) -> str:
+    """
+    Semantic search across findings using pgvector.
+    Returns findings with source attribution.
+    """
+    # Call the actual Pydantic-validated function
+    result = await query_knowledge_base(
+        KnowledgeQueryInput(query=query, filters=filters, limit=limit)
+    )
+
+    # Format for LLM consumption
+    findings_text = "\n".join([
+        f"- {f.text} (source: {f.source_document}, confidence: {f.confidence:.2f})"
+        for f in result.findings
+    ])
+
+    return f"Found {result.total_count} findings:\n{findings_text}"
+
+# Define all 15 tools similarly...
+```
+
+**Agent Setup:**
+
+```python
+from langchain_anthropic import ChatAnthropic
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain_core.prompts import ChatPromptTemplate
+
+# Initialize LLM with tool-calling support
+llm = ChatAnthropic(
+    model="claude-sonnet-4-5-20250929",
+    temperature=0.7,
+    streaming=True  # Enable token-by-token streaming
+)
+
+# Define system prompt for agent
+system_prompt = """You are an M&A intelligence assistant with access to a comprehensive knowledge base.
+
+Your capabilities:
+- Query findings from documents (query_knowledge_base)
+- Update knowledge with new findings (update_knowledge_base)
+- Detect contradictions (detect_contradictions)
+- Suggest questions for Q&A (suggest_questions)
+- Generate CIM narrative outlines (suggest_narrative_outline)
+- And 10 more specialized tools...
+
+Always cite sources when providing information. Use tool calls to access the knowledge base.
+When you don't know something, say so - don't hallucinate."""
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", system_prompt),
+    ("placeholder", "{chat_history}"),  # Conversation history
+    ("human", "{input}"),
+    ("placeholder", "{agent_scratchpad}"),  # Tool invocation history
+])
+
+# Register 11 chat agent tools (CIM v3 tools are in separate CIM agent)
+tools = [
+    query_knowledge_base_tool,
+    update_knowledge_base_tool,
+    update_knowledge_graph_tool,
+    validate_finding_tool,
+    get_document_info_tool,
+    trigger_analysis_tool,
+    create_irl_tool,
+    suggest_questions_tool,  # Max 10 suggestions
+    add_to_qa_tool,
+    detect_contradictions_tool,
+    find_gaps_tool,
+]
+
+# Note: CIM v3 tools (suggest_narrative_outline, validate_idea_coherence, generate_slide_blueprint)
+# are only available in the dedicated CIM Builder workflow agent, not in chat
+
+# Create tool-calling agent
+agent = create_tool_calling_agent(llm, tools, prompt)
+
+# Create executor for running agent
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    verbose=True,  # Log tool calls (useful for debugging)
+    max_iterations=5,  # Prevent infinite loops
+    return_intermediate_steps=True  # Return tool call details
+)
+```
+
+**Streaming Conversation with Tool Calls:**
+
+```python
+async def stream_agent_response(user_query: str, conversation_history: list, deal_id: str):
+    """
+    Stream agent response with tool calls to frontend.
+    Yields tokens + tool invocation indicators.
+    """
+
+    # Prepare input with conversation history
+    agent_input = {
+        "input": user_query,
+        "chat_history": conversation_history,  # List of HumanMessage/AIMessage
+    }
+
+    # Stream events from agent executor
+    async for event in agent_executor.astream_events(agent_input, version="v1"):
+
+        # Stream LLM tokens to frontend
+        if event["event"] == "on_chat_model_stream":
+            chunk = event["data"]["chunk"]
+            if chunk.content:
+                yield {"type": "token", "content": chunk.content}
+
+        # Tool call started - show indicator to user
+        elif event["event"] == "on_tool_start":
+            tool_name = event["name"]
+            tool_input = event["data"].get("input")
+            yield {
+                "type": "tool_start",
+                "tool": tool_name,
+                "status": f"Using {tool_name}..."
+            }
+
+        # Tool call completed - tool output will be passed back to LLM
+        elif event["event"] == "on_tool_end":
+            tool_name = event["name"]
+            tool_output = event["data"].get("output")
+            yield {
+                "type": "tool_end",
+                "tool": tool_name,
+                "status": f"Completed {tool_name}"
+            }
+```
+
+**Frontend Integration (WebSocket):**
+
+```typescript
+// Frontend receives streaming events via WebSocket
+socket.on('agent_stream', (event) => {
+  switch (event.type) {
+    case 'token':
+      // Append token to message display
+      appendToken(event.content);
+      break;
+
+    case 'tool_start':
+      // Show loading indicator: "Searching knowledge base..."
+      showToolIndicator(event.tool, event.status);
+      break;
+
+    case 'tool_end':
+      // Hide loading indicator
+      hideToolIndicator(event.tool);
+      break;
+  }
+});
+```
+
+### How Tool Selection Works
+
+**Example Conversation Flow:**
+
+```
+User: "What were the Q3 revenues?"
+
+1. Agent receives query
+2. LLM (Claude) decides to call query_knowledge_base tool
+   - Function calling: {"name": "query_knowledge_base", "arguments": {"query": "Q3 revenues", "limit": 5}}
+3. Tool executes: Searches pgvector for relevant findings
+4. Tool returns: "Found 3 findings: - Q3 revenues were $5.2M (source: financials.xlsx, confidence: 0.92)..."
+5. LLM receives tool output and generates response
+6. Agent streams response: "According to the financials (financials.xlsx), Q3 revenues were $5.2M."
+```
+
+**Multi-Tool Conversations:**
+
+```
+User: "Summarize the company's financial performance and check for any contradictions."
+
+1. Agent calls query_knowledge_base(query="financial performance")
+2. Agent receives findings
+3. Agent calls detect_contradictions(topic="financial metrics")
+4. Agent receives contradiction report
+5. Agent synthesizes both tool outputs into coherent response
+```
+
+### Conversation Persistence
+
+**Database Schema:**
+
+```sql
+-- Store conversations
+CREATE TABLE conversations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    deal_id uuid REFERENCES deals(id),
+    user_id uuid REFERENCES auth.users(id),
+    title text,  -- Auto-generated from first message
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+-- Store messages (human + AI)
+CREATE TABLE messages (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id uuid REFERENCES conversations(id),
+    role text NOT NULL,  -- 'human', 'ai', 'tool'
+    content text NOT NULL,
+    tool_calls jsonb,  -- Store tool invocations for debugging
+    created_at timestamptz DEFAULT now()
+);
+```
+
+**Loading Conversation History:**
+
+```python
+async def load_conversation_history(conversation_id: str) -> list:
+    """Load previous messages for context."""
+    from langchain_core.messages import HumanMessage, AIMessage
+
+    messages = await db.execute(
+        """
+        SELECT role, content FROM messages
+        WHERE conversation_id = $1
+        ORDER BY created_at ASC
+        """,
+        conversation_id
+    )
+
+    history = []
+    for msg in messages:
+        if msg['role'] == 'human':
+            history.append(HumanMessage(content=msg['content']))
+        elif msg['role'] == 'ai':
+            history.append(AIMessage(content=msg['content']))
+
+    return history
+```
+
+### Error Handling
+
+**Tool Call Failures:**
+
+```python
+# Agent executor handles tool errors gracefully
+agent_executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    handle_parsing_errors=True,  # Catch LLM output parsing errors
+    max_iterations=5,  # Prevent infinite loops if tool keeps failing
+)
+
+# Custom error handler for tool exceptions
+@tool("query_knowledge_base", args_schema=KnowledgeQueryInput)
+async def query_knowledge_base_tool(query: str, filters: dict, limit: int) -> str:
+    try:
+        result = await query_knowledge_base(...)
+        return format_findings(result)
+    except Exception as e:
+        # Return error message to LLM so it can inform user
+        return f"Error searching knowledge base: {str(e)}. Please try rephrasing your query."
+```
+
+**LLM Fallback:**
+
+```python
+# If Claude fails, fallback to Gemini
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+llm_primary = ChatAnthropic(model="claude-sonnet-4-5-20250929")
+llm_fallback = ChatGoogleGenerativeAI(model="gemini-2.0-pro")
+
+# LangChain supports fallback chains
+from langchain.llms import FallbackLLM
+llm = FallbackLLM(llms=[llm_primary, llm_fallback])
+```
+
+### Key Benefits of This Approach
+
+1. **Type Safety:** Pydantic schemas validate all tool inputs/outputs
+2. **Reliability:** Native function calling > ReAct prompting
+3. **Streaming:** Token-by-token responses with tool call indicators
+4. **Debugging:** All tool calls logged and stored in messages table
+5. **Flexibility:** Easy to add new tools (just define @tool decorator)
+6. **Multi-Turn:** Conversation history maintained automatically
+7. **Error Resilience:** Graceful handling of tool failures and LLM errors
+
+### Comparison: Agent Executor vs LangGraph
+
+| Feature | Agent Executor (Chat) | LangGraph (Workflows) |
+|---------|----------------------|------------------------|
+| **Use Case** | Real-time conversation | Multi-step workflow with human approval |
+| **State Persistence** | Conversation history only | Full workflow state with checkpoints |
+| **Tool Calling** | Dynamic (LLM decides) | Explicit (developer defines) |
+| **Human-in-the-Loop** | No interrupts | Interrupts at specified nodes |
+| **Complexity** | Simple agent loop | Complex state graphs |
+| **Example** | Chat Assistant (Epic 5) | CIM v3 Workflow (Epic 9) |
+
+**When to Use Each:**
+- **Agent Executor:** Real-time chat where LLM dynamically selects tools
+- **LangGraph:** Multi-phase workflows requiring human approval between steps
 
 ---
 
