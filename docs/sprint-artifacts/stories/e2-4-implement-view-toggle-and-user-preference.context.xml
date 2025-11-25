@@ -1,0 +1,76 @@
+<story-context id="e2-4-implement-view-toggle-and-user-preference" v="1.0">
+  <metadata>
+    <epicId>E2</epicId>
+    <storyId>4</storyId>
+    <title>Implement View Toggle and User Preference</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e2-4-implement-view-toggle-and-user-preference.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to switch between folder view and buckets view with my preference saved</iWant>
+    <soThat>I can choose the organization style that fits my workflow</soThat>
+    <tasks>
+      <task id="1">Create View Toggle Component (components/data-room/view-toggle.tsx)</task>
+      <task id="2">Implement View Switching logic</task>
+      <task id="3">Add Preference Storage (localStorage per project)</task>
+      <task id="4">Preserve Context on Switch (selected folder)</task>
+      <task id="5">Responsive Styling</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Toggle Button Display">View toggle in top-right with current mode icon</ac>
+    <ac id="2" title="Switch to Buckets">Click toggle switches to Buckets view</ac>
+    <ac id="3" title="Switch to Folders">Click toggle switches to Folder view</ac>
+    <ac id="4" title="Preference Persistence">Return to project shows saved view preference</ac>
+    <ac id="5" title="Per-Project Preference">Each project has independent preference</ac>
+    <ac id="6" title="Context Preservation">Selected folder preserved when switching back</ac>
+    <ac id="7" title="Responsive Design">Toggle works on all screen sizes</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-2.md" title="Epic 2 Tech Spec" section="AC-E2-5" snippet="View toggle switches modes, preference persisted"/>
+    </docs>
+    <code>
+      <file path="manda-app/components/ui/button.tsx" kind="component" reason="shadcn Button for toggle"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="lucide-react" version="^0.554.0" purpose="Folder and Grid icons"/>
+        <package name="zustand" version="^5.0.8" purpose="Optional state management for view mode"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="storage">localStorage key format: dataroom-view-{projectId}</constraint>
+    <constraint type="default">Default to Folders view if no preference saved</constraint>
+    <constraint type="state">React useState or Zustand for view mode state</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="localStorage" kind="browser API">
+      <signature>localStorage.getItem('dataroom-view-{projectId}')</signature>
+      <signature>localStorage.setItem('dataroom-view-{projectId}', 'folders' | 'buckets')</signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Component tests for toggle states. E2E for persistence.</standards>
+    <ideas>
+      <idea ac="1">Test toggle renders with correct icon</idea>
+      <idea ac="4">Test preference loads on mount</idea>
+      <idea ac="5">Test different projects have independent preferences</idea>
+    </ideas>
+  </tests>
+
+  <dependencies>
+    <storyDep>E2.2 (Folder view) - provides FolderView component</storyDep>
+    <storyDep>E2.3 (Buckets view) - provides BucketsView component</storyDep>
+  </dependencies>
+</story-context>

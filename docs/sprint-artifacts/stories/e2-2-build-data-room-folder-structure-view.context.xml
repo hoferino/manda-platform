@@ -1,0 +1,92 @@
+<story-context id="e2-2-build-data-room-folder-structure-view" v="1.0">
+  <metadata>
+    <epicId>E2</epicId>
+    <storyId>2</storyId>
+    <title>Build Data Room Folder Structure View</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e2-2-build-data-room-folder-structure-view.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to organize documents in a hierarchical folder structure</iWant>
+    <soThat>I can structure documents logically like a traditional data room</soThat>
+    <tasks>
+      <task id="1">Create Data Room Layout (app/projects/[id]/data-room/page.tsx)</task>
+      <task id="2">Build Folder Tree Component (components/data-room/folder-tree.tsx)</task>
+      <task id="3">Implement Create Folder functionality</task>
+      <task id="4">Implement Rename/Delete Folder</task>
+      <task id="5">Build Document List Component</task>
+      <task id="6">Implement Drag-and-Drop for documents</task>
+      <task id="7">Add Breadcrumb Navigation</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Folder Tree Component">Folder tree on left panel with expand/collapse, selection highlighting</ac>
+    <ac id="2" title="Create Folder">New Folder button/modal, creates folder in DB, appears in tree</ac>
+    <ac id="3" title="Rename Folder">Right-click rename, inline edit, updates folder_path for documents</ac>
+    <ac id="4" title="Delete Folder">Confirmation dialog, option to move documents or delete</ac>
+    <ac id="5" title="Document List">Selected folder shows documents with name, icon, size, date</ac>
+    <ac id="6" title="Drag-and-Drop">Drag documents between folders, update folder_path in DB</ac>
+    <ac id="7" title="Expand/Collapse Persistence">Tree state saved to localStorage</ac>
+    <ac id="8" title="Breadcrumb Navigation">Path display with clickable segments</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-2.md" title="Epic 2 Tech Spec" section="Workflows and Sequencing" snippet="Folder Navigation Flow: user clicks folder, frontend updates state, fetches documents with folder_path filter"/>
+      <doc path="docs/ux-design-specification.md" title="UX Design" section="Data Room" snippet="Two-panel layout with folder tree on left, document list on right"/>
+    </docs>
+    <code>
+      <file path="manda-app/lib/gcs/client.ts" kind="service" symbol="DOCUMENT_CATEGORIES" reason="Category constants for document organization"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="updateDocument" reason="PATCH API for folder_path updates"/>
+      <file path="manda-app/app/api/documents/[id]/route.ts" kind="api-route" symbol="PATCH" reason="Update folder_path endpoint - EXISTS"/>
+      <file path="manda-app/lib/workspace-navigation.ts" kind="navigation" symbol="workspaceNav" reason="Existing workspace navigation structure"/>
+      <file path="manda-app/supabase/migrations/00012_add_gcs_columns_to_documents.sql" kind="migration" symbol="folder_path" reason="folder_path column already exists"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="lucide-react" version="^0.554.0" purpose="Icons for folder tree (Folder, ChevronRight, ChevronDown)"/>
+        <package name="@radix-ui/react-dropdown-menu" version="^2.1.16" purpose="Right-click context menu"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Two-panel layout: left sidebar (tree) + main content (list)</constraint>
+    <constraint type="state">Folder expand/collapse in localStorage, server state for folder structure</constraint>
+    <constraint type="ux">Optimistic UI - update tree immediately, sync in background</constraint>
+    <constraint type="api">Use existing PATCH /api/documents/[id] for folder_path updates</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="PATCH /api/documents/[id]" kind="REST endpoint" path="manda-app/app/api/documents/[id]/route.ts">
+      <signature>Body: { folderPath?: string | null }</signature>
+      <note>Already implemented in E2.1 - reuse for drag-and-drop folder moves</note>
+    </interface>
+    <interface name="Folder queries" kind="Supabase query">
+      <signature>supabase.from('documents').select('*').eq('deal_id', projectId).eq('folder_path', path)</signature>
+      <note>Filter documents by folder_path to show folder contents</note>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Vitest + React Testing Library for component tests. E2E tests for folder CRUD and drag-drop.</standards>
+    <locations>
+      <location>manda-app/__tests__/components/data-room/</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test folder tree renders with expand/collapse</idea>
+      <idea ac="2">Test folder creation creates record and updates tree</idea>
+      <idea ac="6">Test drag-drop updates document folder_path</idea>
+      <idea ac="7">Test localStorage persistence of expand state</idea>
+    </ideas>
+  </tests>
+
+  <dependencies>
+    <storyDep>E2.1 (document storage API) - COMPLETE</storyDep>
+  </dependencies>
+</story-context>

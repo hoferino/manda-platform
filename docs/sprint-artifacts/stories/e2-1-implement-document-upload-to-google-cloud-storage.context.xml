@@ -1,0 +1,192 @@
+<story-context id="e2-1-implement-document-upload-to-google-cloud-storage" v="1.0">
+  <metadata>
+    <epicId>E2</epicId>
+    <storyId>1</storyId>
+    <title>Implement Document Upload to Google Cloud Storage</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e2-1-implement-document-upload-to-google-cloud-storage.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>Google Cloud Storage configured with upload API endpoints</iWant>
+    <soThat>users can securely upload and store documents in the M&A data room</soThat>
+    <tasks>
+      <task id="1" status="done">Create GCS Client Library (lib/gcs/client.ts) - AC#1, AC#8</task>
+      <task id="2" status="done">Implement File Validation - AC#3, AC#4</task>
+      <task id="3" status="done">Create Upload API Endpoint (app/api/documents/upload/route.ts) - AC#2, AC#6, AC#7</task>
+      <task id="4" status="done">Implement Signed URL Generation - AC#5</task>
+      <task id="5" status="done">Create Document Operations API (app/api/documents/[id]/route.ts) - AC#5, AC#6</task>
+      <task id="6" status="done">Create Database Migration (00012_add_gcs_columns_to_documents.sql) - AC#7</task>
+      <task id="7" status="partial">Update Environment Configuration - AC#8</task>
+      <task id="8" status="done">Create Client-Side API Library (lib/api/documents.ts) - AC#2</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="GCS Client Configuration">
+      <given>the application has GCS environment variables configured</given>
+      <when>the GCS client initializes</when>
+      <then>it authenticates using service account credentials and can access the bucket</then>
+      <status>implemented</status>
+      <implementation>manda-app/lib/gcs/client.ts:83-110 - getStorageClient() with singleton pattern</implementation>
+    </ac>
+    <ac id="2" title="File Upload API Endpoint">
+      <given>I am an authenticated user with project access</given>
+      <when>I POST a file to /api/documents/upload with projectId</when>
+      <then>file uploaded to GCS, document record created, audit log entry created</then>
+      <status>implemented</status>
+      <implementation>manda-app/app/api/documents/upload/route.ts:29-193</implementation>
+    </ac>
+    <ac id="3" title="File Type Validation">
+      <given>I am uploading a document</given>
+      <when>I submit a file</when>
+      <then>allowed types succeed, disallowed types (.exe, .sh, .bat) rejected</then>
+      <status>implemented</status>
+      <implementation>manda-app/lib/gcs/client.ts:22-51, 366-398 - ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, validateFile()</implementation>
+    </ac>
+    <ac id="4" title="File Size Validation">
+      <given>I am uploading a document</given>
+      <when>I submit a file over 500MB</when>
+      <then>upload rejected with size error</then>
+      <status>implemented</status>
+      <implementation>manda-app/lib/gcs/client.ts:54 - MAX_FILE_SIZE = 500MB</implementation>
+    </ac>
+    <ac id="5" title="Signed URL Generation">
+      <given>a document exists in GCS</given>
+      <when>I request a download URL</when>
+      <then>signed URL generated with 15-minute expiry</then>
+      <status>implemented</status>
+      <implementation>manda-app/lib/gcs/client.ts:199-222 - getSignedDownloadUrl()</implementation>
+    </ac>
+    <ac id="6" title="RLS Access Control">
+      <given>User A owns Project 1</given>
+      <when>User B tries to upload to Project 1</when>
+      <then>request rejected with 403/404</then>
+      <status>implemented</status>
+      <implementation>RLS on deals table, checked via supabase.from('deals').select() in upload route</implementation>
+    </ac>
+    <ac id="7" title="Document Metadata Storage">
+      <given>a file is uploaded successfully</given>
+      <when>I query the documents table</when>
+      <then>see name, file_size, mime_type, gcs_bucket, gcs_object_path, folder_path, category</then>
+      <status>implemented</status>
+      <implementation>manda-app/supabase/migrations/00012_add_gcs_columns_to_documents.sql</implementation>
+    </ac>
+    <ac id="8" title="Environment Configuration">
+      <given>the .env.example file</given>
+      <when>a developer sets up the project</when>
+      <then>GCS_PROJECT_ID, GCS_BUCKET_NAME documented</then>
+      <status>partial</status>
+      <note>Environment vars documented in lib/gcs/client.ts comments, may need .env.example update</note>
+    </ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-2.md" title="Epic 2 Technical Specification" section="APIs and Interfaces" snippet="Defines document upload API contracts, GCS configuration, and NFRs for document storage"/>
+      <doc path="docs/sprint-artifacts/epics/epic-E2.md" title="Epic 2: Document Ingestion &amp; Storage" section="Technical Notes" snippet="Architecture decision: GCS instead of Supabase Storage for better Gemini/Vertex AI integration"/>
+      <doc path="docs/manda-architecture.md" title="Manda Architecture" section="File Storage" snippet="Google Cloud Storage with signed URLs, single bucket with project path isolation"/>
+      <doc path="docs/manda-prd.md" title="Product Requirements Document" section="FR-DOC-001" snippet="Document Upload &amp; Storage functional requirements"/>
+    </docs>
+    <code>
+      <file path="manda-app/lib/gcs/client.ts" kind="service" symbol="GCS Client" lines="1-399" reason="Core GCS operations: upload, download, signed URLs, validation - FULLY IMPLEMENTED"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="Documents API Client" lines="1-329" reason="Client-side document operations - FULLY IMPLEMENTED"/>
+      <file path="manda-app/app/api/documents/upload/route.ts" kind="api-route" symbol="POST /api/documents/upload" lines="1-271" reason="Upload endpoint - FULLY IMPLEMENTED"/>
+      <file path="manda-app/app/api/documents/[id]/route.ts" kind="api-route" symbol="GET/DELETE/PATCH /api/documents/[id]" lines="1-326" reason="Document CRUD operations - FULLY IMPLEMENTED"/>
+      <file path="manda-app/supabase/migrations/00012_add_gcs_columns_to_documents.sql" kind="migration" symbol="GCS columns" lines="1-47" reason="Database schema for GCS metadata - APPLIED"/>
+      <file path="manda-app/lib/audit/logger.ts" kind="service" symbol="createAuditLog" reason="Audit logging for document operations"/>
+      <file path="manda-app/lib/audit/event-types.ts" kind="types" symbol="DATA_ACCESS_EVENTS" lines="32-47" reason="DOCUMENT_UPLOADED, DOCUMENT_ACCESSED, DOCUMENT_DELETED events"/>
+      <file path="manda-app/lib/supabase/server.ts" kind="service" symbol="createClient" reason="Server-side Supabase client for auth and RLS"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@google-cloud/storage" version="^7.17.3" purpose="GCS SDK for bucket operations"/>
+        <package name="@supabase/ssr" version="^0.7.0" purpose="Supabase server-side rendering"/>
+        <package name="@supabase/supabase-js" version="^2.84.0" purpose="Supabase client"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Single GCS bucket (manda-documents) with path-based project isolation: {project_id}/{folder_path}/{filename}</constraint>
+    <constraint type="security">Signed URLs expire after 15 minutes (SIGNED_URL_EXPIRY_MINUTES = 15)</constraint>
+    <constraint type="security">RLS enforced via Supabase - users can only access documents in their deals</constraint>
+    <constraint type="validation">Max file size: 500MB; Allowed types: PDF, Excel, Word, PPT, CSV, TXT, Images</constraint>
+    <constraint type="api">Next.js API Routes (not FastAPI) for document operations; FastAPI reserved for Epic 3</constraint>
+    <constraint type="audit">All document operations must be logged via createAuditLog</constraint>
+    <constraint type="pattern">GCS client uses singleton pattern for connection reuse</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="POST /api/documents/upload" kind="REST endpoint" path="manda-app/app/api/documents/upload/route.ts">
+      <signature>FormData: { file: File, projectId: string, folderPath?: string, category?: DocumentCategory }</signature>
+      <response>{ success: true, document: { id, name, size, mimeType, category, folderPath, uploadStatus, processingStatus, createdAt } }</response>
+    </interface>
+    <interface name="GET /api/documents/[id]" kind="REST endpoint" path="manda-app/app/api/documents/[id]/route.ts">
+      <signature>Path param: id (document UUID)</signature>
+      <response>{ document: { ...metadata, downloadUrl, downloadUrlExpiresIn } }</response>
+    </interface>
+    <interface name="DELETE /api/documents/[id]" kind="REST endpoint" path="manda-app/app/api/documents/[id]/route.ts">
+      <signature>Path param: id (document UUID)</signature>
+      <response>{ success: true, message: 'Document deleted successfully' }</response>
+    </interface>
+    <interface name="PATCH /api/documents/[id]" kind="REST endpoint" path="manda-app/app/api/documents/[id]/route.ts">
+      <signature>Body: { name?: string, category?: DocumentCategory, folderPath?: string | null }</signature>
+      <response>{ success: true, document: { id, projectId, name, category, folderPath, updatedAt } }</response>
+    </interface>
+    <interface name="uploadDocument" kind="client function" path="manda-app/lib/api/documents.ts:42-84">
+      <signature>uploadDocument(file: File, options: UploadOptions): Promise&lt;UploadResult&gt;</signature>
+    </interface>
+    <interface name="validateFile" kind="utility function" path="manda-app/lib/gcs/client.ts:366-398">
+      <signature>validateFile(filename: string, mimeType: string, size: number): { valid: boolean, error?: string }</signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Vitest with React Testing Library for component tests. Test files in __tests__/ directory or colocated with source.
+      Unit tests target 80% coverage for utility functions. Integration tests required for all API endpoints.
+      Security tests required for RLS enforcement and signed URL expiry.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/</location>
+      <location>manda-app/**/*.test.ts</location>
+      <location>manda-app/**/*.test.tsx</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test GCS client initialization with valid/invalid credentials</idea>
+      <idea ac="2">Test upload endpoint with valid file, verify document record created</idea>
+      <idea ac="3">Test file type validation rejects .exe, .sh, .bat files</idea>
+      <idea ac="4">Test file size validation rejects files over 500MB</idea>
+      <idea ac="5">Test signed URL generation and verify 15-minute expiry</idea>
+      <idea ac="6">Test RLS: User A cannot access User B's project documents</idea>
+      <idea ac="7">Test document metadata includes all GCS columns after upload</idea>
+      <idea ac="8">Test app starts with GCS env vars configured</idea>
+    </ideas>
+  </tests>
+
+  <implementationStatus>
+    <summary>Story e2-1 is SUBSTANTIALLY COMPLETE. All 8 acceptance criteria have implementations.</summary>
+    <completedItems>
+      <item>GCS Client Library with singleton pattern</item>
+      <item>File validation (type, size, sanitization)</item>
+      <item>Upload API endpoint with FormData handling</item>
+      <item>Signed URL generation for downloads</item>
+      <item>Document CRUD operations API</item>
+      <item>Database migration for GCS columns</item>
+      <item>Client-side API library</item>
+      <item>Audit logging integration</item>
+    </completedItems>
+    <remainingWork>
+      <item priority="low">Update .env.example with GCS variables (AC#8 partial)</item>
+      <item priority="medium">Add unit tests for validateFile function</item>
+      <item priority="medium">Add integration tests for upload/download flow</item>
+      <item priority="high">Verify migration 00012 is applied to database</item>
+      <item priority="high">Regenerate Supabase types to include new columns</item>
+    </remainingWork>
+    <recommendation>Run tests, verify migration applied, regenerate types, then mark story DONE</recommendation>
+  </implementationStatus>
+</story-context>

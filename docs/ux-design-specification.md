@@ -327,7 +327,7 @@ Each bucket card shows:
 #### Upload Flow
 
 1. **Drag-and-drop** or **click to upload**
-2. **File uploaded** to Supabase Storage
+2. **File uploaded** to Google Cloud Storage
 3. **Processing queued** (background worker)
 4. **Status updates** in real-time (WebSocket)
 5. **Notification** when complete: "Financial statements analyzed. 12 findings extracted."

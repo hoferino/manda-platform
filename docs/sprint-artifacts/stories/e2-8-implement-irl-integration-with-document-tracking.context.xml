@@ -1,0 +1,99 @@
+<story-context id="e2-8-implement-irl-integration-with-document-tracking" v="1.0">
+  <metadata>
+    <epicId>E2</epicId>
+    <storyId>8</storyId>
+    <title>Implement IRL Integration with Document Tracking</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e2-8-implement-irl-integration-with-document-tracking.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>an IRL checklist panel showing document collection progress</iWant>
+    <soThat>I can track which documents I've received against the Information Request List</soThat>
+    <tasks>
+      <task id="1">Create Checklist Panel Component</task>
+      <task id="2">Build Progress Display</task>
+      <task id="3">Create Hierarchical Item List</task>
+      <task id="4">Implement Quick Upload from checklist</task>
+      <task id="5">Handle No IRL State</task>
+      <task id="6">Implement Document Linking</task>
+      <task id="7">Create IRL API Endpoints</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Checklist Panel Display">Right-side panel with overall progress (X/Y, %)</ac>
+    <ac id="2" title="Hierarchical Checklist">Items grouped by category, expand/collapse</ac>
+    <ac id="3" title="Status Indicators">Checkmark for linked, empty circle for pending</ac>
+    <ac id="4" title="Progress Calculation">15/19 items = 79% progress bar</ac>
+    <ac id="5" title="Quick Upload">Upload button on pending items, auto-links to IRL item</ac>
+    <ac id="6" title="Collapsible Panel">Collapse to thin strip, remember state</ac>
+    <ac id="7" title="No IRL State">Show "No IRL configured" with create link</ac>
+    <ac id="8" title="Document Linking">Prompt to link uploads to IRL items</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-2.md" title="Epic 2 Tech Spec" section="AC-E2-7" snippet="IRL Checklist panel with progress tracking"/>
+      <doc path="docs/manda-prd.md" title="PRD" section="IRL-Driven-Workflow" snippet="IRL as central tracking mechanism for document collection"/>
+    </docs>
+    <code>
+      <file path="manda-app/supabase/migrations/00007_create_irls_table.sql" kind="migration" symbol="irls, irl_items" reason="IRL tables already exist"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="uploadDocument" reason="Upload with IRL item linking"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@radix-ui/react-progress" version="^1.1.8" purpose="Progress bar"/>
+        <package name="lucide-react" version="^0.554.0" purpose="Check, Circle icons"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="scope">This story READS IRL data, doesn't create IRLs (Epic 6)</constraint>
+    <constraint type="data">Need irl_item_id column on documents for linking</constraint>
+    <constraint type="fallback">Show default categories when no IRL configured</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="GET /api/projects/[id]/irl" kind="REST endpoint">
+      <signature>Get IRL with items for a project</signature>
+      <response>{ irl: { id, name, items: [{ id, name, category, document_id? }] } }</response>
+      <note>NEW ENDPOINT NEEDED</note>
+    </interface>
+    <interface name="GET /api/projects/[id]/irl/progress" kind="REST endpoint">
+      <signature>Get IRL progress stats</signature>
+      <response>{ total: 19, completed: 15, percentage: 79 }</response>
+      <note>NEW ENDPOINT NEEDED</note>
+    </interface>
+    <interface name="Document linking" kind="database">
+      <signature>ALTER TABLE documents ADD COLUMN irl_item_id uuid REFERENCES irl_items(id)</signature>
+      <note>NEW MIGRATION NEEDED</note>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Component tests for checklist rendering. Progress calculation tests.</standards>
+    <ideas>
+      <idea ac="1">Test panel renders with progress</idea>
+      <idea ac="4">Test progress calculation: 15/19 = 79%</idea>
+      <idea ac="5">Test quick upload links to IRL item</idea>
+      <idea ac="7">Test no IRL state shows message</idea>
+    </ideas>
+  </tests>
+
+  <dependencies>
+    <storyDep>E2.1 (document storage API) - COMPLETE</storyDep>
+    <storyDep>Existing IRL tables from migration 00007</storyDep>
+  </dependencies>
+
+  <implementationNotes>
+    <note>IRL tables (irls, irl_items) already exist from migration 00007</note>
+    <note>Need new migration to add irl_item_id to documents table</note>
+    <note>Need new API endpoints for IRL read operations</note>
+    <note>Full IRL management (create/edit) is in Epic 6 - this is read-only</note>
+  </implementationNotes>
+</story-context>

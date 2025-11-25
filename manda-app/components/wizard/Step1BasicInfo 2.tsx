@@ -1,7 +1,7 @@
 /**
  * Step 1: Basic Information
- * Collects project name, company name, industry, and deal type
- * Story: E1.5 - Implement Project Creation Wizard (AC: #2, #3, #5)
+ * Collects project name, company name, and industry
+ * Story: E1.5 - Implement Project Creation Wizard (AC: #2, #5)
  */
 
 'use client'
@@ -16,40 +16,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-export const DEAL_TYPES = [
-  { value: 'tech-ma', label: 'Tech M&A' },
-  { value: 'industrial', label: 'Industrial' },
-  { value: 'pharma', label: 'Pharma' },
-  { value: 'custom', label: 'Custom / General' },
-] as const
-
 export const INDUSTRIES = [
-  { value: 'technology', label: 'Technology & Software' },
-  { value: 'saas', label: 'SaaS & Cloud' },
-  { value: 'fintech', label: 'Fintech' },
+  { value: 'technology', label: 'Technology' },
   { value: 'healthcare', label: 'Healthcare' },
-  { value: 'pharma-biotech', label: 'Pharma & Biotech' },
-  { value: 'medical-devices', label: 'Medical Devices' },
   { value: 'financial-services', label: 'Financial Services' },
-  { value: 'insurance', label: 'Insurance' },
-  { value: 'industrial', label: 'Industrial & Manufacturing' },
-  { value: 'automotive', label: 'Automotive' },
-  { value: 'aerospace-defense', label: 'Aerospace & Defense' },
-  { value: 'retail', label: 'Retail & E-commerce' },
-  { value: 'consumer-goods', label: 'Consumer Goods' },
-  { value: 'food-beverage', label: 'Food & Beverage' },
-  { value: 'energy', label: 'Energy & Utilities' },
-  { value: 'oil-gas', label: 'Oil & Gas' },
-  { value: 'renewables', label: 'Renewables & Clean Tech' },
+  { value: 'industrial', label: 'Industrial' },
+  { value: 'retail', label: 'Retail' },
+  { value: 'energy', label: 'Energy' },
   { value: 'real-estate', label: 'Real Estate' },
-  { value: 'construction', label: 'Construction & Infrastructure' },
-  { value: 'media-entertainment', label: 'Media & Entertainment' },
-  { value: 'telecom', label: 'Telecommunications' },
-  { value: 'logistics', label: 'Logistics & Transportation' },
-  { value: 'professional-services', label: 'Professional Services' },
-  { value: 'education', label: 'Education & EdTech' },
-  { value: 'agriculture', label: 'Agriculture & AgTech' },
-  { value: 'hospitality', label: 'Hospitality & Travel' },
   { value: 'other', label: 'Other' },
 ] as const
 
@@ -57,28 +31,24 @@ interface Step1BasicInfoProps {
   projectName: string
   companyName: string
   industry: string
-  dealType: string
   onProjectNameChange: (value: string) => void
   onCompanyNameChange: (value: string) => void
   onIndustryChange: (value: string) => void
-  onDealTypeChange: (value: string) => void
   errors?: {
     projectName?: string
     companyName?: string
   }
 }
 
-const MAX_NAME_LENGTH = 200
+const MAX_NAME_LENGTH = 100
 
 export function Step1BasicInfo({
   projectName,
   companyName,
   industry,
-  dealType,
   onProjectNameChange,
   onCompanyNameChange,
   onIndustryChange,
-  onDealTypeChange,
   errors,
 }: Step1BasicInfoProps) {
   const handleProjectNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,26 +148,6 @@ export function Step1BasicInfo({
           </Select>
           <p className="text-xs text-muted-foreground">
             Select the industry category (optional)
-          </p>
-        </div>
-
-        {/* Deal Type */}
-        <div className="space-y-2">
-          <Label htmlFor="dealType">Deal Type</Label>
-          <Select value={dealType} onValueChange={onDealTypeChange}>
-            <SelectTrigger id="dealType">
-              <SelectValue placeholder="Select deal type" />
-            </SelectTrigger>
-            <SelectContent>
-              {DEAL_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            This helps suggest the right IRL template (optional - can select on next step)
           </p>
         </div>
       </div>

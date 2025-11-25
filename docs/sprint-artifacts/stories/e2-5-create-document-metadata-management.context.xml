@@ -1,0 +1,85 @@
+<story-context id="e2-5-create-document-metadata-management" v="1.0">
+  <metadata>
+    <epicId>E2</epicId>
+    <storyId>5</storyId>
+    <title>Create Document Metadata Management</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e2-5-create-document-metadata-management.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to view and update document metadata (name, category, folder)</iWant>
+    <soThat>I can organize and track documents effectively</soThat>
+    <tasks>
+      <task id="1">Create Document Card Component (components/data-room/document-card.tsx)</task>
+      <task id="2">Build Document Details Panel (components/data-room/document-details.tsx)</task>
+      <task id="3">Implement Rename Functionality</task>
+      <task id="4">Implement Category Change</task>
+      <task id="5">Implement Folder Move</task>
+      <task id="6">Add Processing Status Display</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Document Card Display">Name, type icon, size, date, category badge, status</ac>
+    <ac id="2" title="Document Details View">All metadata in panel/modal with actions</ac>
+    <ac id="3" title="Rename Document">Edit name, validate, save via PATCH API</ac>
+    <ac id="4" title="Change Category">Dropdown selection, updates bucket view</ac>
+    <ac id="5" title="Change Folder">Folder tree selector, updates folder_path</ac>
+    <ac id="6" title="Processing Status">Spinner during processing, final status display</ac>
+    <ac id="7" title="Validation">Reject empty/invalid names</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-2.md" title="Epic 2 Tech Spec" section="APIs and Interfaces" snippet="PATCH /api/documents/[id] for name, category, folderPath updates"/>
+    </docs>
+    <code>
+      <file path="manda-app/app/api/documents/[id]/route.ts" kind="api-route" symbol="PATCH" reason="Update endpoint - FULLY IMPLEMENTED"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="updateDocument" lines="165-196" reason="Client-side update function - IMPLEMENTED"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="formatFileSize" lines="296-304" reason="File size formatting helper"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="getFileTypeIcon" lines="317-328" reason="Icon selection by MIME type"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="DOCUMENT_CATEGORIES" lines="275-291" reason="Category dropdown options"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@radix-ui/react-select" version="^2.2.6" purpose="Category dropdown"/>
+        <package name="date-fns" version="^4.1.0" purpose="Relative date formatting"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="api">Reuse existing PATCH /api/documents/[id] endpoint</constraint>
+    <constraint type="ux">Optimistic UI - update immediately, revert on error</constraint>
+    <constraint type="validation">Client-side + server-side validation</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="PATCH /api/documents/[id]" kind="REST endpoint" path="manda-app/app/api/documents/[id]/route.ts">
+      <signature>Body: { name?: string, category?: DocumentCategory, folderPath?: string | null }</signature>
+      <response>{ success: true, document: { id, projectId, name, category, folderPath, updatedAt } }</response>
+      <note>FULLY IMPLEMENTED in E2.1</note>
+    </interface>
+    <interface name="updateDocument" kind="client function" path="manda-app/lib/api/documents.ts:165-196">
+      <signature>updateDocument(id, { name?, category?, folderPath? }): Promise&lt;{ success, document?, error? }&gt;</signature>
+      <note>FULLY IMPLEMENTED in E2.1</note>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Component tests for card rendering. Form validation tests.</standards>
+    <ideas>
+      <idea ac="1">Test document card renders all metadata</idea>
+      <idea ac="3">Test rename validation rejects empty name</idea>
+      <idea ac="4">Test category change updates document</idea>
+    </ideas>
+  </tests>
+
+  <dependencies>
+    <storyDep>E2.1 (document storage API) - COMPLETE, provides PATCH endpoint</storyDep>
+  </dependencies>
+</story-context>

@@ -3,10 +3,10 @@
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-25
+**Last Updated:** 2025-11-24
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 2.4 (Document storage: Google Cloud Storage replaces Supabase Storage for raw file storage)
+**Version:** 2.3 (Strategic refinements: flexible cross-domain pattern library, Financial Model Integration elevated to MVP, CIM workflow phase flexibility, live preview feature added)
 
 ---
 
@@ -45,7 +45,7 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 | **Speed Tasks Model** | Configurable | Default: Claude Haiku 4 or Gemini 2.0 Flash; fast, cost-effective queries |
 | **Embeddings** | Configurable | Default: OpenAI text-embedding-3-large; industry-leading semantic search quality |
 | **Authentication** | Supabase Auth | OAuth, magic links, MFA out of the box; RLS for multi-tenant security |
-| **File Storage** | Google Cloud Storage | Scalable document storage, signed URLs, lifecycle policies for M&A documents |
+| **File Storage** | Supabase Storage | Integrated with auth, signed URLs, same infrastructure |
 | **Frontend** | Next.js 15 (React 19.2) | Latest stable with Turbopack beta; proven production-ready, mature ecosystem, shadcn/ui |
 | **Development Environment** | Docker Compose | Local Supabase + Neo4j + Next.js orchestration, production parity |
 | **Starter Template** | Nextbase Lite | Next.js 16 + Supabase + TypeScript + Tailwind + Testing suite pre-configured |
@@ -77,7 +77,7 @@ Data Layer:
   vector_extension: pgvector 0.8+
   graph_database: Neo4j 2025.01 (Community Edition)
   auth_database: Supabase Auth (built-in)
-  file_storage: Google Cloud Storage
+  file_storage: Supabase Storage
 
 Document Processing:
   parser: Docling (IBM open source)
@@ -179,9 +179,9 @@ Development & Deployment:
 ┌─────────────▼───────────────────▼───────────────────────────────┐
 │                       DATA LAYER                                │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   Supabase   │  │    Neo4j     │  │   Google     │         │
-│  │   Postgres   │  │  (Graph DB)  │  │   Cloud      │         │
-│  │  + pgvector  │  │              │  │   Storage    │         │
+│  │   Supabase   │  │    Neo4j     │  │   Supabase   │         │
+│  │   Postgres   │  │  (Graph DB)  │  │   Storage    │         │
+│  │  + pgvector  │  │              │  │  (Documents) │         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
               │
@@ -201,7 +201,7 @@ Development & Deployment:
 ```
 User uploads document
   ↓
-API Gateway → Google Cloud Storage (file saved)
+API Gateway → Supabase Storage (file saved)
   ↓
 Create document record in Postgres
   ↓
@@ -2101,54 +2101,6 @@ npm install
 
 ## Changelog
 
-### Version 2.5 (2025-11-25)
-**Infrastructure Strategy Decisions:**
-- **Supabase Retained for MVP:**
-  - PostgreSQL, Auth, and Realtime remain on Supabase - stable, working, no migration risk
-  - Future migration path to Cloud SQL for PostgreSQL documented for when scale requires
-  - Rationale: "Don't fix what isn't broken" - premature migration adds risk without benefit
-- **Document Processing Hybrid Approach (Epic 3):**
-  - **Docling** for document parsing: Excel formula extraction, table structure, OCR - superior for M&A document complexity
-  - **Vertex AI RAG Engine** for retrieval/indexing layer: Managed chunking, embeddings, vector search
-  - Native GCS integration eliminates custom RAG pipeline infrastructure
-  - Rationale: Best of both worlds - Docling's parsing quality + Vertex AI's managed RAG service
-- **Deployment Target: Google Cloud Run:**
-  - Scale-to-zero for cost efficiency during MVP/variable traffic
-  - Native GCS integration (documents already there)
-  - 2M free requests/month
-  - Container-based: supports both Next.js and FastAPI
-  - Future migration path: Cloud Run → GKE if Kubernetes control needed
-
-### Version 2.4 (2025-11-25)
-**Document Storage Architecture Decision:**
-- **Google Cloud Storage Replaces Supabase Storage:**
-  - Raw M&A documents (PDFs, Word, Excel) stored in Google Cloud Storage
-  - Supabase remains for PostgreSQL, Auth, and pgvector (embeddings)
-  - Neo4j remains for graph relationships
-  - Clear separation: GCS for raw files, pgvector for embeddings, Neo4j for relationships
-- **Rationale:**
-  - Supabase Storage not designed for large-scale document storage
-  - pgvector and Neo4j are for embeddings/relationships, not raw files
-  - GCS offers: scalable storage, signed URLs, lifecycle policies, SOC 2/ISO 27001/GDPR compliance
-  - Simpler service account auth model vs Azure's more complex options
-  - Better TypeScript SDK (`@google-cloud/storage`)
-- **Bucket Structure:**
-  ```
-  manda-documents/
-  ├── {deal_id}/
-  │   ├── dataroom/
-  │   │   ├── financial/
-  │   │   ├── legal/
-  │   │   └── operational/
-  │   ├── deliverables/
-  │   └── chat-attachments/
-  ```
-- **Integration Flow:**
-  - User uploads → Next.js API → GCS bucket (raw file)
-  - pg-boss job triggered → Docling parses → pgvector (embeddings)
-  - Neo4j updated with relationships
-  - Supabase documents table stores metadata + GCS URI
-
 ### Version 2.3 (2025-11-24)
 **Strategic Refinements - MVP Scope Adjustments:**
 - **Flexible Cross-Domain Pattern Library:**
@@ -2258,4 +2210,4 @@ npm install
 ---
 
 *Generated using BMAD Method architecture workflow*
-*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25*
+*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23*

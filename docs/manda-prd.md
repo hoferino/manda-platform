@@ -1,12 +1,37 @@
 # Product Requirements Document (PRD)
 # Manda - M&A Intelligence Platform
 
-**Document Status:** In Review
+**Document Status:** In Development
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-11-25
 **Owner:** Max
 **Contributors:** PM John
-**Version:** 1.4 (Strategic refinements: flexible cross-domain pattern library, Financial Model Integration elevated to MVP, IRL workflow refocused on extraction, CIM phase count flexible, confidence scoring risk documented, live preview added)
+**Version:** 1.6 (Infrastructure decisions: Supabase retained for MVP (PostgreSQL, Auth) with future GCP migration option. Epic 3 will use Docling for document parsing + Vertex AI RAG Engine for retrieval/indexing. Cloud Run identified as preferred deployment target.)
+
+---
+
+## Implementation Status
+
+| Epic | Status | Stories | Completion Date |
+|------|--------|---------|-----------------|
+| **E1: Project Foundation** | ✅ Complete | 9/9 | 2025-11-25 |
+| E2: Document Ingestion & Storage | Backlog | 0/8 | - |
+| E3: Intelligent Document Processing | Backlog | 0/9 | - |
+| E4: Collaborative Knowledge Workflow | Backlog | 0/14 | - |
+| E5: Conversational Assistant | Backlog | 0/8 | - |
+| E6: IRL Management & Auto-Generation | Backlog | 0/8 | - |
+| E7: Learning Loop | Backlog | 0/6 | - |
+| E8: Q&A Co-Creation Workflow | Backlog | 0/8 | - |
+| E9: CIM Company Overview Creation | Backlog | 0/9 | - |
+
+### Architecture Decisions Made
+1. **Document Storage:** Google Cloud Storage (GCS) - selected for better cost model with large files and native Gemini/Vertex AI integration
+2. **Test Infrastructure:** Vitest + React Testing Library
+3. **Error Handling:** Hierarchical error boundaries at global, app, and route levels
+4. **Database & Auth (MVP):** Supabase retained for PostgreSQL, Auth, and pgvector - stable, working, migration to Cloud SQL deferred to post-MVP
+5. **Document Processing (Epic 3):** Docling for parsing (Excel formulas, tables, OCR) + Vertex AI RAG Engine for retrieval/indexing layer - hybrid approach leveraging best of both
+6. **Deployment Target:** Google Cloud Run - scale-to-zero, cost-effective for variable traffic, native GCS integration
+7. **Future Migration Path:** Supabase → Cloud SQL for PostgreSQL when scale requires (documented for planning)
 
 ---
 

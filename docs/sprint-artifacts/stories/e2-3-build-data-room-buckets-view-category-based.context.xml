@@ -1,0 +1,86 @@
+<story-context id="e2-3-build-data-room-buckets-view-category-based" v="1.0">
+  <metadata>
+    <epicId>E2</epicId>
+    <storyId>3</storyId>
+    <title>Build Data Room Buckets View (Category-Based)</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e2-3-build-data-room-buckets-view-category-based.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to organize documents by category buckets with progress indicators</iWant>
+    <soThat>I can see document coverage by due diligence category at a glance</soThat>
+    <tasks>
+      <task id="1">Create Bucket Card Component (components/data-room/bucket-card.tsx)</task>
+      <task id="2">Build Buckets Grid Layout (components/data-room/buckets-view.tsx)</task>
+      <task id="3">Implement Progress Calculation</task>
+      <task id="4">Add Expandable Item List</task>
+      <task id="5">Implement Per-Item Upload</task>
+      <task id="6">Handle Empty/Default States</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Category Bucket Cards">Grid of cards with category name, progress bar, status badge</ac>
+    <ac id="2" title="Progress Calculation">Progress = uploaded / expected (from IRL or defaults)</ac>
+    <ac id="3" title="Status Badges">Not Started (0%), In Progress (1-99%), Completed (100%)</ac>
+    <ac id="4" title="Expandable Item List">Click card to expand, show items with upload status</ac>
+    <ac id="5" title="Per-Item Upload">Upload button on pending items, auto-set category</ac>
+    <ac id="6" title="Empty State">No documents shows 0% with upload prompt</ac>
+    <ac id="7" title="Default Categories">Show standard M&amp;A categories when no IRL configured</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-2.md" title="Epic 2 Tech Spec" section="Data Models" snippet="DOCUMENT_CATEGORIES enum with 15 M&amp;A due diligence categories"/>
+      <doc path="docs/ux-design-specification.md" title="UX Design" section="Buckets View" snippet="Category cards in responsive grid with progress visualization"/>
+    </docs>
+    <code>
+      <file path="manda-app/lib/gcs/client.ts" kind="constants" symbol="DOCUMENT_CATEGORIES" lines="57-73" reason="Category enum to use for bucket cards"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="DOCUMENT_CATEGORIES" lines="275-291" reason="Category labels with display names"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="uploadDocument" reason="Upload with category preset"/>
+      <file path="manda-app/supabase/migrations/00012_add_gcs_columns_to_documents.sql" kind="migration" symbol="category" reason="category column with check constraint"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@radix-ui/react-progress" version="^1.1.8" purpose="Progress bar component"/>
+        <package name="lucide-react" version="^0.554.0" purpose="Category icons"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Uses DOCUMENT_CATEGORIES from lib/gcs/client.ts</constraint>
+    <constraint type="data">Progress aggregation: query documents, group by category, count</constraint>
+    <constraint type="irl">Optional IRL integration - falls back to defaults if no IRL</constraint>
+    <constraint type="ux">Optimistic updates - progress updates immediately on upload</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Category query" kind="Supabase query">
+      <signature>supabase.from('documents').select('category, count(*)').eq('deal_id', projectId).group('category')</signature>
+    </interface>
+    <interface name="uploadDocument" kind="client function" path="manda-app/lib/api/documents.ts">
+      <signature>uploadDocument(file, { projectId, category })</signature>
+      <note>Use category option to preset category on upload</note>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Component tests for bucket card states. Progress calculation unit tests.</standards>
+    <ideas>
+      <idea ac="1">Test bucket card renders with icon, name, progress</idea>
+      <idea ac="2">Test progress calculation: 6/8 = 75%</idea>
+      <idea ac="3">Test status badge colors for each state</idea>
+      <idea ac="5">Test upload sets category correctly</idea>
+    </ideas>
+  </tests>
+
+  <dependencies>
+    <storyDep>E2.1 (document storage API) - COMPLETE</storyDep>
+    <storyDep>E2.2 (folder view) - for layout integration</storyDep>
+  </dependencies>
+</story-context>

@@ -1,7 +1,7 @@
 /**
  * Step 1: Basic Information
- * Collects project name, company name, industry, and deal type
- * Story: E1.5 - Implement Project Creation Wizard (AC: #2, #3, #5)
+ * Collects project name, company name, and industry
+ * Story: E1.5 - Implement Project Creation Wizard (AC: #2, #5)
  */
 
 'use client'
@@ -15,13 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-export const DEAL_TYPES = [
-  { value: 'tech-ma', label: 'Tech M&A' },
-  { value: 'industrial', label: 'Industrial' },
-  { value: 'pharma', label: 'Pharma' },
-  { value: 'custom', label: 'Custom / General' },
-] as const
 
 export const INDUSTRIES = [
   { value: 'technology', label: 'Technology & Software' },
@@ -57,11 +50,9 @@ interface Step1BasicInfoProps {
   projectName: string
   companyName: string
   industry: string
-  dealType: string
   onProjectNameChange: (value: string) => void
   onCompanyNameChange: (value: string) => void
   onIndustryChange: (value: string) => void
-  onDealTypeChange: (value: string) => void
   errors?: {
     projectName?: string
     companyName?: string
@@ -74,11 +65,9 @@ export function Step1BasicInfo({
   projectName,
   companyName,
   industry,
-  dealType,
   onProjectNameChange,
   onCompanyNameChange,
   onIndustryChange,
-  onDealTypeChange,
   errors,
 }: Step1BasicInfoProps) {
   const handleProjectNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,26 +167,6 @@ export function Step1BasicInfo({
           </Select>
           <p className="text-xs text-muted-foreground">
             Select the industry category (optional)
-          </p>
-        </div>
-
-        {/* Deal Type */}
-        <div className="space-y-2">
-          <Label htmlFor="dealType">Deal Type</Label>
-          <Select value={dealType} onValueChange={onDealTypeChange}>
-            <SelectTrigger id="dealType">
-              <SelectValue placeholder="Select deal type" />
-            </SelectTrigger>
-            <SelectContent>
-              {DEAL_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            This helps suggest the right IRL template (optional - can select on next step)
           </p>
         </div>
       </div>

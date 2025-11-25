@@ -1,0 +1,106 @@
+<story-context id="e2-6-implement-document-actions-view-download-delete" v="1.0">
+  <metadata>
+    <epicId>E2</epicId>
+    <storyId>6</storyId>
+    <title>Implement Document Actions (View, Download, Delete)</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e2-6-implement-document-actions-view-download-delete.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to view, download, and delete documents from the data room</iWant>
+    <soThat>I can access and manage my deal documents</soThat>
+    <tasks>
+      <task id="1">Create Actions Dropdown (components/data-room/document-actions.tsx)</task>
+      <task id="2">Implement View Action (open signed URL)</task>
+      <task id="3">Implement Download Action</task>
+      <task id="4">Create Delete Confirmation Dialog</task>
+      <task id="5">Implement Delete Execution</task>
+      <task id="6">Handle Processing State (disable actions)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Actions Menu">Dropdown with View, Download, Delete options</ac>
+    <ac id="2" title="View Document">Open in new tab via signed URL (MVP)</ac>
+    <ac id="3" title="Download Document">Fetch signed URL, trigger download with original filename</ac>
+    <ac id="4" title="Delete Confirmation">Dialog with document name and warning</ac>
+    <ac id="5" title="Delete Execution">Remove from GCS and DB, update UI, audit log</ac>
+    <ac id="6" title="Delete Error Handling">Show error, allow retry</ac>
+    <ac id="7" title="Disabled During Processing">Delete disabled for processing documents</ac>
+    <ac id="8" title="Keyboard Accessibility">Navigate menu with keyboard</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-2.md" title="Epic 2 Tech Spec" section="AC-E2-6" snippet="Document actions with confirmation and audit logging"/>
+    </docs>
+    <code>
+      <file path="manda-app/app/api/documents/[id]/route.ts" kind="api-route" symbol="GET" reason="Fetch document with signed URL - IMPLEMENTED"/>
+      <file path="manda-app/app/api/documents/[id]/route.ts" kind="api-route" symbol="DELETE" reason="Delete document from GCS and DB - IMPLEMENTED"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="getDocument" lines="119-136" reason="Fetch document with download URL - IMPLEMENTED"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="deleteDocument" lines="141-160" reason="Delete document - IMPLEMENTED"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="downloadDocument" lines="202-224" reason="Download helper (opens URL) - IMPLEMENTED"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@radix-ui/react-dropdown-menu" version="^2.1.16" purpose="Actions dropdown"/>
+        <package name="sonner" version="^2.0.7" purpose="Toast notifications"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="api">All actions use existing E2.1 API endpoints</constraint>
+    <constraint type="security">Signed URLs expire in 15 minutes - always fetch fresh</constraint>
+    <constraint type="audit">All actions logged server-side (already implemented)</constraint>
+    <constraint type="ux">Optimistic deletion - remove from UI immediately, restore on error</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="GET /api/documents/[id]" kind="REST endpoint" path="manda-app/app/api/documents/[id]/route.ts">
+      <response>{ document: { ...metadata, downloadUrl, downloadUrlExpiresIn } }</response>
+      <note>FULLY IMPLEMENTED - includes signed URL generation</note>
+    </interface>
+    <interface name="DELETE /api/documents/[id]" kind="REST endpoint" path="manda-app/app/api/documents/[id]/route.ts">
+      <response>{ success: true, message: 'Document deleted successfully' }</response>
+      <note>FULLY IMPLEMENTED - deletes from GCS and DB, logs audit</note>
+    </interface>
+    <interface name="downloadDocument" kind="client function" path="manda-app/lib/api/documents.ts:202-224">
+      <signature>downloadDocument(id): Promise&lt;{ success, error? }&gt;</signature>
+      <note>IMPLEMENTED - fetches URL and opens in new tab</note>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Component tests for dropdown and dialog. E2E for download and delete flows.</standards>
+    <ideas>
+      <idea ac="3">Test download fetches signed URL and opens it</idea>
+      <idea ac="5">Test delete removes document from list</idea>
+      <idea ac="6">Test error handling shows retry option</idea>
+    </ideas>
+  </tests>
+
+  <dependencies>
+    <storyDep>E2.1 (document storage API) - COMPLETE, all endpoints exist</storyDep>
+    <storyDep>E2.5 (document card) - provides UI context for actions</storyDep>
+  </dependencies>
+
+  <implementationStatus>
+    <summary>Backend API is COMPLETE. Only frontend UI components needed.</summary>
+    <completedItems>
+      <item>GET /api/documents/[id] with signed URL</item>
+      <item>DELETE /api/documents/[id] with GCS cleanup</item>
+      <item>Client-side API functions (getDocument, deleteDocument, downloadDocument)</item>
+      <item>Audit logging for all operations</item>
+    </completedItems>
+    <remainingWork>
+      <item>Create document-actions.tsx dropdown component</item>
+      <item>Create delete-confirm-dialog.tsx</item>
+      <item>Wire up actions to existing API functions</item>
+    </remainingWork>
+  </implementationStatus>
+</story-context>

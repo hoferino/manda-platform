@@ -1,6 +1,10 @@
 /**
  * Next.js Middleware for Authentication
  * Protects routes and manages session refresh
+ *
+ * Note: This uses the standard Next.js 16 middleware pattern.
+ * The "proxy" convention mentioned in Next.js docs is still experimental.
+ * Current implementation follows Supabase SSR best practices.
  */
 
 import { type NextRequest, NextResponse } from 'next/server'

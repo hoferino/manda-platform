@@ -4,7 +4,7 @@
 **Created:** 2025-11-19
 **Last Updated:** 2025-11-24
 **Owner:** Max
-**Version:** 2.1 (Strategic refinements: Added Neo4j/pg-boss setup stories to E1, Financial Model Integration story to E3, updated IRL and CIM epics for flexibility and live preview)
+**Version:** 2.2 (Infrastructure decisions: Supabase retained for MVP, Epic 3 uses Docling + Vertex AI RAG Engine hybrid, Cloud Run deployment target, future GCP migration path documented)
 
 ---
 
@@ -786,7 +786,9 @@ And I can see queue depth and processing rate
 
 **User Value:** Users can upload, organize, and track documents in a secure data room
 
-**Description:** Implements the Data Room with dual display modes (Folder Structure and Buckets view with IRL integration), document upload with drag-and-drop, file storage in Supabase Storage, and real-time upload progress tracking.
+**Description:** Implements the Data Room with dual display modes (Folder Structure and Buckets view with IRL integration), document upload with drag-and-drop, file storage in Google Cloud Storage (GCS), and real-time upload progress tracking.
+
+> **Architecture Decision (2025-11-25):** Document storage uses Google Cloud Storage instead of Supabase Storage for better cost model with large files, native Gemini/Vertex AI integration, and enterprise scalability.
 
 **Functional Requirements Covered:**
 - FR-DOC-001: Document Upload
@@ -801,14 +803,14 @@ And I can see queue depth and processing rate
 - IRL Checklist Panel
 
 **Technical Foundation:**
-- Supabase Storage buckets
-- File upload API
+- Google Cloud Storage buckets (per project isolation)
+- File upload API with signed URLs
 - Document metadata in PostgreSQL
 - WebSocket for real-time updates
 
 **Acceptance Criteria (Epic Level):**
 - ✅ User can upload documents via drag-and-drop or button
-- ✅ Documents stored securely in Supabase Storage
+- ✅ Documents stored securely in Google Cloud Storage
 - ✅ User can organize documents in folders or buckets
 - ✅ User can track IRL items with checklist
 - ✅ Upload progress shows in real-time
@@ -816,18 +818,18 @@ And I can see queue depth and processing rate
 
 ### Stories
 
-#### Story E2.1: Configure Supabase Storage and Implement Upload API
+#### Story E2.1: Configure Google Cloud Storage and Implement Upload API
 
 **As a** developer
-**I want** Supabase Storage configured with upload API
+**I want** Google Cloud Storage configured with upload API
 **So that** users can securely upload and store documents
 
 **Description:**
-Set up Supabase Storage buckets with RLS policies, implement file upload API endpoint in FastAPI, generate signed URLs for secure access, and validate file types/sizes.
+Set up Google Cloud Storage buckets with IAM policies and signed URLs, implement file upload API endpoint in FastAPI, generate time-limited signed URLs for secure access, and validate file types/sizes.
 
 **Technical Details:**
-- Create Supabase Storage bucket: `deal-documents`
-- RLS policy: users can only upload to their own deals
+- Create GCS bucket per project: `manda-{project_id}`
+- IAM policy: service account with storage.objectAdmin per bucket
 - FastAPI endpoint: `POST /api/documents/upload`
 - Accept: Excel (.xlsx, .xls), PDF, Word (.docx, .doc)
 - Max file size: 100MB
@@ -837,9 +839,9 @@ Set up Supabase Storage buckets with RLS policies, implement file upload API end
 **Acceptance Criteria:**
 
 ```gherkin
-Given Supabase Storage is configured
+Given Google Cloud Storage is configured
 When I upload a file to my deal
-Then the file is stored in `deal-documents/[user_id]/[deal_id]/[filename]`
+Then the file is stored in `manda-{project_id}/{folder_path}/{filename}`
 And metadata is saved in the documents table
 
 Given I upload a 50MB Excel file
@@ -871,8 +873,8 @@ And they receive a permission denied error
 **Architecture Reference:** File Storage (Technology Stack section)
 
 **Definition of Done:**
-- [ ] Supabase Storage bucket created
-- [ ] RLS policies enforce per-deal access
+- [ ] GCS bucket created with proper IAM
+- [ ] Service account configured with storage.objectAdmin
 - [ ] FastAPI upload endpoint working
 - [ ] File type validation implemented
 - [ ] File size limit enforced (100MB)
@@ -1180,7 +1182,7 @@ And I receive the original file
 
 Given I click "Delete"
 When I confirm the deletion
-Then the file is removed from Supabase Storage
+Then the file is removed from Google Cloud Storage
 And the metadata is deleted from the database
 And the document disappears from the list
 
@@ -1341,6 +1343,11 @@ And storage is cleaned up
 
 **Processing Approach:** Uses **pg-boss queue jobs** for background processing (NOT LangGraph workflows). LangGraph is reserved for human-in-the-loop workflows (CIM v3, Q&A Co-Creation), while document processing is fully automated background work orchestrated through job queues.
 
+**Architecture Decision (2025-11-25): Hybrid Document Processing**
+- **Docling** for document parsing: Excel formula extraction, table structure, OCR for scanned PDFs - Docling excels at preserving complex document structure that M&A documents require
+- **Vertex AI RAG Engine** for retrieval/indexing layer: Native GCS integration, managed chunking/embedding, semantic search - simplifies the RAG pipeline while leveraging GCP ecosystem synergies
+- **Why Hybrid:** Docling's parsing quality for complex Excel/PDF documents is superior, while Vertex AI RAG Engine eliminates custom RAG infrastructure (chunking, embedding, vector indexing) with a managed service that syncs directly with GCS buckets
+
 **Functional Requirements Covered:**
 - FR-DOC-004: Document Processing
 - FR-KB-001: Structured Knowledge Storage
@@ -1352,10 +1359,11 @@ And storage is cleaned up
 
 **Technical Components:**
 - pg-boss job queue
-- Docling document parser
-- OpenAI embeddings API
+- Docling document parser (parsing layer)
+- Vertex AI RAG Engine (retrieval/indexing layer) - alternative to custom pgvector pipeline
+- OpenAI embeddings API (fallback if not using Vertex AI RAG)
 - Configurable LLM for extraction (default: Gemini 2.0 Pro, swappable via env variable)
-- PostgreSQL + pgvector for storage
+- PostgreSQL + pgvector for metadata/findings storage (Vertex AI RAG handles vector search)
 - WebSocket for status updates
 
 **Acceptance Criteria (Epic Level):**
@@ -1501,12 +1509,12 @@ And the job can be marked as failed
 **So that** documents are automatically parsed when uploaded
 
 **Description:**
-Create a job handler for the `parse_document` job type that retrieves the uploaded file from Supabase Storage, parses it using Docling, and stores the parsed content (text chunks, tables, formulas) in the database.
+Create a job handler for the `parse_document` job type that retrieves the uploaded file from Google Cloud Storage, parses it using Docling, and stores the parsed content (text chunks, tables, formulas) in the database.
 
 **Technical Details:**
 - Job type: `parse_document`
 - Job payload: `{document_id, file_path, file_type}`
-- Download file from Supabase Storage to temp location
+- Download file from GCS to temp location
 - Call DocumentParser.parse()
 - Store results in `document_chunks` table (text chunks)
 - Store results in `document_tables` table (structured tables)
@@ -1523,7 +1531,7 @@ And the job contains: document_id, file_path, file_type
 
 Given a `parse_document` job is picked up
 When the worker processes it
-Then the file is downloaded from Supabase Storage
+Then the file is downloaded from GCS
 And Docling parses the file
 And parsed chunks are stored in document_chunks table
 And the document status updates to "parsed"
@@ -1549,7 +1557,7 @@ And table structures are preserved in document_tables
 
 **Definition of Done:**
 - [ ] `parse_document` job handler created
-- [ ] File download from Supabase Storage works
+- [ ] File download from GCS works
 - [ ] Docling parsing called correctly
 - [ ] Chunks stored in database
 - [ ] Tables stored in structured format

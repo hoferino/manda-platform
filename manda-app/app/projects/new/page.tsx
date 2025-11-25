@@ -1,6 +1,6 @@
 /**
  * Project Creation Wizard Page
- * 3-step wizard for creating new M&A projects
+ * 2-step wizard for creating new M&A projects
  * Story: E1.5 - Implement Project Creation Wizard (AC: #1-#10)
  */
 
@@ -11,8 +11,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { WizardLayout } from '@/components/wizard/WizardLayout'
 import { Step1BasicInfo } from '@/components/wizard/Step1BasicInfo'
-import { Step2ProjectType } from '@/components/wizard/Step2ProjectType'
-import { Step3IRLTemplate, getDefaultTemplate, NO_IRL_TEMPLATE, UPLOAD_IRL_TEMPLATE } from '@/components/wizard/Step3IRLTemplate'
+import { Step3IRLTemplate as Step2IRLTemplate, getDefaultTemplate, NO_IRL_TEMPLATE, UPLOAD_IRL_TEMPLATE } from '@/components/wizard/Step3IRLTemplate'
 import { createDeal } from '@/lib/api/deals-client'
 
 interface WizardFormData {
@@ -28,7 +27,7 @@ interface ValidationErrors {
   companyName?: string
 }
 
-const TOTAL_STEPS = 3
+const TOTAL_STEPS = 2
 
 export default function NewProjectPage() {
   const router = useRouter()
@@ -72,14 +71,12 @@ export default function NewProjectPage() {
       case 1:
         return formData.projectName.trim().length > 0
       case 2:
-        return formData.dealType !== ''
-      case 3:
-        // Step 3 is always valid - user can choose "Empty Project" or a template
+        // Step 2 (IRL Template) is always valid - user can choose "Empty Project" or a template
         return true
       default:
         return false
     }
-  }, [currentStep, formData.projectName, formData.dealType, formData.irlTemplate])
+  }, [currentStep, formData.projectName])
 
   // Handle next step
   const handleNext = useCallback(() => {
@@ -87,8 +84,8 @@ export default function NewProjectPage() {
       return
     }
 
-    // When moving from step 2 to step 3, auto-set the IRL template
-    if (currentStep === 2 && formData.dealType && !formData.irlTemplate) {
+    // When moving from step 1 to step 2, auto-set the IRL template based on deal type if selected
+    if (currentStep === 1 && formData.dealType && !formData.irlTemplate) {
       setFormData((prev) => ({
         ...prev,
         irlTemplate: getDefaultTemplate(prev.dealType),
@@ -185,23 +182,18 @@ export default function NewProjectPage() {
           projectName={formData.projectName}
           companyName={formData.companyName}
           industry={formData.industry}
+          dealType={formData.dealType}
           onProjectNameChange={(value) => updateFormData('projectName', value)}
           onCompanyNameChange={(value) => updateFormData('companyName', value)}
           onIndustryChange={(value) => updateFormData('industry', value)}
+          onDealTypeChange={handleDealTypeSelect}
           errors={errors}
         />
       )}
 
       {currentStep === 2 && (
-        <Step2ProjectType
-          selectedType={formData.dealType}
-          onTypeSelect={handleDealTypeSelect}
-        />
-      )}
-
-      {currentStep === 3 && (
-        <Step3IRLTemplate
-          dealType={formData.dealType}
+        <Step2IRLTemplate
+          dealType={formData.dealType || 'custom'}
           selectedTemplate={formData.irlTemplate}
           onTemplateChange={(template) => updateFormData('irlTemplate', template)}
         />

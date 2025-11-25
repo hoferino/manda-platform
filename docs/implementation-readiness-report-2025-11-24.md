@@ -308,7 +308,7 @@ The Manda platform has solid foundational documentation (PRD, Architecture, UX D
 | PostgreSQL 18 + pgvector | E1 | ✅ Story E1.3 creates schema |
 | Neo4j 2025.01 | E1 | ✅ Story E1.7 configures Neo4j |
 | pg-boss Job Queue | E1 | ✅ Story E1.8 configures pg-boss |
-| Document Upload (Supabase Storage) | E2 | ✅ Story E2.1 implements upload |
+| Document Upload (Google Cloud Storage) | E2 | ✅ Story E2.1 implements upload |
 | Folder Structure + Buckets View | E2 | ✅ Stories E2.2, E2.3 build views |
 | FastAPI Backend + Docling | E3 | ✅ Stories E3.1, E3.2 set up backend |
 | LLM Analysis (Gemini) | E3 | ✅ Story E3.5 integrates Gemini |

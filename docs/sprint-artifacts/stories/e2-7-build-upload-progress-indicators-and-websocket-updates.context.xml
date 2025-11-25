@@ -1,0 +1,91 @@
+<story-context id="e2-7-build-upload-progress-indicators-and-websocket-updates" v="1.0">
+  <metadata>
+    <epicId>E2</epicId>
+    <storyId>7</storyId>
+    <title>Build Upload Progress Indicators and WebSocket Updates</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e2-7-build-upload-progress-indicators-and-websocket-updates.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to see real-time upload progress and status updates</iWant>
+    <soThat>I know when my documents are uploaded and ready</soThat>
+    <tasks>
+      <task id="1">Create Upload Zone Component (drag-and-drop)</task>
+      <task id="2">Create Upload Progress Component</task>
+      <task id="3">Implement Upload State Management (Zustand)</task>
+      <task id="4">Add Toast Notifications</task>
+      <task id="5">Implement Background Upload Tracking</task>
+      <task id="6">Connect to Upload API with progress events</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Drag-and-Drop Upload Zone">Drop zone with visual feedback, files added to queue</ac>
+    <ac id="2" title="File Picker Button">Upload button opens file picker, multi-select</ac>
+    <ac id="3" title="Upload Progress Bars">Individual progress per file (0-100%)</ac>
+    <ac id="4" title="Upload Status States">Queued, Uploading, Complete, Failed with icons</ac>
+    <ac id="5" title="Retry Failed Uploads">Retry button restarts failed uploads</ac>
+    <ac id="6" title="Bulk Upload Support">Queue 10+ files, parallel uploads (limit 3)</ac>
+    <ac id="7" title="Real-Time Notifications">Toast on complete/fail</ac>
+    <ac id="8" title="Upload Persistence">Uploads continue when navigating away</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-2.md" title="Epic 2 Tech Spec" section="NFR-PERF-E2-001" snippet="Progress updates at least every 500ms, files under 10MB in 5 seconds"/>
+    </docs>
+    <code>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="uploadDocument" lines="42-84" reason="Upload function to enhance with progress"/>
+      <file path="manda-app/lib/api/documents.ts" kind="client-api" symbol="uploadDocuments" lines="89-114" reason="Batch upload function"/>
+      <file path="manda-app/lib/api/documents.ts" kind="types" symbol="UploadOptions" lines="26-31" reason="Has onProgress callback placeholder"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="zustand" version="^5.0.8" purpose="Upload state management store"/>
+        <package name="sonner" version="^2.0.7" purpose="Toast notifications"/>
+        <package name="@radix-ui/react-progress" version="^1.1.8" purpose="Progress bar component"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="progress">Use XMLHttpRequest for progress events (fetch doesn't support upload progress)</constraint>
+    <constraint type="concurrency">Limit parallel uploads to 3</constraint>
+    <constraint type="state">Zustand store for global upload state across navigation</constraint>
+    <constraint type="ux">Toast notifications non-blocking, auto-dismiss</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Upload with progress" kind="XMLHttpRequest">
+      <signature>xhr.upload.onprogress = (e) =&gt; { progress = e.loaded / e.total }</signature>
+      <note>Current uploadDocument uses fetch - needs enhancement for progress</note>
+    </interface>
+    <interface name="Upload store" kind="Zustand store">
+      <signature>useUploadStore: { uploads: Upload[], addUpload, updateProgress, retry, cancel }</signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Component tests for upload zone interactions. State management tests for queue.</standards>
+    <ideas>
+      <idea ac="1">Test drag-over highlights zone</idea>
+      <idea ac="3">Test progress updates as upload proceeds</idea>
+      <idea ac="5">Test retry restarts failed upload</idea>
+      <idea ac="6">Test only 3 uploads run in parallel</idea>
+    </ideas>
+  </tests>
+
+  <dependencies>
+    <storyDep>E2.1 (upload API) - COMPLETE</storyDep>
+  </dependencies>
+
+  <implementationNotes>
+    <note>Current lib/api/documents.ts uploadDocument uses fetch() which doesn't support upload progress</note>
+    <note>Need to create XMLHttpRequest wrapper for progress tracking</note>
+    <note>uploadDocuments already has onFileProgress callback - can be enhanced</note>
+  </implementationNotes>
+</story-context>

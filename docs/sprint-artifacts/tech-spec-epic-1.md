@@ -225,7 +225,7 @@ Response: Deal
 **NFR-SEC-003: Data Encryption**
 - All data encrypted at rest (Supabase managed encryption)
 - TLS 1.3 for all communications (API, database, storage)
-- Supabase Storage uses signed URLs (expiring, scoped access)
+- Document storage uses signed URLs (expiring, scoped access) - Note: GCS selected for Epic 2
 - Environment variables never committed to version control
 - API keys rotated regularly (documented in deployment guide)
 
@@ -333,7 +333,7 @@ Response: Deal
   - Components:
     - PostgreSQL 18 (managed database with pgvector 0.8+)
     - Supabase Auth (JWT-based authentication)
-    - Supabase Storage (document file storage)
+    - Google Cloud Storage (document file storage - decided in Epic 2 planning)
     - Supabase Realtime (WebSocket updates)
   - Official Docs: [Supabase Documentation](https://supabase.com/docs)
   - RLS Guide: [Row Level Security Best Practices](https://supabase.com/docs/guides/database/postgres/row-level-security)

@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          success: boolean | null
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          success?: boolean | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          success?: boolean | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cims: {
         Row: {
           content: Json
@@ -137,10 +173,14 @@ export type Database = {
       }
       documents: {
         Row: {
+          category: string | null
           created_at: string
           deal_id: string
           file_path: string
           file_size: number | null
+          folder_path: string | null
+          gcs_bucket: string | null
+          gcs_object_path: string | null
           id: string
           mime_type: string | null
           name: string
@@ -150,10 +190,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           deal_id: string
           file_path: string
           file_size?: number | null
+          folder_path?: string | null
+          gcs_bucket?: string | null
+          gcs_object_path?: string | null
           id?: string
           mime_type?: string | null
           name: string
@@ -163,10 +207,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           deal_id?: string
           file_path?: string
           file_size?: number | null
+          folder_path?: string | null
+          gcs_bucket?: string | null
+          gcs_object_path?: string | null
           id?: string
           mime_type?: string | null
           name?: string
