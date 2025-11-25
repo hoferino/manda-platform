@@ -1,25 +1,24 @@
 /**
- * Data Room Section Page
- * Document management and organization (placeholder)
- * Story: E1.6 - Build Project Workspace Shell with Navigation (AC: #4, #5)
+ * Data Room Page
+ * Supports Folders view (E2.2) and Buckets view (E2.3)
+ * Story: E2.2 - Build Data Room Folder Structure View
+ * Story: E2.3 - Build Data Room Buckets View
  */
 
 import type { Metadata } from 'next'
-import { Folder } from 'lucide-react'
-import { PlaceholderSection } from '@/components/workspace'
+import { DataRoomWrapper } from './data-room-wrapper'
 
 export const metadata: Metadata = {
   title: 'Data Room - Manda',
   description: 'Document management and organization',
 }
 
-export default function DataRoomPage() {
-  return (
-    <PlaceholderSection
-      title="Data Room"
-      description="Upload, organize, and manage due diligence documents. View files by folder structure or categorized buckets."
-      epic={2}
-      icon={Folder}
-    />
-  )
+interface DataRoomPageProps {
+  params: Promise<{ id: string }>
+}
+
+export default async function DataRoomPage({ params }: DataRoomPageProps) {
+  const { id: projectId } = await params
+
+  return <DataRoomWrapper projectId={projectId} />
 }

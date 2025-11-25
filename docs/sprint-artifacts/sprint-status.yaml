@@ -88,9 +88,11 @@ development_status:
   e2-1-implement-document-upload-to-google-cloud-storage: done
   e2-1-jira-id: SCRUM-22
   e2-1-completed: 2025-11-25
-  e2-2-build-data-room-folder-structure-view: ready-for-dev
+  e2-2-build-data-room-folder-structure-view: done
+  e2-2-completed: 2025-11-25
   e2-2-jira-id: SCRUM-23
-  e2-3-build-data-room-buckets-view-category-based: ready-for-dev
+  e2-3-build-data-room-buckets-view-category-based: done
+  e2-3-completed: 2025-11-25
   e2-3-jira-id: SCRUM-24
   e2-4-implement-view-toggle-and-user-preference: ready-for-dev
   e2-4-jira-id: SCRUM-25

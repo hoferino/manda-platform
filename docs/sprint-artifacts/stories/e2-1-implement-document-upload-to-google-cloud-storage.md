@@ -185,3 +185,105 @@ claude-opus-4-5-20251101
 - manda-app/.env.example (updated)
 - manda-app/__tests__/lib/gcs-client.test.ts (created)
 - manda-app/lib/supabase/database.types.ts (regenerated)
+
+## Change Log
+
+| Date | Version | Description |
+|------|---------|-------------|
+| 2025-11-25 | 1.0 | Story completed - all 8 ACs implemented |
+| 2025-11-25 | 1.0.1 | Senior Developer Review (AI) notes appended |
+
+---
+
+## Senior Developer Review (AI)
+
+### Reviewer
+Max (via Dev Agent - Retroactive Review)
+
+### Date
+2025-11-25
+
+### Outcome
+**✅ APPROVE** - All acceptance criteria and tasks verified with evidence. Implementation is solid, secure, and follows architectural patterns.
+
+### Summary
+Story E2-S1 establishes Google Cloud Storage integration for document uploads. The implementation is complete, well-structured, and follows security best practices. All 8 acceptance criteria have been verified with file:line evidence. No blocking issues found.
+
+### Key Findings
+
+**No HIGH or MEDIUM severity issues found.**
+
+**LOW Severity (Advisory):**
+
+| # | Finding | Location | Recommendation |
+|---|---------|----------|----------------|
+| 1 | No `DOCUMENT_UPDATED` audit event type | [route.ts:269](manda-app/app/api/documents/[id]/route.ts#L269) | Add dedicated event type for document metadata updates |
+| 2 | No rate limiting on document endpoints | upload/route.ts, [id]/route.ts | Add rate limiting middleware for production |
+| 3 | GCS delete failure silently logged | [[id]/route.ts:148-152](manda-app/app/api/documents/[id]/route.ts#L148-L152) | Return warning in response if GCS delete fails |
+
+### Acceptance Criteria Coverage
+
+| AC# | Description | Status | Evidence |
+|-----|-------------|--------|----------|
+| AC1 | GCS Client Configuration | ✅ IMPLEMENTED | [client.ts:83-110](manda-app/lib/gcs/client.ts#L83-L110) |
+| AC2 | File Upload API Endpoint | ✅ IMPLEMENTED | [upload/route.ts:29-171](manda-app/app/api/documents/upload/route.ts#L29-L171) |
+| AC3 | File Type Validation | ✅ IMPLEMENTED | [client.ts:22-51, 366-398](manda-app/lib/gcs/client.ts#L22-L51) |
+| AC4 | File Size Validation | ✅ IMPLEMENTED | [client.ts:54, 388-395](manda-app/lib/gcs/client.ts#L54) |
+| AC5 | Signed URL Generation | ✅ IMPLEMENTED | [client.ts:199-222](manda-app/lib/gcs/client.ts#L199-L222) |
+| AC6 | RLS Access Control | ✅ IMPLEMENTED | [upload/route.ts:73-84](manda-app/app/api/documents/upload/route.ts#L73-L84) |
+| AC7 | Document Metadata Storage | ✅ IMPLEMENTED | [00012_add_gcs_columns_to_documents.sql](manda-app/supabase/migrations/00012_add_gcs_columns_to_documents.sql) |
+| AC8 | Environment Configuration | ✅ IMPLEMENTED | [.env.example:37-46](manda-app/.env.example#L37-L46) |
+
+**Summary: 8 of 8 acceptance criteria fully implemented**
+
+### Task Completion Validation
+
+| Task | Marked | Verified | Evidence |
+|------|--------|----------|----------|
+| Task 1: GCS Client Library | [x] | ✅ | [lib/gcs/client.ts](manda-app/lib/gcs/client.ts) - 399 lines |
+| Task 2: File Validation | [x] | ✅ | [client.ts:22-54, 366-398](manda-app/lib/gcs/client.ts#L22-L54) |
+| Task 3: Upload API Endpoint | [x] | ✅ | [upload/route.ts](manda-app/app/api/documents/upload/route.ts) |
+| Task 4: Signed URL Generation | [x] | ✅ | [client.ts:199-257](manda-app/lib/gcs/client.ts#L199-L257) |
+| Task 5: Document Operations API | [x] | ✅ | [[id]/route.ts](manda-app/app/api/documents/[id]/route.ts) |
+| Task 6: Database Migration | [x] | ✅ | [00012_add_gcs_columns_to_documents.sql](manda-app/supabase/migrations/00012_add_gcs_columns_to_documents.sql) |
+| Task 7: Environment Config | [x] | ✅ | [.env.example:37-46](manda-app/.env.example#L37-L46) |
+| Task 8: Client-Side API | [x] | ✅ | [lib/api/documents.ts](manda-app/lib/api/documents.ts) - 329 lines |
+
+**Summary: 8 of 8 completed tasks verified, 0 questionable, 0 false completions**
+
+### Test Coverage and Gaps
+
+- ✅ 21 unit tests in [gcs-client.test.ts](manda-app/__tests__/lib/gcs-client.test.ts)
+- ✅ Tests cover: file validation (AC#3, AC#4), path generation, security edge cases
+- ⚪ Integration tests for live GCS operations not included (acceptable - requires live GCS credentials)
+- ⚪ API endpoint tests not included (can be added in E2E testing phase)
+
+### Architectural Alignment
+
+- ✅ GCS client singleton pattern per architecture spec
+- ✅ Signed URLs with 15-minute expiry per security requirements
+- ✅ RLS enforcement via Supabase for multi-tenant isolation
+- ✅ Path-based project isolation: `{project_id}/{folder_path}/{filename}`
+- ✅ Next.js API Routes for document operations (FastAPI reserved for Epic 3)
+
+### Security Notes
+
+- ✅ Path traversal prevention via `sanitizeFilename()` [client.ts:145-151](manda-app/lib/gcs/client.ts#L145-L151)
+- ✅ Double validation: both file extension AND MIME type checked
+- ✅ Authentication required on all endpoints
+- ✅ RLS policies enforce project-level access control
+- ✅ Signed URLs prevent direct bucket access
+- ✅ Audit logging for upload, access, and delete operations
+
+### Best-Practices and References
+
+- [@google-cloud/storage v7.x](https://cloud.google.com/nodejs/docs/reference/storage/latest) - Official SDK used correctly
+- [Next.js App Router API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers) - Proper pattern followed
+- [Supabase RLS](https://supabase.com/docs/guides/auth/row-level-security) - Multi-tenant isolation implemented
+
+### Action Items
+
+**Advisory Notes (No code changes required):**
+- Note: Consider adding `DOCUMENT_UPDATED` audit event type in future stories
+- Note: Consider rate limiting for production deployment (Epic 3 or infrastructure story)
+- Note: Consider returning warning to user if GCS delete fails but DB delete succeeds
