@@ -9,11 +9,13 @@ A modern web application for M&A due diligence and intelligence gathering.
 - **Tailwind CSS 4** - Utility-first CSS with OKLCH color space
 - **shadcn/ui** - Accessible component library
 - **TypeScript** - Type-safe JavaScript with strict mode
+- **Supabase** - Authentication, PostgreSQL database, and storage
 
 ## Prerequisites
 
 - **Node.js 20 LTS** or higher
 - **npm 10+** (comes with Node.js)
+- **Supabase Account** - For authentication and database
 
 Verify your Node.js version:
 ```bash
@@ -30,6 +32,20 @@ cd manda-app
 
 # Install dependencies
 npm install
+```
+
+### Environment Setup
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env.local
+```
+
+2. Fill in your Supabase credentials (from Supabase Dashboard > Settings > API):
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  # Server-only
 ```
 
 ### Development
@@ -56,26 +72,119 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 ```
 manda-app/
 ├── app/                    # Next.js App Router
-│   ├── layout.tsx          # Root layout (Server Component)
+│   ├── layout.tsx          # Root layout with AuthProvider
 │   ├── page.tsx            # Home page
 │   ├── globals.css         # Global styles + Tailwind + theme
+│   ├── login/              # Login page with email/password & OAuth
+│   ├── signup/             # Signup page with email/password & OAuth
+│   ├── auth/callback/      # OAuth callback handler
+│   ├── projects/           # Protected projects page
+│   ├── api/health/         # Health check endpoint
 │   └── test-components/    # Component integration test page
 ├── components/
-│   └── ui/                 # shadcn/ui components
-│       ├── button.tsx
-│       ├── input.tsx
-│       ├── card.tsx
-│       ├── badge.tsx
-│       └── label.tsx
+│   ├── ui/                 # shadcn/ui components
+│   └── providers/          # React context providers
+│       └── auth-provider.tsx
 ├── lib/
-│   └── utils.ts            # Utility functions (cn helper)
+│   ├── utils.ts            # Utility functions (cn helper)
+│   └── supabase/           # Supabase client utilities
+│       ├── client.ts       # Browser client
+│       ├── server.ts       # Server client
+│       ├── middleware.ts   # Middleware client
+│       └── types.ts        # Database types
 ├── hooks/                  # Custom React hooks
-├── styles/                 # Additional styles (optional)
-├── public/                 # Static assets
+├── middleware.ts           # Auth route protection
 ├── next.config.ts          # Next.js configuration
 ├── tsconfig.json           # TypeScript configuration
-├── components.json         # shadcn/ui configuration
 └── package.json            # Dependencies and scripts
+```
+
+## Authentication
+
+### Supported Methods
+
+1. **Email/Password** - Traditional signup with email confirmation
+2. **Magic Link** - Passwordless authentication via email
+3. **Google OAuth** - Sign in with Google (requires setup)
+
+### Authentication Flow
+
+1. User visits `/login` or `/signup`
+2. User authenticates via chosen method
+3. For OAuth/Magic Link, redirected to `/auth/callback`
+4. Session established, user redirected to `/projects`
+5. Middleware protects routes requiring authentication
+
+### Route Protection
+
+Protected routes (require authentication):
+- `/projects/*`
+- `/dashboard/*`
+- `/api/protected/*`
+
+Public routes:
+- `/` (landing page)
+- `/login`
+- `/signup`
+- `/auth/callback`
+
+### Using Authentication in Components
+
+**Server Components:**
+```tsx
+import { createClient } from '@/lib/supabase/server'
+
+export default async function Page() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  // ...
+}
+```
+
+**Client Components:**
+```tsx
+'use client'
+import { useAuth } from '@/components/providers/auth-provider'
+
+export function MyComponent() {
+  const { user, loading, signOut } = useAuth()
+  // ...
+}
+```
+
+### Supabase Setup
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Get your project URL and keys from Settings > API
+3. Configure environment variables in `.env.local`
+4. (Optional) Enable Google OAuth in Authentication > Providers
+
+#### Google OAuth Setup
+
+1. Create OAuth credentials in [Google Cloud Console](https://console.cloud.google.com)
+2. Add authorized redirect URI: `https://<project-id>.supabase.co/auth/v1/callback`
+3. Add Client ID and Secret in Supabase Dashboard > Authentication > Providers > Google
+
+## API Endpoints
+
+### Health Check
+
+```
+GET /api/health
+```
+
+Returns system health status including database connectivity and auth service status.
+
+Response:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-11-25T00:00:00.000Z",
+  "checks": {
+    "database": { "status": "ok", "latency": 45 },
+    "auth": { "status": "ok" }
+  }
+}
 ```
 
 ## Component Usage
@@ -197,6 +306,15 @@ Visit [http://localhost:3000/test-components](http://localhost:3000/test-compone
 - **Dev compile**: <5 seconds initial, <100ms HMR
 - **Bundle size**: <300KB gzipped initial JS
 - **Lighthouse**: >90 performance score
+- **Auth operations**: Login <2s, session validation <100ms
+
+## Security
+
+- Service role key is NEVER exposed to the client
+- Environment variables prefixed with `NEXT_PUBLIC_` are client-safe
+- Row-Level Security (RLS) enforced on all database tables
+- JWT tokens expire after 1 hour with automatic refresh
+- Protected routes enforced via middleware
 
 ## Documentation
 
@@ -204,6 +322,8 @@ Visit [http://localhost:3000/test-components](http://localhost:3000/test-compone
 - [React 19 Documentation](https://react.dev/)
 - [Tailwind CSS v4](https://tailwindcss.com/docs)
 - [shadcn/ui Components](https://ui.shadcn.com/)
+- [Supabase Auth Documentation](https://supabase.com/docs/guides/auth)
+- [Supabase Next.js Guide](https://supabase.com/docs/guides/auth/server-side/nextjs)
 
 ## License
 

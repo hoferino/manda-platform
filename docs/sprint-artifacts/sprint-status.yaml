@@ -47,21 +47,21 @@ development_status:
   epic-1-jira-id: SCRUM-10
   e1-1-set-up-nextjs-15-project-with-shadcnui: done
   e1-1-jira-id: SCRUM-11
-  e1-2-configure-supabase-auth-and-database-connection: in-progress
+  e1-2-configure-supabase-auth-and-database-connection: done
   e1-2-jira-id: SCRUM-12
-  e1-3-create-postgresql-schema-with-rls-policies: ready-for-dev
+  e1-3-create-postgresql-schema-with-rls-policies: done
   e1-3-jira-id: SCRUM-13
-  e1-4-build-projects-overview-screen-landing: ready-for-dev
+  e1-4-build-projects-overview-screen-landing: done
   e1-4-jira-id: SCRUM-14
-  e1-5-implement-project-creation-wizard: ready-for-dev
+  e1-5-implement-project-creation-wizard: done
   e1-5-jira-id: SCRUM-15
-  e1-6-build-project-workspace-shell-with-navigation: ready-for-dev
+  e1-6-build-project-workspace-shell-with-navigation: done
   e1-6-jira-id: SCRUM-16
-  e1-7-configure-neo4j-graph-database: ready-for-dev
+  e1-7-configure-neo4j-graph-database: done
   e1-7-jira-id: SCRUM-17
-  e1-8-configure-pg-boss-job-queue: ready-for-dev
+  e1-8-configure-pg-boss-job-queue: done
   e1-8-jira-id: SCRUM-18
-  e1-9-implement-audit-logging-for-security-events: ready-for-dev
+  e1-9-implement-audit-logging-for-security-events: done
   e1-9-jira-id: SCRUM-19
   epic-1-retrospective: optional
 

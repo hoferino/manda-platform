@@ -1,6 +1,6 @@
 # Story 1.8: Configure pg-boss Job Queue
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -555,22 +555,52 @@ const jobs = await boss.fetch('document-parse', 100)  // Fetch up to 100 jobs
 
 ### Agent Model Used
 
-_To be filled by dev agent_
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
-_To be filled by dev agent during implementation_
+- Fixed pg-boss v12 API changes (handlers receive job arrays, camelCase properties)
+- Updated worker config from teamSize/teamConcurrency to batchSize/pollingIntervalSeconds
+- Fixed getJobById to require queue name as first parameter
 
 ### Completion Notes List
 
-_To be filled by dev agent after completion_
+1. **pg-boss v12.3.1 installed** - Latest version with PostgreSQL-native job queue
+2. **Singleton client pattern** - Thread-safe initialization with connection pooling
+3. **7 job types defined** - test-job, document-parse, generate-embeddings, analyze-document, update-graph, detect-contradictions, detect-patterns
+4. **5 handlers registered** - Test handler functional, placeholders for Epic 3/4 handlers
+5. **Type-safe enqueue functions** - Per-job-type functions with default options
+6. **REST API endpoints** - GET/POST /api/jobs, GET /api/jobs/[jobId], GET /api/health/pgboss
+7. **Graceful shutdown** - SIGTERM/SIGINT handlers complete current jobs before exit
+8. **Environment configuration** - PGBOSS_SCHEMA, PGBOSS_CONCURRENCY documented in .env.example
 
 ### File List
 
-_To be filled by dev agent with created/modified/deleted files_
+**Created:**
+- `lib/pgboss/client.ts` - Singleton pg-boss client with connection management
+- `lib/pgboss/jobs.ts` - Job type definitions and payload schemas
+- `lib/pgboss/handlers/test-job.ts` - Test job handler (functional)
+- `lib/pgboss/handlers/document-parse.ts` - Document parse handler (placeholder)
+- `lib/pgboss/handlers/generate-embeddings.ts` - Embeddings handler (placeholder)
+- `lib/pgboss/handlers/analyze-document.ts` - Analysis handler (placeholder)
+- `lib/pgboss/handlers/update-graph.ts` - Graph update handler (placeholder)
+- `lib/pgboss/handlers/index.ts` - Handler exports
+- `lib/pgboss/register-handlers.ts` - Handler registration with worker config
+- `lib/pgboss/enqueue.ts` - Type-safe job enqueue functions
+- `lib/pgboss/shutdown.ts` - Graceful shutdown handlers
+- `lib/pgboss/index.ts` - Module exports
+- `app/api/jobs/route.ts` - Jobs list API (GET/POST)
+- `app/api/jobs/[jobId]/route.ts` - Job status API
+- `app/api/health/pgboss/route.ts` - Health check endpoint
+- `scripts/test-pgboss.ts` - Integration test script
+
+**Modified:**
+- `.env.example` - Added PGBOSS_SCHEMA, PGBOSS_CONCURRENCY
+- `package.json` - Added pg-boss dependency
 
 ## Change Log
 
 | Date | Author | Changes |
 |------|--------|---------|
 | 2025-11-24 | Max (SM Agent) | Initial story draft created from Epic 1 tech spec |
+| 2025-11-25 | Dev Agent (Claude) | Implementation complete - pg-boss v12 configured with handlers, API, and tests |
