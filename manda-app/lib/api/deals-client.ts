@@ -2,6 +2,8 @@
  * Deals API Client Functions
  * Client-side functions for creating and managing deals
  * Story: E1.5 - Implement Project Creation Wizard (AC: #7, #8)
+ *
+ * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
  */
 
 'use client'
@@ -13,7 +15,6 @@ export interface CreateDealInput {
   name: string
   company_name?: string | null
   industry?: string | null
-  deal_type: string
   irl_template?: string | null
   status?: string
 }
@@ -43,7 +44,6 @@ export async function createDeal(input: CreateDealInput): Promise<CreateDealResp
     name: input.name,
     company_name: input.company_name || null,
     industry: input.industry || null,
-    deal_type: input.deal_type,
     irl_template: input.irl_template,
     status: input.status || 'active',
   }

@@ -1,8 +1,8 @@
 # Manda UX Design Specification
 
 _Created on 2025-11-19 by Max_
-_Last Updated: 2025-11-24_
-_Version: 1.1 (Added Financial Model Integration and live preview features)_
+_Last Updated: 2025-11-26_
+_Version: 1.2 (Simplified 2-step wizard; unified bucket/folder model)_
 _Generated through collaborative UX design discussion_
 
 ---
@@ -270,27 +270,34 @@ Portfolio view of all projects. Users select a project to enter its isolated wor
 
 #### Mode 2: Buckets View (Category-Based) ⭐
 
+**Key Concept: Buckets = Top-Level Folders**
+
+> **Architecture Decision (v2.6):** Buckets and folders are the **same data** with two different views. A bucket is simply a top-level folder displayed as a card. `folder_path` is the single source of truth.
+>
+> - Creating a top-level folder → creates a bucket
+> - Creating a bucket → creates a top-level folder
+> - Subfolders appear as nested items in bucket view
+> - **Empty project = empty data room** (no default buckets pre-created)
+
 **Inspiration:** Screenshot provided (Document Management UI with category cards)
 
 **Layout:**
 
-**Left/Main Area: Category Bucket Cards**
+**Left/Main Area: Bucket Cards (Derived from Top-Level Folders)**
 
 Each bucket card shows:
-- **Header:** Category name (e.g., "Financial Documents")
-- **Progress Bar:** 6/8 documents (75%)
+- **Header:** Folder name (top-level folder = bucket)
+- **Progress Bar:** Documents in folder / expected (from IRL if configured)
 - **Status Badge:** "in progress" / "completed" / "not started"
-- **Nested Item List:** Expandable sub-categories
-  - Annual Reports (2 files)
-  - Projections & Analysis (2 files)
-  - Tax Returns (1 file)
-  - Banking & Debt (1 file)
-  - Insurance Documentation (PDF, pending upload)
+- **Nested Item List:** Expandable subfolders
+  - Subfolder 1 (X files)
+  - Subfolder 2 (X files)
+  - Direct files in bucket
 - **Per-Item Actions:**
   - Upload button
   - View uploaded files
-  - Mark complete/incomplete
-  - Link to IRL item
+  - Create subfolder
+  - Link to IRL item (if IRL configured)
 
 **Right Panel: Document Checklist**
 
@@ -306,14 +313,14 @@ Each bucket card shows:
 - Quick actions: Upload, view, manage
 - Expand/collapse categories
 
-**Bucket Categories (Pre-defined, based on IRL template):**
-- Financial Documents
-- Legal Documents
-- Operational Documents
-- Market & Strategy
-- Technology & IP
-- HR & Organization
-- Custom Categories (user-defined)
+**Bucket Organization:**
+
+> **Note:** Buckets are NOT pre-defined categories. They are derived from top-level folders.
+
+- **With IRL Template:** If user selects an IRL template during project creation, folders are auto-generated from the IRL structure
+- **Empty Project:** No folders/buckets exist initially - user creates their own structure
+- **User-Created:** Users create buckets by creating top-level folders (in either view)
+- **Common patterns:** Financial, Legal, Commercial, Operational, Tax, HR, IT, etc. (user choice)
 
 **IRL Integration:**
 - Each bucket item can link to IRL request
@@ -779,10 +786,10 @@ When generating sections like "Company Overview" or "Market Analysis":
 
 1. **Landing:** User on Projects Overview
 2. **Action:** Click "+ New Project"
-3. **Wizard:**
+3. **Wizard (2 Steps):**
    - Step 1: Project basics (name, company, industry)
-   - Step 2: Project type (Tech M&A / Industrial / Pharma / Custom)
-   - Step 3: IRL template selection (auto-suggested)
+   - Step 2: Data Room setup (IRL template, empty project, or upload custom)
+   - ~~Step 2: Project type~~ *(Removed - deal type did not drive downstream behavior)*
 4. **Redirect:** Project Dashboard (first visit)
 5. **Onboarding Checklist:**
    - ✓ Project created
@@ -1422,6 +1429,11 @@ When generating sections like "Company Overview" or "Market Analysis":
 
 _This UX Design Specification was created through collaborative design discussion, capturing key structural and interaction decisions for the Manda M&A Intelligence Platform. All decisions documented with rationale for future reference and implementation guidance._
 
-**Version:** 1.0
-**Date:** 2025-11-19
-**Status:** Complete - Ready for Epic/Story Creation
+**Version:** 1.2
+**Date:** 2025-11-26
+**Status:** Updated - Unified bucket/folder model; 2-step wizard
+
+**Changelog:**
+- v1.2 (2025-11-26): Simplified wizard to 2 steps (removed deal type); unified bucket/folder model (buckets = top-level folders); clarified empty project behavior
+- v1.1 (2025-11-24): Added Financial Model Integration and live preview features
+- v1.0 (2025-11-19): Initial version

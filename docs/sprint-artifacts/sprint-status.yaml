@@ -1,6 +1,6 @@
 # Sprint Status - Manda Platform Implementation
 # Generated: 2025-11-25
-# Last Updated: 2025-11-25
+# Last Updated: 2025-11-26
 # Project: Manda
 # Tracking System: file-system
 # Story Location: docs/sprint-artifacts
@@ -83,6 +83,12 @@ development_status:
   epic-1-retrospective: completed
 
   # Epic 2: Document Ingestion & Storage (8 stories) - Uses GCS (architecture decision 2025-11-25)
+  # COURSE CORRECTION v2.6 (2025-11-26):
+  # - Unified bucket/folder model: folder_path is single source of truth
+  # - Buckets = top-level folders (same data, different view)
+  # - Removed deal_type from wizard (didn't drive behavior)
+  # - Empty projects have empty data rooms (no default buckets)
+  # - Removed category column from documents table
   epic-2: in-progress
   epic-2-jira-id: SCRUM-21
   e2-1-implement-document-upload-to-google-cloud-storage: done
@@ -94,10 +100,13 @@ development_status:
   e2-3-build-data-room-buckets-view-category-based: done
   e2-3-completed: 2025-11-25
   e2-3-jira-id: SCRUM-24
-  e2-4-implement-view-toggle-and-user-preference: ready-for-dev
+  e2-3-refactored: 2025-11-26  # v2.6: Refactored to derive buckets from folder_path, removed hardcoded categories
+  e2-4-implement-view-toggle-and-user-preference: done
   e2-4-jira-id: SCRUM-25
-  e2-5-create-document-metadata-management: ready-for-dev
+  e2-4-completed: 2025-11-26
+  e2-5-create-document-metadata-management: done
   e2-5-jira-id: SCRUM-26
+  e2-5-completed: 2025-11-26
   e2-6-implement-document-actions-view-download-delete: ready-for-dev
   e2-6-jira-id: SCRUM-27
   e2-7-build-upload-progress-indicators-and-websocket-updates: ready-for-dev

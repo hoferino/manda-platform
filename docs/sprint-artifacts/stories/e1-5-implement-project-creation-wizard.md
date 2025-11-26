@@ -5,12 +5,14 @@ Status: done
 ## Story
 
 As an **M&A analyst**,
-I want **a guided 3-step wizard to create new projects with project type and IRL template selection**,
+I want **a guided 2-step wizard to create new projects with data room setup options**,
 so that **I can quickly set up new deals with appropriate templates and organization**.
+
+> **Course Correction (v2.6, 2025-11-26):** Originally designed as 3-step wizard with deal type selection in Step 2. Deal type was removed as it did not drive any downstream behavior. Wizard simplified to 2 steps: Basic Info → Data Room Setup. The implementation was updated to support: IRL Template, Empty Project, or Upload Custom options.
 
 ## Context
 
-This story implements the project creation wizard that users access by clicking "+ New Project" from the Projects Overview (E1.4). The wizard guides users through a 3-step process: (1) Basic Information (project name, company, industry), (2) Project Type Selection (Tech M&A, Industrial, Pharma, Custom), and (3) IRL Template (auto-suggested based on type). Upon completion, a new deal record is created in the database and the user is redirected to the project workspace.
+This story implements the project creation wizard that users access by clicking "+ New Project" from the Projects Overview (E1.4). The wizard guides users through a 2-step process: (1) Basic Information (project name, company, industry), and (2) Data Room Setup (IRL template selection, empty project, or upload custom). Upon completion, a new deal record is created in the database and the user is redirected to the project workspace.
 
 **User Experience:** The wizard should feel simple and guided, with clear progress indication and validation at each step. The IRL template suggestion demonstrates the platform's intelligence without overwhelming new users.
 
@@ -38,16 +40,19 @@ This story implements the project creation wizard that users access by clicking 
 **Then** I proceed to Step 2
 **And** Progress indicator shows "Step 2 of 3"
 
-### AC3: Step 2 - Project Type Selection
-**Given** I am on Step 2 of the wizard
-**When** the step loads
-**Then** I see 4 project type cards:
-  - Tech M&A (with icon and description)
-  - Industrial (with icon and description)
-  - Pharma (with icon and description)
-  - Custom (with icon and description)
-**When** I click a project type card
-**Then** the card is highlighted as selected
+### AC3: ~~Step 2 - Project Type Selection~~ **DEPRECATED (v2.6)**
+
+> **Note:** This acceptance criteria is deprecated. Deal type selection was removed from the wizard as it did not drive any downstream behavior. Step 2 now handles Data Room Setup (IRL template selection) instead.
+
+~~**Given** I am on Step 2 of the wizard~~
+~~**When** the step loads~~
+~~**Then** I see 4 project type cards:~~
+  ~~- Tech M&A (with icon and description)~~
+  ~~- Industrial (with icon and description)~~
+  ~~- Pharma (with icon and description)~~
+  ~~- Custom (with icon and description)~~
+~~**When** I click a project type card~~
+~~**Then** the card is highlighted as selected~~
 **And** the "Next" button becomes enabled
 **When** I click "Back"
 **Then** I return to Step 1 with my previous inputs preserved
@@ -575,6 +580,7 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 | 2025-11-24 | Max (SM Agent) | Initial story draft created from Epic 1 tech spec |
 | 2025-11-25 | Dev Agent (Claude Opus 4.5) | Implementation complete - all 13 tasks done |
 | 2025-11-25 | Senior Dev Review (Claude Opus 4.5) | Code review completed - APPROVED |
+| 2025-11-26 | Course Correction (v2.6) | Deprecated AC3 (deal type selection) - field removed as it didn't drive behavior |
 
 ---
 

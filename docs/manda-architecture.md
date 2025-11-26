@@ -6,7 +6,7 @@
 **Last Updated:** 2025-11-25
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 2.4 (Document storage: Google Cloud Storage replaces Supabase Storage for raw file storage)
+**Version:** 2.6 (Unified bucket/folder model; removed deal_type from wizard)
 
 ---
 
@@ -2101,6 +2101,28 @@ npm install
 
 ## Changelog
 
+### Version 2.6 (2025-11-26)
+**Data Room Architecture Unification - Course Correction:**
+- **Removed `deal_type` from Project Wizard:**
+  - Deal type field was unnecessary - did not drive any downstream behavior
+  - Project creation simplified from 3 steps to 2 steps (Basic Info → IRL Template)
+  - Reduces user friction during project setup
+- **Unified Bucket/Folder Data Model:**
+  - `folder_path` is now the single source of truth for document organization
+  - **Buckets = top-level folders** - same data, different view
+  - Removed separate `category` column from documents table
+  - Creating a top-level folder creates a bucket; creating a bucket creates a folder
+  - Subfolders appear in both views with consistent hierarchy
+- **Empty Project Behavior Fixed:**
+  - Selecting "Empty Project" in wizard now creates truly empty data room
+  - No default buckets pre-created (was incorrectly creating 15 default categories)
+  - Users build their own folder/bucket structure from scratch
+- **Architecture Benefits:**
+  - Single source of truth eliminates data inconsistency
+  - Simpler mental model for users (folders = buckets)
+  - Reduced code complexity (one data model, two views)
+  - Better alignment with user expectations
+
 ### Version 2.5 (2025-11-25)
 **Infrastructure Strategy Decisions:**
 - **Supabase Retained for MVP:**
@@ -2258,4 +2280,4 @@ npm install
 ---
 
 *Generated using BMAD Method architecture workflow*
-*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25*
+*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25 | Version 2.6: 2025-11-26*

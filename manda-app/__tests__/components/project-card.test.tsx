@@ -15,7 +15,6 @@ const mockDeal: Deal = {
   name: 'Test Acquisition',
   user_id: 'user-123',
   status: 'active',
-  deal_type: 'tech-ma',
   company_name: 'Test Company Inc',
   industry: 'Technology',
   irl_template: null,
@@ -37,11 +36,6 @@ describe('ProjectCard', () => {
   it('renders status badge', () => {
     render(<ProjectCard deal={mockDeal} />)
     expect(screen.getByText('active')).toBeInTheDocument()
-  })
-
-  it('renders deal type badge', () => {
-    render(<ProjectCard deal={mockDeal} />)
-    expect(screen.getByText('Tech M&A')).toBeInTheDocument()
   })
 
   it('renders industry badge when provided', () => {
@@ -66,7 +60,6 @@ describe('ProjectCard', () => {
       name: 'Minimal Deal',
       user_id: 'user-123',
       status: 'active',
-      deal_type: null,
       company_name: null,
       industry: null,
       irl_template: null,
@@ -76,7 +69,6 @@ describe('ProjectCard', () => {
 
     render(<ProjectCard deal={minimalDeal} />)
     expect(screen.getByText('Minimal Deal')).toBeInTheDocument()
-    expect(screen.getByText('General')).toBeInTheDocument() // Default deal type
   })
 
   it('handles on-hold status', () => {

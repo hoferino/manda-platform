@@ -2,6 +2,8 @@
  * Projects API Route
  * Handles project creation with audit logging
  * Story: E1.9 - Implement Audit Logging for Security Events (AC: #4)
+ *
+ * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -16,7 +18,6 @@ interface CreateProjectRequest {
   name: string
   company_name?: string | null
   industry?: string | null
-  deal_type: string
   irl_template?: string | null
   status?: string
 }
@@ -26,11 +27,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = (await request.json()) as CreateProjectRequest
-    const { name, company_name, industry, deal_type, irl_template, status } = body
+    const { name, company_name, industry, irl_template, status } = body
 
-    if (!name || !deal_type) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'Name and deal type are required' },
+        { error: 'Name is required' },
         { status: 400 }
       )
     }
@@ -58,7 +59,6 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         company_name: company_name?.trim() || null,
         industry: industry || null,
-        deal_type,
         irl_template: irl_template || null,
         status: status || 'active',
       })
@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
         user_agent: userAgent,
         metadata: {
           project_name: name,
-          deal_type,
           failure_reason: error.message,
         },
         success: false,
@@ -102,7 +101,6 @@ export async function POST(request: NextRequest) {
       metadata: {
         project_id: data.id,
         project_name: data.name,
-        deal_type: data.deal_type,
         industry: data.industry,
       },
       success: true,

@@ -2,15 +2,17 @@
 
 Status: Done
 
+> **Course Correction (v2.6, 2025-11-26):** The original implementation created 15 hardcoded default categories. This has been revised: **Buckets = top-level folders**. The Buckets view now derives its data from `folder_path` (same source as Folder view). Empty projects have no default buckets. AC7 (Default Categories) is deprecated.
+
 ## Story
 
 As an **M&A analyst**,
-I want **to organize documents by category buckets with progress indicators**,
-so that **I can see document coverage by due diligence category at a glance**.
+I want **to organize documents by buckets (top-level folders) with progress indicators**,
+so that **I can see document coverage by category at a glance**.
 
 ## Context
 
-This story implements the Buckets view for the Data Room, providing a category-based organization with bucket cards showing progress indicators. Each category (Financial, Legal, Commercial, etc.) displays as a card with progress bar, status badge, and expandable item list. This complements the Folder Structure view (E2.2) and integrates with IRL tracking.
+This story implements the Buckets view for the Data Room, providing a card-based organization where each bucket represents a top-level folder. Each bucket displays as a card with progress bar, status badge, and expandable item list showing subfolders and documents. This is an **alternative view** of the same data shown in the Folder Structure view (E2.2) - **not a separate data model**.
 
 ## Acceptance Criteria
 
@@ -61,20 +63,28 @@ This story implements the Buckets view for the Data Room, providing a category-b
 **And** I can click to upload the first document
 **And** progress shows 0%
 
-### AC7: Default Categories
-**Given** a project has no IRL configured
+### AC7: ~~Default Categories~~ **DEPRECATED (v2.6)**
+
+> **Note:** This acceptance criteria is deprecated. Buckets are now derived from top-level folders. Empty projects have NO default buckets - users create their own folder structure. The 15 hardcoded categories have been removed.
+
+~~**Given** a project has no IRL configured~~
+~~**When** I view Buckets view~~
+~~**Then** I see default M&A categories:~~
+  ~~- Financial~~
+  ~~- Legal~~
+  ~~- Commercial~~
+  ~~- Operational~~
+  ~~- Tax~~
+  ~~- HR~~
+  ~~- IT & Technology~~
+  ~~- Environmental~~
+  ~~- Regulatory~~
+  ~~- Other~~
+
+**Revised Behavior:**
+**Given** a project has no IRL configured and no folders created
 **When** I view Buckets view
-**Then** I see default M&A categories:
-  - Financial
-  - Legal
-  - Commercial
-  - Operational
-  - Tax
-  - HR
-  - IT & Technology
-  - Environmental
-  - Regulatory
-  - Other
+**Then** I see an empty state with a prompt to create my first folder/bucket
 
 ## Tasks / Subtasks
 
@@ -117,11 +127,13 @@ This story implements the Buckets view for the Data Room, providing a category-b
 
 ## Dev Notes
 
-### Architecture Patterns
-- **Category Enum:** Uses DOCUMENT_CATEGORIES from lib/gcs/client.ts
-- **Progress Aggregation:** Query documents, group by category, count
-- **IRL Integration:** Optional - falls back to defaults if no IRL
+### Architecture Patterns (Updated v2.6)
+- **Unified Data Model:** Buckets = top-level folders. `folder_path` is single source of truth
+- **No Default Categories:** Empty projects have empty data rooms (no pre-created buckets)
+- **Progress Aggregation:** Query documents by folder_path, group by top-level folder
+- **IRL Integration:** Optional - if IRL template selected, folders auto-generated from IRL structure
 - **Optimistic Updates:** Progress updates immediately on upload
+- **Two Views, One Data Source:** Folder view and Bucket view both read from `folder_path`
 
 ### Source Tree Components
 - `components/data-room/buckets-view.tsx` - Main view
@@ -163,11 +175,23 @@ claude-opus-4-5-20251101
 - Default expected document counts per category
 - View toggle added via DataRoomWrapper for Folders/Buckets switching (E2.4 prep)
 
+### v2.6 Refactoring (2025-11-26)
+
+**Course Correction Applied:** Refactored from hardcoded categories to folder-based buckets
+
+Changes made:
+- **buckets-view.tsx**: Now derives buckets from `folder_path` (top-level folders) instead of hardcoded DOCUMENT_CATEGORIES
+- **bucket-card.tsx**: Simplified to show folder-based cards with document counts and subfolder indicators
+- **bucket-item-list.tsx**: Simplified to show documents within a folder bucket
+- **Empty state**: Projects with no folders now show "No buckets yet" with a prompt to create first bucket
+- **Removed**: DEFAULT_EXPECTED_COUNTS, DEFAULT_CATEGORY_ITEMS, hardcoded category logic
+- **Architecture**: Buckets = top-level folders, unified with Folder view data source
+
 ### File List
 
-- manda-app/components/data-room/bucket-card.tsx (NEW)
-- manda-app/components/data-room/bucket-item-list.tsx (NEW)
-- manda-app/components/data-room/buckets-view.tsx (NEW)
+- manda-app/components/data-room/bucket-card.tsx (NEW, REFACTORED v2.6)
+- manda-app/components/data-room/bucket-item-list.tsx (NEW, REFACTORED v2.6)
+- manda-app/components/data-room/buckets-view.tsx (NEW, REFACTORED v2.6)
 - manda-app/components/data-room/index.ts (MODIFIED)
 - manda-app/app/projects/[id]/data-room/page.tsx (MODIFIED)
 - manda-app/app/projects/[id]/data-room/data-room-wrapper.tsx (NEW)

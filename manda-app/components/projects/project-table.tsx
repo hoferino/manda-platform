@@ -2,6 +2,8 @@
  * Project Table Component
  * Displays projects in a table view with sortable columns
  * Story: E1.4 - Build Projects Overview Screen (AC: #3, #7, #8)
+ *
+ * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
  */
 
 'use client'
@@ -34,20 +36,13 @@ interface ProjectTableProps {
   deals: Deal[]
 }
 
-type SortKey = 'name' | 'company_name' | 'industry' | 'deal_type' | 'status' | 'updated_at'
+type SortKey = 'name' | 'company_name' | 'industry' | 'status' | 'updated_at'
 type SortDirection = 'asc' | 'desc'
 
 const statusColors: Record<string, string> = {
   active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   'on-hold': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
   archived: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
-}
-
-const dealTypeLabels: Record<string, string> = {
-  'tech-ma': 'Tech M&A',
-  'industrial': 'Industrial',
-  'pharma': 'Pharma',
-  'custom': 'Custom',
 }
 
 export function ProjectTable({ deals: initialDeals }: ProjectTableProps) {
@@ -103,9 +98,6 @@ export function ProjectTable({ deals: initialDeals }: ProjectTableProps) {
             <TableHead className="hidden md:table-cell">
               <SortableHeader column="industry" label="Industry" />
             </TableHead>
-            <TableHead className="hidden lg:table-cell">
-              <SortableHeader column="deal_type" label="Deal Type" />
-            </TableHead>
             <TableHead>
               <SortableHeader column="status" label="Status" />
             </TableHead>
@@ -122,7 +114,6 @@ export function ProjectTable({ deals: initialDeals }: ProjectTableProps) {
           {sortedDeals.map((deal) => {
             const status = deal.status ?? 'active'
             const statusClass = statusColors[status] ?? statusColors['active']
-            const dealTypeLabel = deal.deal_type ? (dealTypeLabels[deal.deal_type] ?? deal.deal_type) : 'General'
             const progress = Math.min(100, Math.max(0, Math.floor(Math.random() * 30 + 10)))
             const lastActivity = formatDistanceToNow(new Date(deal.updated_at), { addSuffix: true })
 
@@ -146,11 +137,6 @@ export function ProjectTable({ deals: initialDeals }: ProjectTableProps) {
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">
                   {deal.industry ?? '-'}
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  <Badge variant="outline" className="text-xs">
-                    {dealTypeLabel}
-                  </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge

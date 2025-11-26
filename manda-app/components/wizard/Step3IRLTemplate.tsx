@@ -1,7 +1,9 @@
 /**
- * Step 3: IRL Template Selection
- * Auto-suggests IRL template based on project type with preview
+ * Step 2: IRL Template Selection
+ * Allows user to select an IRL template or start with empty project
  * Story: E1.5 - Implement Project Creation Wizard (AC: #4)
+ *
+ * Note (v2.6): No longer depends on dealType - user selects template directly
  */
 
 'use client'
@@ -23,7 +25,10 @@ import { cn } from '@/lib/utils'
 export const NO_IRL_TEMPLATE = 'none'
 export const UPLOAD_IRL_TEMPLATE = 'upload'
 
-// IRL template configuration based on project type
+// Default template for new projects
+const DEFAULT_TEMPLATE = 'General M&A IRL'
+
+// IRL template configuration
 export const IRL_TEMPLATES = {
   'tech-ma': {
     name: 'Tech M&A Standard IRL',
@@ -73,27 +78,14 @@ export const IRL_TEMPLATES = {
 
 export type IrlTemplateId = keyof typeof IRL_TEMPLATES
 
-// Get default template based on deal type
-export function getDefaultTemplate(dealType: string): string {
-  const templates: Record<string, string> = {
-    'tech-ma': 'Tech M&A Standard IRL',
-    industrial: 'Industrial M&A IRL',
-    pharma: 'Pharma M&A IRL',
-    custom: 'General M&A IRL',
-  }
-  return templates[dealType] || 'General M&A IRL'
-}
-
 type IrlOption = 'template' | 'empty' | 'upload'
 
 interface Step3IRLTemplateProps {
-  dealType: string
   selectedTemplate: string
   onTemplateChange: (template: string) => void
 }
 
 export function Step3IRLTemplate({
-  dealType,
   selectedTemplate,
   onTemplateChange,
 }: Step3IRLTemplateProps) {
@@ -115,7 +107,7 @@ export function Step3IRLTemplate({
 
   const template = templateKey
     ? IRL_TEMPLATES[templateKey]
-    : IRL_TEMPLATES[dealType as IrlTemplateId] || IRL_TEMPLATES.custom
+    : IRL_TEMPLATES.custom
 
   return (
     <div className="space-y-6">
@@ -136,7 +128,7 @@ export function Step3IRLTemplate({
           )}
           onClick={() => {
             if (selectedOption !== 'template') {
-              onTemplateChange(getDefaultTemplate(dealType))
+              onTemplateChange(DEFAULT_TEMPLATE)
             }
           }}
           role="button"
@@ -146,7 +138,7 @@ export function Step3IRLTemplate({
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
               if (selectedOption !== 'template') {
-                onTemplateChange(getDefaultTemplate(dealType))
+                onTemplateChange(DEFAULT_TEMPLATE)
               }
             }
           }}

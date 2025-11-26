@@ -1,0 +1,297 @@
+/**
+ * Document Card Component
+ * Displays document metadata in a compact card format
+ * Story: E2.5 - Create Document Metadata Management (AC: #1)
+ *
+ * Features:
+ * - File type icon based on MIME type
+ * - Size formatted as KB/MB/GB
+ * - Relative date (e.g., "2 hours ago")
+ * - Category badge
+ * - Processing status indicator
+ */
+
+'use client'
+
+import { useState, useCallback } from 'react'
+import {
+  FileText,
+  FileSpreadsheet,
+  FileImage,
+  File,
+  Presentation,
+  MoreVertical,
+  Download,
+  Trash2,
+  FolderInput,
+  Edit,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+} from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import type { Document } from '@/lib/api/documents'
+import { formatFileSize, DOCUMENT_CATEGORIES } from '@/lib/api/documents'
+
+export interface DocumentCardProps {
+  document: Document
+  onClick?: (document: Document) => void
+  onDownload?: (document: Document) => void
+  onDelete?: (document: Document) => void
+  onMove?: (document: Document) => void
+  onRename?: (document: Document) => void
+  draggable?: boolean
+  onDragStart?: (e: React.DragEvent, document: Document) => void
+  className?: string
+}
+
+/**
+ * Get the file icon component based on MIME type
+ */
+function getFileIcon(mimeType: string | null) {
+  if (!mimeType) return File
+
+  if (mimeType.includes('pdf')) return FileText
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel'))
+    return FileSpreadsheet
+  if (mimeType.includes('word') || mimeType.includes('document')) return FileText
+  if (mimeType.includes('presentation') || mimeType.includes('powerpoint'))
+    return Presentation
+  if (mimeType.includes('image')) return FileImage
+  if (mimeType.includes('text')) return FileText
+
+  return File
+}
+
+/**
+ * Get human-readable category label
+ */
+function getCategoryLabel(category: string | null): string | null {
+  if (!category) return null
+  const found = DOCUMENT_CATEGORIES.find((c) => c.value === category)
+  return found?.label || category
+}
+
+/**
+ * Get processing status icon and styling
+ */
+function getProcessingStatusDisplay(status: Document['processingStatus']) {
+  switch (status) {
+    case 'processing':
+      return {
+        icon: Loader2,
+        label: 'Processing',
+        className: 'text-blue-500 animate-spin',
+        badgeVariant: 'secondary' as const,
+      }
+    case 'completed':
+      return {
+        icon: CheckCircle2,
+        label: 'Processed',
+        className: 'text-green-500',
+        badgeVariant: 'secondary' as const,
+      }
+    case 'failed':
+      return {
+        icon: AlertCircle,
+        label: 'Failed',
+        className: 'text-destructive',
+        badgeVariant: 'destructive' as const,
+      }
+    case 'pending':
+    default:
+      return {
+        icon: Clock,
+        label: 'Pending',
+        className: 'text-muted-foreground',
+        badgeVariant: 'outline' as const,
+      }
+  }
+}
+
+/**
+ * Document Card Component
+ * Displays document info in a row/card format with actions
+ */
+export function DocumentCard({
+  document,
+  onClick,
+  onDownload,
+  onDelete,
+  onMove,
+  onRename,
+  draggable = true,
+  onDragStart,
+  className,
+}: DocumentCardProps) {
+  const Icon = getFileIcon(document.mimeType)
+  const categoryLabel = getCategoryLabel(document.category)
+  const processingStatus = getProcessingStatusDisplay(document.processingStatus)
+  const ProcessingIcon = processingStatus.icon
+
+  const handleClick = useCallback(() => {
+    onClick?.(document)
+  }, [document, onClick])
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent) => {
+      if (onDragStart) {
+        e.dataTransfer.setData('application/document-id', document.id)
+        e.dataTransfer.effectAllowed = 'move'
+        onDragStart(e, document)
+      }
+    },
+    [document, onDragStart]
+  )
+
+  // Format date as relative time
+  const relativeDate = formatDistanceToNow(new Date(document.createdAt), {
+    addSuffix: true,
+  })
+
+  return (
+    <div
+      className={cn(
+        'group grid cursor-pointer grid-cols-[1fr_100px_120px_40px] items-center gap-4 px-4 py-3 hover:bg-muted/50',
+        draggable && 'cursor-grab active:cursor-grabbing',
+        className
+      )}
+      onClick={handleClick}
+      draggable={draggable && !!onDragStart}
+      onDragStart={handleDragStart}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleClick()
+        }
+      }}
+    >
+      {/* Name with icon and badges */}
+      <div className="flex items-center gap-3 overflow-hidden">
+        <Icon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+        <div className="flex flex-col gap-1 overflow-hidden">
+          <span className="truncate text-sm font-medium">{document.name}</span>
+          <div className="flex items-center gap-2">
+            {/* Category badge */}
+            {categoryLabel && (
+              <Badge variant="outline" className="text-xs">
+                {categoryLabel}
+              </Badge>
+            )}
+            {/* Processing status (only show if not completed) */}
+            {document.processingStatus !== 'completed' && (
+              <Badge
+                variant={processingStatus.badgeVariant}
+                className="flex items-center gap-1 text-xs"
+              >
+                <ProcessingIcon className={cn('h-3 w-3', processingStatus.className)} />
+                {processingStatus.label}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Size */}
+      <div className="text-sm text-muted-foreground">
+        {formatFileSize(document.size)}
+      </div>
+
+      {/* Date */}
+      <div className="text-sm text-muted-foreground" title={new Date(document.createdAt).toLocaleString()}>
+        {relativeDate}
+      </div>
+
+      {/* Actions menu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="invisible h-8 w-8 p-0 group-hover:visible"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MoreVertical className="h-4 w-4" />
+            <span className="sr-only">Document actions</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-40">
+          {onRename && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onRename(document)
+              }}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Rename
+            </DropdownMenuItem>
+          )}
+          {onDownload && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onDownload(document)
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </DropdownMenuItem>
+          )}
+          {onMove && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onMove(document)
+              }}
+            >
+              <FolderInput className="mr-2 h-4 w-4" />
+              Move to...
+            </DropdownMenuItem>
+          )}
+          {(onRename || onDownload || onMove) && onDelete && <DropdownMenuSeparator />}
+          {onDelete && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(document)
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
+/**
+ * Document Card Header Component
+ * Header row for document card list
+ */
+export function DocumentCardHeader() {
+  return (
+    <div className="grid grid-cols-[1fr_100px_120px_40px] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground">
+      <div>Name</div>
+      <div>Size</div>
+      <div>Date</div>
+      <div></div>
+    </div>
+  )
+}

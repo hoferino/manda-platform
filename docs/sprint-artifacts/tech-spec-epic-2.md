@@ -1,17 +1,22 @@
 # Epic Technical Specification: Document Ingestion & Storage
 
-Date: 2025-11-25
+Date: 2025-11-26
 Author: Max
 Epic ID: 2
-Status: Draft
+Status: Updated (v2.6 Course Correction)
 
 ---
 
 ## Overview
 
-Epic 2: Document Ingestion & Storage implements the Data Room functionality for the Manda M&A Intelligence Platform. This epic enables secure document upload to Google Cloud Storage (GCS), dual-view organization (Folder Structure and Buckets/Category view), IRL-linked document tracking, and real-time upload progress indicators. Building on the Epic 1 foundation, this epic delivers the core document management capabilities that analysts need to organize M&A due diligence materials.
+Epic 2: Document Ingestion & Storage implements the Data Room functionality for the Manda M&A Intelligence Platform. This epic enables secure document upload to Google Cloud Storage (GCS), dual-view organization (Folder Structure and Buckets view), IRL-linked document tracking, and real-time upload progress indicators. Building on the Epic 1 foundation, this epic delivers the core document management capabilities that analysts need to organize M&A due diligence materials.
 
 The architecture decision to use Google Cloud Storage instead of Supabase Storage was made to optimize for large file handling (M&A deals often involve hundreds of MB of documents), native Gemini/Vertex AI integration for future document processing (Epic 3), and enterprise-grade scalability.
+
+> **Course Correction (v2.6, 2025-11-26):**
+> - **Unified Bucket/Folder Model:** `folder_path` is the single source of truth. Buckets = top-level folders. Both views derive from the same data.
+> - **No Default Categories:** Empty projects have empty data rooms. Users create their own folder/bucket structure.
+> - **Removed `category` column:** Documents no longer have a separate category field. Organization is purely via `folder_path`.
 
 ## Objectives and Scope
 
@@ -69,11 +74,12 @@ Key architectural components from the technology stack:
 **Documents Table (PostgreSQL with GCS columns):**
 ```sql
 -- Migration 00012: Add GCS columns to documents table
+-- NOTE (v2.6): category column removed - folder_path is single source of truth
 ALTER TABLE documents
 ADD COLUMN IF NOT EXISTS gcs_bucket text,
 ADD COLUMN IF NOT EXISTS gcs_object_path text,
-ADD COLUMN IF NOT EXISTS folder_path text,
-ADD COLUMN IF NOT EXISTS category text;
+ADD COLUMN IF NOT EXISTS folder_path text;
+-- ADD COLUMN IF NOT EXISTS category text; -- REMOVED in v2.6: buckets derived from folder_path
 
 -- Existing columns:
 -- id uuid PRIMARY KEY
@@ -112,25 +118,25 @@ CREATE TABLE document_versions (
 CREATE INDEX idx_document_versions_doc ON document_versions(document_id);
 ```
 
-**Document Category Enum:**
+**~~Document Category Enum~~ DEPRECATED (v2.6):**
+
+> **Note:** Document categories are no longer used. Buckets are derived from top-level folders in `folder_path`. This enum is preserved for reference only.
+
 ```typescript
-export const DOCUMENT_CATEGORIES = [
-  'financial',       // Financial statements, models, projections
-  'legal',           // Contracts, agreements, corporate docs
-  'commercial',      // Customer data, sales, marketing
-  'operational',     // Operations, processes, facilities
-  'tax',             // Tax returns, compliance
-  'hr',              // Employee data, org charts
-  'it',              // Technology, systems, security
-  'environmental',   // Environmental compliance
-  'regulatory',      // Licenses, permits, compliance
-  'contracts',       // Customer/vendor contracts
-  'corporate',       // Corporate governance, minutes
-  'insurance',       // Insurance policies
-  'intellectual_property', // Patents, trademarks, IP
-  'real_estate',     // Property documents
-  'other',           // Uncategorized
-] as const
+// DEPRECATED (v2.6): Categories removed - use folder_path instead
+// Buckets = top-level folders, not predefined categories
+// export const DOCUMENT_CATEGORIES = [
+//   'financial', 'legal', 'commercial', 'operational', 'tax',
+//   'hr', 'it', 'environmental', 'regulatory', 'contracts',
+//   'corporate', 'insurance', 'intellectual_property', 'real_estate', 'other',
+// ] as const
+
+// NEW (v2.6): Bucket = first segment of folder_path
+// Example: folder_path = "Financial/Q1 Reports" → bucket = "Financial"
+export function getBucketFromPath(folderPath: string | null): string | null {
+  if (!folderPath) return null;
+  return folderPath.split('/')[0];
+}
 ```
 
 ### APIs and Interfaces
@@ -443,17 +449,22 @@ Then the tree state is preserved
 And performance is smooth (< 100ms)
 ```
 
-### AC-E2-4: Buckets View
+### AC-E2-4: Buckets View (Updated v2.6)
 ```gherkin
+# Updated v2.6: Buckets = top-level folders, not categories
 Given I am in Data Room Buckets view
-When documents have categories assigned
-Then I see category cards with progress
-And each card shows document count and status
+When documents exist with folder_path set
+Then I see bucket cards for each unique top-level folder
+And each card shows document count and progress (if IRL configured)
 
-Given I click on a category card
+Given I click on a bucket card
 When it expands
-Then I see documents in that category
-And I can upload directly to that category
+Then I see documents and subfolders in that bucket
+And I can upload directly to that bucket/folder
+
+Given the project has no folders
+When I view Buckets view
+Then I see an empty state prompting me to create a folder/bucket
 ```
 
 ### AC-E2-5: View Toggle

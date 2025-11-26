@@ -1,37 +1,23 @@
 /**
  * Bucket Card Component
- * Displays a category bucket with progress indicator and status badge
+ * Displays a folder-based bucket with document count and status badge
  * Story: E2.3 - Build Data Room Buckets View (AC: #1, #2, #3)
+ *
+ * Architecture (v2.6): Buckets = top-level folders
+ * Cards represent top-level folders, not hardcoded categories
  */
 
 'use client'
 
-import { useState } from 'react'
 import {
   ChevronDown,
   ChevronRight,
-  FileText,
-  Briefcase,
-  Scale,
-  TrendingUp,
-  Cog,
-  Receipt,
-  Users,
-  Monitor,
-  Leaf,
-  Shield,
-  FileSignature,
-  Building,
-  FileCheck,
-  Lightbulb,
-  Home,
-  MoreHorizontal,
+  Folder,
+  FolderOpen,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
-import type { DocumentCategory } from '@/lib/gcs/client'
 
 export interface BucketItem {
   id: string
@@ -42,101 +28,50 @@ export interface BucketItem {
 }
 
 export interface BucketCardProps {
-  category: DocumentCategory
-  label: string
+  folderName: string
+  folderPath: string
   uploadedCount: number
-  expectedCount: number
   items?: BucketItem[]
+  subfolderCount?: number
   isExpanded?: boolean
   onToggleExpand?: () => void
-  onUploadItem?: (itemId: string) => void
   onClick?: () => void
 }
 
 /**
- * Get icon component for a category
+ * Get status badge based on document count
  */
-function getCategoryIcon(category: DocumentCategory) {
-  const iconMap: Record<DocumentCategory, React.ElementType> = {
-    financial: TrendingUp,
-    legal: Scale,
-    commercial: Briefcase,
-    operational: Cog,
-    tax: Receipt,
-    hr: Users,
-    it: Monitor,
-    environmental: Leaf,
-    regulatory: Shield,
-    contracts: FileSignature,
-    corporate: Building,
-    insurance: FileCheck,
-    intellectual_property: Lightbulb,
-    real_estate: Home,
-    other: MoreHorizontal,
-  }
-  return iconMap[category] || FileText
-}
-
-/**
- * Calculate progress percentage
- */
-function calculateProgress(uploaded: number, expected: number): number {
-  if (expected === 0) return uploaded > 0 ? 100 : 0
-  return Math.min(Math.round((uploaded / expected) * 100), 100)
-}
-
-/**
- * Get status badge based on progress
- */
-function getStatusBadge(progress: number): {
+function getStatusBadge(count: number): {
   label: string
   variant: 'default' | 'secondary' | 'destructive' | 'outline'
   className: string
 } {
-  if (progress === 0) {
+  if (count === 0) {
     return {
-      label: 'Not Started',
+      label: 'Empty',
       variant: 'secondary',
       className: 'bg-gray-100 text-gray-600 hover:bg-gray-100',
     }
   }
-  if (progress >= 100) {
-    return {
-      label: 'Completed',
-      variant: 'default',
-      className: 'bg-green-100 text-green-700 hover:bg-green-100',
-    }
-  }
   return {
-    label: 'In Progress',
+    label: `${count} doc${count === 1 ? '' : 's'}`,
     variant: 'default',
-    className: 'bg-amber-100 text-amber-700 hover:bg-amber-100',
+    className: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
   }
-}
-
-/**
- * Get progress bar color based on progress
- */
-function getProgressColor(progress: number): string {
-  if (progress === 0) return 'bg-gray-300'
-  if (progress >= 100) return 'bg-green-500'
-  return 'bg-amber-500'
 }
 
 export function BucketCard({
-  category,
-  label,
+  folderName,
+  folderPath,
   uploadedCount,
-  expectedCount,
   items = [],
+  subfolderCount = 0,
   isExpanded = false,
   onToggleExpand,
-  onUploadItem,
   onClick,
 }: BucketCardProps) {
-  const progress = calculateProgress(uploadedCount, expectedCount)
-  const statusBadge = getStatusBadge(progress)
-  const Icon = getCategoryIcon(category)
+  const statusBadge = getStatusBadge(uploadedCount)
+  const Icon = isExpanded ? FolderOpen : Folder
 
   const handleClick = () => {
     if (onToggleExpand) {
@@ -173,9 +108,10 @@ export function BucketCard({
               <Icon className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-base font-medium">{label}</CardTitle>
+              <CardTitle className="text-base font-medium">{folderName}</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {uploadedCount}/{expectedCount} documents
+                {uploadedCount} document{uploadedCount === 1 ? '' : 's'}
+                {subfolderCount > 0 && ` · ${subfolderCount} subfolder${subfolderCount === 1 ? '' : 's'}`}
               </p>
             </div>
           </div>
@@ -186,22 +122,27 @@ export function BucketCard({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* Progress bar */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Progress</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
-            <div
-              className={cn(
-                'h-full transition-all duration-300',
-                getProgressColor(progress)
+        {/* Document preview list */}
+        {items.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Recent documents</p>
+            <ul className="text-sm text-muted-foreground">
+              {items.slice(0, 3).map((item) => (
+                <li key={item.id} className="truncate">
+                  • {item.name}
+                </li>
+              ))}
+              {items.length > 3 && (
+                <li className="text-xs italic">+{items.length - 3} more</li>
               )}
-              style={{ width: `${progress}%` }}
-            />
+            </ul>
           </div>
-        </div>
+        )}
+
+        {/* Empty state */}
+        {items.length === 0 && (
+          <p className="text-sm text-muted-foreground italic">No documents yet</p>
+        )}
 
         {/* Expand indicator */}
         {onToggleExpand && (

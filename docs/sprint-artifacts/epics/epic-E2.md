@@ -46,4 +46,7 @@ Document storage uses Google Cloud Storage instead of Supabase Storage for:
 - File paths: `{project_id}/{folder_path}/{filename}`
 - Max file size: 500MB (configurable)
 
+**Architecture Update (v2.6, 2025-11-26):**
+> **Unified Bucket/Folder Model:** `folder_path` is the single source of truth for document organization. Buckets = top-level folders. The Folder Structure view and Buckets view are two different presentations of the same underlying data. Creating a top-level folder creates a bucket and vice versa. Empty projects start with no folders/buckets (no default categories).
+
 **Full Details:** See [docs/epics.md](../../epics.md) lines 785-1335

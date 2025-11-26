@@ -136,7 +136,6 @@ export type Database = {
         Row: {
           company_name: string | null
           created_at: string
-          deal_type: string | null
           id: string
           industry: string | null
           irl_template: string | null
@@ -148,7 +147,6 @@ export type Database = {
         Insert: {
           company_name?: string | null
           created_at?: string
-          deal_type?: string | null
           id?: string
           industry?: string | null
           irl_template?: string | null
@@ -160,7 +158,6 @@ export type Database = {
         Update: {
           company_name?: string | null
           created_at?: string
-          deal_type?: string | null
           id?: string
           industry?: string | null
           irl_template?: string | null

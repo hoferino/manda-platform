@@ -2,6 +2,8 @@
  * Project Creation Wizard Page
  * 2-step wizard for creating new M&A projects
  * Story: E1.5 - Implement Project Creation Wizard (AC: #1-#10)
+ *
+ * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
  */
 
 'use client'
@@ -11,14 +13,13 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { WizardLayout } from '@/components/wizard/WizardLayout'
 import { Step1BasicInfo } from '@/components/wizard/Step1BasicInfo'
-import { Step3IRLTemplate as Step2IRLTemplate, getDefaultTemplate, NO_IRL_TEMPLATE, UPLOAD_IRL_TEMPLATE } from '@/components/wizard/Step3IRLTemplate'
+import { Step3IRLTemplate as Step2IRLTemplate, NO_IRL_TEMPLATE, UPLOAD_IRL_TEMPLATE } from '@/components/wizard/Step3IRLTemplate'
 import { createDeal } from '@/lib/api/deals-client'
 
 interface WizardFormData {
   projectName: string
   companyName: string
   industry: string
-  dealType: string
   irlTemplate: string
 }
 
@@ -40,7 +41,6 @@ export default function NewProjectPage() {
     projectName: '',
     companyName: '',
     industry: '',
-    dealType: '',
     irlTemplate: '',
   })
 
@@ -84,17 +84,9 @@ export default function NewProjectPage() {
       return
     }
 
-    // When moving from step 1 to step 2, auto-set the IRL template based on deal type if selected
-    if (currentStep === 1 && formData.dealType && !formData.irlTemplate) {
-      setFormData((prev) => ({
-        ...prev,
-        irlTemplate: getDefaultTemplate(prev.dealType),
-      }))
-    }
-
     setCurrentStep((prev) => Math.min(prev + 1, TOTAL_STEPS))
     setErrors({})
-  }, [currentStep, formData.dealType, formData.irlTemplate, validateStep1])
+  }, [currentStep, validateStep1])
 
   // Handle back step
   const handleBack = useCallback(() => {
@@ -121,7 +113,6 @@ export default function NewProjectPage() {
         name: formData.projectName.trim(),
         company_name: formData.companyName.trim() || null,
         industry: formData.industry || null,
-        deal_type: formData.dealType,
         irl_template: irlTemplate,
         status: 'active',
       })
@@ -157,15 +148,6 @@ export default function NewProjectPage() {
     []
   )
 
-  // Handle deal type selection with auto IRL template
-  const handleDealTypeSelect = useCallback((dealType: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      dealType,
-      irlTemplate: getDefaultTemplate(dealType),
-    }))
-  }, [])
-
   return (
     <WizardLayout
       currentStep={currentStep}
@@ -182,18 +164,15 @@ export default function NewProjectPage() {
           projectName={formData.projectName}
           companyName={formData.companyName}
           industry={formData.industry}
-          dealType={formData.dealType}
           onProjectNameChange={(value) => updateFormData('projectName', value)}
           onCompanyNameChange={(value) => updateFormData('companyName', value)}
           onIndustryChange={(value) => updateFormData('industry', value)}
-          onDealTypeChange={handleDealTypeSelect}
           errors={errors}
         />
       )}
 
       {currentStep === 2 && (
         <Step2IRLTemplate
-          dealType={formData.dealType || 'custom'}
           selectedTemplate={formData.irlTemplate}
           onTemplateChange={(template) => updateFormData('irlTemplate', template)}
         />

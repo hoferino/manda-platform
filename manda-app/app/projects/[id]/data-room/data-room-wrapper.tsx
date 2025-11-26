@@ -1,58 +1,142 @@
 /**
  * Data Room Wrapper Component
- * Provides view switching between Folders and Buckets views
+ * Provides view switching between Folders and Buckets views with preference persistence
  * Story: E2.3 - Build Data Room Buckets View
- * Note: Full view toggle with persistence is E2.4
+ * Story: E2.4 - Implement View Toggle and User Preference
+ *
+ * Features:
+ * - View toggle (Folders/Buckets) with localStorage persistence
+ * - Per-project preference storage
+ * - Context preservation when switching views
+ * - Responsive design
  */
 
 'use client'
 
-import { useState } from 'react'
-import { Folders, LayoutGrid } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useState, useCallback, useRef } from 'react'
 import { DataRoomClient } from './data-room-client'
-import { BucketsView } from '@/components/data-room'
-
-type DataRoomView = 'folders' | 'buckets'
+import {
+  BucketsView,
+  ViewToggle,
+  useViewPreference,
+  type DataRoomView,
+} from '@/components/data-room'
 
 interface DataRoomWrapperProps {
   projectId: string
-  initialView?: DataRoomView
 }
 
-export function DataRoomWrapper({
-  projectId,
-  initialView = 'folders',
-}: DataRoomWrapperProps) {
-  const [view, setView] = useState<DataRoomView>(initialView)
+/**
+ * State to preserve context when switching views
+ */
+interface ViewContext {
+  folders: {
+    selectedPath: string | null
+    scrollTop: number
+  }
+  buckets: {
+    expandedBuckets: string[]
+    scrollTop: number
+  }
+}
+
+export function DataRoomWrapper({ projectId }: DataRoomWrapperProps) {
+  // Use the hook for localStorage persistence (AC4, AC5)
+  const [view, setView] = useViewPreference(projectId)
+
+  // Context preservation state (AC6)
+  const [context, setContext] = useState<ViewContext>({
+    folders: { selectedPath: null, scrollTop: 0 },
+    buckets: { expandedBuckets: [], scrollTop: 0 },
+  })
+
+  // Refs for scroll containers
+  const foldersScrollRef = useRef<HTMLDivElement>(null)
+  const bucketsScrollRef = useRef<HTMLDivElement>(null)
+
+  // Handle view change with context preservation
+  const handleViewChange = useCallback(
+    (newView: DataRoomView) => {
+      // Save current view's scroll position before switching
+      if (view === 'folders' && foldersScrollRef.current) {
+        setContext((prev) => ({
+          ...prev,
+          folders: {
+            ...prev.folders,
+            scrollTop: foldersScrollRef.current?.scrollTop ?? 0,
+          },
+        }))
+      } else if (view === 'buckets' && bucketsScrollRef.current) {
+        setContext((prev) => ({
+          ...prev,
+          buckets: {
+            ...prev.buckets,
+            scrollTop: bucketsScrollRef.current?.scrollTop ?? 0,
+          },
+        }))
+      }
+
+      setView(newView)
+    },
+    [view, setView]
+  )
+
+  // Callback to update selected folder path (for context preservation)
+  const handleFolderSelect = useCallback((path: string | null) => {
+    setContext((prev) => ({
+      ...prev,
+      folders: { ...prev.folders, selectedPath: path },
+    }))
+  }, [])
+
+  // Callback to track expanded buckets (for context preservation)
+  const handleBucketToggle = useCallback((bucketId: string, expanded: boolean) => {
+    setContext((prev) => ({
+      ...prev,
+      buckets: {
+        ...prev.buckets,
+        expandedBuckets: expanded
+          ? [...prev.buckets.expandedBuckets, bucketId]
+          : prev.buckets.expandedBuckets.filter((id) => id !== bucketId),
+      },
+    }))
+  }, [])
 
   return (
     <div className="flex h-full flex-col">
-      {/* View Toggle Header */}
-      <div className="flex items-center justify-between border-b bg-background px-6 py-3">
-        <Tabs
+      {/* View Toggle Header (AC1) */}
+      <div className="flex items-center justify-between border-b bg-background px-4 py-3 sm:px-6">
+        <ViewToggle
+          projectId={projectId}
           value={view}
-          onValueChange={(v) => setView(v as DataRoomView)}
-        >
-          <TabsList>
-            <TabsTrigger value="folders" className="gap-2">
-              <Folders className="h-4 w-4" />
-              Folders
-            </TabsTrigger>
-            <TabsTrigger value="buckets" className="gap-2">
-              <LayoutGrid className="h-4 w-4" />
-              Buckets
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          onChange={handleViewChange}
+        />
       </div>
 
-      {/* View Content */}
+      {/* View Content (AC2, AC3) */}
       <div className="flex-1 overflow-hidden">
         {view === 'folders' ? (
-          <DataRoomClient projectId={projectId} />
+          <div
+            ref={foldersScrollRef}
+            className="h-full overflow-auto"
+          >
+            <DataRoomClient
+              projectId={projectId}
+              selectedPath={context.folders.selectedPath}
+              onFolderSelect={handleFolderSelect}
+            />
+          </div>
         ) : (
-          <BucketsView projectId={projectId} />
+          <div
+            ref={bucketsScrollRef}
+            className="h-full overflow-auto"
+          >
+            <BucketsView
+              projectId={projectId}
+              expandedBuckets={context.buckets.expandedBuckets}
+              onBucketToggle={handleBucketToggle}
+            />
+          </div>
         )}
       </div>
     </div>

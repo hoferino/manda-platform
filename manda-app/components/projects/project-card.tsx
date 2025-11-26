@@ -2,6 +2,8 @@
  * Project Card Component
  * Displays a single project/deal in card view
  * Story: E1.4 - Build Projects Overview Screen (AC: #2, #7, #8)
+ *
+ * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
  */
 
 'use client'
@@ -24,17 +26,9 @@ const statusColors: Record<string, string> = {
   archived: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
 }
 
-const dealTypeLabels: Record<string, string> = {
-  'tech-ma': 'Tech M&A',
-  'industrial': 'Industrial',
-  'pharma': 'Pharma',
-  'custom': 'Custom',
-}
-
 export function ProjectCard({ deal }: ProjectCardProps) {
   const status = deal.status ?? 'active'
   const statusClass = statusColors[status] ?? statusColors['active']
-  const dealTypeLabel = deal.deal_type ? (dealTypeLabels[deal.deal_type] ?? deal.deal_type) : 'General'
 
   // For MVP, progress is simulated (0-100 based on created/updated difference)
   // In future, this will be calculated from actual project completion metrics
@@ -65,16 +59,13 @@ export function ProjectCard({ deal }: ProjectCardProps) {
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="text-xs">
-              {dealTypeLabel}
-            </Badge>
-            {deal.industry && (
+          {deal.industry && (
+            <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="text-xs">
                 {deal.industry}
               </Badge>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground">

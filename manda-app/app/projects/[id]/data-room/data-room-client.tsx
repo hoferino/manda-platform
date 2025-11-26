@@ -2,6 +2,7 @@
  * Data Room Client Component
  * Manages state for folder tree, document list, and CRUD operations
  * Story: E2.2 - Build Data Room Folder Structure View (AC: #1-8)
+ * Story: E2.5 - Create Document Metadata Management (enhanced with details panel)
  */
 
 'use client'
@@ -17,6 +18,8 @@ import {
   CreateFolderDialog,
   DeleteFolderDialog,
   RenameFolderDialog,
+  DocumentDetails,
+  FolderSelectDialog,
   buildFolderTree,
   type FolderNode,
 } from '@/components/data-room'
@@ -31,10 +34,30 @@ import { createClient } from '@/lib/supabase/client'
 
 interface DataRoomClientProps {
   projectId: string
+  /** Selected folder path (for context preservation from parent) */
+  selectedPath?: string | null
+  /** Callback when folder selection changes (for context preservation) */
+  onFolderSelect?: (path: string | null) => void
 }
 
-export function DataRoomClient({ projectId }: DataRoomClientProps) {
-  const [selectedPath, setSelectedPath] = useState<string | null>(null)
+export function DataRoomClient({
+  projectId,
+  selectedPath: externalSelectedPath,
+  onFolderSelect,
+}: DataRoomClientProps) {
+  // Use internal state if no external control provided
+  const [internalSelectedPath, setInternalSelectedPath] = useState<string | null>(null)
+
+  // Determine which path to use - external (controlled) or internal (uncontrolled)
+  const selectedPath = externalSelectedPath !== undefined ? externalSelectedPath : internalSelectedPath
+
+  // Handle path changes - notify parent if callback provided
+  const setSelectedPath = (path: string | null) => {
+    if (onFolderSelect) {
+      onFolderSelect(path)
+    }
+    setInternalSelectedPath(path)
+  }
   const [documents, setDocuments] = useState<Document[]>([])
   const [allDocuments, setAllDocuments] = useState<Document[]>([])
   const [folders, setFolders] = useState<FolderNode[]>([])
@@ -48,6 +71,13 @@ export function DataRoomClient({ projectId }: DataRoomClientProps) {
   const [deleteFolderOpen, setDeleteFolderOpen] = useState(false)
   const [deleteFolderPath, setDeleteFolderPath] = useState<string>('')
   const [deleteFolderDocCount, setDeleteFolderDocCount] = useState(0)
+
+  // E2.5: Document details and folder select states
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [folderSelectOpen, setFolderSelectOpen] = useState(false)
+  const [folderSelectDocument, setFolderSelectDocument] = useState<Document | null>(null)
+  const [isFolderSelectLoading, setIsFolderSelectLoading] = useState(false)
 
   // Load documents from Supabase
   const loadDocuments = useCallback(async () => {
@@ -411,18 +441,70 @@ export function DataRoomClient({ projectId }: DataRoomClientProps) {
     []
   )
 
-  const handleMove = useCallback(
-    (doc: Document) => {
-      // For now, show a simple prompt - could be enhanced with a folder picker modal
-      const newPath = prompt(
-        'Enter new folder path (or leave empty for root):',
-        doc.folderPath || ''
-      )
-      if (newPath !== null) {
-        handleDropDocument(doc.id, newPath || null)
+  // E2.5: Handle opening document details
+  const handleDocumentClick = useCallback((doc: Document) => {
+    setSelectedDocument(doc)
+    setDetailsOpen(true)
+  }, [])
+
+  // E2.5: Handle document update from details panel
+  const handleDocumentUpdate = useCallback((updatedDoc: Document) => {
+    setAllDocuments((prev) =>
+      prev.map((d) => (d.id === updatedDoc.id ? updatedDoc : d))
+    )
+    setSelectedDocument(updatedDoc)
+  }, [])
+
+  // E2.5: Handle opening folder select from details panel
+  const handleMoveToFolder = useCallback((doc: Document) => {
+    setFolderSelectDocument(doc)
+    setFolderSelectOpen(true)
+  }, [])
+
+  // E2.5: Handle folder selection for document move
+  const handleFolderSelect = useCallback(
+    async (path: string | null) => {
+      if (!folderSelectDocument) return
+
+      setIsFolderSelectLoading(true)
+      try {
+        const result = await updateDocument(folderSelectDocument.id, { folderPath: path })
+        if (result.success) {
+          // Update local state
+          setAllDocuments((prev) =>
+            prev.map((d) =>
+              d.id === folderSelectDocument.id ? { ...d, folderPath: path } : d
+            )
+          )
+          // Update selected document if it's the one being moved
+          if (selectedDocument?.id === folderSelectDocument.id) {
+            setSelectedDocument({ ...selectedDocument, folderPath: path })
+          }
+          toast.success(
+            path ? `Moved to "${path}"` : 'Moved to root folder'
+          )
+        } else {
+          toast.error(result.error || 'Failed to move document')
+        }
+      } catch (error) {
+        console.error('Error moving document:', error)
+        toast.error('Failed to move document')
+      } finally {
+        setIsFolderSelectLoading(false)
+        setFolderSelectOpen(false)
+        setFolderSelectDocument(null)
       }
     },
-    [handleDropDocument]
+    [folderSelectDocument, selectedDocument]
+  )
+
+  const handleMove = useCallback(
+    (doc: Document) => {
+      // E2.5: Use the new folder select dialog
+      setFolderSelectDocument(doc)
+      setFolderSelectOpen(true)
+    },
+    []
   )
 
   return (
@@ -472,6 +554,7 @@ export function DataRoomClient({ projectId }: DataRoomClientProps) {
             <DocumentList
               documents={documents}
               isLoading={isLoading}
+              onDocumentClick={handleDocumentClick}
               onDownload={handleDownload}
               onDelete={handleDelete}
               onMove={handleMove}
@@ -501,6 +584,27 @@ export function DataRoomClient({ projectId }: DataRoomClientProps) {
         documentCount={deleteFolderDocCount}
         onOpenChange={setDeleteFolderOpen}
         onConfirm={handleDeleteFolderConfirm}
+      />
+
+      {/* E2.5: Document Details Panel */}
+      <DocumentDetails
+        document={selectedDocument}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        onDocumentUpdate={handleDocumentUpdate}
+        onDocumentDelete={handleDelete}
+        onMoveToFolder={handleMoveToFolder}
+      />
+
+      {/* E2.5: Folder Select Dialog */}
+      <FolderSelectDialog
+        open={folderSelectOpen}
+        onOpenChange={setFolderSelectOpen}
+        folders={folders}
+        currentPath={folderSelectDocument?.folderPath || null}
+        documentName={folderSelectDocument?.name || ''}
+        onSelect={handleFolderSelect}
+        isLoading={isFolderSelectLoading}
       />
     </div>
   )

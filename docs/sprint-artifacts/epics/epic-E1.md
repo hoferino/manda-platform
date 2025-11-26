@@ -39,8 +39,8 @@ Implements the core project management infrastructure, allowing analysts to crea
 - **PostgreSQL Schema** with RLS policies for multi-tenant data isolation
 - **Projects Overview** with search, filter by status, pagination (12 per page)
 - **2-Step Project Wizard** (simplified from original 3-step design)
-  - Step 1: Basic Info (name, company, industry, deal type)
-  - Step 2: IRL Template selection with auto-recommendation
+  - Step 1: Basic Info (name, company, industry) - *deal type removed as it didn't drive downstream behavior*
+  - Step 2: Data Room setup (IRL template, empty project, or upload custom)
 - **Project Workspace Shell** with collapsible sidebar, tab navigation
 - **Neo4j Integration** for knowledge graph (Aura DB)
 - **pg-boss Job Queue** with health monitoring API

@@ -1,6 +1,6 @@
 # Story 2.4: Implement View Toggle and User Preference
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -63,33 +63,35 @@ This story implements the view mode toggle in the Data Room that switches betwee
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create View Toggle Component** (AC: #1)
-  - [ ] Create `components/data-room/view-toggle.tsx`
-  - [ ] Use shadcn/ui Toggle or Button component
-  - [ ] Add folder and bucket icons (Lucide)
-  - [ ] Show current mode with active state
+- [x] **Task 1: Create View Toggle Component** (AC: #1) ✅
+  - [x] Create `components/data-room/view-toggle.tsx`
+  - [x] Use shadcn/ui Tabs component (matches existing pattern)
+  - [x] Add folder and bucket icons (Lucide: Folders, LayoutGrid)
+  - [x] Show current mode with active state via aria-selected
 
-- [ ] **Task 2: Implement View Switching** (AC: #2, #3)
-  - [ ] Add view state to Data Room page
-  - [ ] Conditionally render FolderView or BucketsView
-  - [ ] Update toggle icon on switch
-  - [ ] Add smooth transition/animation
+- [x] **Task 2: Implement View Switching** (AC: #2, #3) ✅
+  - [x] Add view state to Data Room wrapper with useViewPreference hook
+  - [x] Conditionally render FolderView or BucketsView
+  - [x] Update toggle icon on switch
+  - [x] CSS transitions built into Tailwind classes
 
-- [ ] **Task 3: Add Preference Storage** (AC: #4, #5)
-  - [ ] Create localStorage key: `dataroom-view-{projectId}`
-  - [ ] Save preference on toggle
-  - [ ] Load preference on mount
-  - [ ] Handle missing preference (default to Folders)
+- [x] **Task 3: Add Preference Storage** (AC: #4, #5) ✅
+  - [x] Create localStorage key: `dataroom-view-{projectId}`
+  - [x] Save preference on toggle via saveViewPreference()
+  - [x] Load preference on mount via loadViewPreference()
+  - [x] Handle missing preference (default to Folders)
 
-- [ ] **Task 4: Preserve Context on Switch** (AC: #6)
-  - [ ] Store selected folder in state
-  - [ ] Restore folder selection on return to Folder view
-  - [ ] Optionally store scroll position
+- [x] **Task 4: Preserve Context on Switch** (AC: #6) ✅
+  - [x] Store selected folder path in ViewContext state
+  - [x] Restore folder selection on return to Folder view
+  - [x] Store scroll position via refs
+  - [x] Track expanded buckets in buckets view
 
-- [ ] **Task 5: Responsive Styling** (AC: #7)
-  - [ ] Test toggle on mobile/tablet viewports
-  - [ ] Adjust size/position for small screens
-  - [ ] Ensure both views are mobile-friendly
+- [x] **Task 5: Responsive Styling** (AC: #7) ✅
+  - [x] Toggle labels hidden on mobile (`hidden sm:inline`)
+  - [x] Tooltips show on hover for mobile
+  - [x] Responsive padding on toggle header
+  - [x] Both views already responsive (grid adapts to screen size)
 
 ## Dev Notes
 
@@ -125,4 +127,25 @@ claude-opus-4-5-20251101
 
 ### Completion Notes List
 
+- Implemented 2025-11-26 using claude-opus-4-5-20251101
+- All 7 ACs met:
+  - AC1: Toggle button visible in Data Room header using Tabs component with icons
+  - AC2/AC3: View switching works bidirectionally with state management
+  - AC4: localStorage persistence via `dataroom-view-{projectId}` key
+  - AC5: Per-project preferences using project-specific localStorage keys
+  - AC6: Context preservation via ViewContext state (selected folder, expanded buckets, scroll position)
+  - AC7: Responsive design with hidden labels on mobile, tooltips, and adaptive grid
+- Test coverage: 14 unit tests for ViewToggle component and hook (all passing)
+- Build passes with no TypeScript errors
+
 ### File List
+
+**New Files:**
+- `manda-app/components/data-room/view-toggle.tsx` - ViewToggle component, useViewPreference hook, localStorage helpers
+- `manda-app/__tests__/components/data-room/view-toggle.test.tsx` - 14 unit tests
+
+**Modified Files:**
+- `manda-app/components/data-room/index.ts` - Export new view-toggle components
+- `manda-app/app/projects/[id]/data-room/data-room-wrapper.tsx` - Integrated ViewToggle with context preservation
+- `manda-app/app/projects/[id]/data-room/data-room-client.tsx` - Added optional props for external state control
+- `manda-app/components/data-room/buckets-view.tsx` - Added optional props for external state control
