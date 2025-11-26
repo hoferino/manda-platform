@@ -1,6 +1,6 @@
 # Story 2.7: Build Upload Progress Indicators and WebSocket Updates
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -78,41 +78,41 @@ This story implements the document upload UI with drag-and-drop support, progres
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create Upload Zone Component** (AC: #1, #2)
-  - [ ] Create `components/data-room/upload-zone.tsx`
-  - [ ] Implement drag-and-drop with visual feedback
-  - [ ] Add file picker button
-  - [ ] Handle multiple file selection
+- [x] **Task 1: Create Upload Zone Component** (AC: #1, #2) ✅
+  - [x] Create `components/data-room/upload-zone.tsx`
+  - [x] Implement drag-and-drop with visual feedback
+  - [x] Add file picker button
+  - [x] Handle multiple file selection
 
-- [ ] **Task 2: Create Upload Progress Component** (AC: #3, #4)
-  - [ ] Create `components/data-room/upload-progress.tsx`
-  - [ ] Show file list with individual progress
-  - [ ] Use shadcn/ui Progress component
-  - [ ] Display status icons per state
+- [x] **Task 2: Create Upload Progress Component** (AC: #3, #4) ✅
+  - [x] Create `components/data-room/upload-progress.tsx`
+  - [x] Show file list with individual progress
+  - [x] Use shadcn/ui Progress component
+  - [x] Display status icons per state
 
-- [ ] **Task 3: Implement Upload State Management** (AC: #4, #5, #6)
-  - [ ] Create upload state with Zustand or context
-  - [ ] Track: queued, uploading, completed, failed
-  - [ ] Implement retry functionality
-  - [ ] Support parallel uploads (limit: 3)
+- [x] **Task 3: Implement Upload State Management** (AC: #4, #5, #6) ✅
+  - [x] Create upload state with Zustand or context
+  - [x] Track: queued, uploading, completed, failed
+  - [x] Implement retry functionality
+  - [x] Support parallel uploads (limit: 3)
 
-- [ ] **Task 4: Add Toast Notifications** (AC: #7)
-  - [ ] Use Sonner for toast notifications
-  - [ ] Show success toast on complete
-  - [ ] Show error toast with retry action
-  - [ ] Auto-dismiss after few seconds
+- [x] **Task 4: Add Toast Notifications** (AC: #7) ✅
+  - [x] Use Sonner for toast notifications
+  - [x] Show success toast on complete
+  - [x] Show error toast with retry action
+  - [x] Auto-dismiss after few seconds
 
-- [ ] **Task 5: Implement Background Upload Tracking** (AC: #8)
-  - [ ] Persist upload state globally
-  - [ ] Add upload indicator to header/navbar
-  - [ ] Show badge with pending count
-  - [ ] Restore view on navigation return
+- [x] **Task 5: Implement Background Upload Tracking** (AC: #8) ✅
+  - [x] Persist upload state globally
+  - [x] Add upload indicator to header/navbar
+  - [x] Show badge with pending count
+  - [x] Restore view on navigation return
 
-- [ ] **Task 6: Connect to Upload API** (AC: #3, #4)
-  - [ ] Use XMLHttpRequest or fetch with progress events
-  - [ ] Update progress state on upload progress
-  - [ ] Handle completion and error responses
-  - [ ] Queue uploads and manage concurrency
+- [x] **Task 6: Connect to Upload API** (AC: #3, #4) ✅
+  - [x] Use XMLHttpRequest or fetch with progress events
+  - [x] Update progress state on upload progress
+  - [x] Handle completion and error responses
+  - [x] Queue uploads and manage concurrency
 
 ## Dev Notes
 
@@ -151,4 +151,37 @@ claude-opus-4-5-20251101
 
 ### Completion Notes List
 
+**All acceptance criteria implemented:**
+
+1. **AC1 - Drag-and-Drop Upload Zone**: Implemented in `upload-zone.tsx` with visual feedback (border/background changes), "Drop files here to upload" text on hover, and automatic queue addition on drop.
+
+2. **AC2 - File Picker Button**: Upload button with file picker dialog, supports multiple file selection, validates file types and sizes (500MB max).
+
+3. **AC3 - Upload Progress Bars**: Individual progress bars per file in `upload-progress.tsx` using shadcn/ui Progress component, showing file name and size.
+
+4. **AC4 - Upload Status States**: Four status states implemented - Queued (clock icon), Uploading (spinner with percentage), Complete (checkmark), Failed (error icon with message).
+
+5. **AC5 - Retry Failed Uploads**: Retry button on failed uploads, resets progress to 0% and re-queues the file.
+
+6. **AC6 - Bulk Upload Support**: Supports multiple files, parallel uploads limited to 3 concurrent, overall progress shown, individual cancel buttons for queued/failed items.
+
+7. **AC7 - Real-Time Notifications**: Sonner toast notifications on completion (success) and failure (error with retry option), auto-dismiss after 3-5 seconds.
+
+8. **AC8 - Upload Persistence Across Navigation**: Zustand store with localStorage persistence, UploadIndicator in TopNav shows badge with pending count and overall progress, uploads continue in background.
+
 ### File List
+
+**New Files Created:**
+- [stores/upload-store.ts](manda-app/stores/upload-store.ts) - Zustand store for upload state management
+- [components/data-room/upload-zone.tsx](manda-app/components/data-room/upload-zone.tsx) - Drag-and-drop upload zone component
+- [components/data-room/upload-progress.tsx](manda-app/components/data-room/upload-progress.tsx) - Upload progress list component
+- [components/data-room/upload-panel.tsx](manda-app/components/data-room/upload-panel.tsx) - Combined upload zone + progress panel
+- [components/upload-indicator.tsx](manda-app/components/upload-indicator.tsx) - Global upload indicator for navbar
+- [hooks/use-upload-processor.ts](manda-app/hooks/use-upload-processor.ts) - Upload queue processor hook
+- [__tests__/stores/upload-store.test.ts](manda-app/__tests__/stores/upload-store.test.ts) - Upload store unit tests (22 tests)
+- [__tests__/components/data-room/upload-zone.test.tsx](manda-app/__tests__/components/data-room/upload-zone.test.tsx) - Upload zone unit tests (17 tests)
+
+**Modified Files:**
+- [components/data-room/index.ts](manda-app/components/data-room/index.ts) - Added E2.7 component exports
+- [components/workspace/TopNav.tsx](manda-app/components/workspace/TopNav.tsx) - Added UploadIndicator
+- [app/projects/[id]/data-room/data-room-client.tsx](manda-app/app/projects/[id]/data-room/data-room-client.tsx) - Integrated UploadButton

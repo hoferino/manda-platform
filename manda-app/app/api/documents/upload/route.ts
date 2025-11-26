@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
     const projectId = formData.get('projectId') as string | null
     const folderPath = formData.get('folderPath') as string | null
     const category = formData.get('category') as DocumentCategory | null
+    // E2.8: IRL item linking
+    const irlItemId = formData.get('irlItemId') as string | null
 
     // Validate required fields
     if (!file) {
@@ -127,6 +129,8 @@ export async function POST(request: NextRequest) {
         gcs_object_path: gcsResult.objectPath,
         folder_path: folderPath || null,
         category: category || null,
+        // E2.8: Link to IRL item if provided
+        irl_item_id: irlItemId || null,
       })
       .select()
       .single()
@@ -151,6 +155,7 @@ export async function POST(request: NextRequest) {
         mime_type: file.type,
         category: category || null,
         folder_path: folderPath || null,
+        irl_item_id: irlItemId || null,
       },
       success: true,
     })
@@ -164,6 +169,7 @@ export async function POST(request: NextRequest) {
         mimeType: document.mime_type,
         category: document.category || null,
         folderPath: document.folder_path || null,
+        irlItemId: document.irl_item_id || null,
         uploadStatus: document.upload_status,
         processingStatus: document.processing_status,
         createdAt: document.created_at,

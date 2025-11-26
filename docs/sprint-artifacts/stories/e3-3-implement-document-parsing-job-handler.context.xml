@@ -1,0 +1,421 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E3</epicId>
+    <storyId>3</storyId>
+    <title>Implement Document Parsing Job Handler</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e3-3-implement-document-parsing-job-handler.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>platform developer</asA>
+    <iWant>a job handler that processes uploaded documents through the parsing pipeline</iWant>
+    <soThat>documents are automatically parsed when uploaded, with results stored in the database for downstream processing</soThat>
+    <tasks>
+      <task id="1" ac="1">Create Job Handler Module Structure
+        <subtask>Create src/jobs/handlers/parse_document.py</subtask>
+        <subtask>Define ParseDocumentHandler class</subtask>
+        <subtask>Implement job handler interface matching pg-boss pattern</subtask>
+        <subtask>Add structured logging throughout handler lifecycle</subtask>
+        <subtask>Register handler in src/jobs/handlers/__init__.py</subtask>
+      </task>
+      <task id="2" ac="2">Implement GCS Download
+        <subtask>Use existing gcs_client from src/storage/ or create if missing</subtask>
+        <subtask>Implement download_to_temp() method</subtask>
+        <subtask>Use Python tempfile for secure temporary storage</subtask>
+        <subtask>Implement cleanup in finally block or context manager</subtask>
+        <subtask>Add retry logic for transient GCS errors (3 attempts)</subtask>
+      </task>
+      <task id="3" ac="3">Integrate Document Parser
+        <subtask>Import DocumentParser from src/parsers/</subtask>
+        <subtask>Initialize parser with config from E3.2</subtask>
+        <subtask>Call parser.parse(file_path, file_type)</subtask>
+        <subtask>Handle ParseError exceptions appropriately</subtask>
+        <subtask>Log parse duration and chunk count</subtask>
+      </task>
+      <task id="4" ac="4">Implement Database Storage
+        <subtask>Create document_chunks table if not exists (migration)</subtask>
+        <subtask>Implement store_chunks() method using Supabase client</subtask>
+        <subtask>Map ChunkData to database columns</subtask>
+        <subtask>Update documents.processing_status to parsed</subtask>
+        <subtask>Wrap all writes in transaction for atomicity</subtask>
+        <subtask>Handle duplicate chunk inserts (upsert or skip)</subtask>
+      </task>
+      <task id="5" ac="5">Implement Job Queue Flow
+        <subtask>Enqueue generate_embeddings job on success</subtask>
+        <subtask>Configure pg-boss retry options: retryLimit=3, retryDelay=30</subtask>
+        <subtask>Mark job failed with error message on permanent failure</subtask>
+        <subtask>Emit document_parsed event via Supabase Realtime or custom pub/sub</subtask>
+        <subtask>Update document status to failed on permanent failure</subtask>
+      </task>
+      <task id="6" ac="6">Write Tests
+        <subtask>Unit tests for ParseDocumentHandler class methods</subtask>
+        <subtask>Unit tests for GCS download with mocked client</subtask>
+        <subtask>Unit tests for database storage with mocked Supabase</subtask>
+        <subtask>Integration test: full handler flow with mocked external services</subtask>
+        <subtask>Error scenario tests: GCS timeout, parse failure, DB error</subtask>
+        <subtask>Verify 80% coverage target on handler code</subtask>
+      </task>
+      <task id="7" ac="1,5">Add Webhook Trigger
+        <subtask>Verify /webhooks/document-uploaded endpoint triggers job</subtask>
+        <subtask>Add test for webhook to job enqueue flow</subtask>
+        <subtask>Document webhook configuration in Supabase</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Job Handler Created">
+      <item>parse_document job handler exists in manda-processing/src/jobs/handlers/</item>
+      <item>Handler is registered with pg-boss job queue</item>
+      <item>Handler invoked automatically when job is enqueued</item>
+      <item>Handler logs job lifecycle events (started, completed, failed)</item>
+    </criterion>
+    <criterion id="AC2" title="GCS File Download">
+      <item>Handler downloads document from GCS using gcs_path from job payload</item>
+      <item>File downloaded to secure temporary location</item>
+      <item>Temporary files cleaned up after processing</item>
+      <item>Download errors handled gracefully with retry</item>
+    </criterion>
+    <criterion id="AC3" title="Parser Integration">
+      <item>Handler invokes DocumentParser from E3.2 with downloaded file</item>
+      <item>Correct parser selected based on file_type in payload</item>
+      <item>ParseResult (chunks, tables, formulas) captured successfully</item>
+      <item>Parse errors handled and logged appropriately</item>
+    </criterion>
+    <criterion id="AC4" title="Database Storage">
+      <item>Parsed chunks stored in document_chunks table</item>
+      <item>Tables stored in document_tables table (if exists) or as chunks</item>
+      <item>Chunk metadata includes: page_number, sheet_name, cell_reference, chunk_type</item>
+      <item>Document record updated: processing_status = parsed</item>
+      <item>All database operations are transactional</item>
+    </criterion>
+    <criterion id="AC5" title="Job Queue Integration">
+      <item>On success, next job (generate_embeddings) is enqueued</item>
+      <item>On failure, job marked failed with error details</item>
+      <item>Retry logic: 3 attempts with exponential backoff (0s, 30s, 90s)</item>
+      <item>document_parsed event emitted on successful completion</item>
+    </criterion>
+    <criterion id="AC6" title="Tests Pass">
+      <item>Unit tests for job handler logic</item>
+      <item>Integration tests for full parse flow (mock GCS)</item>
+      <item>Error scenario tests (download fail, parse fail, DB fail)</item>
+      <item>Minimum 80% coverage on new handler code</item>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc name="Tech Spec E3" path="docs/sprint-artifacts/tech-spec-epic-E3.md" relevance="HIGH">
+        <summary>Complete technical specification for Epic 3 - Intelligent Document Processing. Defines the document-parse job handler structure, GCS integration patterns, database schemas for document_chunks, and the processing pipeline flow from upload to analysis.</summary>
+        <keyDecisions>
+          <decision>Use pg-boss for job queue (direct SQL via asyncpg)</decision>
+          <decision>GCS for document storage with signed URLs</decision>
+          <decision>Docling for document parsing with OCR support</decision>
+          <decision>Chunking: 512-1024 tokens with semantic boundaries</decision>
+          <decision>document_chunks table with document_id FK, chunk_index, content, chunk_type, metadata JSONB</decision>
+        </keyDecisions>
+      </doc>
+      <doc name="Architecture" path="docs/manda-architecture.md" relevance="HIGH">
+        <summary>System architecture defining processing pipeline: manda-processing FastAPI service at port 8000, pg-boss job queue, Supabase PostgreSQL, Google Cloud Storage integration. Event-driven architecture for document processing.</summary>
+        <keyDecisions>
+          <decision>FastAPI 0.115+ with Python 3.12+</decision>
+          <decision>Pydantic Settings for configuration</decision>
+          <decision>asyncpg for database operations</decision>
+          <decision>structlog for structured logging</decision>
+          <decision>tenacity for retry logic</decision>
+        </keyDecisions>
+      </doc>
+      <doc name="Epic E3" path="docs/sprint-artifacts/epics/epic-E3.md" relevance="HIGH">
+        <summary>Epic breakdown for Intelligent Document Processing. E3.3 is the third story connecting upload (E2) to parsing (E3.2) to storage. Dependencies: E3.1 (FastAPI+pg-boss), E3.2 (Docling parser).</summary>
+        <dependencies>
+          <dep>E3.1: FastAPI Backend with pg-boss - COMPLETE</dep>
+          <dep>E3.2: Docling Integration - COMPLETE</dep>
+        </dependencies>
+        <technicalContext>
+          <item>Documents stored at: gs://manda-documents-dev/{project_id}/{folder_path}/{filename}</item>
+          <item>Processing status values: pending, processing, completed, failed (also: parsed for intermediate state)</item>
+          <item>135+ tests from E1/E2/E3.1/E3.2</item>
+        </technicalContext>
+      </doc>
+      <doc name="E3.1 Story (Complete)" path="docs/sprint-artifacts/stories/e3-1-set-up-fastapi-backend-with-pg-boss-job-queue.md" relevance="HIGH">
+        <summary>Completed story establishing FastAPI backend and pg-boss job queue. 93% test coverage, 79 tests. Key patterns: JobQueue class with enqueue/dequeue/complete/fail, Worker class for background processing, direct SQL approach with asyncpg.</summary>
+        <codeReferences>
+          <file path="manda-processing/src/jobs/queue.py" purpose="JobQueue class - enqueue(), dequeue(), complete(), fail(), get_job()"/>
+          <file path="manda-processing/src/jobs/worker.py" purpose="Worker class - register_handler(), run_worker(), poll loop"/>
+          <file path="manda-processing/src/config.py" purpose="Pydantic Settings configuration"/>
+        </codeReferences>
+      </doc>
+      <doc name="E3.2 Story (Complete)" path="docs/sprint-artifacts/stories/e3-2-integrate-docling-for-document-parsing.md" relevance="HIGH">
+        <summary>Completed story integrating Docling for document parsing. ParseResult, ChunkData, TableData, FormulaData models defined. Supports Excel (.xlsx/.xls), PDF, Word (.docx). OCR enabled for scanned documents.</summary>
+        <codeReferences>
+          <file path="manda-processing/src/parsers/__init__.py" purpose="ParseResult, ChunkData, TableData, FormulaData, ParseError, DocumentParser protocol"/>
+          <file path="manda-processing/src/parsers/docling_parser.py" purpose="Main parser using Docling library"/>
+          <file path="manda-processing/src/parsers/excel_parser.py" purpose="Excel-specific parsing with formula preservation"/>
+          <file path="manda-processing/src/parsers/pdf_parser.py" purpose="PDF parsing with OCR support"/>
+          <file path="manda-processing/src/parsers/chunker.py" purpose="Semantic text chunking (512-1024 tokens)"/>
+        </codeReferences>
+      </doc>
+    </docs>
+
+    <code>
+      <file path="manda-processing/src/jobs/queue.py" relevance="HIGH">
+        <purpose>pg-boss job queue wrapper with direct SQL via asyncpg</purpose>
+        <keyInterfaces>
+          <interface name="JobQueue">
+            <method>enqueue(name: str, data: dict, options: EnqueueOptions) -> str</method>
+            <method>dequeue(name: str, batch_size: int) -> list[Job]</method>
+            <method>complete(job_id: str, output: dict) -> None</method>
+            <method>fail(job_id: str, error: str) -> None</method>
+            <method>get_job(job_id: str) -> Job | None</method>
+          </interface>
+          <dataclass name="Job">id, name, data, state, created_on, started_on, completed_on, retry_count</dataclass>
+          <dataclass name="EnqueueOptions">priority, retry_limit, retry_delay, retry_backoff, expire_in_seconds, singleton_key, start_after</dataclass>
+          <const name="DEFAULT_JOB_OPTIONS">Pre-configured options for document-parse (priority=5, retry_limit=3, retry_delay=5), generate-embeddings (priority=4)</const>
+        </keyInterfaces>
+        <usagePattern><![CDATA[
+queue = await get_job_queue()
+job_id = await queue.enqueue("document-parse", {"document_id": "...", "gcs_path": "..."})
+# Worker calls dequeue, then complete/fail based on result
+        ]]></usagePattern>
+      </file>
+
+      <file path="manda-processing/src/jobs/worker.py" relevance="HIGH">
+        <purpose>Background worker that polls job queue and invokes handlers</purpose>
+        <keyInterfaces>
+          <interface name="Worker">
+            <method>register_handler(job_name: str, handler: Callable[[Job], Awaitable[dict]]) -> None</method>
+            <method>run() -> None (main loop)</method>
+          </interface>
+        </keyInterfaces>
+        <usagePattern><![CDATA[
+worker = Worker(queue)
+worker.register_handler("document-parse", parse_document_handler)
+await worker.run()  # polls and processes jobs
+        ]]></usagePattern>
+      </file>
+
+      <file path="manda-processing/src/parsers/__init__.py" relevance="HIGH">
+        <purpose>Parser data models and protocol definitions</purpose>
+        <keyInterfaces>
+          <model name="ChunkData">content, chunk_type (text|table|formula|image), chunk_index, page_number, sheet_name, cell_reference, metadata, token_count</model>
+          <model name="TableData">content (markdown), rows, cols, headers, sheet_name, page_number, data (raw)</model>
+          <model name="FormulaData">formula, cell_reference, sheet_name, result_value, references</model>
+          <model name="ParseResult">chunks: list[ChunkData], tables: list[TableData], formulas: list[FormulaData], metadata, total_pages, total_sheets, parse_time_ms, errors, warnings</model>
+          <exception name="ParseError">message, file_path, details</exception>
+          <exception name="UnsupportedFileTypeError">extends ParseError</exception>
+          <exception name="CorruptFileError">extends ParseError</exception>
+          <protocol name="DocumentParser">parse(file_path: Path, file_type: str) -> ParseResult; supports(file_type: str) -> bool</protocol>
+          <utility>get_file_category(file_type: str) -> 'excel' | 'pdf' | 'word' | 'image' | None</utility>
+          <utility>is_supported(file_type: str) -> bool</utility>
+        </keyInterfaces>
+      </file>
+
+      <file path="manda-processing/src/parsers/docling_parser.py" relevance="MEDIUM">
+        <purpose>Main document parser using Docling library</purpose>
+        <usagePattern><![CDATA[
+from src.parsers.docling_parser import DoclingParser
+parser = DoclingParser(settings)
+result: ParseResult = await parser.parse(file_path, file_type)
+        ]]></usagePattern>
+      </file>
+
+      <file path="manda-processing/src/config.py" relevance="MEDIUM">
+        <purpose>Pydantic Settings configuration</purpose>
+        <relevantSettings>
+          <setting name="database_url">PostgreSQL connection string</setting>
+          <setting name="supabase_url">Supabase project URL</setting>
+          <setting name="supabase_service_role_key">Service role key for admin operations</setting>
+          <setting name="gcs_bucket">GCS bucket name (default: manda-documents-dev)</setting>
+          <setting name="gcs_project_id">Google Cloud project ID</setting>
+          <setting name="google_application_credentials">Path to service account JSON</setting>
+          <setting name="parser_temp_dir">Temp directory for downloaded files (default: /tmp/manda-processing)</setting>
+          <setting name="parser_max_file_size_mb">Max file size (default: 100MB)</setting>
+        </relevantSettings>
+      </file>
+
+      <file path="manda-app/lib/gcs/client.ts" relevance="MEDIUM">
+        <purpose>TypeScript GCS client in Next.js app (reference pattern for Python implementation)</purpose>
+        <keyFunctions>
+          <function>uploadFile(projectId, file, filename, mimeType, options)</function>
+          <function>getSignedDownloadUrl(objectPath, options)</function>
+          <function>deleteFile(objectPath, bucketName)</function>
+          <function>generateObjectPath(projectId, filename, folderPath)</function>
+        </keyFunctions>
+        <note>Python handler needs similar GCS client - use google-cloud-storage library</note>
+      </file>
+
+      <file path="manda-app/supabase/migrations/00003_create_documents_table.sql" relevance="MEDIUM">
+        <purpose>Documents table schema</purpose>
+        <schema><![CDATA[
+documents:
+  id: uuid PK
+  deal_id: uuid FK -> deals(id) CASCADE
+  user_id: uuid FK -> auth.users(id) CASCADE
+  name: text
+  file_path: text (gs://{bucket}/{object_path})
+  file_size: bigint
+  mime_type: text
+  upload_status: text (pending|uploading|completed|failed)
+  processing_status: text (pending|processing|completed|failed)
+  gcs_bucket: text
+  gcs_object_path: text
+  folder_path: text
+  category: text
+  created_at: timestamptz
+  updated_at: timestamptz
+        ]]></schema>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="fastapi" version=">=0.115.0" purpose="Web framework"/>
+        <package name="asyncpg" version=">=0.30.0" purpose="PostgreSQL async driver"/>
+        <package name="google-cloud-storage" version=">=2.19.0" purpose="GCS operations"/>
+        <package name="structlog" version=">=24.4.0" purpose="Structured logging"/>
+        <package name="tenacity" version=">=9.0.0" purpose="Retry logic"/>
+        <package name="docling" version=">=2.15.0" purpose="Document parsing (from E3.2)"/>
+        <package name="pydantic" version=">=2.10.0" purpose="Data validation"/>
+        <package name="pydantic-settings" version=">=2.6.0" purpose="Settings management"/>
+      </python>
+      <testing>
+        <package name="pytest" version=">=8.3.0" purpose="Test framework"/>
+        <package name="pytest-asyncio" version=">=0.24.0" purpose="Async test support"/>
+        <package name="pytest-cov" version=">=6.0.0" purpose="Coverage reporting"/>
+      </testing>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Handler MUST use existing JobQueue interface from src/jobs/queue.py</constraint>
+    <constraint type="architecture">Handler MUST be registered with Worker class via register_handler()</constraint>
+    <constraint type="architecture">Handler MUST be invoked as async function: async def handle(job: Job) -> dict</constraint>
+    <constraint type="data">Job payload MUST include: document_id, deal_id, gcs_path, file_type, user_id</constraint>
+    <constraint type="data">ParseResult chunks MUST be stored with document_id foreign key</constraint>
+    <constraint type="data">processing_status values: pending -> processing -> parsed -> (completed after embeddings)</constraint>
+    <constraint type="security">GCS service account credentials via GOOGLE_APPLICATION_CREDENTIALS env var</constraint>
+    <constraint type="security">Temporary files MUST be cleaned up after processing (use context manager)</constraint>
+    <constraint type="performance">Retry logic: 3 attempts, exponential backoff (0s, 30s, 90s delays)</constraint>
+    <constraint type="performance">Large files should use streaming download if possible</constraint>
+    <constraint type="database">All chunk inserts MUST be transactional with document status update</constraint>
+    <constraint type="database">document_chunks table requires migration (new table)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Job Payload" type="input">
+      <field name="document_id" type="uuid" required="true">ID of document record in documents table</field>
+      <field name="deal_id" type="uuid" required="true">ID of parent deal</field>
+      <field name="user_id" type="uuid" required="true">ID of user who uploaded</field>
+      <field name="gcs_path" type="string" required="true">Full GCS path: gs://bucket/object_path</field>
+      <field name="file_type" type="string" required="true">MIME type or extension (pdf, xlsx, docx)</field>
+      <field name="file_name" type="string" required="false">Original filename</field>
+    </interface>
+
+    <interface name="Handler Result" type="output">
+      <field name="success" type="boolean">Whether parsing succeeded</field>
+      <field name="document_id" type="uuid">Processed document ID</field>
+      <field name="chunks_created" type="integer">Number of chunks stored</field>
+      <field name="tables_extracted" type="integer">Number of tables found</field>
+      <field name="formulas_extracted" type="integer">Number of formulas found</field>
+      <field name="parse_time_ms" type="integer">Time taken to parse</field>
+      <field name="next_job_id" type="uuid">ID of enqueued generate_embeddings job</field>
+      <field name="error" type="string">Error message if failed</field>
+    </interface>
+
+    <interface name="document_chunks Table" type="database">
+      <field name="id" type="uuid" pk="true">Primary key</field>
+      <field name="document_id" type="uuid" fk="documents.id">Foreign key with CASCADE delete</field>
+      <field name="chunk_index" type="integer">Order within document</field>
+      <field name="content" type="text">Chunk text content</field>
+      <field name="chunk_type" type="text">text|table|formula|image</field>
+      <field name="page_number" type="integer" nullable="true">Source page (PDF)</field>
+      <field name="sheet_name" type="text" nullable="true">Source sheet (Excel)</field>
+      <field name="cell_reference" type="text" nullable="true">Source cell (Excel)</field>
+      <field name="token_count" type="integer" nullable="true">Number of tokens</field>
+      <field name="metadata" type="jsonb">Additional metadata</field>
+      <field name="embedding" type="vector(1536)" nullable="true">For E3.4 - embeddings</field>
+      <field name="created_at" type="timestamptz">Creation timestamp</field>
+    </interface>
+
+    <interface name="JobQueue" type="internal">
+      <method name="enqueue">enqueue("generate-embeddings", {document_id, chunks_count}, options) -> job_id</method>
+      <method name="complete">complete(job_id, {success: true, chunks_created: N}) -> None</method>
+      <method name="fail">fail(job_id, "Error message") -> None</method>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <standard>pytest with pytest-asyncio for async tests</standard>
+      <standard>Mock external services (GCS, database) for unit tests</standard>
+      <standard>80% minimum coverage on new handler code</standard>
+      <standard>Test fixtures in tests/conftest.py</standard>
+      <standard>Unit tests in tests/unit/test_jobs/</standard>
+      <standard>Integration tests in tests/integration/test_jobs/</standard>
+      <standard>Follow existing patterns from test_queue.py and test_worker.py</standard>
+    </standards>
+
+    <locations>
+      <location type="fixtures">manda-processing/tests/conftest.py</location>
+      <location type="unit">manda-processing/tests/unit/test_jobs/ (new: test_parse_document.py)</location>
+      <location type="integration">manda-processing/tests/integration/test_jobs/ (new: test_parse_flow.py)</location>
+      <location type="existing_patterns">manda-processing/tests/unit/test_jobs/test_queue.py (28 tests)</location>
+      <location type="existing_patterns">manda-processing/tests/unit/test_jobs/test_worker.py (22 tests)</location>
+      <location type="parser_tests">manda-processing/tests/unit/test_parsers/ (coverage: 87-96%)</location>
+    </locations>
+
+    <ideas>
+      <category name="Unit Tests - Handler">
+        <test>test_parse_document_handler_success - Happy path with mocked GCS and parser</test>
+        <test>test_parse_document_handler_gcs_download_failure - GCS error handling</test>
+        <test>test_parse_document_handler_parse_error - Parser throws ParseError</test>
+        <test>test_parse_document_handler_unsupported_file_type - UnsupportedFileTypeError</test>
+        <test>test_parse_document_handler_corrupt_file - CorruptFileError</test>
+        <test>test_parse_document_handler_db_storage_failure - Database transaction fails</test>
+        <test>test_parse_document_handler_enqueues_next_job - generate_embeddings job created</test>
+        <test>test_parse_document_handler_updates_status - processing_status changes to parsed</test>
+        <test>test_parse_document_handler_cleanup_temp_files - Temp files deleted after processing</test>
+      </category>
+      <category name="Unit Tests - GCS Download">
+        <test>test_download_to_temp_success - File downloaded to temp location</test>
+        <test>test_download_to_temp_retry_on_transient_error - Retries on network error</test>
+        <test>test_download_to_temp_fails_after_retries - Gives up after 3 attempts</test>
+        <test>test_download_to_temp_file_not_found - Handles 404 gracefully</test>
+        <test>test_download_cleanup_on_error - Temp file cleaned even on error</test>
+      </category>
+      <category name="Unit Tests - Database Storage">
+        <test>test_store_chunks_creates_records - All chunks inserted</test>
+        <test>test_store_chunks_with_metadata - JSONB metadata stored correctly</test>
+        <test>test_store_chunks_transaction_rollback - Rollback on partial failure</test>
+        <test>test_store_chunks_updates_document_status - processing_status = parsed</test>
+        <test>test_store_chunks_handles_duplicates - Upsert or skip on conflict</test>
+      </category>
+      <category name="Integration Tests">
+        <test>test_full_parse_flow_pdf - End-to-end with mocked GCS, real parser</test>
+        <test>test_full_parse_flow_excel - Excel with formulas and tables</test>
+        <test>test_full_parse_flow_word - Word document processing</test>
+        <test>test_job_retry_on_transient_failure - Retry mechanism works</test>
+        <test>test_job_fails_permanently_after_retries - Final failure state</test>
+      </category>
+      <category name="Error Scenarios">
+        <test>test_handler_logs_lifecycle_events - Verify structured logging</test>
+        <test>test_handler_timeout_handling - Expire after 1 hour</test>
+        <test>test_concurrent_processing - Multiple jobs don't conflict</test>
+      </category>
+    </ideas>
+  </tests>
+
+  <implementationNotes>
+    <note priority="HIGH">Create src/jobs/handlers/ directory structure with __init__.py</note>
+    <note priority="HIGH">Create src/storage/ directory with gcs_client.py for Python GCS operations</note>
+    <note priority="HIGH">Create database migration for document_chunks table before running tests</note>
+    <note priority="HIGH">Use tenacity library for retry logic on GCS operations</note>
+    <note priority="MEDIUM">Consider using tempfile.NamedTemporaryFile with delete=False, then cleanup in finally</note>
+    <note priority="MEDIUM">Use async context manager pattern for resource cleanup</note>
+    <note priority="MEDIUM">Emit Supabase Realtime event after successful parse (for E3.6)</note>
+    <note priority="LOW">Consider chunking large file downloads for memory efficiency</note>
+  </implementationNotes>
+</story-context>

@@ -1,6 +1,6 @@
 # Story 2.6: Implement Document Actions (View, Download, Delete)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -74,39 +74,39 @@ This story implements the core document actions available from the document list
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create Actions Dropdown** (AC: #1, #8)
-  - [ ] Create `components/data-room/document-actions.tsx`
-  - [ ] Use shadcn/ui DropdownMenu
-  - [ ] Add View, Download, Delete options
-  - [ ] Add keyboard navigation
+- [x] **Task 1: Create Actions Dropdown** (AC: #1, #8)
+  - [x] Create `components/data-room/document-actions.tsx`
+  - [x] Use shadcn/ui DropdownMenu
+  - [x] Add View, Download, Delete options
+  - [x] Add keyboard navigation
 
-- [ ] **Task 2: Implement View Action** (AC: #2)
-  - [ ] Fetch signed URL for viewing
-  - [ ] Open in new tab (MVP approach)
+- [x] **Task 2: Implement View Action** (AC: #2)
+  - [x] Fetch signed URL for viewing
+  - [x] Open in new tab (MVP approach)
   - [ ] (Stretch) Create preview modal for PDFs/images
 
-- [ ] **Task 3: Implement Download Action** (AC: #3)
-  - [ ] Call GET /api/documents/[id] for signed URL
-  - [ ] Trigger download with correct filename
-  - [ ] Handle download errors gracefully
+- [x] **Task 3: Implement Download Action** (AC: #3)
+  - [x] Call GET /api/documents/[id] for signed URL
+  - [x] Trigger download with correct filename
+  - [x] Handle download errors gracefully
 
-- [ ] **Task 4: Create Delete Confirmation Dialog** (AC: #4, #8)
-  - [ ] Create `components/data-room/delete-confirm-dialog.tsx`
-  - [ ] Use shadcn/ui AlertDialog
-  - [ ] Show document name in message
-  - [ ] Add accessible labeling
+- [x] **Task 4: Create Delete Confirmation Dialog** (AC: #4, #8)
+  - [x] Create `components/data-room/delete-confirm-dialog.tsx`
+  - [x] Use shadcn/ui AlertDialog
+  - [x] Show document name in message
+  - [x] Add accessible labeling
 
-- [ ] **Task 5: Implement Delete Execution** (AC: #5, #6)
-  - [ ] Call DELETE /api/documents/[id]
-  - [ ] Remove document from local state immediately
-  - [ ] Show success toast
-  - [ ] Handle and display errors
-  - [ ] Revert local state on error
+- [x] **Task 5: Implement Delete Execution** (AC: #5, #6)
+  - [x] Call DELETE /api/documents/[id]
+  - [x] Remove document from local state immediately
+  - [x] Show success toast
+  - [x] Handle and display errors
+  - [x] Revert local state on error
 
-- [ ] **Task 6: Handle Processing State** (AC: #7)
-  - [ ] Disable delete for processing documents
-  - [ ] Show tooltip explaining why disabled
-  - [ ] Allow download if upload is completed
+- [x] **Task 6: Handle Processing State** (AC: #7)
+  - [x] Disable delete for processing documents
+  - [x] Show tooltip explaining why disabled
+  - [x] Allow download if upload is completed
 
 ## Dev Notes
 
@@ -143,4 +143,65 @@ claude-opus-4-5-20251101
 
 ### Completion Notes List
 
+- 2025-11-26: All 6 tasks completed successfully
+- Created `document-actions.tsx` with View, Download, Delete, Move, Rename options
+- Created `delete-confirm-dialog.tsx` with confirmation modal
+- Integrated with data-room-client.tsx for optimistic delete with rollback
+- All 73 tests passing, production build successful
+- Processing state disables delete action with tooltip explanation
+- Error handling includes retry option in toast notifications
+
 ### File List
+
+- `manda-app/components/data-room/document-actions.tsx` (NEW)
+- `manda-app/components/data-room/delete-confirm-dialog.tsx` (NEW)
+- `manda-app/components/data-room/document-card.tsx` (MODIFIED)
+- `manda-app/components/data-room/index.ts` (MODIFIED)
+- `manda-app/app/projects/[id]/data-room/data-room-client.tsx` (MODIFIED)
+- `manda-app/__tests__/components/data-room/document-card.test.tsx` (MODIFIED)
+
+---
+
+## Senior Developer Review (AI)
+
+**Date:** 2025-11-26
+**Reviewer:** Senior Developer (AI)
+**Verdict:** ✅ **APPROVED**
+
+### AC Verification
+
+| AC | Status | Notes |
+|----|--------|-------|
+| #1 Actions dropdown | ✅ | DocumentActions with shadcn/ui DropdownMenu |
+| #2 View in new tab | ✅ | Fetches signed URL, `window.open` with `noopener,noreferrer` |
+| #3 Download | ✅ | Uses `downloadDocument` API, error handling with retry |
+| #4 Delete confirmation | ✅ | DeleteConfirmDialog with warning message |
+| #5 Delete execution | ✅ | Optimistic update with rollback on error |
+| #6 Error handling | ✅ | Toast with retry action |
+| #7 Processing state | ✅ | `isProcessing()` helper disables delete with tooltip |
+| #8 Keyboard a11y | ✅ | Radix UI provides full keyboard navigation |
+
+### Strengths
+
+- Clean component architecture with reusable `DocumentActions`
+- Excellent error handling with optimistic updates and rollback
+- Well-implemented processing state detection
+- Good accessibility with aria-label and keyboard support
+- Proper test coverage for new functionality
+
+### Minor Observations (Non-blocking)
+
+- Consider named type for `DeleteResult` return value
+- View action click not tested (acceptable - `window.open` is hard to test)
+
+### Security
+
+- ✅ XSS prevention (no raw HTML)
+- ✅ Click-jacking protection (`noopener,noreferrer`)
+- ✅ Error exposure safe (generic messages)
+- ✅ Authorization via server-side RLS
+
+### Test Results
+
+- **73 tests passing**
+- 2 new E2.6 tests added

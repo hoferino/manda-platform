@@ -1,6 +1,6 @@
 # Story 2.8: Implement IRL Integration with Document Tracking
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -77,43 +77,43 @@ This story implements the IRL Checklist panel that displays on the right side of
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create Checklist Panel Component** (AC: #1, #6)
-  - [ ] Create `components/data-room/irl-checklist-panel.tsx`
-  - [ ] Add panel header with title and collapse button
-  - [ ] Implement collapsible behavior
-  - [ ] Persist collapse state to localStorage
+- [x] **Task 1: Create Checklist Panel Component** (AC: #1, #6)
+  - [x] Create `components/data-room/irl-checklist-panel.tsx`
+  - [x] Add panel header with title and collapse button
+  - [x] Implement collapsible behavior
+  - [x] Persist collapse state to localStorage
 
-- [ ] **Task 2: Build Progress Display** (AC: #4)
-  - [ ] Create progress header with counts
-  - [ ] Add progress bar component
-  - [ ] Calculate progress from IRL items and linked documents
+- [x] **Task 2: Build Progress Display** (AC: #4)
+  - [x] Create progress header with counts
+  - [x] Add progress bar component
+  - [x] Calculate progress from IRL items and linked documents
 
-- [ ] **Task 3: Create Hierarchical Item List** (AC: #2, #3)
-  - [ ] Create `components/data-room/irl-checklist-item.tsx`
-  - [ ] Group items by category
-  - [ ] Add expand/collapse per category
-  - [ ] Show status icon per item
+- [x] **Task 3: Create Hierarchical Item List** (AC: #2, #3)
+  - [x] Create `components/data-room/irl-checklist-item.tsx`
+  - [x] Group items by category
+  - [x] Add expand/collapse per category
+  - [x] Show status icon per item
 
-- [ ] **Task 4: Implement Quick Upload** (AC: #5)
-  - [ ] Add upload button to pending items
-  - [ ] Connect to upload flow
-  - [ ] Auto-link uploaded document to IRL item
-  - [ ] Refresh progress on complete
+- [x] **Task 4: Implement Quick Upload** (AC: #5)
+  - [x] Add upload button to pending items
+  - [x] Connect to upload flow
+  - [x] Auto-link uploaded document to IRL item
+  - [x] Refresh progress on complete
 
-- [ ] **Task 5: Handle No IRL State** (AC: #7)
-  - [ ] Create empty state component
-  - [ ] Show "No IRL configured" message
-  - [ ] Add link to IRL creation (placeholder for Epic 6)
+- [x] **Task 5: Handle No IRL State** (AC: #7)
+  - [x] Create empty state component
+  - [x] Show "No IRL configured" message
+  - [x] Add link to IRL creation (placeholder for Epic 6)
 
-- [ ] **Task 6: Implement Document Linking** (AC: #8)
-  - [ ] Add irl_item_id column to documents (if not exists)
-  - [ ] Update document on link
-  - [ ] Add link selection dialog for ambiguous cases
+- [x] **Task 6: Implement Document Linking** (AC: #8)
+  - [x] Add irl_item_id column to documents (if not exists)
+  - [x] Update document on link
+  - [x] Add link selection dialog for ambiguous cases
 
-- [ ] **Task 7: Create IRL API Endpoints** (AC: #1, #4)
-  - [ ] GET /api/projects/[id]/irl - Get IRL with items
-  - [ ] GET /api/projects/[id]/irl/progress - Get progress stats
-  - [ ] (Document linking via existing PATCH)
+- [x] **Task 7: Create IRL API Endpoints** (AC: #1, #4)
+  - [x] GET /api/projects/[id]/irl - Get IRL with items
+  - [x] GET /api/projects/[id]/irl/progress - Get progress stats
+  - [x] (Document linking via existing PATCH)
 
 ## Dev Notes
 
@@ -158,4 +158,34 @@ claude-opus-4-5-20251101
 
 ### Completion Notes List
 
+- All 8 acceptance criteria implemented
+- Database migration creates irl_items table and adds irl_item_id to documents table
+- IRL panel integrates seamlessly into Data Room right sidebar
+- Collapsible panel with localStorage persistence
+- Progress calculation shows X/Y (percentage%) format
+- Hierarchical checklist with expandable/collapsible categories
+- Status indicators: green checkmark for completed, empty circle for pending
+- Quick upload from checklist items with automatic IRL linking
+- Empty state shows "No IRL Configured" with link to create (Epic 6)
+- Document linking via upload store irlItemId parameter
+- 23 component tests covering all acceptance criteria
+- All 135 tests passing
+
 ### File List
+
+**New Files:**
+- `supabase/migrations/00014_create_irl_items_table.sql` - Database migration
+- `lib/api/irl.ts` - IRL API client with types
+- `components/data-room/irl-checklist-panel.tsx` - Main panel component
+- `components/data-room/irl-checklist-item.tsx` - Individual checklist item
+- `components/data-room/irl-empty-state.tsx` - Empty state component
+- `__tests__/components/data-room/irl-checklist-panel.test.tsx` - Component tests
+
+**Modified Files:**
+- `lib/supabase/database.types.ts` - Added irl_items types
+- `stores/upload-store.ts` - Added irlItemId support
+- `hooks/use-upload-processor.ts` - Pass irlItemId to API
+- `app/api/documents/upload/route.ts` - Handle irl_item_id on upload
+- `components/data-room/upload-zone.tsx` - Exported constants
+- `components/data-room/index.ts` - Export new components
+- `app/projects/[id]/data-room/data-room-wrapper.tsx` - Integrated IRL panel

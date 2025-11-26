@@ -31,3 +31,17 @@ export {
 export { DocumentCard, DocumentCardHeader, type DocumentCardProps } from './document-card'
 export { DocumentDetails, type DocumentDetailsProps } from './document-details'
 export { FolderSelectDialog, type FolderSelectDialogProps } from './folder-select-dialog'
+
+// E2.6 - Document Actions (View, Download, Delete)
+export { DocumentActions, type DocumentActionsProps } from './document-actions'
+export { DeleteConfirmDialog, type DeleteConfirmDialogProps } from './delete-confirm-dialog'
+
+// E2.7 - Upload Progress Indicators
+export { UploadZone, type UploadZoneProps } from './upload-zone'
+export { UploadProgress, UploadProgressBadge, type UploadProgressProps } from './upload-progress'
+export { UploadPanel, UploadButton, type UploadPanelProps } from './upload-panel'
+
+// E2.8 - IRL Integration with Document Tracking
+export { IRLChecklistPanel, type IRLChecklistPanelProps } from './irl-checklist-panel'
+export { IRLChecklistItem, type IRLChecklistItemProps } from './irl-checklist-item'
+export { IRLEmptyState, type IRLEmptyStateProps } from './irl-empty-state'

@@ -3,12 +3,13 @@
  * Manages state for folder tree, document list, and CRUD operations
  * Story: E2.2 - Build Data Room Folder Structure View (AC: #1-8)
  * Story: E2.5 - Create Document Metadata Management (enhanced with details panel)
+ * Story: E2.7 - Build Upload Progress Indicators (integrated upload panel)
  */
 
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Upload, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
@@ -20,6 +21,8 @@ import {
   RenameFolderDialog,
   DocumentDetails,
   FolderSelectDialog,
+  DeleteConfirmDialog,
+  UploadButton,
   buildFolderTree,
   type FolderNode,
 } from '@/components/data-room'
@@ -78,6 +81,10 @@ export function DataRoomClient({
   const [folderSelectOpen, setFolderSelectOpen] = useState(false)
   const [folderSelectDocument, setFolderSelectDocument] = useState<Document | null>(null)
   const [isFolderSelectLoading, setIsFolderSelectLoading] = useState(false)
+
+  // E2.6: Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null)
 
   // Load documents from Supabase
   const loadDocuments = useCallback(async () => {
@@ -423,22 +430,66 @@ export function DataRoomClient({
     await downloadDocument(doc.id)
   }, [])
 
-  const handleDelete = useCallback(
-    async (doc: Document) => {
+  // E2.6: Open delete confirmation dialog
+  const handleDeleteRequest = useCallback((doc: Document) => {
+    setDocumentToDelete(doc)
+    setDeleteConfirmOpen(true)
+  }, [])
+
+  // E2.6: Execute delete with optimistic update and rollback on error
+  const handleDeleteConfirm = useCallback(
+    async (doc: Document): Promise<{ success: boolean; error?: string }> => {
+      // Store current state for potential rollback
+      const previousDocuments = allDocuments
+
+      // Optimistic update - remove immediately from UI
+      setAllDocuments((prev) => prev.filter((d) => d.id !== doc.id))
+
+      // Close details panel if deleted document was selected
+      if (selectedDocument?.id === doc.id) {
+        setDetailsOpen(false)
+        setSelectedDocument(null)
+      }
+
       try {
         const result = await deleteDocument(doc.id)
+
         if (!result.success) {
-          throw new Error(result.error || 'Failed to delete document')
+          // Rollback on error
+          setAllDocuments(previousDocuments)
+          toast.error(result.error || 'Failed to delete document', {
+            action: {
+              label: 'Retry',
+              onClick: () => handleDeleteRequest(doc),
+            },
+          })
+          return { success: false, error: result.error }
         }
 
-        setAllDocuments((prev) => prev.filter((d) => d.id !== doc.id))
         toast.success(`Deleted "${doc.name}"`)
+        return { success: true }
       } catch (error) {
-        console.error('Error deleting document:', error)
-        toast.error('Failed to delete document')
+        // Rollback on error
+        setAllDocuments(previousDocuments)
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete document'
+        toast.error(errorMessage, {
+          action: {
+            label: 'Retry',
+            onClick: () => handleDeleteRequest(doc),
+          },
+        })
+        return { success: false, error: errorMessage }
       }
     },
-    []
+    [allDocuments, selectedDocument]
+  )
+
+  // Legacy handler for backward compatibility (used by folder delete)
+  const handleDelete = useCallback(
+    async (doc: Document) => {
+      await handleDeleteConfirm(doc)
+    },
+    [handleDeleteConfirm]
   )
 
   // E2.5: Handle opening document details
@@ -516,10 +567,11 @@ export function DataRoomClient({
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <Button size="sm">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload
-          </Button>
+          {/* E2.7: Integrated Upload Button with progress tracking */}
+          <UploadButton
+            projectId={projectId}
+            folderPath={selectedPath}
+          />
         </div>
       </div>
 
@@ -556,7 +608,7 @@ export function DataRoomClient({
               isLoading={isLoading}
               onDocumentClick={handleDocumentClick}
               onDownload={handleDownload}
-              onDelete={handleDelete}
+              onDelete={handleDeleteRequest}
               onMove={handleMove}
             />
           </div>
@@ -592,7 +644,7 @@ export function DataRoomClient({
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         onDocumentUpdate={handleDocumentUpdate}
-        onDocumentDelete={handleDelete}
+        onDocumentDelete={handleDeleteRequest}
         onMoveToFolder={handleMoveToFolder}
       />
 
@@ -605,6 +657,14 @@ export function DataRoomClient({
         documentName={folderSelectDocument?.name || ''}
         onSelect={handleFolderSelect}
         isLoading={isFolderSelectLoading}
+      />
+
+      {/* E2.6: Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        document={documentToDelete}
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   )

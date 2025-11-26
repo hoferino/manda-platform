@@ -1,0 +1,77 @@
+# Docker Compose for local development
+# Story: E3.1 - Set up FastAPI Backend with pg-boss Job Queue (AC: #4)
+#
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose logs -f api    # View API logs
+#   docker compose down           # Stop all services
+
+services:
+  # FastAPI application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src:cached
+      - ./tests:/app/tests:cached
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+      - LOG_FORMAT=console
+    depends_on:
+      - db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Background worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python -m src.jobs
+    volumes:
+      - ./src:/app/src:cached
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=development
+      - DEBUG=true
+      - LOG_FORMAT=console
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  # Local PostgreSQL for development (optional - can use Supabase directly)
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=manda_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+# Network configuration
+networks:
+  default:
+    name: manda-network

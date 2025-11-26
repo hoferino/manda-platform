@@ -1362,7 +1362,7 @@ And storage is cleaned up
 - Docling document parser (parsing layer)
 - Vertex AI RAG Engine (retrieval/indexing layer) - alternative to custom pgvector pipeline
 - OpenAI embeddings API (fallback if not using Vertex AI RAG)
-- Configurable LLM for extraction (default: Gemini 2.0 Pro, swappable via env variable)
+- Tiered LLM approach: Gemini 2.5 Flash (extraction), Gemini 2.5 Pro (deep analysis), Flash-Lite (batch)
 - PostgreSQL + pgvector for metadata/findings storage (Vertex AI RAG handles vector search)
 - WebSocket for status updates
 
@@ -1633,20 +1633,23 @@ And the error is logged
 
 ---
 
-#### Story E3.5: Implement LLM Analysis with Gemini 3.0 Pro
+#### Story E3.5: Implement LLM Analysis with Gemini 2.5 (Tiered Approach)
 
 **As a** developer
-**I want** LLM analysis using Gemini 3.0 Pro to extract findings from documents
-**So that** users get intelligent insights automatically
+**I want** LLM analysis using tiered Gemini 2.5 models to extract findings from documents
+**So that** users get intelligent insights automatically with optimized cost/quality
 
 **Description:**
-Create a job handler that uses Gemini 3.0 Pro to analyze parsed document content, extract key findings (financial metrics, operational data, risks, opportunities), and store findings with source attribution in the knowledge base.
+Create a job handler that uses Gemini 2.5 Flash for initial extraction and Gemini 2.5 Pro for complex financial analysis, extract key findings (financial metrics, operational data, risks, opportunities), and store findings with source attribution in the knowledge base.
 
 **Technical Details:**
 - Job type: `analyze_document`
 - Job payload: `{document_id}`
 - Retrieve parsed chunks from database
-- Call Gemini 3.0 Pro with analysis prompt (thinking: high)
+- **Tiered LLM Strategy:**
+  - **Gemini 2.5 Flash** (`gemini-2.5-flash`): Default for extraction ($0.30/1M input, $2.50/1M output)
+  - **Gemini 2.5 Pro** (`gemini-2.5-pro`): Complex financial analysis ($1.25/1M input, $10/1M output)
+  - **Gemini 2.5 Flash-Lite** (`gemini-2.5-flash-lite`): Batch processing ($0.10/1M input, $0.40/1M output)
 - Prompt: "Extract key findings from this M&A document. Focus on: financial metrics, operational data, risks, opportunities. Provide source attribution."
 - Parse LLM response (structured JSON)
 - Store findings in `findings` table with confidence scores
@@ -1660,7 +1663,7 @@ When the `analyze_document` job is enqueued
 Then the job contains the document_id
 
 Given the analysis job runs
-When Gemini 3.0 Pro processes the document
+When Gemini 2.5 Flash processes the document
 Then it extracts key findings (e.g., "Q3 Revenue: $5.2M")
 And each finding has a confidence score (0-100%)
 And each finding is linked to the source chunk
@@ -1691,7 +1694,7 @@ And the document can be re-analyzed
 
 **Definition of Done:**
 - [ ] `analyze_document` job handler created
-- [ ] Gemini 3.0 Pro API integrated
+- [ ] Gemini 2.5 Flash/Pro API integrated (tiered approach)
 - [ ] Analysis prompt optimized for M&A documents
 - [ ] Findings extracted and stored
 - [ ] Confidence scores assigned

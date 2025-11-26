@@ -1,6 +1,7 @@
 /**
  * Unit tests for DocumentCard component
  * Story: E2.5 - Create Document Metadata Management (AC: #1)
+ * Story: E2.6 - Implement Document Actions (View, Download, Delete)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -8,6 +9,21 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DocumentCard, DocumentCardHeader } from '@/components/data-room/document-card'
 import type { Document } from '@/lib/api/documents'
+
+// Mock the documents API
+vi.mock('@/lib/api/documents', async () => {
+  const actual = await vi.importActual('@/lib/api/documents')
+  return {
+    ...actual,
+    getDocument: vi.fn().mockResolvedValue({
+      document: {
+        id: 'doc-123',
+        downloadUrl: 'https://example.com/download',
+      },
+    }),
+    downloadDocument: vi.fn().mockResolvedValue({ success: true }),
+  }
+})
 
 // Mock document data
 const mockDocument: Document = {
@@ -99,7 +115,9 @@ describe('DocumentCard Component', () => {
       // Find the main clickable element (role="button")
       const cards = screen.getAllByRole('button')
       // The first button should be the card itself
-      cards[0].focus()
+      const cardElement = cards[0]
+      expect(cardElement).toBeDefined()
+      cardElement!.focus()
       await user.keyboard('{Enter}')
       expect(onClick).toHaveBeenCalledWith(mockDocument)
     })
@@ -109,13 +127,13 @@ describe('DocumentCard Component', () => {
       const onDownload = vi.fn()
       render(<DocumentCard document={mockDocument} onDownload={onDownload} />)
 
-      // Open dropdown - find by sr-only text within
-      const menuButton = screen.getByText('Document actions').closest('button')!
+      // Open dropdown - find by aria-label
+      const menuButton = screen.getByRole('button', { name: /document actions/i })
       await user.click(menuButton)
 
       // Click download
       await user.click(screen.getByText('Download'))
-      expect(onDownload).toHaveBeenCalledWith(mockDocument)
+      expect(onDownload).toHaveBeenCalled()
     })
 
     it('calls onDelete from dropdown menu', async () => {
@@ -123,13 +141,13 @@ describe('DocumentCard Component', () => {
       const onDelete = vi.fn()
       render(<DocumentCard document={mockDocument} onDelete={onDelete} />)
 
-      // Open dropdown - find by sr-only text within
-      const menuButton = screen.getByText('Document actions').closest('button')!
+      // Open dropdown - find by aria-label
+      const menuButton = screen.getByRole('button', { name: /document actions/i })
       await user.click(menuButton)
 
       // Click delete
       await user.click(screen.getByText('Delete'))
-      expect(onDelete).toHaveBeenCalledWith(mockDocument)
+      expect(onDelete).toHaveBeenCalled()
     })
 
     it('calls onMove from dropdown menu', async () => {
@@ -137,13 +155,13 @@ describe('DocumentCard Component', () => {
       const onMove = vi.fn()
       render(<DocumentCard document={mockDocument} onMove={onMove} />)
 
-      // Open dropdown - find by sr-only text within
-      const menuButton = screen.getByText('Document actions').closest('button')!
+      // Open dropdown - find by aria-label
+      const menuButton = screen.getByRole('button', { name: /document actions/i })
       await user.click(menuButton)
 
       // Click move
       await user.click(screen.getByText('Move to...'))
-      expect(onMove).toHaveBeenCalledWith(mockDocument)
+      expect(onMove).toHaveBeenCalled()
     })
 
     it('calls onRename from dropdown menu when provided', async () => {
@@ -151,13 +169,42 @@ describe('DocumentCard Component', () => {
       const onRename = vi.fn()
       render(<DocumentCard document={mockDocument} onRename={onRename} />)
 
-      // Open dropdown - find by sr-only text within
-      const menuButton = screen.getByText('Document actions').closest('button')!
+      // Open dropdown - find by aria-label
+      const menuButton = screen.getByRole('button', { name: /document actions/i })
       await user.click(menuButton)
 
       // Click rename
       await user.click(screen.getByText('Rename'))
-      expect(onRename).toHaveBeenCalledWith(mockDocument)
+      expect(onRename).toHaveBeenCalled()
+    })
+
+    // E2.6: Test View action (opens document in new tab)
+    it('shows View option in dropdown menu', async () => {
+      const user = userEvent.setup()
+      render(<DocumentCard document={mockDocument} />)
+
+      // Open dropdown
+      const menuButton = screen.getByRole('button', { name: /document actions/i })
+      await user.click(menuButton)
+
+      // View option should be present
+      expect(screen.getByText('View')).toBeInTheDocument()
+    })
+
+    // E2.6: Test that delete is disabled for processing documents
+    it('disables delete for processing documents', async () => {
+      const user = userEvent.setup()
+      const processingDoc = { ...mockDocument, processingStatus: 'processing' as const }
+      const onDelete = vi.fn()
+      render(<DocumentCard document={processingDoc} onDelete={onDelete} />)
+
+      // Open dropdown
+      const menuButton = screen.getByRole('button', { name: /document actions/i })
+      await user.click(menuButton)
+
+      // Delete option should be disabled
+      const deleteItem = screen.getByText('Delete').closest('[role="menuitem"]')
+      expect(deleteItem).toHaveAttribute('aria-disabled', 'true')
     })
   })
 

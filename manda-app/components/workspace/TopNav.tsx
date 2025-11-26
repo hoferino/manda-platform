@@ -2,6 +2,7 @@
  * Top Navigation Bar Component
  * Shows project name, breadcrumb, and actions menu
  * Story: E1.6 - Build Project Workspace Shell with Navigation (AC: #2, #9, #11)
+ * Story: E2.7 - Build Upload Progress Indicators (AC: #8 - Background Upload Tracking)
  */
 
 'use client'
@@ -18,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { useSidebarStore } from './sidebar-store'
+import { UploadIndicator } from '@/components/upload-indicator'
 import type { Deal } from '@/lib/supabase/types'
 
 interface TopNavProps {
@@ -79,6 +81,9 @@ export function TopNav({ project }: TopNavProps) {
 
       {/* Right Section: Actions */}
       <div className="flex items-center gap-2">
+        {/* E2.7: Upload Indicator - shows background upload progress */}
+        <UploadIndicator />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Project actions">

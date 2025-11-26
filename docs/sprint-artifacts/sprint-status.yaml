@@ -5,6 +5,38 @@
 # Tracking System: file-system
 # Story Location: docs/sprint-artifacts
 
+# ===================
+# BACKLOG ITEMS
+# ===================
+# Technical debt and action items from retrospectives
+backlog:
+  # From Epic 2 Retrospective (2025-11-26)
+  - id: BL-001
+    title: Add E2E tests for Data Room
+    priority: medium
+    source: epic-2-retrospective
+    description: |
+      No Playwright/Cypress E2E tests were created during Epic 2.
+      Manual verification worked but doesn't scale.
+      Consider adding E2E test story or including in DoD.
+
+  - id: BL-002
+    title: Add rate limiting on document endpoints
+    priority: medium
+    source: epic-2-retrospective
+    description: |
+      Document upload and download endpoints lack rate limiting.
+      Required for production readiness to prevent abuse.
+      Consider using middleware or API gateway.
+
+  - id: BL-003
+    title: Monitor GCS costs as usage grows
+    priority: low
+    source: epic-2-retrospective
+    description: |
+      Google Cloud Storage costs should be monitored as document volume increases.
+      Set up billing alerts and consider lifecycle policies for old documents.
+
 # generated: 2025-11-25
 # project: Manda
 # project_key: manda-platform
@@ -89,8 +121,9 @@ development_status:
   # - Removed deal_type from wizard (didn't drive behavior)
   # - Empty projects have empty data rooms (no default buckets)
   # - Removed category column from documents table
-  epic-2: in-progress
+  epic-2: done
   epic-2-jira-id: SCRUM-21
+  epic-2-completed: 2025-11-26
   e2-1-implement-document-upload-to-google-cloud-storage: done
   e2-1-jira-id: SCRUM-22
   e2-1-completed: 2025-11-25
@@ -107,25 +140,105 @@ development_status:
   e2-5-create-document-metadata-management: done
   e2-5-jira-id: SCRUM-26
   e2-5-completed: 2025-11-26
-  e2-6-implement-document-actions-view-download-delete: ready-for-dev
+  e2-6-implement-document-actions-view-download-delete: done
   e2-6-jira-id: SCRUM-27
-  e2-7-build-upload-progress-indicators-and-websocket-updates: ready-for-dev
+  e2-6-completed: 2025-11-26
+  e2-6-reviewed: 2025-11-26
+  e2-7-build-upload-progress-indicators-and-websocket-updates: done
   e2-7-jira-id: SCRUM-28
-  e2-8-implement-irl-integration-with-document-tracking: ready-for-dev
+  e2-7-completed: 2025-11-26
+  e2-8-implement-irl-integration-with-document-tracking: done
   e2-8-jira-id: SCRUM-29
-  epic-2-retrospective: optional
+  e2-8-completed: 2025-11-26
+  epic-2-retrospective: completed
+  epic-2-notes: |
+    All 8 stories completed. Key deliverables:
+    - Google Cloud Storage integration with signed URLs
+    - Data Room with Folder and Bucket views (unified model)
+    - Virtual folders derived from folder_path (no separate table)
+    - Drag-and-drop document management
+    - Upload progress with Zustand store and parallel uploads
+    - IRL Checklist panel for document tracking
+    - 135 tests (7x growth from Epic 1)
+    Architecture decisions:
+    - Buckets = top-level folders (v2.6 course correction)
+    - XHR for upload progress (Fetch API limitation)
+    - Zustand + localStorage for upload persistence
 
   # Epic 3: Intelligent Document Processing (9 stories)
-  epic-3: backlog
-  e3-1-set-up-fastapi-backend-with-pg-boss-job-queue: backlog
-  e3-2-integrate-docling-for-document-parsing: backlog
-  e3-3-implement-document-parsing-job-handler: backlog
+  # CONTEXTED: 2025-11-26
+  # Tech Spec: docs/sprint-artifacts/tech-spec-epic-E3.md
+  # Key Decisions:
+  # - FastAPI Python backend (manda-processing service)
+  # - Tiered Gemini 2.5: Flash (extraction), Pro (deep analysis), Flash-Lite (batch)
+  # - pgvector for embeddings (staying with Supabase for MVP)
+  # - Docling for document parsing with OCR
+  # - 3 new tables: document_chunks, findings, financial_metrics
+  epic-3: contexted
+  epic-3-jira-id: SCRUM-30
+  epic-3-contexted: 2025-11-26
+  epic-3-tech-spec: docs/sprint-artifacts/tech-spec-epic-E3.md
+  epic-3-preparation:
+    - FastAPI service setup for Python processing pipeline
+    - Reuse Zustand patterns for processing queue state
+    - WebSocket infrastructure for real-time status updates
+    - Consider batch processing for multiple documents
+  e3-1-set-up-fastapi-backend-with-pg-boss-job-queue: done
+  e3-1-jira-id: SCRUM-31
+  e3-1-drafted: 2025-11-26
+  e3-1-context-ready: 2025-11-26
+  e3-1-completed: 2025-11-26
+  e3-1-reviewed: 2025-11-26
+  e3-1-notes: |
+    FastAPI backend created with pg-boss job queue integration.
+    79 tests passing with 93% coverage. Python 3.12+ required.
+    Direct SQL approach for pg-boss compatibility with TypeScript.
+    Code review APPROVED - all 6 ACs verified, no HIGH/MEDIUM issues.
+  e3-2-integrate-docling-for-document-parsing: done
+  e3-2-jira-id: SCRUM-32
+  e3-2-drafted: 2025-11-26
+  e3-2-completed: 2025-11-26
+  e3-2-reviewed: 2025-11-26
+  e3-2-notes: |
+    Docling integration completed with comprehensive parser module.
+    136 tests passing (24 skipped for docling-dependent tests).
+    Coverage: chunker.py 87%, excel_parser.py 89%, __init__.py 96%.
+    Code review APPROVED - all 6 ACs verified, no HIGH/MEDIUM blocking issues.
+    Key deliverables:
+    - Parser interface with Pydantic models (ChunkData, TableData, FormulaData, ParseResult)
+    - Excel parser with formula preservation (openpyxl)
+    - PDF parser with OCR support (Docling)
+    - Semantic chunking (512-1024 tokens, tiktoken)
+    - Documentation at manda-processing/docs/parsers.md
+  e3-3-implement-document-parsing-job-handler: done
+  e3-3-jira-id: SCRUM-33
+  e3-3-drafted: 2025-11-26
+  e3-3-completed: 2025-11-27
+  e3-3-notes: |
+    Document parsing job handler completed. Key deliverables:
+    - ParseDocumentHandler class with GCS download, parsing, DB storage
+    - Webhook endpoint for triggering parse jobs (/webhooks/document-uploaded)
+    - Atomic transaction: store chunks + update status in single transaction
+    - Error handling: GCS errors, parse errors, DB errors with retry classification
+    - 137 tests passing with 84% coverage on new code
+    Key files:
+    - src/jobs/handlers/parse_document.py - Main handler
+    - src/storage/gcs_client.py - GCS download with retry
+    - src/storage/supabase_client.py - DB operations for chunks
+    - src/api/routes/webhooks.py - Webhook endpoints
+    - migrations/00015_create_document_chunks_table.sql - Chunks table
   e3-4-generate-embeddings-for-semantic-search: backlog
-  e3-5-implement-llm-analysis-with-gemini-30-pro: backlog
+  e3-4-jira-id: SCRUM-34
+  e3-5-implement-llm-analysis-with-gemini-25-tiered: backlog
+  e3-5-jira-id: SCRUM-35
   e3-6-create-processing-status-tracking-and-websocket-updates: backlog
+  e3-6-jira-id: SCRUM-36
   e3-7-implement-processing-queue-visibility: backlog
+  e3-7-jira-id: SCRUM-37
   e3-8-implement-retry-logic-for-failed-processing: backlog
+  e3-8-jira-id: SCRUM-38
   e3-9-financial-model-integration-extract-and-query-financial-metrics: backlog
+  e3-9-jira-id: SCRUM-39
   epic-3-retrospective: optional
 
   # Epic 4: Collaborative Knowledge Workflow (14 stories)

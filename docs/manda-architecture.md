@@ -21,7 +21,7 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 - **Tool-Based Integration:** Agent accesses platform services through well-defined tools (12 core tools)
 - **Event-Driven Processing:** Heavy analysis happens asynchronously in background
 - **Human-in-the-Loop:** LangGraph workflows enable collaborative document creation
-- **Multi-Model Strategy:** Route tasks to optimal LLM (Gemini 3.0 Pro for extraction, Claude for conversation)
+- **Multi-Model Strategy:** Route tasks to optimal LLM (Gemini 2.5 Flash/Pro for extraction, Claude for conversation)
 - **Containerized Development:** Docker Compose for consistent dev environment and production parity
 
 ---
@@ -40,9 +40,10 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 | **Type Safety & Validation** | Pydantic v2.12+ | Latest stable; structured outputs, data validation, type-safe tool definitions |
 | **LLM Integration** | LangChain LLM Adapters | Model-agnostic interface for multiple providers (Anthropic, Google, OpenAI, etc.) with retry, fallback |
 | **LLM Provider (Default)** | Configurable | Provider-agnostic configuration (Anthropic Claude, Google Gemini, OpenAI GPT, etc.) |
-| **Conversation Model** | Configurable | Default: Claude Sonnet 4.5 or Gemini 2.0 Pro; easily swappable via config |
-| **Extraction Model** | Configurable | Default: Gemini 2.0 Pro (2M context) or Claude Opus 3; long-context document processing |
-| **Speed Tasks Model** | Configurable | Default: Claude Haiku 4 or Gemini 2.0 Flash; fast, cost-effective queries |
+| **Conversation Model** | Configurable | Default: Claude Sonnet 4.5 or Gemini 2.5 Pro; easily swappable via config |
+| **Extraction Model** | Configurable | Default: Gemini 2.5 Flash (1M context, $0.30/1M input); high-volume extraction |
+| **Deep Analysis Model** | Configurable | Default: Gemini 2.5 Pro ($1.25/1M input); complex financial analysis |
+| **Speed Tasks Model** | Configurable | Default: Claude Haiku 4 or Gemini 2.5 Flash-Lite ($0.10/1M input); fast, cost-effective |
 | **Embeddings** | Configurable | Default: OpenAI text-embedding-3-large; industry-leading semantic search quality |
 | **Authentication** | Supabase Auth | OAuth, magic links, MFA out of the box; RLS for multi-tenant security |
 | **File Storage** | Google Cloud Storage | Scalable document storage, signed URLs, lifecycle policies for M&A documents |
@@ -111,9 +112,10 @@ Intelligence Layer:
         speed: claude-haiku-4-20250514
         deep_analysis: claude-3-opus-20240229
       google:
-        conversation: gemini-2.0-pro
-        extraction: gemini-2.0-pro  # 2M context window
-        speed: gemini-2.0-flash
+        conversation: gemini-2.5-pro
+        extraction: gemini-2.5-flash     # 1M context, $0.30/1M input - high volume
+        deep_analysis: gemini-2.5-pro    # $1.25/1M input - complex reasoning
+        speed: gemini-2.5-flash-lite     # $0.10/1M input - batch processing
       openai:
         conversation: gpt-4-turbo
         embeddings: text-embedding-3-large

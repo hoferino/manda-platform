@@ -1,0 +1,326 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E3</epicId>
+    <storyId>1</storyId>
+    <title>Set up FastAPI Backend with pg-boss Job Queue</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e3-1-set-up-fastapi-backend-with-pg-boss-job-queue.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>platform developer</asA>
+    <iWant>a Python FastAPI backend service with pg-boss job queue integration</iWant>
+    <soThat>we can process documents asynchronously in the background with reliable job execution and retry capabilities</soThat>
+    <tasks>
+      <task id="1" ac="3">
+        <title>Initialize Python Project</title>
+        <subtasks>
+          <subtask>Create `manda-processing/` directory at project root</subtask>
+          <subtask>Set up `pyproject.toml` with dependencies from tech spec</subtask>
+          <subtask>Configure `src/` package structure with `__init__.py` files</subtask>
+          <subtask>Create `src/config.py` with Pydantic Settings class</subtask>
+          <subtask>Create `.env.example` with required environment variables</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="1,5">
+        <title>Implement FastAPI Application</title>
+        <subtasks>
+          <subtask>Create `src/main.py` with FastAPI app instance</subtask>
+          <subtask>Implement `/health` endpoint in `src/api/routes/health.py`</subtask>
+          <subtask>Implement `/ready` endpoint with DB connection check</subtask>
+          <subtask>Add API key middleware in `src/api/dependencies.py`</subtask>
+          <subtask>Configure CORS for development</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="2">
+        <title>Set up pg-boss Integration</title>
+        <subtasks>
+          <subtask>Research pg-boss Python implementation (py-pg-boss or direct SQL)</subtask>
+          <subtask>Create `src/jobs/queue.py` with job queue wrapper class</subtask>
+          <subtask>Create `src/jobs/worker.py` with worker process loop</subtask>
+          <subtask>Implement job enqueue and dequeue methods</subtask>
+          <subtask>Add job retry configuration (3 retries, exponential backoff)</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Docker Configuration</title>
+        <subtasks>
+          <subtask>Create `Dockerfile` for production build</subtask>
+          <subtask>Create `Dockerfile.dev` for development with hot reload</subtask>
+          <subtask>Create `docker-compose.yaml` for local development</subtask>
+          <subtask>Configure networking to connect to Supabase</subtask>
+          <subtask>Add volume mounts for development</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="2">
+        <title>Database Migration</title>
+        <subtasks>
+          <subtask>Create migration for pg-boss schema (if using direct SQL approach)</subtask>
+          <subtask>Verify pg-boss tables created in Supabase</subtask>
+          <subtask>Test connection from FastAPI to PostgreSQL</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Write Tests</title>
+        <subtasks>
+          <subtask>Set up pytest configuration in `tests/conftest.py`</subtask>
+          <subtask>Write tests for `/health` endpoint</subtask>
+          <subtask>Write tests for `/ready` endpoint</subtask>
+          <subtask>Write tests for job queue operations</subtask>
+          <subtask>Configure pytest-cov for coverage reporting</subtask>
+        </subtasks>
+      </task>
+      <task id="7" ac="3">
+        <title>Documentation</title>
+        <subtasks>
+          <subtask>Update README with setup instructions</subtask>
+          <subtask>Document API endpoints</subtask>
+          <subtask>Add architecture notes for future developers</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="FastAPI Service Running">
+      <requirement>FastAPI application starts successfully on port 8000</requirement>
+      <requirement>`/health` endpoint returns `200 OK` with `{"status": "healthy"}`</requirement>
+      <requirement>`/ready` endpoint validates database and queue connections</requirement>
+    </criterion>
+    <criterion id="AC2" title="pg-boss Job Queue Configured">
+      <requirement>pg-boss tables created in Supabase PostgreSQL</requirement>
+      <requirement>Jobs can be enqueued via Python wrapper</requirement>
+      <requirement>Worker process picks up jobs within 5 seconds</requirement>
+    </criterion>
+    <criterion id="AC3" title="Project Structure Established">
+      <requirement>`manda-processing/` directory created with proper module layout</requirement>
+      <requirement>Pydantic Settings for configuration management</requirement>
+      <requirement>Environment variables documented in `.env.example`</requirement>
+    </criterion>
+    <criterion id="AC4" title="Docker Development Setup">
+      <requirement>`Dockerfile` for the FastAPI service</requirement>
+      <requirement>`docker-compose.yaml` for local development</requirement>
+      <requirement>Service integrates with existing Supabase instance</requirement>
+    </criterion>
+    <criterion id="AC5" title="Basic API Authentication">
+      <requirement>API key validation middleware for processing endpoints</requirement>
+      <requirement>Webhook secret validation for Supabase webhooks</requirement>
+    </criterion>
+    <criterion id="AC6" title="Tests Pass">
+      <requirement>Health endpoint tests pass</requirement>
+      <requirement>Job queue integration tests pass</requirement>
+      <requirement>Minimum 80% coverage on new code</requirement>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Services and Modules</section>
+        <snippet>Defines the manda-processing/ directory structure, module responsibilities, and Python dependencies including FastAPI 0.121+, pydantic-settings 2.7.0+, asyncpg 0.30.0+.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>APIs and Interfaces</section>
+        <snippet>Specifies /health, /ready endpoints and webhook payload structure. API key auth for processing endpoints, webhook secret for Supabase.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Python Dependencies</section>
+        <snippet>Lists pyproject.toml dependencies: fastapi>=0.121.0, uvicorn[standard]>=0.34.0, pydantic>=2.12.0, pydantic-settings>=2.7.0, asyncpg>=0.30.0, pg-boss>=0.2.0.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Workflows and Sequencing</section>
+        <snippet>Job queue schema uses pg-boss with job names: parse_document, generate_embeddings, analyze_document. Retry: 3 attempts, 30s initial delay, exponential backoff.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Test Strategy</section>
+        <snippet>pytest for unit/integration tests, 80% coverage target, test structure in manda-processing/tests/ with conftest.py, unit/, integration/ directories.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Backend Framework</section>
+        <snippet>FastAPI 0.121+ (Python 3.11+) chosen for native integration with Docling, LangGraph, LLM libraries. Eliminates Node.js to Python bridge.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Job Queue</section>
+        <snippet>pg-boss selected for MVP simplicity (Postgres-based), with migration path to Redis+Bull if needed. Part of dual-service pattern.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Docker Architecture</section>
+        <snippet>Docker Compose for local development with API service, worker service, and web service. Uses uvicorn --reload for development hot reload.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E3.md</path>
+        <title>Epic 3 Definition</title>
+        <section>Preparation Notes</section>
+        <snippet>FastAPI service is sibling to Next.js (separate manda-processing/ directory). GCS credentials needed. Processing status: pending, processing, completed, failed.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/pgboss/client.ts</path>
+        <kind>service</kind>
+        <symbol>getPgBoss, closePgBoss, verifyPgBossConnection</symbol>
+        <lines>36-147</lines>
+        <reason>Existing pg-boss TypeScript implementation for reference. Shows singleton pattern, connection config, graceful shutdown. Python implementation should follow similar patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/pgboss/jobs.ts</path>
+        <kind>types</kind>
+        <symbol>JOB_TYPES, DocumentParseJobPayload, DEFAULT_JOB_OPTIONS</symbol>
+        <lines>1-286</lines>
+        <reason>Defines job type constants and payload schemas that Python service will interact with. Python JobQueue class should use same job names and retry settings.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/supabase/server.ts</path>
+        <kind>service</kind>
+        <symbol>createClient, createAdminClient</symbol>
+        <lines>1-65</lines>
+        <reason>Shows Supabase connection pattern with service role key for admin operations. Python service will need similar admin client pattern.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/gcs/client.ts</path>
+        <kind>service</kind>
+        <symbol>getStorageClient, getSignedDownloadUrl, uploadFile</symbol>
+        <lines>77-193</lines>
+        <reason>GCS client implementation showing credential handling, signed URLs, file operations. Python service will need to download files from same GCS bucket.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/health/route.ts</path>
+        <kind>endpoint</kind>
+        <symbol>GET /api/health</symbol>
+        <reason>Existing health endpoint pattern in Next.js. Python /health should return similar JSON structure for consistency.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="python">
+        <note>New Python service - dependencies from tech spec</note>
+        <package name="fastapi" version=">=0.121.0">Web framework</package>
+        <package name="uvicorn" version=">=0.34.0">ASGI server with standard extras</package>
+        <package name="pydantic" version=">=2.12.0">Data validation</package>
+        <package name="pydantic-settings" version=">=2.7.0">Configuration management</package>
+        <package name="asyncpg" version=">=0.30.0">PostgreSQL async driver</package>
+        <package name="supabase" version=">=2.15.0">Supabase Python client</package>
+        <package name="google-cloud-storage" version=">=2.19.0">GCS client</package>
+        <package name="structlog" version=">=25.1.0">Structured logging</package>
+        <package name="tenacity" version=">=9.0.0">Retry logic</package>
+        <package name="httpx" version=">=0.28.0">HTTP client</package>
+        <package name="pytest" version=">=8.3.0">Testing framework</package>
+        <package name="pytest-asyncio" version=">=0.25.0">Async test support</package>
+        <package name="pytest-cov" version=">=6.0.0">Coverage reporting</package>
+      </ecosystem>
+      <ecosystem name="node" existing="true">
+        <note>Existing Next.js app with pg-boss integration</note>
+        <package name="pg-boss" version="^12.3.1">Job queue (TypeScript)</package>
+        <package name="@supabase/supabase-js" version="^2.84.0">Supabase client</package>
+        <package name="@google-cloud/storage" version="^7.17.3">GCS client</package>
+      </ecosystem>
+      <ecosystem name="infrastructure">
+        <service name="Supabase PostgreSQL">DATABASE_URL env var, same instance as Next.js</service>
+        <service name="Google Cloud Storage">GCS_PROJECT_ID, GCS_BUCKET_NAME, GOOGLE_APPLICATION_CREDENTIALS</service>
+        <service name="Docker">Containerization for local dev and deployment</service>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint category="architecture">
+      <rule>New Python service at `manda-processing/` as sibling to `manda-app/`</rule>
+      <rule>Use existing Supabase PostgreSQL instance - same DATABASE_URL</rule>
+      <rule>pg-boss tables will be shared between TypeScript and Python services</rule>
+      <rule>Python 3.11+ required (for Docling compatibility in later stories)</rule>
+    </constraint>
+    <constraint category="patterns">
+      <rule>Pydantic Settings for configuration (not raw env vars)</rule>
+      <rule>Structured JSON logging with structlog</rule>
+      <rule>Singleton pattern for database connections</rule>
+      <rule>Graceful shutdown handling for worker processes</rule>
+    </constraint>
+    <constraint category="security">
+      <rule>API key validation middleware for /api/processing/* endpoints</rule>
+      <rule>Webhook secret validation for Supabase webhooks</rule>
+      <rule>Never expose service role key to client-side</rule>
+      <rule>SSL/TLS for database connections</rule>
+    </constraint>
+    <constraint category="compatibility">
+      <rule>pg-boss job names must match existing TypeScript definitions in lib/pgboss/jobs.ts</rule>
+      <rule>Job payload schemas must be compatible with existing TypeScript types</rule>
+      <rule>Health endpoint response format should match existing /api/health pattern</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="/health" kind="REST endpoint">
+      <signature>GET /health -> {"status": "healthy"}</signature>
+      <path>manda-processing/src/api/routes/health.py</path>
+    </interface>
+    <interface name="/ready" kind="REST endpoint">
+      <signature>GET /ready -> {"status": "ready", "database": "connected", "queue": "connected"}</signature>
+      <path>manda-processing/src/api/routes/health.py</path>
+    </interface>
+    <interface name="JobQueue" kind="class interface">
+      <signature>
+        class JobQueue:
+            async def enqueue(self, name: str, data: dict, options: dict = None) -> str
+            async def dequeue(self, name: str) -> Optional[Job]
+            async def complete(self, job_id: str) -> None
+            async def fail(self, job_id: str, error: str) -> None
+      </signature>
+      <path>manda-processing/src/jobs/queue.py</path>
+    </interface>
+    <interface name="Settings" kind="Pydantic model">
+      <signature>
+        class Settings(BaseSettings):
+            database_url: str
+            supabase_url: str
+            supabase_service_role_key: str
+            api_key: str
+            gcs_bucket: str = "manda-documents-dev"
+            class Config:
+                env_file = ".env"
+      </signature>
+      <path>manda-processing/src/config.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest with pytest-asyncio for async tests. Structure tests in manda-processing/tests/ with unit/ and integration/ subdirectories. Use conftest.py for shared fixtures. Target 80% code coverage minimum. Mock external services (Supabase, GCS) in unit tests. Use test database for integration tests. Follow existing testing patterns from manda-app/__tests__/ for consistency.
+    </standards>
+    <locations>
+      <location>manda-processing/tests/conftest.py</location>
+      <location>manda-processing/tests/unit/</location>
+      <location>manda-processing/tests/integration/</location>
+      <location>manda-processing/tests/unit/test_api/test_health.py</location>
+      <location>manda-processing/tests/integration/test_jobs/</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test /health returns 200 with correct JSON structure</idea>
+      <idea ac="AC1">Test /ready returns connected status when DB is available</idea>
+      <idea ac="AC1">Test /ready returns error status when DB is unavailable</idea>
+      <idea ac="AC2">Test JobQueue.enqueue creates job in database</idea>
+      <idea ac="AC2">Test JobQueue.dequeue returns job when available</idea>
+      <idea ac="AC2">Test worker picks up job within 5 seconds</idea>
+      <idea ac="AC2">Test retry logic with exponential backoff</idea>
+      <idea ac="AC5">Test API key middleware rejects invalid keys</idea>
+      <idea ac="AC5">Test API key middleware accepts valid keys</idea>
+      <idea ac="AC5">Test webhook secret validation</idea>
+    </ideas>
+  </tests>
+</story-context>

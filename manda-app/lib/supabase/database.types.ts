@@ -179,6 +179,7 @@ export type Database = {
           gcs_bucket: string | null
           gcs_object_path: string | null
           id: string
+          irl_item_id: string | null
           mime_type: string | null
           name: string
           processing_status: string | null
@@ -196,6 +197,7 @@ export type Database = {
           gcs_bucket?: string | null
           gcs_object_path?: string | null
           id?: string
+          irl_item_id?: string | null
           mime_type?: string | null
           name: string
           processing_status?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           gcs_bucket?: string | null
           gcs_object_path?: string | null
           id?: string
+          irl_item_id?: string | null
           mime_type?: string | null
           name?: string
           processing_status?: string | null
@@ -226,6 +229,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_irl_item_id_fkey"
+            columns: ["irl_item_id"]
+            isOneToOne: false
+            referencedRelation: "irl_items"
             referencedColumns: ["id"]
           },
         ]
@@ -330,6 +340,50 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      irl_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          irl_id: string
+          name: string
+          required: boolean | null
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          irl_id: string
+          name: string
+          required?: boolean | null
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          irl_id?: string
+          name?: string
+          required?: boolean | null
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "irl_items_irl_id_fkey"
+            columns: ["irl_id"]
+            isOneToOne: false
+            referencedRelation: "irls"
             referencedColumns: ["id"]
           },
         ]

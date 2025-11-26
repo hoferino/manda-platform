@@ -2,6 +2,7 @@
  * Document Card Component
  * Displays document metadata in a compact card format
  * Story: E2.5 - Create Document Metadata Management (AC: #1)
+ * Story: E2.6 - Implement Document Actions (View, Download, Delete)
  *
  * Features:
  * - File type icon based on MIME type
@@ -9,22 +10,18 @@
  * - Relative date (e.g., "2 hours ago")
  * - Category badge
  * - Processing status indicator
+ * - Document actions (View, Download, Delete) via DocumentActions component
  */
 
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import {
   FileText,
   FileSpreadsheet,
   FileImage,
   File,
   Presentation,
-  MoreVertical,
-  Download,
-  Trash2,
-  FolderInput,
-  Edit,
   Loader2,
   CheckCircle2,
   AlertCircle,
@@ -32,17 +29,10 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import type { Document } from '@/lib/api/documents'
 import { formatFileSize, DOCUMENT_CATEGORIES } from '@/lib/api/documents'
+import { DocumentActions } from './document-actions'
 
 export interface DocumentCardProps {
   document: Document
@@ -215,68 +205,14 @@ export function DocumentCard({
         {relativeDate}
       </div>
 
-      {/* Actions menu */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="invisible h-8 w-8 p-0 group-hover:visible"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <MoreVertical className="h-4 w-4" />
-            <span className="sr-only">Document actions</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
-          {onRename && (
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                onRename(document)
-              }}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Rename
-            </DropdownMenuItem>
-          )}
-          {onDownload && (
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                onDownload(document)
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </DropdownMenuItem>
-          )}
-          {onMove && (
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                onMove(document)
-              }}
-            >
-              <FolderInput className="mr-2 h-4 w-4" />
-              Move to...
-            </DropdownMenuItem>
-          )}
-          {(onRename || onDownload || onMove) && onDelete && <DropdownMenuSeparator />}
-          {onDelete && (
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(document)
-              }}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* Actions menu - E2.6: Uses DocumentActions with View, Download, Delete */}
+      <DocumentActions
+        document={document}
+        onDownload={onDownload ? () => onDownload(document) : undefined}
+        onDelete={onDelete ? () => onDelete(document) : undefined}
+        onMove={onMove ? () => onMove(document) : undefined}
+        onRename={onRename ? () => onRename(document) : undefined}
+      />
     </div>
   )
 }

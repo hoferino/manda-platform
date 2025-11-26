@@ -21,7 +21,7 @@ Implements the background processing pipeline that automatically parses uploaded
 - E3.2: Integrate Docling for Document Parsing
 - E3.3: Implement Document Parsing Job Handler
 - E3.4: Generate Embeddings for Semantic Search
-- E3.5: Implement LLM Analysis with Gemini 3.0 Pro
+- E3.5: Implement LLM Analysis with Gemini 2.5 (Tiered Approach)
 - E3.6: Create Processing Status Tracking and WebSocket Updates
 - E3.7: Implement Processing Queue Visibility
 - E3.8: Implement Retry Logic for Failed Processing
@@ -30,6 +30,29 @@ Implements the background processing pipeline that automatically parses uploaded
 **Total Stories:** 9
 
 **Priority:** P0
+
+---
+
+## Preparation Notes (from E2 Retrospective)
+
+**Dependencies from Epic 2 (all met ✅):**
+- Documents are now stored in Google Cloud Storage
+- Document metadata is in PostgreSQL with `processing_status` field
+- IRL items table available for linking findings to checklist items
+- Zustand patterns established for state management
+
+**Recommendations for Implementation:**
+1. **FastAPI Service Setup** - New Python service for processing pipeline (separate from Next.js)
+2. **Reuse Zustand Patterns** - Processing queue similar to upload queue in E2.7
+3. **WebSocket Infrastructure** - E3.6 will need real-time status updates
+4. **Batch Processing** - Consider processing multiple documents queued together
+5. **GCS Access** - FastAPI service will need GCS credentials to read uploaded documents
+
+**Technical Context:**
+- Documents stored at: `gs://manda-documents-dev/{project_id}/{folder_path}/{filename}`
+- Signed URLs available via `lib/gcs/client.ts:getSignedDownloadUrl()`
+- Processing status values: `pending`, `processing`, `completed`, `failed`
+- 135 tests in place from E1/E2 - continue test-first approach
 
 ---
 

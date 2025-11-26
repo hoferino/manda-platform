@@ -3,11 +3,13 @@
  * Provides view switching between Folders and Buckets views with preference persistence
  * Story: E2.3 - Build Data Room Buckets View
  * Story: E2.4 - Implement View Toggle and User Preference
+ * Story: E2.8 - IRL Integration with Document Tracking
  *
  * Features:
  * - View toggle (Folders/Buckets) with localStorage persistence
  * - Per-project preference storage
  * - Context preservation when switching views
+ * - IRL Checklist panel integration (E2.8)
  * - Responsive design
  */
 
@@ -19,6 +21,7 @@ import {
   BucketsView,
   ViewToggle,
   useViewPreference,
+  IRLChecklistPanel,
   type DataRoomView,
 } from '@/components/data-room'
 
@@ -113,31 +116,37 @@ export function DataRoomWrapper({ projectId }: DataRoomWrapperProps) {
         />
       </div>
 
-      {/* View Content (AC2, AC3) */}
-      <div className="flex-1 overflow-hidden">
-        {view === 'folders' ? (
-          <div
-            ref={foldersScrollRef}
-            className="h-full overflow-auto"
-          >
-            <DataRoomClient
-              projectId={projectId}
-              selectedPath={context.folders.selectedPath}
-              onFolderSelect={handleFolderSelect}
-            />
-          </div>
-        ) : (
-          <div
-            ref={bucketsScrollRef}
-            className="h-full overflow-auto"
-          >
-            <BucketsView
-              projectId={projectId}
-              expandedBuckets={context.buckets.expandedBuckets}
-              onBucketToggle={handleBucketToggle}
-            />
-          </div>
-        )}
+      {/* Main Content with IRL Panel (E2.8) */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* View Content (AC2, AC3) */}
+        <div className="flex-1 overflow-hidden">
+          {view === 'folders' ? (
+            <div
+              ref={foldersScrollRef}
+              className="h-full overflow-auto"
+            >
+              <DataRoomClient
+                projectId={projectId}
+                selectedPath={context.folders.selectedPath}
+                onFolderSelect={handleFolderSelect}
+              />
+            </div>
+          ) : (
+            <div
+              ref={bucketsScrollRef}
+              className="h-full overflow-auto"
+            >
+              <BucketsView
+                projectId={projectId}
+                expandedBuckets={context.buckets.expandedBuckets}
+                onBucketToggle={handleBucketToggle}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* IRL Checklist Panel (E2.8 - AC1, AC6) */}
+        <IRLChecklistPanel projectId={projectId} />
       </div>
     </div>
   )

@@ -1,0 +1,395 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E3</epicId>
+    <storyId>2</storyId>
+    <title>Integrate Docling for Document Parsing</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-26</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e3-2-integrate-docling-for-document-parsing.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>platform developer</asA>
+    <iWant>Docling integrated into the FastAPI service for document parsing</iWant>
+    <soThat>we can extract text, tables, and formulas from Excel, PDF, and Word documents with high fidelity for downstream AI processing</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Install and Configure Docling</title>
+        <subtasks>
+          <subtask>Add docling>=2.15.0 to pyproject.toml</subtask>
+          <subtask>Add openpyxl>=3.1.5 for enhanced Excel support</subtask>
+          <subtask>Configure Docling settings in src/config.py</subtask>
+          <subtask>Verify installation with basic parse test</subtask>
+          <subtask>Document any system dependencies (tesseract for OCR)</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="5">
+        <title>Create Parser Interface</title>
+        <subtasks>
+          <subtask>Define DocumentParser protocol in src/parsers/__init__.py</subtask>
+          <subtask>Define ParseResult, ChunkData, TableData, FormulaData models</subtask>
+          <subtask>Create base parser class with common functionality</subtask>
+          <subtask>Implement error handling patterns (corrupt files, unsupported types)</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="1,5">
+        <title>Implement Docling Parser Wrapper</title>
+        <subtasks>
+          <subtask>Create src/parsers/docling_parser.py</subtask>
+          <subtask>Wrap Docling API with our DocumentParser interface</subtask>
+          <subtask>Handle file download from GCS (temporary local file)</subtask>
+          <subtask>Implement cleanup of temporary files</subtask>
+          <subtask>Add structured logging for parse operations</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="2">
+        <title>Implement Excel Parser Enhancements</title>
+        <subtasks>
+          <subtask>Create src/parsers/excel_parser.py for Excel-specific logic</subtask>
+          <subtask>Extract formulas from cells and preserve as text</subtask>
+          <subtask>Handle multi-sheet workbooks (chunk per sheet)</subtask>
+          <subtask>Extract tables with row/column structure</subtask>
+          <subtask>Record cell references in chunk metadata</subtask>
+          <subtask>Handle named ranges and cell references</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="3">
+        <title>Implement PDF Parser with OCR</title>
+        <subtasks>
+          <subtask>Create src/parsers/pdf_parser.py for PDF-specific logic</subtask>
+          <subtask>Configure Docling OCR settings</subtask>
+          <subtask>Extract text from native PDFs</subtask>
+          <subtask>Enable OCR for scanned documents</subtask>
+          <subtask>Extract page numbers into metadata</subtask>
+          <subtask>Handle embedded images with OCR</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="4">
+        <title>Implement Chunking Strategy</title>
+        <subtasks>
+          <subtask>Create src/parsers/chunker.py for chunking logic</subtask>
+          <subtask>Implement semantic chunking (respect paragraph boundaries)</subtask>
+          <subtask>Configure chunk size (target 512-1024 tokens)</subtask>
+          <subtask>Preserve table integrity (don't split tables)</subtask>
+          <subtask>Add chunk type classification (text, table, formula, image)</subtask>
+          <subtask>Include source metadata in each chunk</subtask>
+        </subtasks>
+      </task>
+      <task id="7" ac="6">
+        <title>Write Tests</title>
+        <subtasks>
+          <subtask>Create test document samples in tests/fixtures/</subtask>
+          <subtask>Write tests for Excel parsing (formulas, multi-sheet, tables)</subtask>
+          <subtask>Write tests for PDF parsing (native, scanned, tables)</subtask>
+          <subtask>Write tests for chunking strategy</subtask>
+          <subtask>Write integration tests with real documents</subtask>
+          <subtask>Verify 80% coverage target</subtask>
+        </subtasks>
+      </task>
+      <task id="8" ac="5">
+        <title>Documentation</title>
+        <subtasks>
+          <subtask>Document parser interface and usage</subtask>
+          <subtask>Document supported file types and limitations</subtask>
+          <subtask>Add examples for common parsing scenarios</subtask>
+          <subtask>Document OCR configuration and dependencies</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Docling Parser Integrated">
+      <description>Docling library installed and configured in manda-processing/</description>
+      <requirements>
+        <req>Parser supports Excel (.xlsx, .xls), PDF, and Word (.docx) files</req>
+        <req>Parser can be invoked programmatically via Python API</req>
+      </requirements>
+    </criterion>
+    <criterion id="AC2" title="Excel Parsing with Formula Preservation">
+      <requirements>
+        <req>Each sheet in Excel files becomes separate chunks</req>
+        <req>Formulas are preserved as text (e.g., "=SUM(A1:A10)")</req>
+        <req>Tables are extracted as structured data with row/column metadata</req>
+        <req>Cell references recorded in chunk metadata</req>
+      </requirements>
+    </criterion>
+    <criterion id="AC3" title="PDF Parsing with OCR Support">
+      <requirements>
+        <req>Native PDF text extraction works</req>
+        <req>OCR enabled for scanned documents and embedded images</req>
+        <req>Page numbers recorded in chunk metadata</req>
+        <req>Table extraction preserves structure</req>
+      </requirements>
+    </criterion>
+    <criterion id="AC4" title="Chunking Strategy Implemented">
+      <requirements>
+        <req>Text content chunked appropriately for embedding (512-1024 tokens)</req>
+        <req>Chunk boundaries respect semantic units (paragraphs, table rows)</req>
+        <req>Chunk metadata includes source location (page, sheet, cell)</req>
+        <req>Chunk type identified (text, table, formula, image)</req>
+      </requirements>
+    </criterion>
+    <criterion id="AC5" title="Parser Service Interface">
+      <requirements>
+        <req>Clean Python interface via DocumentParser class</req>
+        <req>Returns structured ParseResult with chunks, tables, formulas</req>
+        <req>Error handling for corrupt or unsupported files</req>
+        <req>Logging for parse operations</req>
+      </requirements>
+    </criterion>
+    <criterion id="AC6" title="Tests Pass">
+      <requirements>
+        <req>Unit tests for Excel parser cover formulas, multi-sheet, tables</req>
+        <req>Unit tests for PDF parser cover native text, OCR, tables</req>
+        <req>Integration tests with real document samples</req>
+        <req>Minimum 80% coverage on new parser code</req>
+      </requirements>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Document Processing</section>
+        <snippet>Docling 2.15+ for RAG-optimized parsing. Preserves Excel formulas, table extraction, OCR built-in. Parser interface: DocumentParser protocol with parse() -> ParseResult containing chunks, tables, formulas.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Services and Modules</section>
+        <snippet>parsers/ module contains docling_parser.py, excel_parser.py, pdf_parser.py. Uses Pydantic models for ChunkData (content, chunk_type, page_number, sheet_name, cell_reference).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Data Models</section>
+        <snippet>document_chunks table: id, document_id, chunk_index, content, chunk_type (text/table/formula/image), metadata JSONB, page_number, sheet_name, cell_reference, embedding vector(3072).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Workflows</section>
+        <snippet>Parse job downloads from GCS -> Docling parses -> chunks stored in PostgreSQL. Status flow: pending -> parsing -> parsed. Chunk types: text, table, formula, image.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Document Parser</section>
+        <snippet>Docling selected for RAG-optimized document parsing. Supported formats: Excel (.xlsx, .xls) with formula preservation, PDF (native + scanned with OCR), Word (.docx, .doc), Images (PNG, JPG) with OCR.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR-DOC-004</section>
+        <snippet>Document Processing: Automatic background processing on upload, OCR for scanned documents, Excel formula extraction and preservation, processing status indication.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E3.md</path>
+        <title>Epic 3 Definition</title>
+        <section>Technical Context</section>
+        <snippet>Documents stored at gs://manda-documents-dev/{project_id}/{folder_path}/{filename}. Processing status values: pending, processing, completed, failed. E3.2 is Docling integration story.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/gcs/client.ts</path>
+        <kind>service</kind>
+        <symbol>getSignedDownloadUrl, downloadFileToLocal</symbol>
+        <lines>77-193</lines>
+        <reason>GCS client showing signed URL generation and download patterns. Python parser will need to download files from GCS to temporary location before parsing.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/pgboss/handlers/document-parse.ts</path>
+        <kind>handler</kind>
+        <symbol>documentParseHandler, DocumentParseJobPayload</symbol>
+        <reason>Existing placeholder parse handler in TypeScript. Python implementation will replace/complement this with actual Docling parsing logic.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/pgboss/jobs.ts</path>
+        <kind>types</kind>
+        <symbol>JOB_TYPES.DOCUMENT_PARSE, DocumentParseJobPayload</symbol>
+        <lines>45-82</lines>
+        <reason>Defines job payload schema for document parsing. Python parser will receive same payload structure: document_id, project_id, gcs_path, file_type.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/supabase/database.types.ts</path>
+        <kind>types</kind>
+        <symbol>Documents table type</symbol>
+        <reason>TypeScript types for documents table. Python will create chunks linked to document_id with same schema patterns.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="python">
+        <note>New dependencies for E3.2 (extends E3.1 base)</note>
+        <package name="docling" version=">=2.15.0">RAG-optimized document parser</package>
+        <package name="openpyxl" version=">=3.1.5">Enhanced Excel parsing with formulas</package>
+        <package name="python-docx" version=">=1.1.2">Word document support</package>
+        <package name="tiktoken" version=">=0.9.0">Token counting for chunking</package>
+        <package name="pillow" version=">=11.0.0">Image processing for OCR</package>
+        <package name="pytesseract" version=">=0.3.13">OCR engine binding (requires tesseract system dep)</package>
+      </ecosystem>
+      <ecosystem name="system">
+        <note>System-level dependencies</note>
+        <package name="tesseract-ocr">OCR engine for scanned documents</package>
+        <package name="poppler-utils">PDF utilities (pdftotext, pdfimages)</package>
+      </ecosystem>
+      <ecosystem name="inherited-from-e3-1">
+        <package name="fastapi" version=">=0.121.0">Web framework</package>
+        <package name="pydantic" version=">=2.12.0">Data validation</package>
+        <package name="google-cloud-storage" version=">=2.19.0">GCS download</package>
+        <package name="structlog" version=">=25.1.0">Logging</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint category="architecture">
+      <rule>Parser module lives in manda-processing/src/parsers/</rule>
+      <rule>Uses Pydantic models for all data structures (ChunkData, ParseResult, etc.)</rule>
+      <rule>Downloads files from GCS to temp directory, processes, then cleans up</rule>
+      <rule>Parser is stateless - receives file path, returns ParseResult</rule>
+    </constraint>
+    <constraint category="performance">
+      <rule>Document parse time target: less than 30s for 50-page PDF</rule>
+      <rule>Chunk size: 512-1024 tokens for optimal embedding</rule>
+      <rule>Use async I/O for GCS downloads</rule>
+      <rule>Temp files must be cleaned up after parsing</rule>
+    </constraint>
+    <constraint category="data-integrity">
+      <rule>Preserve original Excel formulas as text (e.g., "=SUM(A1:A10)")</rule>
+      <rule>Record precise source attribution: page number, sheet name, cell reference</rule>
+      <rule>Chunk type must be accurately classified (text, table, formula, image)</rule>
+      <rule>Never split tables across chunks</rule>
+    </constraint>
+    <constraint category="compatibility">
+      <rule>ChunkData schema must match document_chunks table in PostgreSQL</rule>
+      <rule>chunk_type values: 'text', 'table', 'formula', 'image' (matches tech spec)</rule>
+      <rule>Integrate with E3.1 FastAPI service and job queue</rule>
+    </constraint>
+    <constraint category="error-handling">
+      <rule>Graceful handling of corrupt or password-protected files</rule>
+      <rule>Structured error logging with document context</rule>
+      <rule>Return partial results if some pages/sheets fail</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="DocumentParser" kind="Protocol">
+      <signature>
+        class DocumentParser(Protocol):
+            async def parse(self, file_path: Path, file_type: str) -> ParseResult:
+                """Parse document and return structured chunks."""
+                ...
+      </signature>
+      <path>manda-processing/src/parsers/__init__.py</path>
+    </interface>
+    <interface name="ParseResult" kind="Pydantic model">
+      <signature>
+        class ParseResult(BaseModel):
+            chunks: list[ChunkData]
+            tables: list[TableData]
+            formulas: list[FormulaData]
+            metadata: dict
+      </signature>
+      <path>manda-processing/src/parsers/__init__.py</path>
+    </interface>
+    <interface name="ChunkData" kind="Pydantic model">
+      <signature>
+        class ChunkData(BaseModel):
+            content: str
+            chunk_type: Literal["text", "table", "formula", "image"]
+            chunk_index: int
+            page_number: Optional[int] = None
+            sheet_name: Optional[str] = None
+            cell_reference: Optional[str] = None
+            metadata: dict = Field(default_factory=dict)
+      </signature>
+      <path>manda-processing/src/parsers/__init__.py</path>
+    </interface>
+    <interface name="TableData" kind="Pydantic model">
+      <signature>
+        class TableData(BaseModel):
+            content: str  # Markdown or structured representation
+            rows: int
+            cols: int
+            headers: list[str]
+            sheet_name: Optional[str] = None
+      </signature>
+      <path>manda-processing/src/parsers/__init__.py</path>
+    </interface>
+    <interface name="FormulaData" kind="Pydantic model">
+      <signature>
+        class FormulaData(BaseModel):
+            formula: str  # e.g., "=SUM(A1:A10)"
+            cell_reference: str  # e.g., "B15"
+            sheet_name: str
+            result_value: Optional[str] = None
+      </signature>
+      <path>manda-processing/src/parsers/__init__.py</path>
+    </interface>
+    <interface name="DoclingParser" kind="class">
+      <signature>
+        class DoclingParser:
+            def __init__(self, config: Settings)
+            async def parse(self, file_path: Path, file_type: str) -> ParseResult
+            def _extract_chunks(self, result) -> list[ChunkData]
+            def _extract_tables(self, result) -> list[TableData]
+            def _extract_formulas(self, result, file_type: str) -> list[FormulaData]
+      </signature>
+      <path>manda-processing/src/parsers/docling_parser.py</path>
+    </interface>
+    <interface name="Chunker" kind="class">
+      <signature>
+        class Chunker:
+            def __init__(self, max_tokens: int = 1024, min_tokens: int = 512)
+            def chunk_text(self, text: str, metadata: dict) -> list[ChunkData]
+            def count_tokens(self, text: str) -> int
+      </signature>
+      <path>manda-processing/src/parsers/chunker.py</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use pytest with pytest-asyncio for async parser tests. Structure tests in manda-processing/tests/unit/test_parsers/ and tests/integration/test_parsers/. Create test fixtures in tests/fixtures/ with sample documents (simple.pdf, financial.xlsx with formulas, scanned.pdf). Target 80% coverage on parser module. Mock GCS downloads in unit tests. Use real documents in integration tests. Follow AAA pattern (Arrange, Act, Assert).
+    </standards>
+    <locations>
+      <location>manda-processing/tests/fixtures/simple.pdf</location>
+      <location>manda-processing/tests/fixtures/financial.xlsx</location>
+      <location>manda-processing/tests/fixtures/scanned.pdf</location>
+      <location>manda-processing/tests/fixtures/multisheet.xlsx</location>
+      <location>manda-processing/tests/unit/test_parsers/test_docling_parser.py</location>
+      <location>manda-processing/tests/unit/test_parsers/test_excel_parser.py</location>
+      <location>manda-processing/tests/unit/test_parsers/test_pdf_parser.py</location>
+      <location>manda-processing/tests/unit/test_parsers/test_chunker.py</location>
+      <location>manda-processing/tests/integration/test_parsers/test_full_parse.py</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test Docling parses simple PDF and returns chunks</idea>
+      <idea ac="AC1">Test Docling parses XLSX file with formulas</idea>
+      <idea ac="AC1">Test Docling handles Word documents</idea>
+      <idea ac="AC1">Test parser gracefully handles corrupt file</idea>
+      <idea ac="AC2">Test Excel parser extracts formulas as text (=SUM, =VLOOKUP)</idea>
+      <idea ac="AC2">Test multi-sheet workbook creates separate chunks per sheet</idea>
+      <idea ac="AC2">Test table extraction preserves row/column structure</idea>
+      <idea ac="AC2">Test cell references are recorded in metadata</idea>
+      <idea ac="AC3">Test native PDF text extraction</idea>
+      <idea ac="AC3">Test OCR extracts text from scanned PDF</idea>
+      <idea ac="AC3">Test page numbers in chunk metadata</idea>
+      <idea ac="AC3">Test table extraction from PDF</idea>
+      <idea ac="AC4">Test chunker respects 512-1024 token range</idea>
+      <idea ac="AC4">Test chunker preserves paragraph boundaries</idea>
+      <idea ac="AC4">Test tables are not split across chunks</idea>
+      <idea ac="AC4">Test chunk_type classification is accurate</idea>
+      <idea ac="AC5">Test ParseResult contains all required fields</idea>
+      <idea ac="AC5">Test error handling returns structured error response</idea>
+      <idea ac="AC5">Test logging includes document context</idea>
+      <idea ac="AC6">Integration test: parse real financial Excel file</idea>
+      <idea ac="AC6">Integration test: parse multi-page PDF with tables</idea>
+    </ideas>
+  </tests>
+</story-context>
