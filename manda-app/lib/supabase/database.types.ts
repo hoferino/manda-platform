@@ -168,6 +168,59 @@ export type Database = {
         }
         Relationships: []
       }
+      document_chunks: {
+        Row: {
+          cell_reference: string | null
+          chunk_index: number
+          chunk_type: string
+          content: string
+          created_at: string
+          document_id: string
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          page_number: number | null
+          sheet_name: string | null
+          token_count: number | null
+        }
+        Insert: {
+          cell_reference?: string | null
+          chunk_index: number
+          chunk_type?: string
+          content: string
+          created_at?: string
+          document_id: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          page_number?: number | null
+          sheet_name?: string | null
+          token_count?: number | null
+        }
+        Update: {
+          cell_reference?: string | null
+          chunk_index?: number
+          chunk_type?: string
+          content?: string
+          created_at?: string
+          document_id?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          page_number?: number | null
+          sheet_name?: string | null
+          token_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           category: string | null
@@ -180,9 +233,12 @@ export type Database = {
           gcs_object_path: string | null
           id: string
           irl_item_id: string | null
+          last_completed_stage: string | null
           mime_type: string | null
           name: string
+          processing_error: Json | null
           processing_status: string | null
+          retry_history: Json | null
           updated_at: string
           upload_status: string | null
           user_id: string
@@ -198,9 +254,12 @@ export type Database = {
           gcs_object_path?: string | null
           id?: string
           irl_item_id?: string | null
+          last_completed_stage?: string | null
           mime_type?: string | null
           name: string
+          processing_error?: Json | null
           processing_status?: string | null
+          retry_history?: Json | null
           updated_at?: string
           upload_status?: string | null
           user_id: string
@@ -216,9 +275,12 @@ export type Database = {
           gcs_object_path?: string | null
           id?: string
           irl_item_id?: string | null
+          last_completed_stage?: string | null
           mime_type?: string | null
           name?: string
+          processing_error?: Json | null
           processing_status?: string | null
+          retry_history?: Json | null
           updated_at?: string
           upload_status?: string | null
           user_id?: string
@@ -240,47 +302,159 @@ export type Database = {
           },
         ]
       }
+      financial_metrics: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          document_id: string
+          finding_id: string | null
+          fiscal_quarter: number | null
+          fiscal_year: number | null
+          id: string
+          is_actual: boolean | null
+          metadata: Json | null
+          metric_category: Database["public"]["Enums"]["metric_category"]
+          metric_name: string
+          notes: string | null
+          period_end: string | null
+          period_start: string | null
+          period_type: Database["public"]["Enums"]["period_type"] | null
+          source_cell: string | null
+          source_formula: string | null
+          source_page: number | null
+          source_sheet: string | null
+          source_table_index: number | null
+          unit: string | null
+          updated_at: string | null
+          value: number | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          document_id: string
+          finding_id?: string | null
+          fiscal_quarter?: number | null
+          fiscal_year?: number | null
+          id?: string
+          is_actual?: boolean | null
+          metadata?: Json | null
+          metric_category: Database["public"]["Enums"]["metric_category"]
+          metric_name: string
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          period_type?: Database["public"]["Enums"]["period_type"] | null
+          source_cell?: string | null
+          source_formula?: string | null
+          source_page?: number | null
+          source_sheet?: string | null
+          source_table_index?: number | null
+          unit?: string | null
+          updated_at?: string | null
+          value?: number | null
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          document_id?: string
+          finding_id?: string | null
+          fiscal_quarter?: number | null
+          fiscal_year?: number | null
+          id?: string
+          is_actual?: boolean | null
+          metadata?: Json | null
+          metric_category?: Database["public"]["Enums"]["metric_category"]
+          metric_name?: string
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          period_type?: Database["public"]["Enums"]["period_type"] | null
+          source_cell?: string | null
+          source_formula?: string | null
+          source_page?: number | null
+          source_sheet?: string | null
+          source_table_index?: number | null
+          unit?: string | null
+          updated_at?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_metrics_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_metrics_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       findings: {
         Row: {
+          chunk_id: string | null
           confidence: number | null
           created_at: string
           deal_id: string
           document_id: string | null
+          domain: Database["public"]["Enums"]["finding_domain_enum"] | null
           embedding: string | null
+          finding_type: Database["public"]["Enums"]["finding_type_enum"] | null
           id: string
           metadata: Json | null
           page_number: number | null
           source_document: string | null
           text: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
+          chunk_id?: string | null
           confidence?: number | null
           created_at?: string
           deal_id: string
           document_id?: string | null
+          domain?: Database["public"]["Enums"]["finding_domain_enum"] | null
           embedding?: string | null
+          finding_type?: Database["public"]["Enums"]["finding_type_enum"] | null
           id?: string
           metadata?: Json | null
           page_number?: number | null
           source_document?: string | null
           text: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
+          chunk_id?: string | null
           confidence?: number | null
           created_at?: string
           deal_id?: string
           document_id?: string | null
+          domain?: Database["public"]["Enums"]["finding_domain_enum"] | null
           embedding?: string | null
+          finding_type?: Database["public"]["Enums"]["finding_type_enum"] | null
           id?: string
           metadata?: Json | null
           page_number?: number | null
           source_document?: string | null
           text?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "findings_chunk_id_fkey"
+            columns: ["chunk_id"]
+            isOneToOne: false
+            referencedRelation: "document_chunks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "findings_deal_id_fkey"
             columns: ["deal_id"]
@@ -293,6 +467,44 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          deal_id: string
+          id: string
+          name: string
+          parent_path: string | null
+          path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          id?: string
+          name: string
+          parent_path?: string | null
+          path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          id?: string
+          name?: string
+          parent_path?: string | null
+          path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
         ]
@@ -528,7 +740,24 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      finding_domain_enum:
+        | "financial"
+        | "operational"
+        | "market"
+        | "legal"
+        | "technical"
+      finding_type_enum:
+        | "metric"
+        | "fact"
+        | "risk"
+        | "opportunity"
+        | "contradiction"
+      metric_category:
+        | "income_statement"
+        | "balance_sheet"
+        | "cash_flow"
+        | "ratio"
+      period_type: "annual" | "quarterly" | "monthly" | "ytd"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -655,6 +884,28 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      finding_domain_enum: [
+        "financial",
+        "operational",
+        "market",
+        "legal",
+        "technical",
+      ],
+      finding_type_enum: [
+        "metric",
+        "fact",
+        "risk",
+        "opportunity",
+        "contradiction",
+      ],
+      metric_category: [
+        "income_statement",
+        "balance_sheet",
+        "cash_flow",
+        "ratio",
+      ],
+      period_type: ["annual", "quarterly", "monthly", "ytd"],
+    },
   },
 } as const

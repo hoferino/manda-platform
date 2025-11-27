@@ -22,8 +22,11 @@ import {
   ViewToggle,
   useViewPreference,
   IRLChecklistPanel,
+  CreateFolderDialog,
   type DataRoomView,
 } from '@/components/data-room'
+import { createFolder } from '@/lib/api/folders'
+import { toast } from 'sonner'
 
 interface DataRoomWrapperProps {
   projectId: string
@@ -52,6 +55,10 @@ export function DataRoomWrapper({ projectId }: DataRoomWrapperProps) {
     folders: { selectedPath: null, scrollTop: 0 },
     buckets: { expandedBuckets: [], scrollTop: 0 },
   })
+
+  // Create folder dialog state (for Buckets view)
+  const [createFolderOpen, setCreateFolderOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Refs for scroll containers
   const foldersScrollRef = useRef<HTMLDivElement>(null)
@@ -105,6 +112,32 @@ export function DataRoomWrapper({ projectId }: DataRoomWrapperProps) {
     }))
   }, [])
 
+  // Handle create folder/bucket from Buckets view
+  const handleCreateBucket = useCallback(() => {
+    setCreateFolderOpen(true)
+  }, [])
+
+  // Handle create folder confirmation
+  const handleCreateFolderConfirm = useCallback(
+    async (name: string) => {
+      try {
+        const result = await createFolder(projectId, name, null) // null parent = root level bucket
+        if (result.error) {
+          toast.error(result.error)
+          return
+        }
+        toast.success(`Created bucket "${name}"`)
+        setCreateFolderOpen(false)
+        // Trigger refresh by incrementing key
+        setRefreshKey((k) => k + 1)
+      } catch (error) {
+        console.error('Error creating bucket:', error)
+        toast.error('Failed to create bucket')
+      }
+    },
+    [projectId]
+  )
+
   return (
     <div className="flex h-full flex-col">
       {/* View Toggle Header (AC1) */}
@@ -137,9 +170,11 @@ export function DataRoomWrapper({ projectId }: DataRoomWrapperProps) {
               className="h-full overflow-auto"
             >
               <BucketsView
+                key={refreshKey}
                 projectId={projectId}
                 expandedBuckets={context.buckets.expandedBuckets}
                 onBucketToggle={handleBucketToggle}
+                onCreateFolder={handleCreateBucket}
               />
             </div>
           )}
@@ -148,6 +183,14 @@ export function DataRoomWrapper({ projectId }: DataRoomWrapperProps) {
         {/* IRL Checklist Panel (E2.8 - AC1, AC6) */}
         <IRLChecklistPanel projectId={projectId} />
       </div>
+
+      {/* Create Bucket Dialog */}
+      <CreateFolderDialog
+        open={createFolderOpen}
+        onOpenChange={setCreateFolderOpen}
+        onConfirm={handleCreateFolderConfirm}
+        parentPath={null}
+      />
     </div>
   )
 }

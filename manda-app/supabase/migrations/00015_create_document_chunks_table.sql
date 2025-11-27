@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     cell_reference TEXT,
     token_count INTEGER,
     metadata JSONB DEFAULT '{}',
-    embedding vector(1536),  -- OpenAI text-embedding-3-small dimension, populated by E3.4
+    embedding vector(3072),  -- OpenAI text-embedding-3-large dimension (3072), populated by E3.4
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     -- Ensure unique chunks per document
@@ -70,8 +70,16 @@ CREATE POLICY "Service role has full access to chunks"
     FOR ALL
     USING (auth.jwt() ->> 'role' = 'service_role');
 
+-- HNSW index for vector similarity search
+-- pgvector has 2000 dimension limit for indexes, so we cast to halfvec for indexing
+-- This allows 3072 dimensions while still enabling fast similarity search
+-- See: https://github.com/pgvector/pgvector/issues/461
+CREATE INDEX IF NOT EXISTS idx_chunks_embedding ON document_chunks
+    USING hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops)
+    WITH (m = 16, ef_construction = 64);
+
 -- Add comment
 COMMENT ON TABLE document_chunks IS 'Stores parsed document chunks for semantic search and analysis (E3.3)';
 COMMENT ON COLUMN document_chunks.chunk_type IS 'Type of content: text, table, formula, or image';
-COMMENT ON COLUMN document_chunks.embedding IS 'Vector embedding for semantic search (populated by E3.4)';
+COMMENT ON COLUMN document_chunks.embedding IS 'Vector embedding (3072 dimensions) for semantic search using OpenAI text-embedding-3-large. Uses HNSW index with halfvec cast to bypass 2000-dim limit.';
 COMMENT ON COLUMN document_chunks.metadata IS 'Additional metadata as JSONB (source_file, is_table, ocr_processed, etc.)';

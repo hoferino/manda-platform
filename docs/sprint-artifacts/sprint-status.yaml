@@ -1,9 +1,98 @@
 # Sprint Status - Manda Platform Implementation
-# Generated: 2025-11-25
-# Last Updated: 2025-11-26
+# Generated: 2025-11-28
+# Last Updated: 2025-11-28
 # Project: Manda
 # Tracking System: file-system
 # Story Location: docs/sprint-artifacts
+
+# ===================
+# BUSINESS PRINCIPLES
+# ===================
+# Core principles that guide sprint planning and execution
+principles:
+  - id: BP-001
+    title: Zero Technical Debt Policy
+    established: 2025-11-28
+    description: |
+      We do not carry unnecessary technical debt between sprints.
+      All identified tech debt items must be addressed before starting new feature epics.
+      Rationale: Accumulated debt slows velocity, increases bug risk, and compounds over time.
+      Implementation:
+      - Backlog items from retrospectives are resolved in dedicated tech debt sprints
+      - New epics cannot begin until backlog is clear or explicitly deferred with justification
+      - Code review includes tech debt assessment
+
+# ===================
+# TECH DEBT SPRINT
+# ===================
+# Sprint dedicated to resolving backlog items before Epic 4
+tech_debt_sprint:
+  name: "Tech Debt Resolution Sprint"
+  started: 2025-11-28
+  target_completion: 2025-11-29
+  goal: Clear all medium/high priority backlog items before Epic 4
+  stories:
+    - id: TD-001
+      backlog_ref: BL-001
+      title: Add E2E tests for Data Room
+      status: todo
+      priority: medium
+      estimate: 4h
+      scope: |
+        - Set up Playwright in manda-app
+        - Write E2E tests for document upload flow
+        - Write E2E tests for folder/bucket operations
+        - Add to CI pipeline
+
+    - id: TD-002
+      backlog_ref: BL-002
+      title: Add rate limiting on document endpoints
+      status: todo
+      priority: medium
+      estimate: 2h
+      scope: |
+        - Add rate limiting middleware to Next.js API routes
+        - Configure limits: 10 uploads/min, 100 downloads/min per user
+        - Add 429 response handling in frontend
+
+    - id: TD-003
+      backlog_ref: BL-004
+      title: Implement test sharding / parallel execution
+      status: todo
+      priority: medium
+      estimate: 2h
+      scope: |
+        - Configure Vitest for parallel test execution
+        - Set up test sharding for CI (split by file)
+        - Target: <60s full test run
+
+    - id: TD-004
+      backlog_ref: BL-005
+      title: Create shared Supabase test utilities
+      status: todo
+      priority: medium
+      estimate: 2h
+      scope: |
+        - Create __tests__/utils/supabase-mock.ts
+        - Standardize mock patterns across components
+        - Refactor existing tests to use shared utilities
+
+# Deferred items (low priority - will address in future sprints)
+deferred_backlog:
+  - id: BL-003
+    title: Monitor GCS costs as usage grows
+    priority: low
+    defer_reason: No production traffic yet, will address before launch
+
+  - id: BL-006
+    title: Error message consistency catalog
+    priority: low
+    defer_reason: Nice-to-have, can address incrementally
+
+  - id: BL-007
+    title: Pipeline visualization tool
+    priority: low
+    defer_reason: Current logging sufficient for MVP debugging
 
 # ===================
 # BACKLOG ITEMS
@@ -37,7 +126,40 @@ backlog:
       Google Cloud Storage costs should be monitored as document volume increases.
       Set up billing alerts and consider lifecycle policies for old documents.
 
-# generated: 2025-11-25
+  # From Epic 3 Retrospective (2025-11-28)
+  - id: BL-004
+    title: Test sharding / parallel execution
+    priority: medium
+    source: epic-3-retrospective
+    description: |
+      550+ tests causing slower CI runs.
+      Implement test sharding or parallel execution.
+
+  - id: BL-005
+    title: Shared Supabase test utilities
+    priority: medium
+    source: epic-3-retrospective
+    description: |
+      Mocking Supabase client required repetitive setup across tests.
+      Create shared test utilities for consistency.
+
+  - id: BL-006
+    title: Error message consistency catalog
+    priority: low
+    source: epic-3-retrospective
+    description: |
+      Some error messages are technical, others user-friendly.
+      Create catalog for consistency (potential i18n foundation).
+
+  - id: BL-007
+    title: Pipeline visualization tool
+    priority: low
+    source: epic-3-retrospective
+    description: |
+      5-stage pipeline is complex to debug.
+      Consider enhanced logging or visualization tool.
+
+# generated: 2025-11-28
 # project: Manda
 # project_key: manda-platform
 # tracking_system: file-system
@@ -48,6 +170,7 @@ backlog:
 # Epic Status:
 #   - backlog: Epic exists in epic file but not contexted
 #   - contexted: Epic tech context created (required before drafting stories)
+#   - done: All stories in epic completed
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
@@ -68,7 +191,7 @@ backlog:
 # - SM typically drafts next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', SM reviews, then Dev moves to 'done'
 
-generated: 2025-11-24
+generated: 2025-11-28
 project: Manda
 project_key: manda-platform
 tracking_system: file-system
@@ -114,13 +237,17 @@ development_status:
   e1-9-jira-id: SCRUM-19
   epic-1-retrospective: completed
 
-  # Epic 2: Document Ingestion & Storage (8 stories) - Uses GCS (architecture decision 2025-11-25)
+  # Epic 2: Document Ingestion & Storage (8 stories) - COMPLETED 2025-11-26
+  # Uses GCS (architecture decision 2025-11-25)
   # COURSE CORRECTION v2.6 (2025-11-26):
   # - Unified bucket/folder model: folder_path is single source of truth
   # - Buckets = top-level folders (same data, different view)
   # - Removed deal_type from wizard (didn't drive behavior)
   # - Empty projects have empty data rooms (no default buckets)
   # - Removed category column from documents table
+  # COURSE CORRECTION v2.7 (2025-11-28):
+  # - Persistent folder storage with folders table
+  # - Bug fixes: Buckets tab click, New Bucket button
   epic-2: done
   epic-2-jira-id: SCRUM-21
   epic-2-completed: 2025-11-26
@@ -165,7 +292,7 @@ development_status:
     - XHR for upload progress (Fetch API limitation)
     - Zustand + localStorage for upload persistence
 
-  # Epic 3: Intelligent Document Processing (9 stories)
+  # Epic 3: Intelligent Document Processing (9 stories) - COMPLETED 2025-11-28
   # CONTEXTED: 2025-11-26
   # Tech Spec: docs/sprint-artifacts/tech-spec-epic-E3.md
   # Key Decisions:
@@ -174,15 +301,11 @@ development_status:
   # - pgvector for embeddings (staying with Supabase for MVP)
   # - Docling for document parsing with OCR
   # - 3 new tables: document_chunks, findings, financial_metrics
-  epic-3: contexted
+  epic-3: done
   epic-3-jira-id: SCRUM-30
   epic-3-contexted: 2025-11-26
+  epic-3-completed: 2025-11-28
   epic-3-tech-spec: docs/sprint-artifacts/tech-spec-epic-E3.md
-  epic-3-preparation:
-    - FastAPI service setup for Python processing pipeline
-    - Reuse Zustand patterns for processing queue state
-    - WebSocket infrastructure for real-time status updates
-    - Consider batch processing for multiple documents
   e3-1-set-up-fastapi-backend-with-pg-boss-job-queue: done
   e3-1-jira-id: SCRUM-31
   e3-1-drafted: 2025-11-26
@@ -326,7 +449,24 @@ development_status:
     - API endpoints for querying metrics by project/document/category
     - 82 tests passing with 87% coverage
     Code review approved: Fixed PDF table financial extraction trigger
-  epic-3-retrospective: optional
+  epic-3-retrospective: completed
+  epic-3-retrospective-completed: 2025-11-28
+  epic-3-notes: |
+    All 9 stories completed. Duration: 3 days (Nov 26-28).
+    Key deliverables:
+    - FastAPI Python backend (manda-processing service)
+    - Document parsing with Docling (PDF, Word, Excel)
+    - Embeddings with OpenAI text-embedding-3-large (3072 dims)
+    - LLM analysis with tiered Gemini 2.5 (Flash/Pro/Lite)
+    - Financial metric extraction (EN+DE patterns)
+    - Real-time processing status via Supabase Realtime
+    - Processing queue visibility with cancel/retry
+    - Stage-aware retry logic with error classification
+    - 550+ tests with 85-93% backend coverage
+    Key patterns established:
+    - Job handler pattern with error classification
+    - Supabase Realtime subscription hook
+    - Stage-aware processing pipeline
 
   # Epic 4: Collaborative Knowledge Workflow (14 stories)
   epic-4: backlog

@@ -49,4 +49,11 @@ Document storage uses Google Cloud Storage instead of Supabase Storage for:
 **Architecture Update (v2.6, 2025-11-26):**
 > **Unified Bucket/Folder Model:** `folder_path` is the single source of truth for document organization. Buckets = top-level folders. The Folder Structure view and Buckets view are two different presentations of the same underlying data. Creating a top-level folder creates a bucket and vice versa. Empty projects start with no folders/buckets (no default categories).
 
+**Architecture Update (v2.7, 2025-11-28):**
+> **Persistent Folder Storage:** Folders are now persisted in their own `folders` table (migration `00020_create_folders_table.sql`). This enables empty folders to exist even without documents. Both Folder View and Bucket View load data from the same sources (`documents` + `folders` tables), ensuring full parity. All CRUD operations (create, rename, delete) work identically in both views. Subfolders are visible in both views.
+
+**Bug Fixes (v2.7.1, 2025-11-28):**
+> - **Buckets Tab Click Fix:** Removed `Tooltip` wrappers from `TabsTrigger` elements in `view-toggle.tsx` that were interfering with click events.
+> - **New Bucket Button:** Added `onCreateFolder` prop to `BucketsView` in `data-room-wrapper.tsx` with `CreateFolderDialog` for creating new buckets directly from Buckets view.
+
 **Full Details:** See [docs/epics.md](../../epics.md) lines 785-1335

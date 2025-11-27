@@ -36,6 +36,13 @@ import {
   deleteDocument,
   downloadDocument,
 } from '@/lib/api/documents'
+import {
+  getFolders,
+  createFolder as createFolderApi,
+  renameFolder as renameFolderApi,
+  deleteFolder as deleteFolderApi,
+  type Folder,
+} from '@/lib/api/folders'
 import { createClient } from '@/lib/supabase/client'
 import {
   useDocumentUpdates,
@@ -73,6 +80,7 @@ export function DataRoomClient({
   const [documents, setDocuments] = useState<Document[]>([])
   const [allDocuments, setAllDocuments] = useState<Document[]>([])
   const [folders, setFolders] = useState<FolderNode[]>([])
+  const [dbFolders, setDbFolders] = useState<Folder[]>([]) // Folders from database
   const [isLoading, setIsLoading] = useState(true)
 
   // Dialog states
@@ -170,19 +178,24 @@ export function DataRoomClient({
     }
   )
 
-  // Load documents from Supabase
+  // Load documents and folders from Supabase
   const loadDocuments = useCallback(async () => {
     setIsLoading(true)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('deal_id', projectId)
-        .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error loading documents:', error)
+      // Load documents and folders in parallel
+      const [documentsResult, foldersResult] = await Promise.all([
+        supabase
+          .from('documents')
+          .select('*')
+          .eq('deal_id', projectId)
+          .order('created_at', { ascending: false }),
+        getFolders(projectId),
+      ])
+
+      if (documentsResult.error) {
+        console.error('Error loading documents:', documentsResult.error)
         toast.error('Failed to load documents')
         return
       }
@@ -190,7 +203,7 @@ export function DataRoomClient({
       // Transform to Document type
       // E3.6: Map all processing status fields including error and findings count
       // Note: processing_error and findings_count may not exist in schema yet
-      const docs: Document[] = (data || []).map((doc) => ({
+      const docs: Document[] = (documentsResult.data || []).map((doc) => ({
         id: doc.id,
         projectId: doc.deal_id,
         name: doc.name,
@@ -208,11 +221,20 @@ export function DataRoomClient({
 
       setAllDocuments(docs)
 
-      // Extract unique folder paths and build tree
-      const folderPaths = docs
+      // Store database folders
+      if (foldersResult.folders) {
+        setDbFolders(foldersResult.folders)
+      }
+
+      // Merge folder paths from documents AND from database
+      const docFolderPaths = docs
         .map((d) => d.folderPath)
         .filter((p): p is string => p !== null)
-      const tree = buildFolderTree(folderPaths)
+      const dbFolderPaths = foldersResult.folders.map((f) => f.path)
+
+      // Combine unique paths
+      const allFolderPaths = [...new Set([...docFolderPaths, ...dbFolderPaths])]
+      const tree = buildFolderTree(allFolderPaths)
 
       // Add document counts to folders
       addDocumentCounts(tree, docs)
@@ -260,49 +282,63 @@ export function DataRoomClient({
 
   const handleCreateFolderConfirm = useCallback(
     async (name: string) => {
-      const newPath = createFolderParent ? `${createFolderParent}/${name}` : name
+      try {
+        // Create folder in database via API
+        const result = await createFolderApi(projectId, name, createFolderParent)
 
-      // Create a placeholder document to establish the folder
-      // (folders are virtual - derived from document folder_path values)
-      // For now, we just add the folder to the tree locally
-      setFolders((prev) => {
-        const newNode: FolderNode = {
-          id: newPath,
-          name,
-          path: newPath,
-          children: [],
-          documentCount: 0,
+        if (result.error || !result.folder) {
+          toast.error(result.error || 'Failed to create folder')
+          return
         }
 
-        if (!createFolderParent) {
-          // Add to root
-          return [...prev, newNode].sort((a, b) => a.name.localeCompare(b.name))
-        }
+        const newPath = result.folder.path
 
-        // Add to parent folder
-        const addToParent = (nodes: FolderNode[]): FolderNode[] => {
-          return nodes.map((node) => {
-            if (node.path === createFolderParent) {
-              return {
-                ...node,
-                children: [...node.children, newNode].sort((a, b) =>
-                  a.name.localeCompare(b.name)
-                ),
+        // Add to database folders list
+        setDbFolders((prev) => [...prev, result.folder!])
+
+        // Update the folder tree
+        setFolders((prev) => {
+          const newNode: FolderNode = {
+            id: newPath,
+            name,
+            path: newPath,
+            children: [],
+            documentCount: 0,
+          }
+
+          if (!createFolderParent) {
+            // Add to root
+            return [...prev, newNode].sort((a, b) => a.name.localeCompare(b.name))
+          }
+
+          // Add to parent folder
+          const addToParent = (nodes: FolderNode[]): FolderNode[] => {
+            return nodes.map((node) => {
+              if (node.path === createFolderParent) {
+                return {
+                  ...node,
+                  children: [...node.children, newNode].sort((a, b) =>
+                    a.name.localeCompare(b.name)
+                  ),
+                }
               }
-            }
-            if (node.children.length > 0) {
-              return { ...node, children: addToParent(node.children) }
-            }
-            return node
-          })
-        }
-        return addToParent(prev)
-      })
+              if (node.children.length > 0) {
+                return { ...node, children: addToParent(node.children) }
+              }
+              return node
+            })
+          }
+          return addToParent(prev)
+        })
 
-      setCreateFolderOpen(false)
-      toast.success(`Created folder "${name}"`)
+        setCreateFolderOpen(false)
+        toast.success(`Created folder "${name}"`)
+      } catch (error) {
+        console.error('Error creating folder:', error)
+        toast.error('Failed to create folder')
+      }
     },
-    [createFolderParent]
+    [projectId, createFolderParent]
   )
 
   // Handle rename folder
@@ -318,13 +354,41 @@ export function DataRoomClient({
       parts[parts.length - 1] = newName
       const newPath = parts.join('/')
 
-      // Update all documents with old path prefix
-      const docsToUpdate = allDocuments.filter(
-        (d) =>
-          d.folderPath === oldPath || d.folderPath?.startsWith(`${oldPath}/`)
-      )
+      // Find the folder in database
+      const dbFolder = dbFolders.find((f) => f.path === oldPath)
 
       try {
+        // Update folder in database if it exists
+        if (dbFolder) {
+          const result = await renameFolderApi(projectId, dbFolder.id, newName)
+          if (result.error) {
+            toast.error(result.error)
+            return
+          }
+          // Update dbFolders state
+          setDbFolders((prev) =>
+            prev.map((f) => {
+              if (f.path === oldPath) {
+                return { ...f, name: newName, path: newPath }
+              }
+              if (f.path.startsWith(`${oldPath}/`)) {
+                return {
+                  ...f,
+                  path: f.path.replace(oldPath, newPath),
+                  parentPath: f.parentPath?.replace(oldPath, newPath) || null,
+                }
+              }
+              return f
+            })
+          )
+        }
+
+        // Update all documents with old path prefix
+        const docsToUpdate = allDocuments.filter(
+          (d) =>
+            d.folderPath === oldPath || d.folderPath?.startsWith(`${oldPath}/`)
+        )
+
         // Update documents in database
         for (const doc of docsToUpdate) {
           const updatedPath = doc.folderPath!.replace(oldPath, newPath)
@@ -394,7 +458,7 @@ export function DataRoomClient({
         toast.error('Failed to rename folder')
       }
     },
-    [renameFolderPath, allDocuments, selectedPath]
+    [projectId, renameFolderPath, allDocuments, dbFolders, selectedPath]
   )
 
   // Handle delete folder
@@ -416,6 +480,9 @@ export function DataRoomClient({
       const docsInFolder = allDocuments.filter(
         (d) => d.folderPath === path || d.folderPath?.startsWith(`${path}/`)
       )
+
+      // Find the folder in database
+      const dbFolder = dbFolders.find((f) => f.path === path)
 
       try {
         if (documentAction === 'delete') {
@@ -453,6 +520,21 @@ export function DataRoomClient({
           )
         }
 
+        // Delete folder from database if it exists
+        if (dbFolder) {
+          const result = await deleteFolderApi(projectId, dbFolder.id)
+          if (!result.success) {
+            console.error('Failed to delete folder from database:', result.error)
+            // Continue anyway - folder tree will be cleaned up
+          }
+          // Remove from dbFolders state
+          setDbFolders((prev) =>
+            prev.filter(
+              (f) => f.path !== path && !f.path.startsWith(`${path}/`)
+            )
+          )
+        }
+
         // Remove folder from tree
         const removeFolder = (nodes: FolderNode[]): FolderNode[] => {
           return nodes
@@ -480,7 +562,7 @@ export function DataRoomClient({
         toast.error('Failed to delete folder')
       }
     },
-    [deleteFolderPath, allDocuments, selectedPath]
+    [projectId, deleteFolderPath, allDocuments, dbFolders, selectedPath]
   )
 
   // Handle document drag-and-drop

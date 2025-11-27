@@ -15,7 +15,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Folders, LayoutGrid } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export type DataRoomView = 'folders' | 'buckets'
 
@@ -96,6 +95,7 @@ export function useViewPreference(projectId: string): [DataRoomView, (view: Data
 
 /**
  * ViewToggle component with icons and accessibility
+ * Note: Removed Tooltip wrappers as they interfere with TabsTrigger click events
  */
 export function ViewToggle({ projectId, value, onChange, className }: ViewToggleProps) {
   const handleValueChange = (newValue: string) => {
@@ -105,46 +105,30 @@ export function ViewToggle({ projectId, value, onChange, className }: ViewToggle
   }
 
   return (
-    <TooltipProvider>
-      <Tabs
-        value={value}
-        onValueChange={handleValueChange}
-        className={className}
-      >
-        <TabsList className="h-9">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <TabsTrigger
-                value="folders"
-                className="gap-2 px-3"
-                aria-label="Switch to folder view"
-              >
-                <Folders className="h-4 w-4" />
-                <span className="hidden sm:inline">Folders</span>
-              </TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="sm:hidden">
-              Folder Structure View
-            </TooltipContent>
-          </Tooltip>
+    <Tabs
+      value={value}
+      onValueChange={handleValueChange}
+      className={className}
+    >
+      <TabsList className="h-9">
+        <TabsTrigger
+          value="folders"
+          className="gap-2 px-3"
+          aria-label="Switch to folder view"
+        >
+          <Folders className="h-4 w-4" />
+          <span className="hidden sm:inline">Folders</span>
+        </TabsTrigger>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <TabsTrigger
-                value="buckets"
-                className="gap-2 px-3"
-                aria-label="Switch to buckets view"
-              >
-                <LayoutGrid className="h-4 w-4" />
-                <span className="hidden sm:inline">Buckets</span>
-              </TabsTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="sm:hidden">
-              Category Buckets View
-            </TooltipContent>
-          </Tooltip>
-        </TabsList>
-      </Tabs>
-    </TooltipProvider>
+        <TabsTrigger
+          value="buckets"
+          className="gap-2 px-3"
+          aria-label="Switch to buckets view"
+        >
+          <LayoutGrid className="h-4 w-4" />
+          <span className="hidden sm:inline">Buckets</span>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   )
 }

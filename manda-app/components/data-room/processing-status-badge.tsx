@@ -64,6 +64,12 @@ const statusConfig: Record<
     animate: true,
     badgeVariant: 'secondary',
   },
+  embedded: {
+    label: 'Embedded',
+    color: 'bg-blue-100 text-blue-700 border-blue-200',
+    icon: CheckCircle2,
+    badgeVariant: 'secondary',
+  },
   analyzing: {
     label: 'Analyzing',
     color: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -91,6 +97,12 @@ const statusConfig: Record<
   },
   analysis_failed: {
     label: 'Analysis Failed',
+    color: 'bg-red-100 text-red-700 border-red-200',
+    icon: AlertCircle,
+    badgeVariant: 'destructive',
+  },
+  embedding_failed: {
+    label: 'Embedding Failed',
     color: 'bg-red-100 text-red-700 border-red-200',
     icon: AlertCircle,
     badgeVariant: 'destructive',
@@ -179,10 +191,12 @@ export function getStatusDescription(status: ProcessingStatus): string {
     parsing: 'Extracting text and structure from document',
     parsed: 'Document parsed, waiting for embedding',
     embedding: 'Generating semantic embeddings',
+    embedded: 'Embeddings generated, waiting for analysis',
     analyzing: 'AI analyzing document content',
     analyzed: 'Analysis complete, finalizing',
     complete: 'All processing complete',
     failed: 'Processing failed',
+    embedding_failed: 'Embedding generation failed',
     analysis_failed: 'AI analysis failed',
   }
   return descriptions[status] || 'Unknown status'

@@ -82,9 +82,9 @@ export function BucketItemList({
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
               <FileText className="mb-2 h-8 w-8 text-muted-foreground" />
-              <p className="font-medium">No documents in this bucket</p>
+              <p className="font-medium">No items in this bucket</p>
               <p className="mb-4 text-sm text-muted-foreground">
-                Upload your first document to this folder
+                Upload documents or create subfolders
               </p>
               <Button size="sm" onClick={onBulkUpload}>
                 <Upload className="mr-2 h-4 w-4" />
@@ -94,6 +94,7 @@ export function BucketItemList({
           ) : (
             items.map((item) => {
               const isUploading = uploadingItemId === item.id
+              const isFolder = item.type === 'folder'
 
               return (
                 <div
@@ -101,22 +102,42 @@ export function BucketItemList({
                   className="flex items-center justify-between px-4 py-3"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-100">
-                      <FileText className="h-4 w-4 text-green-600" />
+                    <div className={cn(
+                      "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full",
+                      isFolder ? "bg-blue-100" : "bg-green-100"
+                    )}>
+                      {isFolder ? (
+                        <Folder className="h-4 w-4 text-blue-600" />
+                      ) : (
+                        <FileText className="h-4 w-4 text-green-600" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{item.name}</p>
+                      {isFolder && (
+                        <p className="text-xs text-muted-foreground">Subfolder</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                    <Badge
-                      variant="secondary"
-                      className="bg-green-100 text-green-700"
-                    >
-                      <Check className="mr-1 h-3 w-3" />
-                      Uploaded
-                    </Badge>
+                    {isFolder ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-blue-100 text-blue-700"
+                      >
+                        <Folder className="mr-1 h-3 w-3" />
+                        Folder
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-700"
+                      >
+                        <Check className="mr-1 h-3 w-3" />
+                        Uploaded
+                      </Badge>
+                    )}
                   </div>
                 </div>
               )

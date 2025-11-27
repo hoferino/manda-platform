@@ -216,10 +216,12 @@ export function getProcessingProgressPercent(status: ProcessingStatus): number {
     parsing: 20,
     parsed: 30,
     embedding: 50,
+    embedded: 60,
     analyzing: 70,
     analyzed: 85,
     complete: 100,
     failed: 0,
+    embedding_failed: 50,
     analysis_failed: 70,
   }
   return statusProgress[status] ?? 0

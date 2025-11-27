@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import { BucketCard, type BucketItem } from './bucket-card'
 import { BucketItemList } from './bucket-item-list'
 import { uploadDocument, type Document } from '@/lib/api/documents'
+import { getFolders } from '@/lib/api/folders'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
@@ -70,27 +71,32 @@ export function BucketsView({
 
   /**
    * Load documents and build folder-based buckets
-   * Buckets = top-level folders (derived from folder_path)
+   * Buckets = top-level folders (derived from folder_path AND folders table)
    */
   const loadBuckets = useCallback(async () => {
     setIsLoading(true)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('deal_id', projectId)
-        .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error loading documents:', error)
+      // Load documents and folders in parallel
+      const [documentsResult, foldersResult] = await Promise.all([
+        supabase
+          .from('documents')
+          .select('*')
+          .eq('deal_id', projectId)
+          .order('created_at', { ascending: false }),
+        getFolders(projectId),
+      ])
+
+      if (documentsResult.error) {
+        console.error('Error loading documents:', documentsResult.error)
         toast.error('Failed to load documents')
         return
       }
 
       // Transform to Document type
       // Note: category field is deprecated (v2.6), folder_path is the source of truth
-      const documents: Document[] = (data || []).map((doc) => ({
+      const documents: Document[] = (documentsResult.data || []).map((doc) => ({
         id: doc.id,
         projectId: doc.deal_id,
         name: doc.name,
@@ -131,19 +137,52 @@ export function BucketsView({
         }
       }
 
+      // Add empty folders from database (folders without documents)
+      // Only add root-level folders (buckets) that don't have any documents yet
+      for (const folder of foldersResult.folders) {
+        const topLevelFolder = getTopLevelFolder(folder.path)
+        if (topLevelFolder && !folderMap.has(topLevelFolder)) {
+          // This is a root folder with no documents - add it as an empty bucket
+          folderMap.set(topLevelFolder, [])
+          subfolderMap.set(topLevelFolder, new Set())
+        }
+        // Track subfolders from database too
+        if (folder.path.includes('/')) {
+          const rootFolder = folder.path.split('/')[0]
+          if (rootFolder && subfolderMap.has(rootFolder)) {
+            const subfolder = folder.path.substring(rootFolder.length + 1).split('/')[0]
+            if (subfolder) {
+              subfolderMap.get(rootFolder)!.add(subfolder)
+            }
+          }
+        }
+      }
+
       // Build buckets from unique top-level folders
       const folderBuckets: FolderBucket[] = Array.from(folderMap.entries())
         .map(([folderName, folderDocs]) => {
           const subfolders = Array.from(subfolderMap.get(folderName) || [])
 
-          // Build items list from documents in this folder
-          const items: BucketItem[] = folderDocs.map((doc, index) => ({
-            id: `${folderName}-${index}`,
-            name: doc.name,
-            status: 'uploaded' as const,
-            documentId: doc.id,
-            documentName: doc.name,
-          }))
+          // Build items list: subfolders first, then documents
+          const items: BucketItem[] = [
+            // Add subfolders as items
+            ...subfolders.map((subfolder) => ({
+              id: `folder-${folderName}/${subfolder}`,
+              name: subfolder,
+              status: 'uploaded' as const,
+              type: 'folder' as const,
+              folderPath: `${folderName}/${subfolder}`,
+            })),
+            // Add documents as items
+            ...folderDocs.map((doc, index) => ({
+              id: `doc-${folderName}-${index}`,
+              name: doc.name,
+              status: 'uploaded' as const,
+              type: 'document' as const,
+              documentId: doc.id,
+              documentName: doc.name,
+            })),
+          ]
 
           return {
             folderName,

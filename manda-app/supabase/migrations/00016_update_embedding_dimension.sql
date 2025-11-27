@@ -12,12 +12,12 @@ DROP INDEX IF EXISTS idx_chunks_embedding;
 ALTER TABLE document_chunks
 ALTER COLUMN embedding TYPE vector(3072);
 
--- Recreate the index with proper dimension
--- Using ivfflat index for cosine similarity search (efficient for ~100k+ vectors)
--- lists parameter: sqrt(num_vectors) is recommended, starting with 100 for initial deployment
+-- Recreate the index with HNSW (required for dimensions > 2000, ivfflat only supports up to 2000)
+-- HNSW is actually faster for queries and doesn't require training, good default choice
+-- m = 16 (connections per layer), ef_construction = 64 (build quality) are reasonable defaults
 CREATE INDEX idx_chunks_embedding ON document_chunks
-    USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100);
+    USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64);
 
 -- Add comment
-COMMENT ON COLUMN document_chunks.embedding IS 'Vector embedding (3072 dimensions) for semantic search using OpenAI text-embedding-3-large (E3.4)';
+COMMENT ON COLUMN document_chunks.embedding IS 'Vector embedding (3072 dimensions) for semantic search using OpenAI text-embedding-3-large (E3.4). Uses HNSW index (ivfflat limited to 2000 dims).';

@@ -3,10 +3,10 @@
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-25
+**Last Updated:** 2025-11-28
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 2.6 (Unified bucket/folder model; removed deal_type from wizard)
+**Version:** 2.7 (Persistent folder storage; full folder/bucket parity)
 
 ---
 
@@ -2102,6 +2102,39 @@ npm install
 ---
 
 ## Changelog
+
+### Version 2.7 (2025-11-28)
+**Persistent Folder Storage - Full Folder/Bucket Parity:**
+- **New `folders` Table:**
+  - Folders are now persisted in their own table (migration `00020_create_folders_table.sql`)
+  - Previously folders were virtual (derived from `document.folder_path` values)
+  - Empty folders now persist even without documents
+  - Schema: `id`, `deal_id`, `name`, `path`, `parent_path`, timestamps
+  - RLS policies ensure users can only access folders for their own deals
+- **API Routes:**
+  - `GET /api/projects/[id]/folders` - List all folders for a project
+  - `POST /api/projects/[id]/folders` - Create a new folder
+  - `PUT /api/projects/[id]/folders/[folderId]` - Rename a folder (cascades to child folders and documents)
+  - `DELETE /api/projects/[id]/folders/[folderId]` - Delete a folder
+- **Folder = Bucket Parity Enforced:**
+  - Creating a folder in Folder View creates a bucket in Bucket View (and vice versa)
+  - Subfolders are visible in both views
+  - Both views now load from the same data source (documents table + folders table)
+  - All CRUD operations work identically in both views
+- **Data Model:**
+  - Folders are persisted in `folders` table
+  - Documents reference folders via `folder_path` column
+  - Folder tree = merge of folders from `folders` table + paths from `documents.folder_path`
+
+### Version 2.7.1 (2025-11-28)
+**Bug Fixes - View Toggle and Bucket Creation:**
+- **Buckets Tab Click Fix:**
+  - Removed `Tooltip` wrappers from `TabsTrigger` elements in `view-toggle.tsx`
+  - Tooltip components were intercepting click events, preventing view switching
+- **New Bucket Button:**
+  - Added `onCreateFolder` prop to `BucketsView` in `data-room-wrapper.tsx`
+  - Integrated `CreateFolderDialog` for creating new buckets directly from Buckets view
+  - Previously, bucket/folder creation only worked from Folders view
 
 ### Version 2.6 (2025-11-26)
 **Data Room Architecture Unification - Course Correction:**

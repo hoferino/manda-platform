@@ -23,8 +23,10 @@ export interface BucketItem {
   id: string
   name: string
   status: 'uploaded' | 'pending' | 'not_started'
+  type: 'document' | 'folder'
   documentId?: string
   documentName?: string
+  folderPath?: string
 }
 
 export interface BucketCardProps {
