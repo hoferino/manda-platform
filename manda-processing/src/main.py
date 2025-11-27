@@ -10,7 +10,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import health, webhooks
+from src.api.routes import health, webhooks, search, processing
 from src.config import get_settings
 
 # Configure structured logging
@@ -88,6 +88,8 @@ def create_app() -> FastAPI:
     # Register routes
     app.include_router(health.router, tags=["Health"])
     app.include_router(webhooks.router, tags=["Webhooks"])
+    app.include_router(search.router, tags=["Search"])
+    app.include_router(processing.router, tags=["Processing"])
 
     return app
 

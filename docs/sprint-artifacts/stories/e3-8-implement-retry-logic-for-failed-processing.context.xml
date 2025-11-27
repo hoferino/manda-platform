@@ -1,0 +1,316 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E3</epicId>
+    <storyId>8</storyId>
+    <title>Implement Retry Logic for Failed Processing</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e3-8-implement-retry-logic-for-failed-processing.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>failed document processing to automatically retry and resume from the failed stage</iWant>
+    <soThat>temporary failures don't require manual intervention and I can focus on analysis</soThat>
+    <tasks>
+      <task id="1" name="Implement Error Classification">
+        <subtask>Create ErrorClassifier class in manda-processing/src/jobs/errors.py</subtask>
+        <subtask>Define error categories: transient, permanent, unknown</subtask>
+        <subtask>Map exception types to categories (NetworkError → transient, ValueError → permanent)</subtask>
+        <subtask>Add classification method that inspects exception and message</subtask>
+        <subtask>Include retry recommendation in classification result</subtask>
+      </task>
+      <task id="2" name="Add Stage Tracking to Documents">
+        <subtask>Add last_completed_stage column to documents table (migration 00018)</subtask>
+        <subtask>Update handlers to set stage on completion: parsing → parsed, embedding → embedded</subtask>
+        <subtask>Add retry_from_stage field to job data</subtask>
+        <subtask>Create helper to determine next stage based on last_completed_stage</subtask>
+      </task>
+      <task id="3" name="Implement Stage-Aware Retry in Job Handlers">
+        <subtask>Modify handle_parse_document to check if already parsed (skip if so)</subtask>
+        <subtask>Modify handle_generate_embeddings to check if already embedded</subtask>
+        <subtask>Modify handle_analyze_document to check if already analyzed</subtask>
+        <subtask>Add logic to clear only failed stage data on retry</subtask>
+        <subtask>Preserve chunks/embeddings from successful stages</subtask>
+      </task>
+      <task id="4" name="Enhance Error Handling in Job Handlers">
+        <subtask>Wrap handler logic with error classification</subtask>
+        <subtask>Store structured error in processing_error JSON field</subtask>
+        <subtask>Include: error_type, message, stage, timestamp, stack_trace (truncated)</subtask>
+        <subtask>Log classified errors with appropriate severity</subtask>
+        <subtask>Update document status based on error classification</subtask>
+      </task>
+      <task id="5" name="Create Retry History Tracking">
+        <subtask>Add retry_history JSONB column to documents table (migration)</subtask>
+        <subtask>Append retry attempt to history: {attempt, stage, error, timestamp}</subtask>
+        <subtask>Limit history to last 10 attempts</subtask>
+        <subtask>Create API endpoint to fetch retry history</subtask>
+      </task>
+      <task id="6" name="Update Document Details UI for Retry">
+        <subtask>Display retry count and history in Document Details panel</subtask>
+        <subtask>Show user-friendly error message based on error_type</subtask>
+        <subtask>Add "Retry from Stage" dropdown (Parse, Embed, Analyze, Full)</subtask>
+        <subtask>Disable retry button for permanent errors with explanation</subtask>
+        <subtask>Show confirmation dialog if partial results exist</subtask>
+      </task>
+      <task id="7" name="Update Retry API Endpoint">
+        <subtask>Add from_stage query parameter to /api/documents/[id]/retry</subtask>
+        <subtask>Validate stage parameter (must be >= last_completed_stage)</subtask>
+        <subtask>Pass stage to webhook payload for stage-aware retry</subtask>
+        <subtask>Return updated document with retry_history</subtask>
+      </task>
+      <task id="8" name="Write Tests">
+        <subtask>Unit tests for ErrorClassifier</subtask>
+        <subtask>Unit tests for stage determination logic</subtask>
+        <subtask>Unit tests for retry history tracking</subtask>
+        <subtask>Integration tests for stage-aware retry flow</subtask>
+        <subtask>Frontend tests for retry UI components</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" name="Automatic Retry with Exponential Backoff">
+      <requirement>Jobs automatically retry up to 3 times on transient failures</requirement>
+      <requirement>Retry delay increases exponentially: 5s → 10s → 20s</requirement>
+      <requirement>Permanent failures (invalid file, unsupported format) skip retry</requirement>
+      <requirement>Document status shows "Retrying (attempt 2/3)" during retry</requirement>
+    </criterion>
+    <criterion id="AC2" name="Stage-Aware Retry (Resume from Failed Stage)">
+      <requirement>Track last successful processing stage in document metadata</requirement>
+      <requirement>On retry, resume from failed stage instead of restarting</requirement>
+      <requirement>Skip completed stages: If parsing succeeded, retry starts at embedding</requirement>
+      <requirement>Clear only the failed stage's data on retry (preserve prior work)</requirement>
+    </criterion>
+    <criterion id="AC3" name="Error Classification System">
+      <requirement>Classify errors as transient (retry) vs permanent (fail immediately)</requirement>
+      <requirement>Transient: Network timeout, rate limit, service unavailable, DB deadlock</requirement>
+      <requirement>Permanent: Invalid file format, file corrupted, unsupported type, auth error</requirement>
+      <requirement>Store error classification in processing_error JSON field</requirement>
+    </criterion>
+    <criterion id="AC4" name="Enhanced Error Reporting">
+      <requirement>Store structured error details: error_type, message, stage, timestamp, retry_count</requirement>
+      <requirement>Display user-friendly error messages in Document Details panel</requirement>
+      <requirement>Show retry history with timestamps and error messages</requirement>
+      <requirement>Provide actionable guidance: "File appears corrupted - please re-upload"</requirement>
+    </criterion>
+    <criterion id="AC5" name="Manual Retry with Stage Selection">
+      <requirement>"Retry Processing" button in Document Details (existing)</requirement>
+      <requirement>Option to retry from specific stage or full reprocess</requirement>
+      <requirement>Disable retry for documents with permanent errors (show reason)</requirement>
+      <requirement>Confirm before full reprocess if partial results exist</requirement>
+    </criterion>
+    <criterion id="AC6" name="Tests Pass">
+      <requirement>Unit tests for error classification logic</requirement>
+      <requirement>Unit tests for stage-aware retry</requirement>
+      <requirement>Integration tests for retry flow (mock transient failures)</requirement>
+      <requirement>Minimum 80% coverage on new code</requirement>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E3.md" title="Epic 3 Technical Specification" section="Error Handling and Retry Flow">
+        <snippet>Error Recovery: Failed parsing → Document marked failed, user can retry. LLM timeout → Retry with exponential backoff. Retry up to 3 attempts with backoff (30s, 90s delays).</snippet>
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Manda Architecture" section="Background Processing">
+        <snippet>Job queue: pg-boss (Postgres-based, MVP simplicity). Workers handle document parsing, embedding generation, LLM analysis. Graceful degradation with per-chunk error handling.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file path="manda-processing/src/jobs/queue.py" kind="service" symbol="JobQueue" lines="95-367" reason="Core job queue implementation with retry logic (fail method handles retry_count, retry_limit, retry_delay, retry_backoff)">
+        <key-methods>
+          <method name="fail" lines="245-307">Handles job failure with automatic retry scheduling based on retry_count, retry_limit, retry_delay, retry_backoff</method>
+          <method name="enqueue" lines="109-169">Creates jobs with retry options (retry_limit=3, retry_delay, retry_backoff=True)</method>
+        </key-methods>
+      </file>
+      <file path="manda-processing/src/jobs/worker.py" kind="service" symbol="Worker" lines="41-215" reason="Worker process that executes jobs and calls queue.fail() on exceptions">
+        <key-methods>
+          <method name="_process_job" lines="159-196">Catches exceptions and calls queue.fail(job_id, error_msg)</method>
+          <method name="setup_default_handlers" lines="248-269">Registers parse_document, generate_embeddings, analyze_document handlers</method>
+        </key-methods>
+      </file>
+      <file path="manda-processing/src/jobs/handlers/parse_document.py" kind="handler" symbol="ParseDocumentHandler" lines="60-327" reason="Parse handler with NON_RETRYABLE_ERRORS tuple for permanent failure detection">
+        <key-patterns>
+          <pattern name="NON_RETRYABLE_ERRORS" lines="52-58">Tuple of exceptions that should NOT trigger retry</pattern>
+          <pattern name="_handle_permanent_failure" lines="268-292">Updates document status to 'failed' with error message</pattern>
+        </key-patterns>
+      </file>
+      <file path="manda-processing/src/jobs/handlers/generate_embeddings.py" kind="handler" symbol="handle_generate_embeddings" reason="Embedding generation handler - needs stage-aware retry modification" />
+      <file path="manda-processing/src/jobs/handlers/analyze_document.py" kind="handler" symbol="handle_analyze_document" reason="LLM analysis handler - needs stage-aware retry modification" />
+      <file path="manda-app/app/api/documents/[id]/retry/route.ts" kind="api-route" symbol="POST" lines="1-167" reason="Existing retry API endpoint - needs from_stage parameter and structured error response">
+        <current-behavior>
+          <step>Validates document is in failed/analysis_failed state</step>
+          <step>Resets processing_status to 'pending', clears processing_error</step>
+          <step>Calls manda-processing webhook to enqueue new parse job</step>
+        </current-behavior>
+      </file>
+      <file path="manda-app/components/data-room/document-details.tsx" kind="component" symbol="DocumentDetails" lines="166-611" reason="Document details panel with existing retry button - needs retry history display, stage selector, error UI">
+        <existing-retry-ui>
+          <feature lines="309-337">handleRetryProcessing function calls /api/documents/[id]/retry</feature>
+          <feature lines="482-492">Error message display for failed processing</feature>
+          <feature lines="494-510">Retry button (RefreshCw icon) for failed documents</feature>
+        </existing-retry-ui>
+      </file>
+      <file path="manda-app/components/data-room/processing-status-badge.tsx" kind="component" symbol="ProcessingStatusBadge" lines="1-189" reason="Status badge - may need 'retrying' state with attempt count" />
+      <file path="manda-app/components/data-room/processing-progress.tsx" kind="component" symbol="ProcessingProgress" reason="Progress indicator - may need retry attempt display" />
+      <file path="manda-processing/src/storage/supabase_client.py" kind="service" symbol="SupabaseClient" reason="Database client - needs update_document_status to handle retry_history JSONB" />
+    </code>
+    <dependencies>
+      <dependency ecosystem="python" name="tenacity" version="9.0.0" purpose="Retry logic with exponential backoff (already in pyproject.toml)" />
+      <dependency ecosystem="python" name="structlog" version="25.1.0" purpose="Structured logging for error classification" />
+      <dependency ecosystem="python" name="asyncpg" version="0.30.0" purpose="Async PostgreSQL for job queue operations" />
+      <dependency ecosystem="typescript" name="sonner" purpose="Toast notifications for retry feedback" />
+      <dependency ecosystem="typescript" name="lucide-react" purpose="Icons for retry UI (RefreshCw, AlertCircle, etc.)" />
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Error classification must use regex patterns to match error messages (see story dev notes for TRANSIENT_PATTERNS and PERMANENT_PATTERNS)</constraint>
+    <constraint type="architecture">Retry history limited to 10 entries per document to avoid unbounded growth</constraint>
+    <constraint type="architecture">Stage-aware retry must preserve existing chunks/embeddings from successful stages</constraint>
+    <constraint type="database">New columns (last_completed_stage, retry_history) must have appropriate indexes and constraints</constraint>
+    <constraint type="database">last_completed_stage CHECK constraint: IN ('parsed', 'embedded', 'analyzed', 'complete') OR NULL</constraint>
+    <constraint type="api">Retry API must validate from_stage parameter against last_completed_stage</constraint>
+    <constraint type="ux">User-friendly error messages must map error_type to actionable guidance</constraint>
+    <constraint type="ux">Disable retry button for permanent errors with clear explanation</constraint>
+    <constraint type="testing">Minimum 80% coverage on new code</constraint>
+    <constraint type="existing">pg-boss already handles automatic retry with 3 attempts and exponential backoff - enhance, don't replace</constraint>
+    <constraint type="existing">Existing retry flow (/api/documents/[id]/retry → webhook → parse job) must continue working</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="ErrorClassifier" kind="class" path="manda-processing/src/jobs/errors.py">
+      <signature><![CDATA[
+class ErrorCategory(str, Enum):
+    TRANSIENT = "transient"
+    PERMANENT = "permanent"
+    UNKNOWN = "unknown"
+
+@dataclass
+class ClassifiedError:
+    category: ErrorCategory
+    error_type: str
+    message: str
+    should_retry: bool
+    user_message: str
+    guidance: Optional[str] = None
+
+class ErrorClassifier:
+    TRANSIENT_PATTERNS: list[tuple[str, str]]
+    PERMANENT_PATTERNS: list[tuple[str, str]]
+
+    def classify(self, error: Exception) -> ClassifiedError
+    def _get_user_message(self, error_type: str) -> str
+    def _get_guidance(self, error_type: str) -> Optional[str]
+      ]]></signature>
+    </interface>
+    <interface name="ProcessingStage" kind="enum" path="manda-processing/src/jobs/handlers/parse_document.py">
+      <signature><![CDATA[
+class ProcessingStage(str, Enum):
+    PENDING = "pending"
+    PARSED = "parsed"
+    EMBEDDED = "embedded"
+    ANALYZED = "analyzed"
+    COMPLETE = "complete"
+
+def get_next_stage(last_completed: ProcessingStage | None) -> ProcessingStage
+      ]]></signature>
+    </interface>
+    <interface name="ProcessingError" kind="type" path="manda-app/lib/api/documents.ts">
+      <signature><![CDATA[
+interface ProcessingError {
+  error_type: string;        // "timeout" | "rate_limit" | "invalid_file" | etc.
+  category: string;          // "transient" | "permanent" | "unknown"
+  message: string;           // Full error message
+  stage: string;             // "parsing" | "embedding" | "analyzing"
+  timestamp: string;         // ISO timestamp
+  retry_count: number;       // Current retry attempt
+  stack_trace?: string;      // Truncated stack trace (first 500 chars)
+  guidance?: string;         // User guidance message
+}
+
+type RetryHistory = Array<{
+  attempt: number;
+  stage: string;
+  error_type: string;
+  message: string;
+  timestamp: string;
+}>;
+      ]]></signature>
+    </interface>
+    <interface name="Retry API" kind="REST endpoint" path="manda-app/app/api/documents/[id]/retry/route.ts">
+      <signature><![CDATA[
+POST /api/documents/{id}/retry?from_stage={stage}
+
+Query Parameters:
+  - from_stage: Optional["pending" | "parsed" | "embedded" | "analyzed"]
+    If not provided, starts from beginning (full reprocess)
+    If provided, must be >= last_completed_stage
+
+Request Body: None
+
+Response:
+{
+  success: boolean;
+  message: string;
+  document: {
+    id: string;
+    processingStatus: "pending";
+    retryHistory?: RetryHistory;
+  };
+}
+
+Errors:
+  - 400: "Document is not in a failed state"
+  - 400: "Cannot retry from stage before last completed stage"
+  - 401: "Unauthorized"
+  - 404: "Document not found"
+      ]]></signature>
+    </interface>
+    <interface name="Document Webhook Payload" kind="webhook" path="manda-processing/src/api/routes/webhooks.py">
+      <signature><![CDATA[
+POST /webhooks/document-uploaded
+
+{
+  document_id: string;
+  deal_id: string;
+  user_id: string;
+  gcs_path: string;
+  file_type: string;
+  file_name: string;
+  retry_from_stage?: "pending" | "parsed" | "embedded";  // NEW: For stage-aware retry
+}
+      ]]></signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Python backend: pytest with pytest-asyncio for async tests, pytest-cov for coverage. Mock external services (GCS, OpenAI, Gemini). Test files in manda-processing/tests/unit/ and tests/integration/.
+      TypeScript frontend: Jest with React Testing Library. Mock fetch calls. Test files in manda-app/__tests__/.
+      Minimum 80% coverage on new code per AC6.
+    </standards>
+    <locations>
+      <location>manda-processing/tests/unit/test_jobs/test_errors.py</location>
+      <location>manda-processing/tests/unit/test_jobs/test_retry_logic.py</location>
+      <location>manda-processing/tests/integration/test_stage_aware_retry.py</location>
+      <location>manda-app/__tests__/api/documents/retry.test.ts</location>
+      <location>manda-app/__tests__/components/data-room/retry-ui.test.tsx</location>
+    </locations>
+    <ideas>
+      <testIdea criterion="AC1">Test that ErrorClassifier classifies timeout/rate_limit/503 errors as transient with should_retry=True</testIdea>
+      <testIdea criterion="AC1">Test that ErrorClassifier classifies invalid_file/corrupted errors as permanent with should_retry=False</testIdea>
+      <testIdea criterion="AC2">Test get_next_stage returns correct next stage for each ProcessingStage value</testIdea>
+      <testIdea criterion="AC2">Test parse handler skips parsing when last_completed_stage='parsed' and retry_from_stage != 'pending'</testIdea>
+      <testIdea criterion="AC2">Test embedding handler skips embedding when last_completed_stage='embedded'</testIdea>
+      <testIdea criterion="AC3">Test structured error stored in processing_error field contains all required fields</testIdea>
+      <testIdea criterion="AC4">Test retry_history appends new entry and limits to 10 entries</testIdea>
+      <testIdea criterion="AC5">Test retry API validates from_stage against last_completed_stage</testIdea>
+      <testIdea criterion="AC5">Test retry API returns 400 for permanent error documents</testIdea>
+      <testIdea criterion="AC5">Test UI shows retry stage dropdown when document has partial results</testIdea>
+      <testIdea criterion="AC5">Test UI disables retry for permanent errors with explanation</testIdea>
+    </ideas>
+  </tests>
+</story-context>

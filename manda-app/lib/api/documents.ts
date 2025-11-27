@@ -7,6 +7,22 @@
 
 import type { DocumentCategory } from '@/lib/gcs/client'
 
+/**
+ * Processing status values that match the backend pipeline
+ * Status transitions: pending → parsing → parsed → embedding → analyzing → analyzed → complete
+ * Failed states: failed (general), analysis_failed (LLM analysis failed)
+ */
+export type ProcessingStatus =
+  | 'pending'
+  | 'parsing'
+  | 'parsed'
+  | 'embedding'
+  | 'analyzing'
+  | 'analyzed'
+  | 'complete'
+  | 'failed'
+  | 'analysis_failed'
+
 export interface Document {
   id: string
   projectId: string
@@ -16,7 +32,9 @@ export interface Document {
   category: DocumentCategory | null
   folderPath: string | null
   uploadStatus: 'pending' | 'uploading' | 'completed' | 'failed'
-  processingStatus: 'pending' | 'processing' | 'completed' | 'failed'
+  processingStatus: ProcessingStatus
+  processingError?: string | null
+  findingsCount?: number | null
   createdAt: string
   updatedAt?: string
   downloadUrl?: string | null

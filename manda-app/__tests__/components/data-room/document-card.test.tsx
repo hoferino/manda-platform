@@ -25,7 +25,7 @@ vi.mock('@/lib/api/documents', async () => {
   }
 })
 
-// Mock document data
+// Mock document data (E3.6: Updated to use new ProcessingStatus values)
 const mockDocument: Document = {
   id: 'doc-123',
   projectId: 'project-456',
@@ -35,7 +35,9 @@ const mockDocument: Document = {
   category: 'financial',
   folderPath: 'reports/annual',
   uploadStatus: 'completed',
-  processingStatus: 'completed',
+  processingStatus: 'complete', // E3.6: Changed from 'completed' to 'complete'
+  processingError: null,
+  findingsCount: null,
   createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
 }
 
@@ -72,15 +74,22 @@ describe('DocumentCard Component', () => {
       expect(screen.queryByText('Financial')).not.toBeInTheDocument()
     })
 
-    it('does not render processing badge when completed', () => {
+    // E3.6: Updated tests for new ProcessingStatus values
+    it('does not render processing badge when complete', () => {
       render(<DocumentCard document={mockDocument} />)
-      expect(screen.queryByText('Processed')).not.toBeInTheDocument()
+      expect(screen.queryByText('Complete')).not.toBeInTheDocument()
     })
 
-    it('renders processing badge when processing', () => {
-      const processingDoc = { ...mockDocument, processingStatus: 'processing' as const }
-      render(<DocumentCard document={processingDoc} />)
-      expect(screen.getByText('Processing')).toBeInTheDocument()
+    it('renders parsing badge when parsing', () => {
+      const parsingDoc = { ...mockDocument, processingStatus: 'parsing' as const }
+      render(<DocumentCard document={parsingDoc} />)
+      expect(screen.getByText('Parsing')).toBeInTheDocument()
+    })
+
+    it('renders analyzing badge when analyzing', () => {
+      const analyzingDoc = { ...mockDocument, processingStatus: 'analyzing' as const }
+      render(<DocumentCard document={analyzingDoc} />)
+      expect(screen.getByText('Analyzing')).toBeInTheDocument()
     })
 
     it('renders failed badge when processing failed', () => {
@@ -191,10 +200,10 @@ describe('DocumentCard Component', () => {
       expect(screen.getByText('View')).toBeInTheDocument()
     })
 
-    // E2.6: Test that delete is disabled for processing documents
+    // E2.6: Test that delete is disabled for processing documents (E3.6: Updated status)
     it('disables delete for processing documents', async () => {
       const user = userEvent.setup()
-      const processingDoc = { ...mockDocument, processingStatus: 'processing' as const }
+      const processingDoc = { ...mockDocument, processingStatus: 'parsing' as const }
       const onDelete = vi.fn()
       render(<DocumentCard document={processingDoc} onDelete={onDelete} />)
 

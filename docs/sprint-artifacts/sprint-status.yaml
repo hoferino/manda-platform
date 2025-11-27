@@ -227,15 +227,76 @@ development_status:
     - src/storage/supabase_client.py - DB operations for chunks
     - src/api/routes/webhooks.py - Webhook endpoints
     - migrations/00015_create_document_chunks_table.sql - Chunks table
-  e3-4-generate-embeddings-for-semantic-search: backlog
+  e3-4-generate-embeddings-for-semantic-search: done
   e3-4-jira-id: SCRUM-34
-  e3-5-implement-llm-analysis-with-gemini-25-tiered: backlog
+  e3-4-drafted: 2025-11-27
+  e3-4-context-ready: 2025-11-27
+  e3-4-completed: 2025-11-27
+  e3-4-notes: |
+    Embedding generation completed. Key deliverables:
+    - OpenAI embedding client with text-embedding-3-large (3072 dims)
+    - Batch processing with retry logic and token tracking
+    - generate_embeddings job handler with pipeline integration
+    - Similarity search API: GET /api/search/similar
+    - 37 tests passing with 86% coverage
+    Key files:
+    - src/embeddings/openai_client.py - OpenAI embedding client
+    - src/jobs/handlers/generate_embeddings.py - Job handler
+    - src/api/routes/search.py - Similarity search API
+    - migrations/00016_update_embedding_dimension.sql - Vector dimensions
+  e3-5-implement-llm-analysis-with-gemini-25-tiered: done
   e3-5-jira-id: SCRUM-35
-  e3-6-create-processing-status-tracking-and-websocket-updates: backlog
+  e3-5-drafted: 2025-11-27
+  e3-5-context-ready: 2025-11-27
+  e3-5-completed: 2025-11-27
+  e3-5-reviewed: 2025-11-27
+  e3-5-notes: |
+    LLM analysis with Gemini 2.5 tiered models completed. Key deliverables:
+    - GeminiClient with LangChain integration and tiered model support (Flash/Pro/Lite)
+    - Model selection based on document type (Pro for Excel, Flash default)
+    - M&A-specific finding extraction prompts with structured output
+    - analyze_document job handler with atomic findings storage
+    - 62 tests passing
+    Code review APPROVED - all 6 ACs verified, no issues found.
+    Key files:
+    - src/llm/client.py - GeminiClient with retry logic
+    - src/llm/models.py - ModelTier enum and selection
+    - src/llm/prompts.py - M&A extraction prompts
+    - src/models/findings.py - Finding Pydantic models
+    - src/jobs/handlers/analyze_document.py - Job handler
+    - migrations/00017_update_findings_for_llm_analysis.sql - Schema update
+  e3-6-create-processing-status-tracking-and-websocket-updates: done
   e3-6-jira-id: SCRUM-36
-  e3-7-implement-processing-queue-visibility: backlog
+  e3-6-drafted: 2025-11-27
+  e3-6-context-ready: 2025-11-27
+  e3-6-completed: 2025-11-27
+  e3-6-notes: |
+    Processing status tracking and WebSocket updates completed. Key deliverables:
+    - ProcessingStatusBadge component with all granular statuses
+    - ProcessingProgress component showing pipeline stages
+    - useDocumentUpdates Supabase Realtime hook
+    - Real-time connection status indicator in Data Room
+    - Toast notifications for completion/failure
+    - Enhanced DocumentDetails panel with retry button
+    - /api/documents/[id]/retry API route
+    - 207 tests passing
+  e3-7-implement-processing-queue-visibility: done
+  e3-7-drafted: 2025-11-27
+  e3-7-context-ready: 2025-11-27
+  e3-7-completed: 2025-11-27
   e3-7-jira-id: SCRUM-37
-  e3-8-implement-retry-logic-for-failed-processing: backlog
+  e3-7-notes: |
+    Processing queue visibility implemented. Key deliverables:
+    - FastAPI endpoints: GET /api/processing/queue, DELETE /api/processing/queue/{job_id}
+    - Next.js proxy routes for queue operations
+    - ProcessingQueue collapsible panel component with real-time updates
+    - QueueItem component with cancel/retry actions
+    - useProcessingQueue hook with polling
+    - Integrated into Data Room above document list
+    - Tests for components, hooks, and API endpoints
+  e3-8-implement-retry-logic-for-failed-processing: ready-for-dev
+  e3-8-drafted: 2025-11-27
+  e3-8-context-ready: 2025-11-27
   e3-8-jira-id: SCRUM-38
   e3-9-financial-model-integration-extract-and-query-financial-metrics: backlog
   e3-9-jira-id: SCRUM-39

@@ -254,6 +254,15 @@ def setup_default_handlers(worker: Worker) -> None:
 
     worker.register("document-parse", handle_parse_document)
 
+    # Embedding generation handler (E3.4)
+    from src.jobs.handlers import handle_generate_embeddings
+
+    worker.register("generate-embeddings", handle_generate_embeddings)
+
+    # LLM analysis handler (E3.5)
+    from src.jobs.handlers import handle_analyze_document
+
+    worker.register("analyze-document", handle_analyze_document)
+
     # Future handlers:
-    # worker.register("generate-embeddings", generate_embeddings_handler)
-    # worker.register("analyze-document", analyze_document_handler)
+    # worker.register("extract-financials", extract_financials_handler)

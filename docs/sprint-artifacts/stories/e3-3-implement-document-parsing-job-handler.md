@@ -1,6 +1,6 @@
 # Story 3.3: Implement Document Parsing Job Handler
 
-Status: drafted
+Status: done
 
 ## Story
 
@@ -49,54 +49,54 @@ so that **documents are automatically parsed when uploaded, with results stored 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create Job Handler Module Structure** (AC: 1)
-  - [ ] Create `src/jobs/handlers/parse_document.py`
-  - [ ] Define `ParseDocumentHandler` class
-  - [ ] Implement job handler interface matching pg-boss pattern
-  - [ ] Add structured logging throughout handler lifecycle
-  - [ ] Register handler in `src/jobs/handlers/__init__.py`
+- [x] **Task 1: Create Job Handler Module Structure** (AC: 1)
+  - [x] Create `src/jobs/handlers/parse_document.py`
+  - [x] Define `ParseDocumentHandler` class
+  - [x] Implement job handler interface matching pg-boss pattern
+  - [x] Add structured logging throughout handler lifecycle
+  - [x] Register handler in `src/jobs/handlers/__init__.py`
 
-- [ ] **Task 2: Implement GCS Download** (AC: 2)
-  - [ ] Use existing `gcs_client` from `src/storage/` or create if missing
-  - [ ] Implement `download_to_temp()` method
-  - [ ] Use Python `tempfile` for secure temporary storage
-  - [ ] Implement cleanup in `finally` block or context manager
-  - [ ] Add retry logic for transient GCS errors (3 attempts)
+- [x] **Task 2: Implement GCS Download** (AC: 2)
+  - [x] Use existing `gcs_client` from `src/storage/` or create if missing
+  - [x] Implement `download_to_temp()` method
+  - [x] Use Python `tempfile` for secure temporary storage
+  - [x] Implement cleanup in `finally` block or context manager
+  - [x] Add retry logic for transient GCS errors (3 attempts)
 
-- [ ] **Task 3: Integrate Document Parser** (AC: 3)
-  - [ ] Import `DocumentParser` from `src/parsers/`
-  - [ ] Initialize parser with config from E3.2
-  - [ ] Call `parser.parse(file_path, file_type)`
-  - [ ] Handle `ParseError` exceptions appropriately
-  - [ ] Log parse duration and chunk count
+- [x] **Task 3: Integrate Document Parser** (AC: 3)
+  - [x] Import `DocumentParser` from `src/parsers/`
+  - [x] Initialize parser with config from E3.2
+  - [x] Call `parser.parse(file_path, file_type)`
+  - [x] Handle `ParseError` exceptions appropriately
+  - [x] Log parse duration and chunk count
 
-- [ ] **Task 4: Implement Database Storage** (AC: 4)
-  - [ ] Create `document_chunks` table if not exists (migration)
-  - [ ] Implement `store_chunks()` method using Supabase client
-  - [ ] Map `ChunkData` to database columns
-  - [ ] Update `documents.processing_status` to "parsed"
-  - [ ] Wrap all writes in transaction for atomicity
-  - [ ] Handle duplicate chunk inserts (upsert or skip)
+- [x] **Task 4: Implement Database Storage** (AC: 4)
+  - [x] Create `document_chunks` table if not exists (migration)
+  - [x] Implement `store_chunks()` method using Supabase client
+  - [x] Map `ChunkData` to database columns
+  - [x] Update `documents.processing_status` to "parsed"
+  - [x] Wrap all writes in transaction for atomicity
+  - [x] Handle duplicate chunk inserts (upsert or skip)
 
-- [ ] **Task 5: Implement Job Queue Flow** (AC: 5)
-  - [ ] Enqueue `generate_embeddings` job on success
-  - [ ] Configure pg-boss retry options: `retryLimit=3, retryDelay=30`
-  - [ ] Mark job failed with error message on permanent failure
-  - [ ] Emit `document_parsed` event via Supabase Realtime or custom pub/sub
-  - [ ] Update document status to "failed" on permanent failure
+- [x] **Task 5: Implement Job Queue Flow** (AC: 5)
+  - [x] Enqueue `generate_embeddings` job on success
+  - [x] Configure pg-boss retry options: `retryLimit=3, retryDelay=30`
+  - [x] Mark job failed with error message on permanent failure
+  - [x] Emit `document_parsed` event via Supabase Realtime or custom pub/sub
+  - [x] Update document status to "failed" on permanent failure
 
-- [ ] **Task 6: Write Tests** (AC: 6)
-  - [ ] Unit tests for `ParseDocumentHandler` class methods
-  - [ ] Unit tests for GCS download with mocked client
-  - [ ] Unit tests for database storage with mocked Supabase
-  - [ ] Integration test: full handler flow with mocked external services
-  - [ ] Error scenario tests: GCS timeout, parse failure, DB error
-  - [ ] Verify 80% coverage target on handler code
+- [x] **Task 6: Write Tests** (AC: 6)
+  - [x] Unit tests for `ParseDocumentHandler` class methods
+  - [x] Unit tests for GCS download with mocked client
+  - [x] Unit tests for database storage with mocked Supabase
+  - [x] Integration test: full handler flow with mocked external services
+  - [x] Error scenario tests: GCS timeout, parse failure, DB error
+  - [x] Verify 80% coverage target on handler code
 
-- [ ] **Task 7: Add Webhook Trigger** (AC: 1, 5)
-  - [ ] Verify `/webhooks/document-uploaded` endpoint triggers job
-  - [ ] Add test for webhook → job enqueue flow
-  - [ ] Document webhook configuration in Supabase
+- [x] **Task 7: Add Webhook Trigger** (AC: 1, 5)
+  - [x] Verify `/webhooks/document-uploaded` endpoint triggers job
+  - [x] Add test for webhook → job enqueue flow
+  - [x] Document webhook configuration in Supabase
 
 ## Dev Notes
 
@@ -238,13 +238,41 @@ manda-processing/src/jobs/handlers/
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+- Test run: 137 tests passing with 84% coverage on E3.3 code
+
 ### Completion Notes List
 
+1. **ParseDocumentHandler** - Main handler class orchestrating the document parsing pipeline
+2. **GCSClient** - Google Cloud Storage client with retry logic and async context manager for temp file cleanup
+3. **SupabaseClient** - Database client with transactional chunk storage and status updates
+4. **Webhook Endpoints** - `/webhooks/document-uploaded` for triggering parse jobs with batch support
+5. **Migration** - `00015_create_document_chunks_table.sql` for document chunks with RLS policies
+6. **Lazy Imports** - Docling parser loaded lazily to avoid test dependency issues
+
 ### File List
+
+**Created:**
+- `src/jobs/handlers/__init__.py` - Handler registry with lazy imports
+- `src/jobs/handlers/parse_document.py` - Main parse document handler (81 lines)
+- `src/storage/__init__.py` - Storage module init
+- `src/storage/gcs_client.py` - GCS download client (95 lines)
+- `src/storage/supabase_client.py` - Supabase client for chunks (93 lines)
+- `src/api/routes/webhooks.py` - Webhook endpoints
+- `migrations/00015_create_document_chunks_table.sql` - Chunks table migration
+- `tests/unit/test_jobs/test_parse_document.py` - 14 handler tests
+- `tests/unit/test_storage/test_gcs_client.py` - 12 GCS client tests
+- `tests/unit/test_storage/test_supabase_client.py` - 14 Supabase client tests
+- `tests/unit/test_api/test_webhooks.py` - 12 webhook tests
+
+**Modified:**
+- `src/jobs/worker.py` - Registered parse_document handler
+- `src/main.py` - Added webhooks router
+- `src/api/dependencies.py` - Added verify_webhook_signature
+- `tests/conftest.py` - Fixed Path import order
 
 ---
 
@@ -253,3 +281,4 @@ manda-processing/src/jobs/handlers/
 | Date | Change | Author |
 |------|--------|--------|
 | 2025-11-26 | Story drafted | SM Agent |
+| 2025-11-27 | Story completed - all ACs verified | Dev Agent (Claude Opus 4.5) |

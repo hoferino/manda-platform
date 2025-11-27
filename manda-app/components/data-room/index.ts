@@ -45,3 +45,23 @@ export { UploadPanel, UploadButton, type UploadPanelProps } from './upload-panel
 export { IRLChecklistPanel, type IRLChecklistPanelProps } from './irl-checklist-panel'
 export { IRLChecklistItem, type IRLChecklistItemProps } from './irl-checklist-item'
 export { IRLEmptyState, type IRLEmptyStateProps } from './irl-empty-state'
+
+// E3.6 - Processing Status Tracking and WebSocket Updates
+export {
+  ProcessingStatusBadge,
+  isProcessingInProgress,
+  isProcessingComplete,
+  isProcessingFailed,
+  getStatusDescription,
+  type ProcessingStatusBadgeProps,
+} from './processing-status-badge'
+export {
+  ProcessingProgress,
+  getCurrentStageLabel,
+  getProcessingProgressPercent,
+  type ProcessingProgressProps,
+} from './processing-progress'
+
+// E3.7 - Processing Queue Visibility
+export { ProcessingQueue, type ProcessingQueueProps } from './processing-queue'
+export { QueueItem, type QueueItemProps } from './queue-item'

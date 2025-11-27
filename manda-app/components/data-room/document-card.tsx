@@ -3,13 +3,14 @@
  * Displays document metadata in a compact card format
  * Story: E2.5 - Create Document Metadata Management (AC: #1)
  * Story: E2.6 - Implement Document Actions (View, Download, Delete)
+ * Story: E3.6 - Processing Status Tracking (AC: #1)
  *
  * Features:
  * - File type icon based on MIME type
  * - Size formatted as KB/MB/GB
  * - Relative date (e.g., "2 hours ago")
  * - Category badge
- * - Processing status indicator
+ * - Processing status badge with granular status display
  * - Document actions (View, Download, Delete) via DocumentActions component
  */
 
@@ -22,10 +23,6 @@ import {
   FileImage,
   File,
   Presentation,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -33,6 +30,7 @@ import { Badge } from '@/components/ui/badge'
 import type { Document } from '@/lib/api/documents'
 import { formatFileSize, DOCUMENT_CATEGORIES } from '@/lib/api/documents'
 import { DocumentActions } from './document-actions'
+import { ProcessingStatusBadge, isProcessingComplete } from './processing-status-badge'
 
 export interface DocumentCardProps {
   document: Document
@@ -74,43 +72,6 @@ function getCategoryLabel(category: string | null): string | null {
 }
 
 /**
- * Get processing status icon and styling
- */
-function getProcessingStatusDisplay(status: Document['processingStatus']) {
-  switch (status) {
-    case 'processing':
-      return {
-        icon: Loader2,
-        label: 'Processing',
-        className: 'text-blue-500 animate-spin',
-        badgeVariant: 'secondary' as const,
-      }
-    case 'completed':
-      return {
-        icon: CheckCircle2,
-        label: 'Processed',
-        className: 'text-green-500',
-        badgeVariant: 'secondary' as const,
-      }
-    case 'failed':
-      return {
-        icon: AlertCircle,
-        label: 'Failed',
-        className: 'text-destructive',
-        badgeVariant: 'destructive' as const,
-      }
-    case 'pending':
-    default:
-      return {
-        icon: Clock,
-        label: 'Pending',
-        className: 'text-muted-foreground',
-        badgeVariant: 'outline' as const,
-      }
-  }
-}
-
-/**
  * Document Card Component
  * Displays document info in a row/card format with actions
  */
@@ -127,8 +88,7 @@ export function DocumentCard({
 }: DocumentCardProps) {
   const Icon = getFileIcon(document.mimeType)
   const categoryLabel = getCategoryLabel(document.category)
-  const processingStatus = getProcessingStatusDisplay(document.processingStatus)
-  const ProcessingIcon = processingStatus.icon
+  const showProcessingStatus = !isProcessingComplete(document.processingStatus)
 
   const handleClick = useCallback(() => {
     onClick?.(document)
@@ -181,15 +141,9 @@ export function DocumentCard({
                 {categoryLabel}
               </Badge>
             )}
-            {/* Processing status (only show if not completed) */}
-            {document.processingStatus !== 'completed' && (
-              <Badge
-                variant={processingStatus.badgeVariant}
-                className="flex items-center gap-1 text-xs"
-              >
-                <ProcessingIcon className={cn('h-3 w-3', processingStatus.className)} />
-                {processingStatus.label}
-              </Badge>
+            {/* Processing status badge (only show if not complete) */}
+            {showProcessingStatus && (
+              <ProcessingStatusBadge status={document.processingStatus} size="sm" />
             )}
           </div>
         </div>

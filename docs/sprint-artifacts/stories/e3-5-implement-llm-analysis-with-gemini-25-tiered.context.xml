@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context Document
+  Story: E3.5 - Implement LLM Analysis with Gemini 2.5 (Tiered Approach)
+  Generated: 2025-11-27
+  Epic: E3 - Document Processing Pipeline
+-->
+<story-context story-id="e3-5" epic-id="3">
+  <metadata>
+    <title>Implement LLM Analysis with Gemini 2.5 (Tiered Approach)</title>
+    <story-type>feature</story-type>
+    <priority>high</priority>
+    <complexity>medium-high</complexity>
+    <estimated-points>8</estimated-points>
+  </metadata>
+
+  <!-- ============================================== -->
+  <!-- SECTION 1: STORY REQUIREMENTS -->
+  <!-- ============================================== -->
+  <requirements>
+    <user-story>
+      <as-a>platform developer</as-a>
+      <i-want>a job handler that performs LLM analysis on parsed document chunks using tiered Gemini 2.5 models</i-want>
+      <so-that>the system automatically extracts key findings with confidence scores and links them to source chunks for comprehensive document intelligence</so-that>
+    </user-story>
+
+    <acceptance-criteria>
+      <criterion id="AC1" priority="must-have">
+        <title>Create analyze-document job handler</title>
+        <description>Create analyze_document.py handler that receives job from generate_embeddings completion, loads document chunks from database, and orchestrates LLM analysis</description>
+        <testable>Handler processes jobs with document_id, deal_id, user_id payload</testable>
+      </criterion>
+      <criterion id="AC2" priority="must-have">
+        <title>Implement tiered Gemini 2.5 integration</title>
+        <description>Create gemini_client.py with GeminiAnalysisClient supporting:
+          - Flash model (gemini-2.5-flash) for initial chunk analysis
+          - Pro model (gemini-2.5-pro) for high-confidence finding validation
+          - Configurable thresholds for tier escalation</description>
+        <testable>Client correctly routes to Flash vs Pro based on confidence thresholds</testable>
+      </criterion>
+      <criterion id="AC3" priority="must-have">
+        <title>Extract structured findings with confidence scores</title>
+        <description>Define FindingData dataclass and prompt templates that extract:
+          - Key business findings (text)
+          - Confidence score (0.0-1.0)
+          - Finding category (financial, legal, operational, risk, etc.)
+          - Source chunk reference (chunk_id, page, position)</description>
+        <testable>Each finding has required fields with valid confidence scores</testable>
+      </criterion>
+      <criterion id="AC4" priority="must-have">
+        <title>Store findings with chunk linkage</title>
+        <description>Extend SupabaseClient with store_findings() method that inserts into findings table with:
+          - Document and deal references
+          - Source chunk_id for traceability
+          - Confidence score and category</description>
+        <testable>Findings are stored with proper FK relationships and can be queried by chunk</testable>
+      </criterion>
+      <criterion id="AC5" priority="must-have">
+        <title>Update document status flow</title>
+        <description>Handler updates document status: embedded -> analyzing -> analyzed (or analysis_failed)</description>
+        <testable>Status transitions are atomic and handle failures gracefully</testable>
+      </criterion>
+      <criterion id="AC6" priority="must-have">
+        <title>Implement comprehensive error handling</title>
+        <description>Handle Gemini API errors with retry logic:
+          - Rate limits (429) with exponential backoff
+          - Timeout errors with retry
+          - Invalid response parsing with fallback
+          - Non-retryable errors mark document as analysis_failed</description>
+        <testable>Different error types trigger appropriate retry/fail behavior</testable>
+      </criterion>
+      <criterion id="AC7" priority="must-have">
+        <title>Write comprehensive unit tests</title>
+        <description>Create test_analyze_document.py and test_gemini_client.py with:
+          - Success path with mocked Gemini responses
+          - Tier escalation logic tests
+          - Error handling scenarios
+          - Finding extraction and storage tests</description>
+        <testable>Tests achieve >80% coverage for new handler code</testable>
+      </criterion>
+      <criterion id="AC8" priority="should-have">
+        <title>Add cost tracking metrics</title>
+        <description>Track and log Gemini API costs:
+          - Input/output token counts per model
+          - Cost estimates based on Gemini pricing
+          - Aggregate costs per document and deal</description>
+        <testable>Metrics are logged and returned in handler result</testable>
+      </criterion>
+    </acceptance-criteria>
+
+    <out-of-scope>
+      <item>Knowledge graph integration (future story)</item>
+      <item>Real-time streaming analysis</item>
+      <item>Custom fine-tuned models</item>
+      <item>Multi-document cross-referencing analysis</item>
+    </out-of-scope>
+  </requirements>
+
+  <!-- ============================================== -->
+  <!-- SECTION 2: TECHNICAL ARCHITECTURE -->
+  <!-- ============================================== -->
+  <architecture>
+    <system-context>
+      <description>Manda Platform document processing pipeline - LLM analysis stage</description>
+      <processing-flow>
+        <step order="1">Document uploaded to GCS via Next.js frontend</step>
+        <step order="2">Webhook triggers document-parse job</step>
+        <step order="3">Parse handler extracts chunks, stores in document_chunks</step>
+        <step order="4">generate-embeddings job generates OpenAI embeddings</step>
+        <step order="5">analyze-document job (THIS STORY) performs LLM analysis</step>
+        <step order="6">Findings stored in findings table with chunk references</step>
+      </processing-flow>
+    </system-context>
+
+    <component-design>
+      <component name="AnalyzeDocumentHandler" path="src/jobs/handlers/analyze_document.py">
+        <responsibility>Orchestrates LLM analysis for a document's chunks</responsibility>
+        <dependencies>
+          <dep>GeminiAnalysisClient - LLM interaction</dep>
+          <dep>SupabaseClient - DB operations</dep>
+          <dep>JobQueue - Next job enqueueing</dep>
+        </dependencies>
+        <interfaces>
+          <interface>handle(job: Job) -> dict[str, Any]</interface>
+        </interfaces>
+        <flow>
+          <step>1. Update status to "analyzing"</step>
+          <step>2. Load chunks from database</step>
+          <step>3. Batch chunks for analysis (configurable batch size)</step>
+          <step>4. For each batch: Call Flash model for initial analysis</step>
+          <step>5. For high-confidence findings: Validate with Pro model</step>
+          <step>6. Store findings with chunk linkage</step>
+          <step>7. Update status to "analyzed"</step>
+          <step>8. Enqueue next job (update-graph) if applicable</step>
+        </flow>
+      </component>
+
+      <component name="GeminiAnalysisClient" path="src/llm/gemini_client.py">
+        <responsibility>Tiered Gemini API interaction for document analysis</responsibility>
+        <interfaces>
+          <interface>analyze_chunk(content: str, context: dict) -> list[FindingData]</interface>
+          <interface>validate_finding(finding: FindingData, chunk_content: str) -> FindingData</interface>
+          <interface>analyze_batch(chunks: list[ChunkData]) -> AnalysisBatchResult</interface>
+        </interfaces>
+        <configuration>
+          <config name="flash_model">gemini-2.5-flash</config>
+          <config name="pro_model">gemini-2.5-pro</config>
+          <config name="confidence_threshold">0.7 (escalate to Pro if below)</config>
+          <config name="max_retries">3</config>
+          <config name="batch_size">10 chunks per API call</config>
+        </configuration>
+      </component>
+
+      <component name="FindingData" path="src/llm/__init__.py">
+        <responsibility>Structured finding data model</responsibility>
+        <fields>
+          <field name="text" type="str">The extracted finding text</field>
+          <field name="confidence" type="float">0.0-1.0 confidence score</field>
+          <field name="category" type="str">financial|legal|operational|risk|strategic|other</field>
+          <field name="source_chunk_id" type="UUID">Reference to source chunk</field>
+          <field name="page_number" type="Optional[int]">Page number if applicable</field>
+          <field name="metadata" type="dict">Additional extraction metadata</field>
+        </fields>
+      </component>
+    </component-design>
+
+    <database-schema>
+      <existing-table name="findings" path="migrations/00004_create_findings_table.sql">
+        <note>Findings table already exists with proper schema</note>
+        <columns>
+          <column name="id" type="uuid" pk="true"/>
+          <column name="deal_id" type="uuid" fk="deals.id" not-null="true"/>
+          <column name="document_id" type="uuid" fk="documents.id"/>
+          <column name="user_id" type="uuid" fk="auth.users" not-null="true"/>
+          <column name="text" type="text" not-null="true"/>
+          <column name="source_document" type="text"/>
+          <column name="page_number" type="int"/>
+          <column name="confidence" type="float" constraint="0-1"/>
+          <column name="embedding" type="vector(1536)"/>
+          <column name="metadata" type="jsonb"/>
+          <column name="created_at" type="timestamptz"/>
+        </columns>
+        <note>Need migration to add: chunk_id FK, category field</note>
+      </existing-table>
+
+      <migration name="00017_add_findings_chunk_reference.sql">
+        <purpose>Add chunk_id reference and category to findings table</purpose>
+        <changes>
+          <change>ADD COLUMN chunk_id UUID REFERENCES document_chunks(id)</change>
+          <change>ADD COLUMN category VARCHAR(50)</change>
+          <change>CREATE INDEX idx_findings_chunk_id ON findings(chunk_id)</change>
+          <change>CREATE INDEX idx_findings_category ON findings(category)</change>
+        </changes>
+      </migration>
+    </database-schema>
+
+    <api-integration>
+      <service name="Google Gemini API">
+        <endpoints>
+          <endpoint model="gemini-2.5-flash" use="initial-analysis">
+            <pricing>$0.10 / 1M input tokens, $0.40 / 1M output tokens</pricing>
+            <rate-limit>60 RPM, 1M TPM</rate-limit>
+            <context-window>1M tokens</context-window>
+          </endpoint>
+          <endpoint model="gemini-2.5-pro" use="validation">
+            <pricing>$2.50 / 1M input tokens, $10.00 / 1M output tokens</pricing>
+            <rate-limit>60 RPM, 1M TPM</rate-limit>
+            <context-window>2M tokens</context-window>
+          </endpoint>
+        </endpoints>
+        <auth>API key via GOOGLE_GEMINI_API_KEY env var</auth>
+        <sdk>google-generativeai>=0.8.0</sdk>
+      </service>
+    </api-integration>
+  </architecture>
+
+  <!-- ============================================== -->
+  <!-- SECTION 3: EXISTING CODE ARTIFACTS -->
+  <!-- ============================================== -->
+  <existing-code>
+    <relevant-files>
+      <file path="src/jobs/handlers/__init__.py" relevance="high">
+        <purpose>Handler registration - need to add analyze_document handler</purpose>
+        <pattern>Lazy import pattern with get_handle_* functions</pattern>
+        <modification>Add handle_analyze_document export</modification>
+      </file>
+
+      <file path="src/jobs/handlers/generate_embeddings.py" relevance="high">
+        <purpose>Upstream handler that enqueues analyze-document jobs</purpose>
+        <pattern>Handler class with DI, async handle method, _enqueue_next_job</pattern>
+        <note>Already enqueues "analyze-document" job at line 272</note>
+        <code-snippet>
+async def _enqueue_next_job(self, document_id, deal_id, user_id):
+    job_id = await queue.enqueue("analyze-document", job_data)
+        </code-snippet>
+      </file>
+
+      <file path="src/jobs/worker.py" relevance="high">
+        <purpose>Worker registration for job handlers</purpose>
+        <pattern>setup_default_handlers registers handlers with worker</pattern>
+        <modification>Add: worker.register("analyze-document", handle_analyze_document)</modification>
+        <existing-config>
+          <worker-config name="analyze-document" batch-size="3" polling-interval="5"/>
+        </existing-config>
+      </file>
+
+      <file path="src/storage/supabase_client.py" relevance="high">
+        <purpose>Database operations - need to extend for findings</purpose>
+        <pattern>Async methods with asyncpg, transaction support, error handling</pattern>
+        <existing-methods>
+          <method>store_chunks(document_id, chunks) -> int</method>
+          <method>update_document_status(document_id, status) -> bool</method>
+          <method>get_chunks_by_document(document_id) -> list[dict]</method>
+        </existing-methods>
+        <new-methods-needed>
+          <method>store_findings(document_id, findings: list[FindingData]) -> int</method>
+          <method>store_findings_and_update_status(document_id, findings, status) -> int</method>
+        </new-methods-needed>
+      </file>
+
+      <file path="src/embeddings/openai_client.py" relevance="medium">
+        <purpose>Reference pattern for external API client</purpose>
+        <pattern>
+          - Retry with tenacity (exponential backoff)
+          - BatchResult dataclass for aggregated results
+          - Error classes (EmbeddingError, retryable flag)
+          - Token counting for cost tracking
+        </pattern>
+        <reuse>Same patterns for GeminiAnalysisClient</reuse>
+      </file>
+
+      <file path="src/config.py" relevance="medium">
+        <purpose>Configuration management - add Gemini settings</purpose>
+        <new-config-needed>
+          <setting name="google_gemini_api_key" type="str"/>
+          <setting name="gemini_flash_model" type="str" default="gemini-2.5-flash"/>
+          <setting name="gemini_pro_model" type="str" default="gemini-2.5-pro"/>
+          <setting name="gemini_confidence_threshold" type="float" default="0.7"/>
+          <setting name="gemini_batch_size" type="int" default="10"/>
+        </new-config-needed>
+      </file>
+
+      <file path="src/jobs/queue.py" relevance="low">
+        <purpose>Job queue interface</purpose>
+        <note>No changes needed - use existing enqueue/dequeue</note>
+      </file>
+    </relevant-files>
+
+    <code-patterns>
+      <pattern name="Job Handler Structure">
+        <description>Standard handler class pattern from generate_embeddings.py</description>
+        <template>
+class AnalyzeDocumentHandler:
+    def __init__(self, db_client=None, llm_client=None, config=None):
+        self.db = db_client or get_supabase_client()
+        self.llm = llm_client or GeminiAnalysisClient()
+        self.config = config or get_settings()
+
+    async def handle(self, job: Job) -> dict[str, Any]:
+        document_id = UUID(job.data["document_id"])
+        # 1. Update status
+        # 2. Load chunks
+        # 3. Process with LLM
+        # 4. Store findings
+        # 5. Update status
+        # 6. Return metrics
+
+async def handle_analyze_document(job: Job) -> dict[str, Any]:
+    handler = get_analyze_document_handler()
+    return await handler.handle(job)
+        </template>
+      </pattern>
+
+      <pattern name="External API Client">
+        <description>Pattern from OpenAIEmbeddingClient for external service</description>
+        <key-elements>
+          <element>Tenacity retry decorator for transient errors</element>
+          <element>Custom exception classes with retryable flag</element>
+          <element>Batch processing with configurable size</element>
+          <element>Result dataclass with metrics (tokens, cost, timing)</element>
+        </key-elements>
+      </pattern>
+
+      <pattern name="Database Transaction">
+        <description>Atomic operations from supabase_client.py</description>
+        <template>
+async with pool.acquire() as conn:
+    async with conn.transaction():
+        # Multiple DB operations
+        # All succeed or all rollback
+        </template>
+      </pattern>
+    </code-patterns>
+  </existing-code>
+
+  <!-- ============================================== -->
+  <!-- SECTION 4: DEPENDENCIES -->
+  <!-- ============================================== -->
+  <dependencies>
+    <new-packages>
+      <package name="google-generativeai" version=">=0.8.0">
+        <purpose>Official Google Gemini SDK for Python</purpose>
+        <install>Add to pyproject.toml dependencies</install>
+      </package>
+    </new-packages>
+
+    <existing-packages>
+      <package name="tenacity" version=">=9.0.0">
+        <purpose>Retry logic with exponential backoff</purpose>
+        <already-used-in>src/embeddings/openai_client.py</already-used-in>
+      </package>
+      <package name="structlog" version=">=24.4.0">
+        <purpose>Structured logging</purpose>
+      </package>
+      <package name="pydantic" version=">=2.10.0">
+        <purpose>Data validation for FindingData</purpose>
+      </package>
+      <package name="asyncpg" version=">=0.30.0">
+        <purpose>Async PostgreSQL operations</purpose>
+      </package>
+    </existing-packages>
+
+    <environment-variables>
+      <var name="GOOGLE_GEMINI_API_KEY" required="true">
+        <description>Gemini API key for LLM analysis</description>
+        <obtain>Google AI Studio or Cloud Console</obtain>
+      </var>
+    </environment-variables>
+  </dependencies>
+
+  <!-- ============================================== -->
+  <!-- SECTION 5: TESTING STRATEGY -->
+  <!-- ============================================== -->
+  <testing>
+    <test-files>
+      <file path="tests/unit/test_jobs/test_analyze_document.py">
+        <purpose>Handler unit tests</purpose>
+        <coverage-target>80%</coverage-target>
+        <test-cases>
+          <case>test_handle_success_returns_result</case>
+          <case>test_handle_updates_status_to_analyzing</case>
+          <case>test_handle_loads_chunks_from_database</case>
+          <case>test_handle_calls_flash_model_for_analysis</case>
+          <case>test_handle_escalates_to_pro_for_low_confidence</case>
+          <case>test_handle_stores_findings_atomically</case>
+          <case>test_handle_enqueues_next_job</case>
+          <case>test_handle_empty_chunks_marks_analyzed</case>
+          <case>test_handle_gemini_error_raises</case>
+          <case>test_handle_non_retryable_error_marks_failed</case>
+          <case>test_handle_returns_cost_metrics</case>
+        </test-cases>
+      </file>
+
+      <file path="tests/unit/test_llm/test_gemini_client.py">
+        <purpose>Gemini client unit tests</purpose>
+        <coverage-target>85%</coverage-target>
+        <test-cases>
+          <case>test_analyze_chunk_returns_findings</case>
+          <case>test_analyze_chunk_parses_json_response</case>
+          <case>test_validate_finding_improves_confidence</case>
+          <case>test_analyze_batch_processes_multiple_chunks</case>
+          <case>test_retry_on_rate_limit</case>
+          <case>test_retry_on_timeout</case>
+          <case>test_no_retry_on_invalid_response</case>
+          <case>test_cost_calculation_accuracy</case>
+        </test-cases>
+      </file>
+    </test-files>
+
+    <mocking-strategy>
+      <mock name="GeminiAnalysisClient">
+        <pattern>
+from unittest.mock import MagicMock, AsyncMock
+
+@pytest.fixture
+def mock_gemini_client():
+    mock = MagicMock()
+    mock.analyze_batch = AsyncMock(return_value=AnalysisBatchResult(
+        findings=[sample_finding],
+        input_tokens=1000,
+        output_tokens=200,
+        flash_calls=5,
+        pro_calls=1,
+    ))
+    return mock
+        </pattern>
+      </mock>
+
+      <mock name="Gemini API Response">
+        <pattern>
+# Mock the google.generativeai module
+with patch("src.llm.gemini_client.genai") as mock_genai:
+    mock_model = MagicMock()
+    mock_model.generate_content_async = AsyncMock(return_value=MockResponse(
+        text='[{"text": "Revenue increased 25%", "confidence": 0.85, "category": "financial"}]'
+    ))
+    mock_genai.GenerativeModel.return_value = mock_model
+        </pattern>
+      </mock>
+    </mocking-strategy>
+
+    <test-fixtures>
+      <fixture name="sample_finding">
+        <code>
+@pytest.fixture
+def sample_finding():
+    return FindingData(
+        text="Revenue increased 25% YoY to $150M",
+        confidence=0.85,
+        category="financial",
+        source_chunk_id=uuid4(),
+        page_number=3,
+        metadata={"entities": ["revenue", "$150M"]}
+    )
+        </code>
+      </fixture>
+
+      <fixture name="sample_analysis_job">
+        <code>
+@pytest.fixture
+def sample_analysis_job():
+    return Job(
+        id=str(uuid4()),
+        name="analyze-document",
+        data={
+            "document_id": str(uuid4()),
+            "deal_id": str(uuid4()),
+            "user_id": str(uuid4()),
+        },
+        state=JobState.ACTIVE,
+        created_on=datetime.now(),
+        started_on=datetime.now(),
+        retry_count=0,
+    )
+        </code>
+      </fixture>
+    </test-fixtures>
+  </testing>
+
+  <!-- ============================================== -->
+  <!-- SECTION 6: IMPLEMENTATION GUIDANCE -->
+  <!-- ============================================== -->
+  <implementation-guidance>
+    <suggested-order>
+      <phase number="1" name="Foundation">
+        <task>Create src/llm/ directory structure</task>
+        <task>Add FindingData and AnalysisBatchResult dataclasses to src/llm/__init__.py</task>
+        <task>Add Gemini configuration to src/config.py</task>
+        <task>Add google-generativeai to pyproject.toml</task>
+      </phase>
+
+      <phase number="2" name="Gemini Client">
+        <task>Implement GeminiAnalysisClient in src/llm/gemini_client.py</task>
+        <task>Create prompt templates for M&A document analysis</task>
+        <task>Implement analyze_chunk with Flash model</task>
+        <task>Implement validate_finding with Pro model</task>
+        <task>Implement analyze_batch with batching logic</task>
+        <task>Write test_gemini_client.py tests</task>
+      </phase>
+
+      <phase number="3" name="Database">
+        <task>Create migration 00017_add_findings_chunk_reference.sql</task>
+        <task>Add store_findings method to SupabaseClient</task>
+        <task>Add store_findings_and_update_status method</task>
+        <task>Add tests for new DB methods</task>
+      </phase>
+
+      <phase number="4" name="Handler">
+        <task>Implement AnalyzeDocumentHandler in src/jobs/handlers/analyze_document.py</task>
+        <task>Register handler in src/jobs/handlers/__init__.py</task>
+        <task>Register with worker in src/jobs/worker.py</task>
+        <task>Write test_analyze_document.py tests</task>
+      </phase>
+
+      <phase number="5" name="Integration">
+        <task>End-to-end test with full pipeline</task>
+        <task>Verify findings appear in database with chunk links</task>
+        <task>Verify cost metrics are logged</task>
+      </phase>
+    </suggested-order>
+
+    <prompt-engineering>
+      <system-prompt purpose="M&A Document Analysis">
+You are an expert M&A (Mergers and Acquisitions) analyst reviewing due diligence documents.
+Your task is to extract key findings from document chunks that would be relevant for investment decisions.
+
+For each finding, provide:
+1. A concise but complete statement of the finding
+2. A confidence score (0.0-1.0) based on clarity and specificity of the source
+3. A category: financial, legal, operational, risk, strategic, or other
+4. Any relevant entities or metrics mentioned
+
+Return findings as a JSON array. Only extract findings you are confident about.
+      </system-prompt>
+
+      <user-prompt-template purpose="Chunk Analysis">
+Analyze the following document chunk and extract key M&A-relevant findings:
+
+Document: {{document_name}}
+Page: {{page_number}}
+Chunk Type: {{chunk_type}}
+
+Content:
+{{chunk_content}}
+
+Return findings as JSON array with structure:
+[{
+  "text": "finding statement",
+  "confidence": 0.0-1.0,
+  "category": "financial|legal|operational|risk|strategic|other",
+  "entities": ["entity1", "entity2"]
+}]
+      </user-prompt-template>
+
+      <validation-prompt purpose="Pro Model Validation">
+Review this finding extracted from an M&A document and validate its accuracy.
+Improve the confidence score if the finding is well-supported, or lower it if uncertain.
+
+Original Finding: {{finding_text}}
+Original Confidence: {{original_confidence}}
+Source Content: {{chunk_content}}
+
+Return the validated finding with potentially adjusted confidence and any refinements to the text.
+      </validation-prompt>
+    </prompt-engineering>
+
+    <error-handling>
+      <error type="RateLimitError">
+        <behavior>Retry with exponential backoff (1s, 2s, 4s, max 60s)</behavior>
+        <max-retries>5</max-retries>
+        <implementation>Use tenacity @retry decorator</implementation>
+      </error>
+      <error type="TimeoutError">
+        <behavior>Retry up to 3 times</behavior>
+        <timeout>60 seconds per API call</timeout>
+      </error>
+      <error type="InvalidResponseError">
+        <behavior>Log and skip chunk, continue processing</behavior>
+        <note>Don't fail entire document for one bad chunk</note>
+      </error>
+      <error type="AuthenticationError">
+        <behavior>Non-retryable, mark document as analysis_failed</behavior>
+      </error>
+    </error-handling>
+
+    <performance-considerations>
+      <consideration name="Batching">
+        <recommendation>Process 10 chunks per Gemini API call to optimize throughput</recommendation>
+        <rationale>Reduces API call overhead while staying within context limits</rationale>
+      </consideration>
+      <consideration name="Tier Escalation">
+        <recommendation>Only escalate to Pro model for findings with confidence &lt; 0.7</recommendation>
+        <rationale>Pro model costs 25x more than Flash - use sparingly</rationale>
+      </consideration>
+      <consideration name="Concurrent Processing">
+        <recommendation>Process multiple documents concurrently via worker batch_size=3</recommendation>
+        <rationale>Already configured in DEFAULT_WORKER_CONFIG</rationale>
+      </consideration>
+    </performance-considerations>
+  </implementation-guidance>
+
+  <!-- ============================================== -->
+  <!-- SECTION 7: RELATED DOCUMENTATION -->
+  <!-- ============================================== -->
+  <related-docs>
+    <doc type="epic" path="docs/sprint-artifacts/epics/epic-E3.md">
+      <relevance>Parent epic defining document processing pipeline</relevance>
+    </doc>
+    <doc type="tech-spec" path="docs/sprint-artifacts/tech-spec-epic-E3.md">
+      <relevance>Technical specification for Epic 3</relevance>
+    </doc>
+    <doc type="architecture" path="docs/manda-architecture.md">
+      <relevance>Overall system architecture</relevance>
+    </doc>
+    <doc type="prd" path="docs/manda-prd.md">
+      <relevance>Product requirements context</relevance>
+    </doc>
+    <doc type="migration" path="manda-app/supabase/migrations/00004_create_findings_table.sql">
+      <relevance>Existing findings table schema</relevance>
+    </doc>
+  </related-docs>
+
+  <!-- ============================================== -->
+  <!-- SECTION 8: CHECKLIST -->
+  <!-- ============================================== -->
+  <checklist>
+    <item category="setup">[ ] Add google-generativeai to pyproject.toml</item>
+    <item category="setup">[ ] Add GOOGLE_GEMINI_API_KEY to .env.example</item>
+    <item category="setup">[ ] Add Gemini config settings to src/config.py</item>
+    <item category="database">[ ] Create migration 00017_add_findings_chunk_reference.sql</item>
+    <item category="database">[ ] Run migration against dev database</item>
+    <item category="database">[ ] Add store_findings methods to SupabaseClient</item>
+    <item category="code">[ ] Create src/llm/__init__.py with data classes</item>
+    <item category="code">[ ] Implement GeminiAnalysisClient</item>
+    <item category="code">[ ] Implement AnalyzeDocumentHandler</item>
+    <item category="code">[ ] Register handler in __init__.py and worker.py</item>
+    <item category="tests">[ ] Write test_gemini_client.py (>85% coverage)</item>
+    <item category="tests">[ ] Write test_analyze_document.py (>80% coverage)</item>
+    <item category="tests">[ ] Write test_supabase_findings.py for new methods</item>
+    <item category="tests">[ ] All tests pass: pytest manda-processing/</item>
+    <item category="verification">[ ] End-to-end: Upload doc, verify findings in DB</item>
+    <item category="verification">[ ] Cost metrics logged correctly</item>
+    <item category="verification">[ ] Error handling works (test with invalid API key)</item>
+  </checklist>
+</story-context>

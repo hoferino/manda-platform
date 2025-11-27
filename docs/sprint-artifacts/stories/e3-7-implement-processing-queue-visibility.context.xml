@@ -1,0 +1,187 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>7</storyId>
+    <title>Implement Processing Queue Visibility</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e3-7-implement-processing-queue-visibility.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to see what documents are in the processing queue</iWant>
+    <soThat>I understand what's being analyzed and can manage the queue</soThat>
+    <tasks>
+      <task id="1" acs="3">Create FastAPI Queue API Endpoint - GET /api/processing/queue to query pg-boss jobs</task>
+      <task id="2" acs="4">Create Cancel Job API Endpoint - DELETE /api/processing/queue/{job_id}</task>
+      <task id="3" acs="3,4">Create Next.js API Routes - proxy endpoints to manda-processing</task>
+      <task id="4" acs="1,2">Create ProcessingQueue Component - collapsible panel showing queue</task>
+      <task id="5" acs="2">Create QueueItem Component - individual queue entry display</task>
+      <task id="6" acs="1,5">Integrate Queue Panel in Data Room - add to DataRoomClient</task>
+      <task id="7" acs="4">Implement Cancel Flow - confirmation dialog, optimistic updates</task>
+      <task id="8" acs="6">Write Tests - unit and integration tests for all components</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Processing Queue Panel Component - collapsible panel in Data Room showing queued/processing documents with empty state</criterion>
+    <criterion id="AC2">Queue Item Display - document name, current status, time in queue, processing stage, estimated completion, visual indicator</criterion>
+    <criterion id="AC3">Query pg-boss for Active Jobs - FastAPI endpoint GET /api/processing/queue with project_id filter, job metadata, pagination</criterion>
+    <criterion id="AC4">Cancel Job Action - Cancel button for queued jobs, DELETE endpoint, confirmation dialog, status update to cancelled</criterion>
+    <criterion id="AC5">Real-time Queue Updates - panel updates via existing Supabase Realtime (useDocumentUpdates), WebSocket reconnection</criterion>
+    <criterion id="AC6">Tests Pass - unit tests for components and API, integration tests for cancel flow, 80% coverage</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E3.md" title="Epic 3 Technical Specification" section="E3.7: Processing Queue Visibility" snippet="Story defines queue visibility API (GET /api/processing/queue) and UI components to display documents in processing pipeline. Acceptance criteria: view queue position, status, estimated completion time." />
+      <doc path="docs/manda-architecture.md" title="Architecture Document" section="Background Processing" snippet="pg-boss for job queue, Python worker processes. Job states: created (queued), active (processing), retry, completed, failed, cancelled." />
+      <doc path="docs/sprint-artifacts/stories/e3-6-create-processing-status-tracking-and-websocket-updates.md" title="E3.6 Story (Done)" section="Learnings" snippet="ProcessingStatusBadge, ProcessingProgress, useDocumentUpdates hook available for reuse. 207 tests passing. Pattern: Supabase Realtime for status updates." />
+    </docs>
+
+    <code>
+      <!-- Existing Components to Reuse (E3.6) -->
+      <file path="manda-app/components/data-room/processing-status-badge.tsx" kind="component" symbol="ProcessingStatusBadge" lines="1-190" reason="Reuse for queue item status display - supports all granular statuses (pending, parsing, embedding, analyzing, complete, failed)" />
+      <file path="manda-app/components/data-room/processing-progress.tsx" kind="component" symbol="ProcessingProgress" lines="1-100" reason="Reuse for queue item stage indicator - shows pipeline stages with checkmarks and spinner" />
+      <file path="manda-app/lib/hooks/useDocumentUpdates.ts" kind="hook" symbol="useDocumentUpdates" lines="1-280" reason="Reuse for real-time queue updates - Supabase Realtime subscription for document status changes" />
+
+      <!-- Data Room Integration Point -->
+      <file path="manda-app/app/projects/[id]/data-room/data-room-client.tsx" kind="component" symbol="DataRoomClient" lines="1-200" reason="Integration point for ProcessingQueue panel - add alongside document list. Uses useDocumentUpdates already." />
+      <file path="manda-app/components/data-room/index.ts" kind="barrel" symbol="exports" reason="Add new component exports (ProcessingQueue, QueueItem)" />
+
+      <!-- API Patterns -->
+      <file path="manda-app/app/api/documents/[id]/retry/route.ts" kind="api-route" symbol="POST" reason="Reference pattern for document action API routes - validates status, calls webhook" />
+
+      <!-- Backend Processing Service -->
+      <file path="manda-processing/src/jobs/queue.py" kind="service" symbol="JobQueue, JobState" lines="1-150" reason="pg-boss queue interface - JobState enum (CREATED, ACTIVE, RETRY, COMPLETED, CANCELLED, FAILED), Job dataclass" />
+      <file path="manda-processing/src/jobs/worker.py" kind="service" symbol="Worker" lines="1-269" reason="Job worker implementation - shows registered job types (document-parse, generate-embeddings, analyze-document)" />
+      <file path="manda-processing/src/api/routes/webhooks.py" kind="api-route" symbol="webhooks_router" reason="Existing webhook patterns - POST /webhooks/document-uploaded" />
+      <file path="manda-processing/src/api/routes/search.py" kind="api-route" symbol="search_router" reason="Reference pattern for FastAPI routes with query parameters" />
+      <file path="manda-processing/src/storage/supabase_client.py" kind="service" symbol="SupabaseClient" reason="Database operations pattern - use for updating document status to cancelled" />
+
+      <!-- Test Patterns -->
+      <file path="manda-app/__tests__/components/data-room/processing-status-badge.test.tsx" kind="test" symbol="ProcessingStatusBadge tests" reason="Follow pattern for component tests with mocked dependencies" />
+      <file path="manda-app/__tests__/lib/hooks/useDocumentUpdates.test.tsx" kind="test" symbol="useDocumentUpdates tests" reason="Follow pattern for hook tests with mocked Supabase client" />
+      <file path="manda-processing/tests/unit/test_api/test_webhooks.py" kind="test" symbol="webhook tests" reason="Follow pattern for FastAPI endpoint tests with pytest-asyncio" />
+    </code>
+
+    <dependencies>
+      <frontend>
+        <package name="react" version="19.2.0" />
+        <package name="next" version="16.0.4" />
+        <package name="@supabase/supabase-js" version="^2.84.0" />
+        <package name="zustand" version="^5.0.8" />
+        <package name="lucide-react" version="^0.554.0" />
+        <package name="sonner" version="^2.0.7" purpose="Toast notifications" />
+        <package name="vitest" version="^4.0.14" purpose="Testing" />
+        <package name="@testing-library/react" version="^16.3.0" purpose="Component testing" />
+      </frontend>
+      <backend>
+        <package name="fastapi" version=">=0.115.0" />
+        <package name="asyncpg" version=">=0.30.0" />
+        <package name="pydantic" version=">=2.10.0" />
+        <package name="structlog" version=">=24.4.0" />
+        <package name="pytest" version=">=8.3.0" />
+        <package name="pytest-asyncio" version=">=0.24.0" />
+      </backend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Follow existing FastAPI route patterns in manda-processing/src/api/routes/</constraint>
+    <constraint type="pattern">Reuse useDocumentUpdates hook pattern for real-time updates - don't create new WebSocket connections</constraint>
+    <constraint type="pattern">Follow existing component structure in manda-app/components/data-room/</constraint>
+    <constraint type="security">Filter pg-boss queries by project_id for multi-tenant isolation</constraint>
+    <constraint type="security">Verify job belongs to user's project before allowing cancel</constraint>
+    <constraint type="testing">Minimum 80% coverage on new code</constraint>
+    <constraint type="testing">Follow vitest patterns for frontend, pytest-asyncio for backend</constraint>
+    <constraint type="database">Use existing pgboss schema (pgboss.job table) - don't modify pg-boss internals</constraint>
+    <constraint type="database">Only cancel jobs in 'created' state (not yet started)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="GET /api/processing/queue" kind="REST endpoint">
+      <signature>GET /api/processing/queue?project_id={uuid}&amp;limit={int}&amp;offset={int}</signature>
+      <path>manda-processing/src/api/routes/processing.py (to create)</path>
+      <response>
+        {
+          "jobs": [QueueJob],
+          "total": int,
+          "hasMore": bool
+        }
+      </response>
+    </interface>
+    <interface name="DELETE /api/processing/queue/{job_id}" kind="REST endpoint">
+      <signature>DELETE /api/processing/queue/{job_id}?project_id={uuid}</signature>
+      <path>manda-processing/src/api/routes/processing.py (to create)</path>
+      <response>{"success": bool, "message": string}</response>
+    </interface>
+    <interface name="QueueJob" kind="TypeScript interface">
+      <signature>
+        interface QueueJob {
+          id: string;
+          documentId: string;
+          documentName: string;
+          fileType: string;
+          status: 'queued' | 'processing' | 'failed';
+          processingStage: 'parsing' | 'embedding' | 'analyzing' | null;
+          createdAt: string;
+          startedAt: string | null;
+          timeInQueue: number;
+          estimatedCompletion: string | null;
+          retryCount: number;
+          error: string | null;
+        }
+      </signature>
+      <path>manda-app/lib/api/processing.ts (to create)</path>
+    </interface>
+    <interface name="JobState" kind="Python enum">
+      <signature>
+        class JobState(str, Enum):
+          CREATED = "created"
+          RETRY = "retry"
+          ACTIVE = "active"
+          COMPLETED = "completed"
+          CANCELLED = "cancelled"
+          FAILED = "failed"
+      </signature>
+      <path>manda-processing/src/jobs/queue.py:24-32</path>
+    </interface>
+    <interface name="useProcessingQueue" kind="React hook">
+      <signature>
+        function useProcessingQueue(projectId: string): {
+          jobs: QueueJob[];
+          isLoading: boolean;
+          error: Error | null;
+          refetch: () => void;
+        }
+      </signature>
+      <path>manda-app/lib/hooks/useProcessingQueue.ts (to create)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Frontend: Vitest with React Testing Library. Mock Supabase client and external dependencies.
+      Test rendering, user interactions, and state changes. Use describe/it blocks with descriptive names.
+      Backend: pytest with pytest-asyncio. Mock database and external services. Test happy path,
+      edge cases, and error handling. Use fixtures in conftest.py for reusable test data.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/data-room/processing-queue.test.tsx</location>
+      <location>manda-app/__tests__/components/data-room/queue-item.test.tsx</location>
+      <location>manda-app/__tests__/lib/hooks/useProcessingQueue.test.ts</location>
+      <location>manda-processing/tests/unit/test_api/test_processing.py</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test ProcessingQueue renders when jobs exist, hides when empty, collapses/expands</idea>
+      <idea ac="AC2">Test QueueItem displays all fields correctly, shows correct icons for status</idea>
+      <idea ac="AC3">Test queue API returns jobs filtered by project_id, respects pagination</idea>
+      <idea ac="AC4">Test cancel API rejects non-created jobs, updates document status, returns success</idea>
+      <idea ac="AC5">Test queue updates when useDocumentUpdates fires, handles reconnection</idea>
+      <idea ac="AC6">Test all new components have >80% coverage, integration test for cancel flow</idea>
+    </ideas>
+  </tests>
+</story-context>

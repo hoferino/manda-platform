@@ -4,12 +4,14 @@
  * Story: E2.2 - Build Data Room Folder Structure View (AC: #1-8)
  * Story: E2.5 - Create Document Metadata Management (enhanced with details panel)
  * Story: E2.7 - Build Upload Progress Indicators (integrated upload panel)
+ * Story: E3.6 - Processing Status Tracking and WebSocket Updates (AC: #2, #4)
+ * Story: E3.7 - Implement Processing Queue Visibility (AC: #1, #5, #6)
  */
 
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
@@ -23,6 +25,7 @@ import {
   FolderSelectDialog,
   DeleteConfirmDialog,
   UploadButton,
+  ProcessingQueue,
   buildFolderTree,
   type FolderNode,
 } from '@/components/data-room'
@@ -34,6 +37,12 @@ import {
   downloadDocument,
 } from '@/lib/api/documents'
 import { createClient } from '@/lib/supabase/client'
+import {
+  useDocumentUpdates,
+  didProcessingComplete,
+  didProcessingFail,
+  type DocumentUpdate,
+} from '@/lib/hooks'
 
 interface DataRoomClientProps {
   projectId: string
@@ -86,6 +95,81 @@ export function DataRoomClient({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null)
 
+  // E3.6: Handle realtime document updates
+  const handleRealtimeUpdate = useCallback(
+    (update: DocumentUpdate) => {
+      if (update.type === 'INSERT') {
+        // Add new document to the list
+        setAllDocuments((prev) => {
+          // Check if already exists (avoid duplicates)
+          if (prev.some((d) => d.id === update.document.id)) {
+            return prev
+          }
+          return [update.document, ...prev]
+        })
+      } else if (update.type === 'UPDATE') {
+        // Update existing document
+        setAllDocuments((prev) =>
+          prev.map((d) => (d.id === update.document.id ? update.document : d))
+        )
+        // Update selected document if it's the one being updated
+        if (selectedDocument?.id === update.document.id) {
+          setSelectedDocument(update.document)
+        }
+
+        // Show toast notifications for processing status changes (AC: #4)
+        if (didProcessingComplete(update.oldDocument, update.document)) {
+          toast.success(`Document "${update.document.name}" processed successfully`, {
+            action: {
+              label: 'View',
+              onClick: () => {
+                setSelectedDocument(update.document)
+                setDetailsOpen(true)
+              },
+            },
+          })
+        } else if (didProcessingFail(update.oldDocument, update.document)) {
+          toast.error(`Document "${update.document.name}" processing failed`, {
+            action: {
+              label: 'View',
+              onClick: () => {
+                setSelectedDocument(update.document)
+                setDetailsOpen(true)
+              },
+            },
+          })
+        }
+      } else if (update.type === 'DELETE') {
+        // Remove document from list
+        setAllDocuments((prev) => prev.filter((d) => d.id !== update.document.id))
+        // Close details panel if deleted document was selected
+        if (selectedDocument?.id === update.document.id) {
+          setDetailsOpen(false)
+          setSelectedDocument(null)
+        }
+      }
+    },
+    [selectedDocument]
+  )
+
+  // E3.6: Subscribe to realtime updates
+  const { status: realtimeStatus, reconnect: reconnectRealtime } = useDocumentUpdates(
+    projectId,
+    {
+      onUpdate: handleRealtimeUpdate,
+      onConnectionChange: (status) => {
+        if (status === 'error') {
+          toast.error('Realtime connection lost', {
+            action: {
+              label: 'Reconnect',
+              onClick: reconnectRealtime,
+            },
+          })
+        }
+      },
+    }
+  )
+
   // Load documents from Supabase
   const loadDocuments = useCallback(async () => {
     setIsLoading(true)
@@ -104,6 +188,8 @@ export function DataRoomClient({
       }
 
       // Transform to Document type
+      // E3.6: Map all processing status fields including error and findings count
+      // Note: processing_error and findings_count may not exist in schema yet
       const docs: Document[] = (data || []).map((doc) => ({
         id: doc.id,
         projectId: doc.deal_id,
@@ -114,6 +200,8 @@ export function DataRoomClient({
         folderPath: doc.folder_path || null,
         uploadStatus: doc.upload_status as Document['uploadStatus'],
         processingStatus: doc.processing_status as Document['processingStatus'],
+        processingError: (doc as Record<string, unknown>).processing_error as string | null || null,
+        findingsCount: (doc as Record<string, unknown>).findings_count as number | null || null,
         createdAt: doc.created_at,
         updatedAt: doc.updated_at,
       }))
@@ -561,7 +649,33 @@ export function DataRoomClient({
   return (
     <div className="flex h-full flex-col">
       {/* Action bar */}
-      <div className="flex items-center justify-end border-b px-4 py-2">
+      <div className="flex items-center justify-between border-b px-4 py-2">
+        {/* E3.6: Realtime connection status indicator */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {realtimeStatus === 'connected' ? (
+            <>
+              <Wifi className="h-4 w-4 text-green-500" />
+              <span className="hidden sm:inline">Live updates</span>
+            </>
+          ) : realtimeStatus === 'connecting' ? (
+            <>
+              <Wifi className="h-4 w-4 animate-pulse text-yellow-500" />
+              <span className="hidden sm:inline">Connecting...</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-4 w-4 text-red-500" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 text-red-500 hover:text-red-600"
+                onClick={reconnectRealtime}
+              >
+                Reconnect
+              </Button>
+            </>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={loadDocuments}>
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -599,6 +713,11 @@ export function DataRoomClient({
               folderPath={selectedPath}
               onNavigate={handleSelectFolder}
             />
+          </div>
+
+          {/* E3.7: Processing Queue Panel */}
+          <div className="px-4 pt-4">
+            <ProcessingQueue projectId={projectId} />
           </div>
 
           {/* Document list */}

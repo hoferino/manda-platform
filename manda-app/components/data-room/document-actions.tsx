@@ -56,13 +56,16 @@ export interface DocumentActionsProps {
 
 /**
  * Check if document is in a state where destructive actions should be disabled
+ * E3.6: Updated to use isProcessingInProgress from processing-status-badge
  */
-function isProcessing(document: Document): boolean {
-  return (
-    document.uploadStatus === 'uploading' ||
-    document.uploadStatus === 'pending' ||
-    document.processingStatus === 'processing'
-  )
+function isProcessingDocument(document: Document): boolean {
+  // Check upload status
+  if (document.uploadStatus === 'uploading' || document.uploadStatus === 'pending') {
+    return true
+  }
+  // Check processing status (parsing, embedding, analyzing are all "in progress")
+  const inProgressStatuses = ['parsing', 'embedding', 'analyzing']
+  return inProgressStatuses.includes(document.processingStatus)
 }
 
 /**
@@ -74,6 +77,7 @@ function canDownload(document: Document): boolean {
 
 /**
  * Get processing status tooltip message
+ * E3.6: Updated for new granular processing statuses
  */
 function getProcessingTooltip(document: Document): string | null {
   if (document.uploadStatus === 'uploading') {
@@ -82,7 +86,9 @@ function getProcessingTooltip(document: Document): string | null {
   if (document.uploadStatus === 'pending') {
     return 'Upload is pending'
   }
-  if (document.processingStatus === 'processing') {
+  // Check for any in-progress processing status
+  const inProgressStatuses = ['parsing', 'embedding', 'analyzing']
+  if (inProgressStatuses.includes(document.processingStatus)) {
     return 'Document is being processed'
   }
   return null
@@ -106,7 +112,7 @@ export function DocumentActions({
   const [isDownloading, setIsDownloading] = useState(false)
   const [isViewing, setIsViewing] = useState(false)
 
-  const processing = isProcessing(document)
+  const processing = isProcessingDocument(document)
   const downloadable = canDownload(document)
   const processingTooltip = getProcessingTooltip(document)
 

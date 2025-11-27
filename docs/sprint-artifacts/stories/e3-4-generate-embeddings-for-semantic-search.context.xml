@@ -1,0 +1,321 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>3</epicId>
+    <storyId>4</storyId>
+    <title>Generate Embeddings for Semantic Search</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e3-4-generate-embeddings-for-semantic-search.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>platform developer</asA>
+    <iWant>a job handler that generates vector embeddings for parsed document chunks</iWant>
+    <soThat>users can perform semantic similarity search across all uploaded documents to find relevant information quickly</soThat>
+    <tasks>
+      <task id="1" ac="2">
+        <title>Create Embedding Client Module</title>
+        <subtasks>
+          <subtask>Create src/embeddings/__init__.py module structure</subtask>
+          <subtask>Implement OpenAIEmbeddingClient class in src/embeddings/openai_client.py</subtask>
+          <subtask>Add batching logic (chunk texts into groups of 100)</subtask>
+          <subtask>Implement retry with exponential backoff using tenacity</subtask>
+          <subtask>Add token counting for cost tracking</subtask>
+          <subtask>Create embedding client singleton factory</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="1,5">
+        <title>Create Embedding Job Handler</title>
+        <subtasks>
+          <subtask>Create src/jobs/handlers/generate_embeddings.py</subtask>
+          <subtask>Implement GenerateEmbeddingsHandler class</subtask>
+          <subtask>Load chunks from database by document_id</subtask>
+          <subtask>Call OpenAI embedding client in batches</subtask>
+          <subtask>Store embeddings back to document_chunks table</subtask>
+          <subtask>Update document processing_status to "embedded"</subtask>
+          <subtask>Enqueue next job (analyze_document) on success</subtask>
+          <subtask>Register handler in src/jobs/handlers/__init__.py</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Implement Database Operations</title>
+        <subtasks>
+          <subtask>Add update_chunk_embeddings() method to SupabaseClient</subtask>
+          <subtask>Implement batch update for efficiency</subtask>
+          <subtask>Ensure transactional consistency</subtask>
+          <subtask>Handle pgvector format conversion (list → vector)</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Implement Similarity Search API</title>
+        <subtasks>
+          <subtask>Create src/api/routes/search.py</subtask>
+          <subtask>Implement GET /api/search/similar endpoint</subtask>
+          <subtask>Add query embedding generation</subtask>
+          <subtask>Implement pgvector cosine similarity search</subtask>
+          <subtask>Add filtering by project_id, document_id</subtask>
+          <subtask>Return ranked results with similarity scores</subtask>
+          <subtask>Register router in main.py</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="2">
+        <title>Add Configuration</title>
+        <subtasks>
+          <subtask>Add OPENAI_API_KEY to config.py</subtask>
+          <subtask>Add EMBEDDING_MODEL setting (default: text-embedding-3-large)</subtask>
+          <subtask>Add EMBEDDING_BATCH_SIZE setting (default: 100)</subtask>
+          <subtask>Add EMBEDDING_DIMENSIONS setting (default: 3072)</subtask>
+          <subtask>Update .env.example with new variables</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Write Tests</title>
+        <subtasks>
+          <subtask>Unit tests for OpenAIEmbeddingClient with mocked OpenAI</subtask>
+          <subtask>Unit tests for batch processing logic</subtask>
+          <subtask>Unit tests for GenerateEmbeddingsHandler</subtask>
+          <subtask>Integration tests for embedding job flow</subtask>
+          <subtask>API tests for similarity search endpoint</subtask>
+          <subtask>Verify 80% coverage target on new code</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Embedding Job Handler Created">
+      <requirement>generate_embeddings job handler exists in manda-processing/src/jobs/handlers/</requirement>
+      <requirement>Handler is registered with pg-boss job queue</requirement>
+      <requirement>Handler invoked automatically when parse_document job completes successfully</requirement>
+      <requirement>Handler logs job lifecycle events (started, completed, failed)</requirement>
+    </criterion>
+    <criterion id="AC2" title="OpenAI Embeddings Integration">
+      <requirement>Use text-embedding-3-large model (3072 dimensions)</requirement>
+      <requirement>Batch API calls to respect rate limits (max 100 texts per request)</requirement>
+      <requirement>Handle API errors with retry logic (3 attempts with exponential backoff)</requirement>
+      <requirement>Track token usage for cost monitoring</requirement>
+    </criterion>
+    <criterion id="AC3" title="Embedding Storage">
+      <requirement>Embedding vectors stored in document_chunks.embedding column (pgvector)</requirement>
+      <requirement>Update happens within transaction (all-or-nothing for a document)</requirement>
+      <requirement>Document status updated to embedded on completion</requirement>
+      <requirement>Handle partial failures gracefully (retry individual chunks if needed)</requirement>
+    </criterion>
+    <criterion id="AC4" title="Similarity Search">
+      <requirement>API endpoint for vector similarity search: GET /api/search/similar</requirement>
+      <requirement>Search accepts query text and returns top-K most similar chunks</requirement>
+      <requirement>Results include: chunk_id, document_id, content preview, similarity score</requirement>
+      <requirement>Support filtering by project_id and document_id</requirement>
+    </criterion>
+    <criterion id="AC5" title="Job Queue Flow">
+      <requirement>Job enqueued automatically after parse_document completes (already done in E3.3)</requirement>
+      <requirement>On success, next job (analyze_document) is enqueued</requirement>
+      <requirement>On failure, job marked failed with error details</requirement>
+      <requirement>Document status updated to embedding_failed on permanent failure</requirement>
+    </criterion>
+    <criterion id="AC6" title="Tests Pass">
+      <requirement>Unit tests for embedding generation logic</requirement>
+      <requirement>Unit tests for OpenAI client with mocked responses</requirement>
+      <requirement>Integration tests for full embedding flow</requirement>
+      <requirement>Similarity search API tests</requirement>
+      <requirement>Minimum 80% coverage on new handler code</requirement>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>E3.4: Embedding Generation</section>
+        <snippet>Embedding generation using OpenAI text-embedding-3-large (3072 dimensions). Job enqueued after parse_document completes. Embeddings stored in pgvector column with cosine similarity index.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Data Models - document_chunks table</section>
+        <snippet>document_chunks table includes embedding vector(3072) column with ivfflat index for cosine similarity search. Chunks linked to documents with source attribution metadata.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Module Structure - embeddings/</section>
+        <snippet>embeddings/ module contains openai_embeddings.py for OpenAI embedding client. Uses AsyncOpenAI with retry logic via tenacity. Batch processing with 100 texts per request limit.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E3.md</path>
+        <title>Epic 3 Technical Specification</title>
+        <section>Document Processing Pipeline</section>
+        <snippet>Job flow: parse_document (parsed) → generate_embeddings (embedded) → analyze_document (analyzed). Each job updates document.processing_status and enqueues next job on success.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Document Processing Flow</section>
+        <snippet>pg-boss enqueues job: generate_embeddings → Worker generates embeddings (OpenAI) → Store chunks in Postgres with embeddings (pgvector). Embeddings default: OpenAI text-embedding-3-large.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Technology Stack - Embeddings</section>
+        <snippet>Embeddings provider configurable (default: OpenAI). Model: text-embedding-3-large. Stored in PostgreSQL via pgvector extension for semantic similarity search.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E3.md</path>
+        <title>Epic 3: Intelligent Document Processing</title>
+        <section>Stories</section>
+        <snippet>E3.4: Generate Embeddings for Semantic Search. Part of background processing pipeline transforming documents into searchable knowledge base.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>manda-processing/src/jobs/handlers/parse_document.py</path>
+        <kind>handler</kind>
+        <symbol>ParseDocumentHandler</symbol>
+        <lines>60-181</lines>
+        <reason>Pattern to follow for GenerateEmbeddingsHandler. Shows job handling, error handling, status updates, and next job enqueuing. Enqueues generate-embeddings job at completion.</reason>
+      </file>
+      <file>
+        <path>manda-processing/src/jobs/handlers/__init__.py</path>
+        <kind>registry</kind>
+        <symbol>handlers</symbol>
+        <reason>Handler registration point. GenerateEmbeddingsHandler must be registered here for worker discovery.</reason>
+      </file>
+      <file>
+        <path>manda-processing/src/storage/supabase_client.py</path>
+        <kind>client</kind>
+        <symbol>SupabaseClient</symbol>
+        <lines>34-398</lines>
+        <reason>Database client to extend with update_chunk_embeddings() and get_chunks_by_document() methods. Uses asyncpg pool via get_pool() for transactions.</reason>
+      </file>
+      <file>
+        <path>manda-processing/src/jobs/queue.py</path>
+        <kind>queue</kind>
+        <symbol>JobQueue, Job, EnqueueOptions</symbol>
+        <lines>36-48, 95-170</lines>
+        <reason>Job queue interface. Job dataclass defines job structure. DEFAULT_JOB_OPTIONS already includes generate-embeddings config at line 78-84.</reason>
+      </file>
+      <file>
+        <path>manda-processing/src/config.py</path>
+        <kind>config</kind>
+        <symbol>Settings</symbol>
+        <lines>12-75</lines>
+        <reason>Configuration class to extend with OPENAI_API_KEY, EMBEDDING_MODEL, EMBEDDING_BATCH_SIZE, EMBEDDING_DIMENSIONS settings.</reason>
+      </file>
+      <file>
+        <path>manda-processing/src/main.py</path>
+        <kind>app</kind>
+        <symbol>app</symbol>
+        <reason>FastAPI application. Search router (src/api/routes/search.py) must be registered here.</reason>
+      </file>
+      <file>
+        <path>manda-app/supabase/migrations/00015_create_document_chunks_table.sql</path>
+        <kind>migration</kind>
+        <symbol>document_chunks</symbol>
+        <reason>Table schema. NOTE: Current embedding column is vector(1536) but story requires vector(3072) for text-embedding-3-large. Need migration to alter column dimension.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <existing>
+        <dep name="fastapi" version=">=0.115.0">Web framework for search API endpoint</dep>
+        <dep name="asyncpg" version=">=0.30.0">PostgreSQL async driver (already installed)</dep>
+        <dep name="pydantic" version=">=2.10.0">Request/response models</dep>
+        <dep name="structlog" version=">=24.4.0">Structured logging</dep>
+        <dep name="tenacity" version=">=9.0.0">Retry logic with exponential backoff</dep>
+        <dep name="tiktoken" version=">=0.9.0">Token counting for cost tracking</dep>
+      </existing>
+      <new>
+        <dep name="openai" version=">=1.82.0">OpenAI Python SDK for embeddings API</dep>
+        <dep name="pgvector" version=">=0.2.0">pgvector integration (psycopg2/asyncpg) - may not need Python package if using raw SQL</dep>
+      </new>
+      <pyproject>manda-processing/pyproject.toml - add "openai>=1.82.0" to dependencies (already commented)</pyproject>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec">Use text-embedding-3-large model with 3072 dimensions (not 1536)</constraint>
+    <constraint source="tech-spec">Batch API calls with max 100 texts per request (OpenAI limit)</constraint>
+    <constraint source="tech-spec">3 retry attempts with exponential backoff using tenacity</constraint>
+    <constraint source="tech-spec">Transactional updates - all embeddings for a document succeed or fail together</constraint>
+    <constraint source="architecture">Track token usage for cost monitoring (~$0.01 per 50-page document)</constraint>
+    <constraint source="architecture">All async operations using asyncpg and AsyncOpenAI</constraint>
+    <constraint source="code">Follow ParseDocumentHandler pattern for job handler structure</constraint>
+    <constraint source="code">Use lazy imports to avoid circular dependencies in tests</constraint>
+    <constraint source="code">Maintain 80%+ test coverage on new code</constraint>
+    <constraint source="migration">Current migration has vector(1536) - need new migration to alter to vector(3072)</constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>generate-embeddings job</name>
+      <kind>pg-boss job</kind>
+      <signature>{"document_id": "uuid", "chunks_count": int, "deal_id?": "uuid", "user_id?": "uuid"}</signature>
+      <path>manda-processing/src/jobs/queue.py:78-84</path>
+    </interface>
+    <interface>
+      <name>OpenAIEmbeddingClient.generate_batch</name>
+      <kind>async method</kind>
+      <signature>async def generate_batch(texts: list[str]) -> list[list[float]]</signature>
+      <path>manda-processing/src/embeddings/openai_client.py (to create)</path>
+    </interface>
+    <interface>
+      <name>SupabaseClient.update_chunk_embeddings</name>
+      <kind>async method</kind>
+      <signature>async def update_chunk_embeddings(document_id: UUID, chunk_ids: list[UUID], embeddings: list[list[float]]) -> int</signature>
+      <path>manda-processing/src/storage/supabase_client.py (to add)</path>
+    </interface>
+    <interface>
+      <name>SupabaseClient.get_chunks_by_document</name>
+      <kind>async method</kind>
+      <signature>async def get_chunks_by_document(document_id: UUID) -> list[dict]</signature>
+      <path>manda-processing/src/storage/supabase_client.py (to add)</path>
+    </interface>
+    <interface>
+      <name>GET /api/search/similar</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /api/search/similar?query=str&amp;project_id=uuid&amp;document_id=uuid&amp;limit=int</signature>
+      <path>manda-processing/src/api/routes/search.py (to create)</path>
+    </interface>
+    <interface>
+      <name>pgvector similarity search</name>
+      <kind>SQL query</kind>
+      <signature>SELECT *, 1 - (embedding &lt;=&gt; $1::vector) as similarity FROM document_chunks ORDER BY embedding &lt;=&gt; $1::vector LIMIT $2</signature>
+      <path>PostgreSQL with pgvector extension</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      <standard>Use pytest with pytest-asyncio for async tests (asyncio_mode = "auto")</standard>
+      <standard>Mock external dependencies (OpenAI, database) using unittest.mock.AsyncMock</standard>
+      <standard>Follow existing test patterns in test_parse_document.py for handler tests</standard>
+      <standard>Use fixtures for sample data (document_id, job payloads, chunks)</standard>
+      <standard>Lazy imports inside test functions to avoid circular dependencies</standard>
+      <standard>Patch singletons like get_supabase_client, get_job_queue</standard>
+      <standard>Minimum 80% coverage on new code (pytest-cov)</standard>
+      <standard>Test both success paths and error handling paths</standard>
+    </standards>
+    <locations>
+      <location>tests/unit/test_embeddings/ (new) - Unit tests for embedding client</location>
+      <location>tests/unit/test_jobs/test_generate_embeddings.py (new) - Handler unit tests</location>
+      <location>tests/unit/test_api/test_search.py (new) - Search API endpoint tests</location>
+      <location>tests/unit/test_storage/test_supabase_client.py (extend) - DB method tests</location>
+      <location>tests/integration/test_jobs/ (extend) - Integration tests for full flow</location>
+      <location>tests/conftest.py - Add embedding-related fixtures</location>
+    </locations>
+    <ideas>
+      <idea ac="AC2">Test OpenAI client batching: verify texts are split into groups of max 100</idea>
+      <idea ac="AC2">Test retry logic: mock API errors and verify 3 retries with backoff</idea>
+      <idea ac="AC2">Test token counting: verify tiktoken integration tracks usage</idea>
+      <idea ac="AC1">Test handler success flow: job → load chunks → embed → store → enqueue next</idea>
+      <idea ac="AC1">Test handler lifecycle logging: verify structured logs for started/completed/failed</idea>
+      <idea ac="AC3">Test transactional update: verify all chunks updated or none on failure</idea>
+      <idea ac="AC3">Test pgvector format: verify list[float] converts to proper vector format</idea>
+      <idea ac="AC5">Test next job enqueue: verify analyze_document job enqueued on success</idea>
+      <idea ac="AC5">Test failure status: verify document status set to embedding_failed on permanent failure</idea>
+      <idea ac="AC4">Test search API: verify endpoint returns ranked results with similarity scores</idea>
+      <idea ac="AC4">Test search filtering: verify project_id and document_id filters work</idea>
+      <idea ac="AC4">Test search with empty query: verify graceful handling</idea>
+      <idea ac="AC6">Verify 80% coverage with pytest-cov: pytest --cov=src/embeddings --cov=src/jobs/handlers/generate_embeddings</idea>
+    </ideas>
+  </tests>
+</story-context>

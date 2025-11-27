@@ -1,0 +1,152 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+    <metadata>
+        <epicId>3</epicId>
+        <storyId>6</storyId>
+        <title>Create Processing Status Tracking and WebSocket Updates</title>
+        <status>drafted</status>
+        <generatedAt>2025-11-27</generatedAt>
+        <generator>BMAD Story Context Workflow</generator>
+        <sourceStoryPath>docs/sprint-artifacts/stories/e3-6-create-processing-status-tracking-and-websocket-updates.md</sourceStoryPath>
+    </metadata>
+
+    <story>
+        <asA>platform user</asA>
+        <iWant>real-time visibility into document processing status via the Data Room UI</iWant>
+        <soThat>I can monitor processing progress and receive notifications when documents are ready for analysis</soThat>
+        <tasks>
+            <task id="1" ac="1">Create Processing Status Badge Component - ProcessingStatusBadge in components/data-room/ with status types, colors, icons, animated pulse for in-progress</task>
+            <task id="2" ac="1">Update Document List/Card Views - Add ProcessingStatusBadge to DocumentCard and DocumentList components in both Folder and Bucket views</task>
+            <task id="3" ac="2">Create Supabase Realtime Hook - useDocumentUpdates hook in lib/hooks/ with project_id filter, INSERT/UPDATE/DELETE events, reconnection logic</task>
+            <task id="4" ac="2">Integrate Real-time Updates in Data Room - Use hook in DataRoomClient, update state on status changes, invalidate React Query cache</task>
+            <task id="5" ac="3">Create Processing Progress Indicator - ProcessingProgress component showing pipeline stages: Upload → Parse → Embed → Analyze → Complete</task>
+            <task id="6" ac="4">Implement Toast Notifications - Trigger toasts on processing_status change to complete/failed with action buttons</task>
+            <task id="7" ac="5">Update Document Details Panel - Add processing status section, error display, retry button, findings count</task>
+            <task id="8" ac="5">Create Retry Processing API Route - Next.js route /api/documents/[id]/retry calling manda-processing service</task>
+            <task id="9" ac="6">Write Tests - Unit tests for badge, hook, progress components; integration tests for status updates</task>
+        </tasks>
+    </story>
+
+    <acceptanceCriteria>
+        <criterion id="AC1">Processing Status Column in Data Room - Add processing_status column to document list/card views with status badges (pending=gray, processing=blue/animated, complete=green, failed=red)</criterion>
+        <criterion id="AC2">Real-time Status Updates via Supabase Realtime - Subscribe to documents table changes filtered by project_id, update UI immediately on status changes without page refresh</criterion>
+        <criterion id="AC3">Processing Progress Indicator - Show visual pipeline stages (Upload → Parse → Embed → Analyze → Complete) with current stage highlighted</criterion>
+        <criterion id="AC4">Toast Notifications - Show toast on processing complete/failed with action buttons (View Document, Retry)</criterion>
+        <criterion id="AC5">Document Details Panel Updates - Show processing status, current stage with timestamp, error messages, retry button, findings count</criterion>
+        <criterion id="AC6">Tests Pass - Unit tests for components and hooks, integration tests for real-time updates, minimum 80% coverage on new frontend code</criterion>
+    </acceptanceCriteria>
+
+    <artifacts>
+        <docs>
+            <doc path="docs/sprint-artifacts/tech-spec-epic-E3.md" title="Epic 3 Technical Specification" section="E3.6: Processing Status and WebSocket" snippet="Documents automatic status updates via Supabase Realtime. Status transitions: pending → parsing → parsed → embedding → analyzing → analyzed → complete. Frontend receives WebSocket update for real-time UI refresh."/>
+            <doc path="docs/sprint-artifacts/tech-spec-epic-E3.md" title="Epic 3 Technical Specification" section="Workflows and Sequencing" snippet="Processing pipeline diagram showing status transitions through parse, embed, analyze jobs. Supabase Realtime broadcasts document.processing_status changes to subscribed clients."/>
+            <doc path="docs/manda-architecture.md" title="Manda Architecture Document" section="Document Processing Flow" snippet="Upload triggers pg-boss job queue → Background Worker parses → Embeddings generated → LLM analysis → WebSocket notification to frontend showing 'Document processed' message."/>
+            <doc path="docs/manda-architecture.md" title="Manda Architecture Document" section="Frontend - websockets" snippet="WebSockets via Supabase Realtime for real-time updates. Frontend state management with Zustand and TanStack Query for data fetching."/>
+            <doc path="docs/sprint-artifacts/epics/epic-E3.md" title="Epic 3: Intelligent Document Processing" section="Technical Context" snippet="Processing status values: pending, processing, completed, failed. WebSocket infrastructure needed for E3.6 real-time status updates."/>
+        </docs>
+        <code>
+            <artifact path="manda-app/components/data-room/document-card.tsx" kind="component" symbol="DocumentCard, getProcessingStatusDisplay" lines="79-111, 117-218" reason="Existing document card component with basic processing status display. Already has status icon mapping for pending/processing/completed/failed. Needs enhancement to support new granular statuses."/>
+            <artifact path="manda-app/components/data-room/document-details.tsx" kind="component" symbol="DocumentDetails, ProcessingStatusBadge" lines="115-156, 203-561" reason="Document details panel with existing status badges. Already uses sonner toast. Needs retry button and processing progress section added."/>
+            <artifact path="manda-app/components/data-room/document-list.tsx" kind="component" symbol="DocumentList" lines="25-79" reason="Document list component that renders DocumentCard rows. Integration point for status column updates."/>
+            <artifact path="manda-app/app/projects/[id]/data-room/data-room-client.tsx" kind="component" symbol="DataRoomClient" lines="46-686" reason="Main data room client component managing state, document loading via Supabase query. Integration point for Realtime subscription hook. Uses toast from sonner for notifications."/>
+            <artifact path="manda-app/lib/supabase/client.ts" kind="utility" symbol="createClient" lines="1-15" reason="Browser Supabase client factory. Used for Realtime subscriptions via supabase.channel()."/>
+            <artifact path="manda-app/lib/api/documents.ts" kind="api-client" symbol="Document interface, updateDocument" lines="10-24, 165-196" reason="Document type definition with processingStatus field. Currently supports: pending, processing, completed, failed. Need to add new status values: parsing, parsed, embedding, analyzing, analyzed."/>
+            <artifact path="manda-app/components/ui/sonner.tsx" kind="component" symbol="Toaster" reason="Sonner toast component already configured in the app. Use toast() from sonner for notifications."/>
+            <artifact path="manda-processing/src/storage/supabase_client.py" kind="service" symbol="SupabaseClient" reason="Backend Supabase client for updating document status. Status updates here trigger Realtime broadcasts to frontend."/>
+            <artifact path="manda-processing/src/jobs/handlers/analyze_document.py" kind="handler" symbol="AnalyzeDocumentHandler" reason="Handler that updates document status to analyzed/complete. Shows status update pattern used in backend."/>
+        </code>
+        <dependencies>
+            <ecosystem name="node">
+                <package name="@supabase/supabase-js" version="^2.84.0" note="Supabase client with Realtime support via .channel() and .on('postgres_changes')"/>
+                <package name="@supabase/ssr" version="^0.7.0" note="SSR-compatible Supabase client factory"/>
+                <package name="sonner" version="^2.0.7" note="Toast notification library, already imported in existing components"/>
+                <package name="zustand" version="^5.0.8" note="State management, consider for global subscription state"/>
+                <package name="lucide-react" version="^0.554.0" note="Icons: Loader2, CheckCircle2, AlertCircle, Clock already used for status"/>
+                <package name="date-fns" version="^4.1.0" note="Date formatting for timestamps"/>
+                <package name="next" version="16.0.4" note="Next.js framework for API routes"/>
+                <package name="react" version="19.2.0" note="React with hooks support"/>
+                <package name="vitest" version="^4.0.14" note="Test runner"/>
+                <package name="@testing-library/react" version="^16.3.0" note="React testing utilities"/>
+            </ecosystem>
+            <ecosystem name="python">
+                <package name="fastapi" version=">=0.115.0" note="Backend API framework" />
+                    <package name="supabase" version=">=2.10.0" note="Python Supabase client for status updates" />
+                    </ecosystem>
+                </dependencies>
+            </artifacts>
+
+            <constraints>
+                <constraint type="pattern">Use existing Supabase client factory from lib/supabase/client.ts for Realtime subscriptions</constraint>
+                <constraint type="pattern">Follow existing component patterns in components/data-room/ directory</constraint>
+                <constraint type="pattern">Use sonner toast() for notifications - already configured in app</constraint>
+                <constraint type="pattern">Keep processing status values consistent with backend: pending, parsing, parsed, embedding, analyzing, analyzed, complete, failed, analysis_failed</constraint>
+                <constraint type="testing">Minimum 80% coverage on new frontend code per AC6</constraint>
+                <constraint type="testing">Use Vitest for tests per existing test setup</constraint>
+                <constraint type="architecture">Filter Realtime subscriptions by project_id to avoid receiving updates for other projects</constraint>
+                <constraint type="architecture">Clean up Realtime subscriptions on component unmount to prevent memory leaks</constraint>
+                <constraint type="ux">Status updates must be reflected immediately without page refresh per AC2</constraint>
+                <constraint type="ux">Toast notifications should work even when user is on different project tab per AC4</constraint>
+            </constraints>
+
+            <interfaces>
+                <interface name="Supabase Realtime Subscription" kind="websocket">
+                    <signature>
+                        supabase.channel(`documents:project=${projectId}`)
+                          .on('postgres_changes', {
+                            event: '*',
+                            schema: 'public',
+                            table: 'documents',
+                            filter: `project_id=eq.${projectId}`
+                          }, (payload) => { /* handle update */ })
+                          .subscribe()
+                    </signature>
+                    <path>manda-app/lib/supabase/client.ts</path>
+                </interface>
+                <interface name="Document Type" kind="typescript-interface">
+                    <signature>
+                        interface Document {
+                          id: string
+                          projectId: string
+                          name: string
+                          processingStatus: 'pending' | 'parsing' | 'parsed' | 'embedding' | 'analyzing' | 'analyzed' | 'complete' | 'failed' | 'analysis_failed'
+                          // ... other fields
+                        }
+                    </signature>
+                    <path>manda-app/lib/api/documents.ts</path>
+                </interface>
+                <interface name="Retry Processing API" kind="REST endpoint">
+                    <signature>POST /api/documents/[id]/retry → { success: boolean, error?: string }</signature>
+                    <path>manda-app/app/api/documents/[id]/retry/route.ts (to create)</path>
+                </interface>
+                <interface name="Processing Service Retry" kind="REST endpoint">
+                    <signature>POST /api/processing/retry/{document_id} (manda-processing service, E3.8)</signature>
+                    <path>manda-processing/src/api/routes/processing.py</path>
+                </interface>
+            </interfaces>
+
+            <tests>
+                <standards>
+                    Use Vitest as test runner with @testing-library/react for component tests. Tests are located in manda-app/__tests__/ directory following the component structure. Mock Supabase client for Realtime subscription tests. Use jsdom environment for DOM testing. Coverage reports via vitest --coverage.
+                </standards>
+                <locations>
+                    <location>manda-app/__tests__/components/data-room/*.test.tsx</location>
+                    <location>manda-app/__tests__/lib/hooks/*.test.ts</location>
+                    <location>manda-app/__tests__/api/documents/*.test.ts</location>
+                </locations>
+                <ideas>
+                    <idea ac="AC1">Test ProcessingStatusBadge renders correct icon and color for each status value</idea>
+                    <idea ac="AC1">Test DocumentCard displays status badge correctly for all processing states</idea>
+                    <idea ac="AC2">Test useDocumentUpdates hook subscribes with correct project filter</idea>
+                    <idea ac="AC2">Test useDocumentUpdates calls onUpdate callback when document status changes</idea>
+                    <idea ac="AC2">Test useDocumentUpdates unsubscribes on cleanup</idea>
+                    <idea ac="AC2">Test useDocumentUpdates handles reconnection on connection loss</idea>
+                    <idea ac="AC3">Test ProcessingProgress shows correct stage highlighted based on status</idea>
+                    <idea ac="AC3">Test ProcessingProgress shows checkmarks for completed stages</idea>
+                    <idea ac="AC4">Test toast appears when processing status changes to complete</idea>
+                    <idea ac="AC4">Test toast appears with retry action when status is failed</idea>
+                    <idea ac="AC5">Test DocumentDetails shows processing stage with timestamp</idea>
+                    <idea ac="AC5">Test DocumentDetails retry button calls retry API</idea>
+                    <idea ac="AC5">Test DocumentDetails shows findings count after analysis complete</idea>
+                    <idea ac="AC6">Integration test: mock Realtime event → verify UI updates</idea>
+                </ideas>
+            </tests>
+        </story-context>

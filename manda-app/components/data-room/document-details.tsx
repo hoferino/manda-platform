@@ -2,13 +2,17 @@
  * Document Details Panel Component
  * Displays full document metadata in a slide-out sheet
  * Story: E2.5 - Create Document Metadata Management (AC: #2, #3, #4, #5, #6, #7)
+ * Story: E3.6 - Processing Status Tracking and WebSocket Updates (AC: #5)
  *
  * Features:
  * - All document metadata display
  * - Inline rename with validation
  * - Category dropdown selection
  * - Folder move dialog
- * - Processing status with spinner
+ * - Processing status with progress indicator
+ * - Error display for failed documents
+ * - Retry button for failed processing
+ * - Findings count display
  * - Action buttons (Download, Delete)
  */
 
@@ -32,6 +36,8 @@ import {
   X,
   Check,
   Folder,
+  RefreshCw,
+  FileSearch,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -62,6 +68,8 @@ import {
   downloadDocument,
 } from '@/lib/api/documents'
 import type { DocumentCategory } from '@/lib/gcs/client'
+import { ProcessingStatusBadge, isProcessingFailed, getStatusDescription } from './processing-status-badge'
+import { ProcessingProgress } from './processing-progress'
 
 export interface DocumentDetailsProps {
   document: Document | null
@@ -70,6 +78,7 @@ export interface DocumentDetailsProps {
   onDocumentUpdate?: (document: Document) => void
   onDocumentDelete?: (document: Document) => void
   onMoveToFolder?: (document: Document) => void
+  onRetryProcessing?: (document: Document) => void
   folders?: Array<{ path: string; name: string }>
 }
 
@@ -107,52 +116,6 @@ function validateName(name: string): string | null {
     return 'Name contains invalid characters'
   }
   return null
-}
-
-/**
- * Processing status display component
- */
-function ProcessingStatusBadge({
-  status,
-}: {
-  status: Document['processingStatus']
-}) {
-  const statusConfig = {
-    processing: {
-      icon: Loader2,
-      label: 'Processing',
-      className: 'text-blue-500 animate-spin',
-      badgeVariant: 'secondary' as const,
-    },
-    completed: {
-      icon: CheckCircle2,
-      label: 'Completed',
-      className: 'text-green-500',
-      badgeVariant: 'secondary' as const,
-    },
-    failed: {
-      icon: AlertCircle,
-      label: 'Failed',
-      className: 'text-destructive',
-      badgeVariant: 'destructive' as const,
-    },
-    pending: {
-      icon: Clock,
-      label: 'Pending',
-      className: 'text-muted-foreground',
-      badgeVariant: 'outline' as const,
-    },
-  }
-
-  const config = statusConfig[status]
-  const Icon = config.icon
-
-  return (
-    <Badge variant={config.badgeVariant} className="flex items-center gap-1">
-      <Icon className={cn('h-3 w-3', config.className)} />
-      {config.label}
-    </Badge>
-  )
 }
 
 /**
@@ -207,6 +170,7 @@ export function DocumentDetails({
   onDocumentUpdate,
   onDocumentDelete,
   onMoveToFolder,
+  onRetryProcessing,
 }: DocumentDetailsProps) {
   // Rename state
   const [isEditing, setIsEditing] = useState(false)
@@ -217,6 +181,9 @@ export function DocumentDetails({
   // Category state
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [isSavingCategory, setIsSavingCategory] = useState(false)
+
+  // E3.6: Retry processing state
+  const [isRetrying, setIsRetrying] = useState(false)
 
   // Reset state when document changes
   useEffect(() => {
@@ -337,6 +304,37 @@ export function DocumentDetails({
       onMoveToFolder?.(document)
     }
   }, [document, onMoveToFolder])
+
+  // E3.6: Handle retry processing
+  const handleRetryProcessing = useCallback(async () => {
+    if (!document || !onRetryProcessing) return
+
+    setIsRetrying(true)
+    try {
+      // Call the retry API
+      const response = await fetch(`/api/documents/${document.id}/retry`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        toast.success('Processing restarted')
+        // Update the document status locally to pending
+        onDocumentUpdate?.({
+          ...document,
+          processingStatus: 'pending',
+          processingError: null,
+        })
+      } else {
+        toast.error(data.error || 'Failed to retry processing')
+      }
+    } catch (error) {
+      toast.error('Failed to retry processing')
+    } finally {
+      setIsRetrying(false)
+    }
+  }, [document, onRetryProcessing, onDocumentUpdate])
 
   if (!document) return null
 
@@ -468,9 +466,61 @@ export function DocumentDetails({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Processing status</span>
-                <ProcessingStatusBadge status={document.processingStatus} />
+                <ProcessingStatusBadge status={document.processingStatus} size="md" />
               </div>
             </div>
+
+            {/* E3.6: Processing progress indicator */}
+            <div className="pt-2">
+              <ProcessingProgress status={document.processingStatus} />
+              <p className="mt-2 text-xs text-muted-foreground">
+                {getStatusDescription(document.processingStatus)}
+              </p>
+            </div>
+
+            {/* E3.6: Error message for failed processing */}
+            {isProcessingFailed(document.processingStatus) && document.processingError && (
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Processing Error</p>
+                    <p className="mt-1 text-xs">{document.processingError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* E3.6: Retry button for failed processing */}
+            {isProcessingFailed(document.processingStatus) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRetryProcessing}
+                disabled={isRetrying}
+                className="w-full"
+              >
+                {isRetrying ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Retry Processing
+              </Button>
+            )}
+
+            {/* E3.6: Findings count for completed analysis */}
+            {document.processingStatus === 'complete' && document.findingsCount !== null && (
+              <div className="flex items-center justify-between rounded-md bg-green-50 p-3 text-sm text-green-700">
+                <div className="flex items-center gap-2">
+                  <FileSearch className="h-4 w-4" />
+                  <span>Analysis Complete</span>
+                </div>
+                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                  {document.findingsCount} {document.findingsCount === 1 ? 'finding' : 'findings'}
+                </Badge>
+              </div>
+            )}
           </div>
 
           {/* Organization section */}
