@@ -3,11 +3,13 @@
  * POST /api/documents/[id]/retry
  *
  * Story: E3.6 - Create Processing Status Tracking and WebSocket Updates (AC: #6)
+ * Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #5)
  *
- * Retry failed document processing by:
- * 1. Resetting the document's processing_status to 'pending'
- * 2. Clearing the processing_error
- * 3. Enqueueing a new parse job via the manda-processing webhook
+ * Enhanced stage-aware retry:
+ * 1. Determines which stage to restart from based on last_completed_stage
+ * 2. Clears processing_error but preserves retry_history
+ * 3. Sets appropriate status for stage-aware retry
+ * 4. Triggers the correct job (parse/embed/analyze) via manda-processing
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,9 +20,45 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
+// E3.8: Map last_completed_stage to next stage job
+function getNextStageJob(lastCompletedStage: string | null): {
+  job: string
+  status: string
+  endpoint: string
+} {
+  switch (lastCompletedStage) {
+    case 'parsed':
+      return {
+        job: 'generate-embeddings',
+        status: 'embedding',
+        endpoint: '/api/processing/retry/embedding',
+      }
+    case 'embedded':
+      return {
+        job: 'analyze-document',
+        status: 'analyzing',
+        endpoint: '/api/processing/retry/analysis',
+      }
+    case 'analyzed':
+      // Already complete, but allow re-analysis
+      return {
+        job: 'analyze-document',
+        status: 'analyzing',
+        endpoint: '/api/processing/retry/analysis',
+      }
+    default:
+      // No stage completed, start from parsing
+      return {
+        job: 'parse-document',
+        status: 'pending',
+        endpoint: '/webhooks/document-uploaded',
+      }
+  }
+}
+
 /**
  * POST /api/documents/[id]/retry
- * Retry processing a failed document
+ * Retry processing a failed document with stage-aware resumption
  */
 export async function POST(
   request: NextRequest,
@@ -54,8 +92,8 @@ export async function POST(
       )
     }
 
-    // Validate that the document is in a failed state
-    const failedStatuses = ['failed', 'analysis_failed']
+    // E3.8: Expanded list of failed statuses
+    const failedStatuses = ['failed', 'analysis_failed', 'embedding_failed']
     const processingStatus = document.processing_status as string | null
     if (!processingStatus || !failedStatuses.includes(processingStatus)) {
       return NextResponse.json(
@@ -72,12 +110,16 @@ export async function POST(
       )
     }
 
-    // Reset processing status to pending
+    // E3.8: Determine next stage based on last_completed_stage
+    const lastCompletedStage = document.last_completed_stage as string | null
+    const { job: nextJob, status: nextStatus, endpoint } = getNextStageJob(lastCompletedStage)
+
+    // E3.8: Update status to next stage status, clear error but NOT retry_history
     const { error: updateError } = await supabase
       .from('documents')
       .update({
-        processing_status: 'pending',
-        processing_error: null,
+        processing_status: nextStatus,
+        processing_error: null,  // Clear error, retry_history stays
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -90,9 +132,11 @@ export async function POST(
       )
     }
 
-    // Call the manda-processing webhook to enqueue the parsing job
+    // Call the manda-processing webhook to enqueue the appropriate job
     const processingApiUrl = process.env.MANDA_PROCESSING_API_URL
     const processingApiKey = process.env.MANDA_PROCESSING_API_KEY
+
+    let jobId: string | null = null
 
     if (processingApiUrl && processingApiKey) {
       try {
@@ -101,7 +145,9 @@ export async function POST(
           ? `gs://${document.gcs_bucket}/${document.gcs_object_path}`
           : document.file_path
 
-        const webhookResponse = await fetch(`${processingApiUrl}/webhooks/document-uploaded`, {
+        // E3.8: Call appropriate retry endpoint based on stage
+        const webhookUrl = `${processingApiUrl}${endpoint}`
+        const webhookResponse = await fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -114,6 +160,8 @@ export async function POST(
             gcs_path: gcsPath,
             file_type: document.mime_type || 'application/octet-stream',
             file_name: document.name,
+            is_retry: true,  // E3.8: Flag to indicate this is a retry
+            last_completed_stage: lastCompletedStage,
           }),
         })
 
@@ -121,10 +169,15 @@ export async function POST(
           const errorData = await webhookResponse.json().catch(() => ({}))
           console.error('Processing webhook failed:', errorData)
           // Don't fail the request - status is already reset
-          // The job will be picked up by the worker polling for pending documents
+          // The job will be picked up by the worker polling
         } else {
           const result = await webhookResponse.json()
-          console.log('Processing job enqueued:', result.job_id)
+          jobId = result.job_id
+          console.log('Processing job enqueued:', {
+            jobId,
+            job: nextJob,
+            lastCompletedStage,
+          })
         }
       } catch (webhookError) {
         // Log but don't fail - status is already reset
@@ -145,17 +198,25 @@ export async function POST(
         file_name: document.name,
         action: 'retry_processing',
         previous_status: document.processing_status,
+        last_completed_stage: lastCompletedStage,
+        next_job: nextJob,
+        job_id: jobId,
       },
       success: true,
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Processing restarted',
+      message: lastCompletedStage
+        ? `Processing resumed from ${lastCompletedStage} stage`
+        : 'Processing restarted',
       document: {
         id: document.id,
-        processingStatus: 'pending',
+        processingStatus: nextStatus,
+        lastCompletedStage,
+        nextJob,
       },
+      jobId,
     })
   } catch (error) {
     console.error('Error retrying document processing:', error)

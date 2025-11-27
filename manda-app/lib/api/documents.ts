@@ -10,18 +10,54 @@ import type { DocumentCategory } from '@/lib/gcs/client'
 /**
  * Processing status values that match the backend pipeline
  * Status transitions: pending → parsing → parsed → embedding → analyzing → analyzed → complete
- * Failed states: failed (general), analysis_failed (LLM analysis failed)
+ * Failed states: failed (general), analysis_failed (LLM analysis failed), embedding_failed
  */
 export type ProcessingStatus =
   | 'pending'
   | 'parsing'
   | 'parsed'
   | 'embedding'
+  | 'embedded'
   | 'analyzing'
   | 'analyzed'
   | 'complete'
   | 'failed'
   | 'analysis_failed'
+  | 'embedding_failed'
+
+/**
+ * Last completed processing stage for stage-aware retry
+ * Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2)
+ */
+export type ProcessingStage = 'parsed' | 'embedded' | 'analyzed' | 'complete'
+
+/**
+ * Structured error information for failed processing
+ * Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #4)
+ */
+export interface ProcessingError {
+  error_type: string        // "timeout" | "rate_limit" | "invalid_file" | etc.
+  category: 'transient' | 'permanent' | 'unknown'
+  message: string           // Full error message
+  stage?: string            // "parsing" | "embedding" | "analyzing"
+  timestamp: string         // ISO timestamp
+  retry_count: number       // Current retry attempt
+  stack_trace?: string      // Truncated stack trace (first 500 chars)
+  guidance?: string         // User guidance message
+  user_message?: string     // User-friendly error message
+}
+
+/**
+ * Retry history entry
+ * Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #4)
+ */
+export interface RetryHistoryEntry {
+  attempt: number
+  stage: string
+  error_type: string
+  message: string
+  timestamp: string
+}
 
 export interface Document {
   id: string
@@ -33,12 +69,15 @@ export interface Document {
   folderPath: string | null
   uploadStatus: 'pending' | 'uploading' | 'completed' | 'failed'
   processingStatus: ProcessingStatus
-  processingError?: string | null
+  processingError?: string | ProcessingError | null
   findingsCount?: number | null
   createdAt: string
   updatedAt?: string
   downloadUrl?: string | null
   downloadUrlExpiresIn?: number | null
+  // E3.8: Stage-aware retry fields
+  lastCompletedStage?: ProcessingStage | null
+  retryHistory?: RetryHistoryEntry[]
 }
 
 export interface UploadOptions {

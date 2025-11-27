@@ -1,0 +1,225 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E3</epicId>
+    <storyId>9</storyId>
+    <title>Financial Model Integration - Extract and Query Financial Metrics</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-27</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e3-9-financial-model-integration-extract-and-query-financial-metrics.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>analyst</asA>
+    <iWant>financial metrics extracted from Excel models and PDF tables, stored with full provenance</iWant>
+    <soThat>I can quickly access structured financial data without manually searching through documents, with clear traceability to source</soThat>
+    <tasks>
+      <task id="1" ac="1,3">Create Database Schema
+        <subtask>Write migration 00019_create_financial_metrics_table.sql</subtask>
+        <subtask>Create financial_metrics table with all fields from tech spec</subtask>
+        <subtask>Add indexes for document_id, metric_name, period lookup</subtask>
+        <subtask>Add RLS policies for project-level access control</subtask>
+        <subtask>Run migration and verify schema</subtask>
+      </task>
+      <task id="2" ac="4">Implement Financial Document Detector
+        <subtask>Create src/financial/detector.py - FinancialDocumentDetector class</subtask>
+        <subtask>Implement detection for Excel: P&L, Balance Sheet, Cash Flow keywords</subtask>
+        <subtask>Implement detection for PDF tables: analyze TableData.headers for financial patterns</subtask>
+        <subtask>Detect financial patterns: revenue, EBITDA, COGS, Assets, Liabilities, Umsatz, Gewinn</subtask>
+        <subtask>Return confidence score for "contains financial data" determination</subtask>
+        <subtask>Add detection for actuals vs projections</subtask>
+      </task>
+      <task id="3" ac="1,2,3">Implement Financial Metric Extractor
+        <subtask>Create src/financial/extractor.py - FinancialMetricExtractor class</subtask>
+        <subtask>Implement extraction from existing ParseResult (no re-parsing)</subtask>
+        <subtask>Create metric identification logic (EN + DE patterns)</subtask>
+        <subtask>Extract period information from headers</subtask>
+        <subtask>For Excel: link formulas from FormulaData to extracted metrics</subtask>
+        <subtask>Map extracted values to FinancialMetric Pydantic model</subtask>
+      </task>
+      <task id="4" ac="1,3">Create Pydantic Models
+        <subtask>Create src/models/financial_metrics.py</subtask>
+        <subtask>Define FinancialMetric model matching DB schema</subtask>
+        <subtask>Define MetricCategory enum</subtask>
+        <subtask>Define PeriodType enum</subtask>
+        <subtask>Define extraction result models for API responses</subtask>
+      </task>
+      <task id="5" ac="6">Implement Extract Financials Job Handler
+        <subtask>Create src/jobs/handlers/extract_financials.py</subtask>
+        <subtask>Load existing ParseResult from database</subtask>
+        <subtask>Run FinancialDocumentDetector to check for financial content</subtask>
+        <subtask>If financial content detected, run FinancialMetricExtractor</subtask>
+        <subtask>Store metrics in database with supabase_client</subtask>
+        <subtask>Update document processing_status to 'complete'</subtask>
+        <subtask>Integrate with error classification from e3-8</subtask>
+      </task>
+      <task id="6" ac="6">Update Processing Pipeline
+        <subtask>Modify analyze_document handler to enqueue extract_financials job</subtask>
+        <subtask>Add extract_financials job type to pg-boss queue</subtask>
+        <subtask>Register handler in worker main.py</subtask>
+        <subtask>Update ProcessingStage enum in errors.py</subtask>
+      </task>
+      <task id="7" ac="5">Create API Endpoints
+        <subtask>Create src/api/routes/financial_metrics.py</subtask>
+        <subtask>Implement GET /api/financial-metrics/{document_id}</subtask>
+        <subtask>Implement GET /api/financial-metrics/query with filters</subtask>
+        <subtask>Register router in main.py</subtask>
+      </task>
+      <task id="8" ac="1,5">Add SupabaseClient Methods
+        <subtask>Add store_financial_metrics(metrics: list[FinancialMetric]) method</subtask>
+        <subtask>Add get_financial_metrics(document_id) method</subtask>
+        <subtask>Add query_financial_metrics(filters) method</subtask>
+        <subtask>Handle batch insert for multiple metrics</subtask>
+      </task>
+      <task id="9" ac="7">Write Tests
+        <subtask>Unit tests for FinancialDocumentDetector</subtask>
+        <subtask>Unit tests for FinancialMetricExtractor</subtask>
+        <subtask>Integration tests for extract_financials job handler</subtask>
+        <subtask>API tests for financial metrics endpoints</subtask>
+        <subtask>Create test fixtures (Excel, PDF tables)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Financial Metrics Extraction from Parsed Documents - Extract key metrics from existing ParseResult.formulas and ParseResult.tables (no re-parsing). Support revenue, EBITDA, margins, cash flow, balance sheet items. Store in financial_metrics table.</criterion>
+    <criterion id="AC2">Formula Preservation and Dependency Tracking (Excel Only) - Use existing ParseResult.formulas. Store original formula text in source_formula field. Identify calculation dependencies. Track assumptions driving projections.</criterion>
+    <criterion id="AC3">Source Attribution and Traceability - Every metric includes source attribution: document_id, sheet_name/page_number, cell_reference/table_index. Link to findings via finding_id FK. Store period information.</criterion>
+    <criterion id="AC4">Financial Document Detection and Classification - Auto-detect if document contains financial data. Classify metric types (income_statement, balance_sheet, cash_flow, ratio). Distinguish actuals vs projections.</criterion>
+    <criterion id="AC5">Query API for Financial Metrics - GET /api/financial-metrics/{document_id} and GET /api/financial-metrics/query endpoints. Support filtering by metric_name, category, fiscal_year, is_actual.</criterion>
+    <criterion id="AC6">Integration with Processing Pipeline - Create extract_financials job handler after analyze_document. Trigger for Excel and PDF with tables. Consume existing ParseResult. Update status to 'complete'. Reuse e3-8 error classification.</criterion>
+    <criterion id="AC7">Tests Pass - Unit tests for extraction logic. Integration tests for pipeline. API tests. Minimum 80% coverage on new code.</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E3.md" title="Epic E3 Technical Specification" section="E3.9: Financial Model Extraction" snippet="Defines financial_metrics table schema, FinancialMetric Pydantic model, extract_financials job handler, processing pipeline flow. Schema includes: metric_name, metric_category, value, unit, period_type, fiscal_year/quarter, source_cell, source_formula, is_actual."/>
+      <doc path="docs/manda-architecture 2.md" title="Manda Architecture" section="Financial Model Integration" snippet="Describes FinancialModelExtractor class for extracting metrics from Excel models. Schema: financial_metrics table with metric_type, period, value, unit, formula, assumptions, source_reference. Integration with knowledge base and agent tools."/>
+      <doc path="docs/sprint-artifacts/epics/epic-E3.md" title="Epic E3: Intelligent Document Processing" section="Story E3.9" snippet="Financial Model Integration - Extract and Query Financial Metrics. Part of the processing pipeline that transforms raw documents into structured knowledge."/>
+    </docs>
+    <code>
+      <file path="manda-processing/src/parsers/excel_parser.py" kind="parser" symbol="ExcelParser" lines="1-517" reason="CRITICAL: Contains FormulaData and TableData extraction using openpyxl. Financial extraction will consume this ParseResult.formulas and ParseResult.tables output. Key interfaces: ExcelParser.parse() returns ParseResult with formulas list and tables list."/>
+      <file path="manda-processing/src/parsers/__init__.py" kind="interface" symbol="ParseResult, FormulaData, TableData, ChunkData" lines="1-244" reason="CRITICAL: Defines ParseResult model with formulas: list[FormulaData] and tables: list[TableData] fields. FormulaData contains formula, cell_reference, sheet_name, result_value, references. TableData contains headers, data rows."/>
+      <file path="manda-processing/src/models/findings.py" kind="model" symbol="FindingCreate, Finding, FindingType, Domain" lines="1-238" reason="Reference pattern for Pydantic models. Follow field_validator pattern for confidence scores. Use SourceReference model pattern for source attribution."/>
+      <file path="manda-processing/src/jobs/errors.py" kind="utility" symbol="ErrorClassifier, ProcessingStage, ClassifiedError" lines="1-457" reason="MODIFY: Add FINANCIALS_EXTRACTED stage to ProcessingStage enum and STAGE_ORDER. Reuse ErrorClassifier for financial extraction error handling."/>
+      <file path="manda-processing/src/jobs/handlers/analyze_document.py" kind="handler" symbol="AnalyzeDocumentHandler, handle_analyze_document" lines="1-457" reason="REFERENCE: Job handler pattern to follow. Already enqueues 'extract-financials' job for Excel files (line 271). Need to also enqueue for PDFs with tables."/>
+      <file path="manda-processing/src/storage/supabase_client.py" kind="client" symbol="SupabaseClient, store_findings, get_chunks_by_document" lines="1-1501" reason="MODIFY: Add store_financial_metrics(), get_financial_metrics(), query_financial_metrics() methods. Follow transactional pattern from store_findings_and_update_status()."/>
+      <file path="manda-processing/src/main.py" kind="application" symbol="create_app" lines="1-112" reason="MODIFY: Register financial_metrics router. Follow pattern from existing router registration."/>
+      <file path="manda-processing/src/jobs/retry_manager.py" kind="utility" symbol="RetryManager" reason="Reuse for retry logic in extract_financials handler."/>
+      <file path="manda-processing/src/parsers/docling_parser.py" kind="parser" symbol="DoclingParser" reason="Reference for PDF parsing - returns ParseResult.tables for PDFs with extracted tables."/>
+    </code>
+    <dependencies>
+      <ecosystem name="python">
+        <package name="fastapi" version=">=0.115.0" purpose="Web framework for API endpoints"/>
+        <package name="pydantic" version=">=2.10.0" purpose="Data models and validation"/>
+        <package name="asyncpg" version=">=0.30.0" purpose="PostgreSQL async client"/>
+        <package name="openpyxl" version=">=3.1.5" purpose="Excel parsing - already in use"/>
+        <package name="structlog" version=">=24.4.0" purpose="Structured logging"/>
+        <package name="langchain-google-genai" version=">=2.1.0" purpose="Gemini for intelligent metric identification (optional)"/>
+      </ecosystem>
+      <ecosystem name="database">
+        <table name="financial_metrics" status="TO_CREATE">New table per tech spec schema</table>
+        <table name="documents" status="EXISTS">Has processing_status field to update</table>
+        <table name="document_chunks" status="EXISTS">Contains ParseResult data</table>
+        <table name="findings" status="EXISTS">Optional FK relationship for finding_id</table>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Extract metrics from existing ParseResult - NO re-parsing of files. The parsing pipeline (e3-2) already extracts FormulaData and TableData.</constraint>
+    <constraint type="architecture">Store in PostgreSQL via Supabase - NOT Neo4j for MVP. Graph integration is Phase 2 (Epic 4).</constraint>
+    <constraint type="pattern">Follow existing Pydantic model patterns from models/findings.py (field validators, enums, model_dump).</constraint>
+    <constraint type="pattern">Follow existing job handler patterns from analyze_document.py (stage tracking, error classification, retry management).</constraint>
+    <constraint type="pattern">Reuse error classification from e3-8 ErrorClassifier for retry logic.</constraint>
+    <constraint type="testing">Minimum 80% code coverage on new code. Use pytest-asyncio for async tests.</constraint>
+    <constraint type="schema">financial_metrics table must match tech spec exactly: id, document_id, finding_id, metric_name, metric_category, value, unit, period_type, period_start, period_end, fiscal_year, fiscal_quarter, source_cell, source_formula, is_actual, notes, created_at.</constraint>
+    <constraint type="out-of-scope">UI display of financial metrics - deferred to Phase 2</constraint>
+    <constraint type="out-of-scope">Agent tool query_financial_metric - deferred to Epic 5</constraint>
+    <constraint type="out-of-scope">Neo4j graph nodes for metrics - deferred to Epic 4</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="FinancialMetric" kind="pydantic-model" path="manda-processing/src/models/financial_metrics.py">
+      <signature>class FinancialMetric(BaseModel):
+    id: UUID
+    document_id: UUID
+    finding_id: Optional[UUID]
+    metric_name: str  # 'revenue', 'ebitda', 'gross_margin'
+    metric_category: MetricCategory  # income_statement, balance_sheet, cash_flow, ratio
+    value: Optional[Decimal]
+    unit: Optional[str]  # 'USD', 'EUR', '%'
+    period_type: Optional[PeriodType]  # annual, quarterly, monthly, ytd
+    fiscal_year: Optional[int]
+    fiscal_quarter: Optional[int]
+    source_cell: Optional[str]  # Excel cell reference
+    source_formula: Optional[str]
+    is_actual: bool = True  # false for projections</signature>
+    </interface>
+    <interface name="extract_financials_endpoint" kind="REST" path="manda-processing/src/api/routes/financial_metrics.py">
+      <signature>GET /api/financial-metrics/{document_id}
+Response: { "metrics": list[FinancialMetric], "document_id": str }
+
+GET /api/financial-metrics/query?project_id=X&amp;metric_name=Y&amp;fiscal_year=Z&amp;is_actual=true
+Response: { "metrics": list[FinancialMetric], "total": int }</signature>
+    </interface>
+    <interface name="handle_extract_financials" kind="job-handler" path="manda-processing/src/jobs/handlers/extract_financials.py">
+      <signature>async def handle_extract_financials(job: Job) -> dict[str, Any]:
+    """Process extract-financials job from queue.
+
+    Job data:
+        document_id: UUID - Document to extract metrics from
+        deal_id: Optional[str] - Parent project ID
+        user_id: Optional[str] - User who uploaded
+        is_retry: bool - Whether this is a retry attempt
+
+    Returns: { success: bool, metrics_count: int, document_id: str }
+    """</signature>
+    </interface>
+    <interface name="SupabaseClient.store_financial_metrics" kind="method" path="manda-processing/src/storage/supabase_client.py">
+      <signature>async def store_financial_metrics(
+    self,
+    document_id: UUID,
+    metrics: list[FinancialMetric],
+) -> int:
+    """Store extracted financial metrics. Returns count stored."""</signature>
+    </interface>
+    <interface name="ParseResult" kind="existing-interface" path="manda-processing/src/parsers/__init__.py">
+      <signature>class ParseResult(BaseModel):
+    chunks: list[ChunkData]
+    tables: list[TableData]  # Use this for PDF financial tables
+    formulas: list[FormulaData]  # Use this for Excel formulas</signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Follow pytest-asyncio pattern from existing tests. Use pytest fixtures for test data. Mock external services (database, LLM if used). Use pytest-cov for coverage reporting with minimum 80% on new code. Tests should be in manda-processing/tests/ following existing structure.
+    </standards>
+    <locations>
+      <location>manda-processing/tests/unit/test_financial/test_detector.py</location>
+      <location>manda-processing/tests/unit/test_financial/test_extractor.py</location>
+      <location>manda-processing/tests/unit/test_models/test_financial_metrics.py</location>
+      <location>manda-processing/tests/integration/test_financial_extraction.py</location>
+      <location>manda-processing/tests/integration/test_api/test_financial_metrics.py</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test extraction of revenue metric from Excel ParseResult.tables with known values</idea>
+      <idea ac="AC1">Test extraction of EBITDA from PDF TableData headers</idea>
+      <idea ac="AC2">Test formula preservation - verify source_formula field populated for Excel</idea>
+      <idea ac="AC2">Test formula dependency tracking - verify references list populated</idea>
+      <idea ac="AC3">Test source attribution - verify document_id, sheet_name, cell_reference all populated</idea>
+      <idea ac="AC3">Test period extraction - verify fiscal_year parsed from "Q3 2024" header</idea>
+      <idea ac="AC4">Test financial document detection - P&amp;L keywords return high confidence</idea>
+      <idea ac="AC4">Test non-financial Excel (e.g., contact list) returns low confidence</idea>
+      <idea ac="AC4">Test actuals vs projections detection - "2024E" flagged as is_actual=false</idea>
+      <idea ac="AC5">Test GET /api/financial-metrics/{document_id} returns correct metrics</idea>
+      <idea ac="AC5">Test query filtering by metric_category, fiscal_year, is_actual</idea>
+      <idea ac="AC6">Test extract_financials job triggered after analyze_document for Excel</idea>
+      <idea ac="AC6">Test extract_financials job triggered for PDF with tables</idea>
+      <idea ac="AC6">Test document status updated to 'complete' after extraction</idea>
+      <idea ac="AC6">Test error classification reuses e3-8 ErrorClassifier</idea>
+      <idea ac="AC7">Verify 80% coverage threshold met</idea>
+    </ideas>
+  </tests>
+</story-context>

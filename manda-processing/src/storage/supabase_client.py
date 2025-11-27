@@ -18,6 +18,7 @@ import structlog
 from src.config import Settings, get_settings
 from src.jobs.queue import get_pool
 from src.parsers import ChunkData, TableData, FormulaData
+from src.models.financial_metrics import FinancialMetricCreate
 
 logger = structlog.get_logger(__name__)
 
@@ -964,6 +965,457 @@ class SupabaseClient:
                 retryable=self._is_retryable_error(e),
             )
 
+    # ==========================================================================
+    # Financial Metrics Methods (Story E3.9)
+    # ==========================================================================
+
+    async def store_financial_metrics(
+        self,
+        document_id: UUID,
+        metrics: list[FinancialMetricCreate],
+    ) -> int:
+        """
+        Store extracted financial metrics in the database.
+
+        Story: E3.9 - Financial Model Integration (AC: #1, #3)
+
+        Args:
+            document_id: UUID of the source document
+            metrics: List of FinancialMetricCreate models to store
+
+        Returns:
+            Number of metrics stored
+
+        Raises:
+            DatabaseError: If storage fails
+        """
+        if not metrics:
+            return 0
+
+        pool = await self._get_pool()
+
+        logger.info(
+            "Storing financial metrics",
+            document_id=str(document_id),
+            metrics_count=len(metrics),
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    stored_count = 0
+
+                    for metric in metrics:
+                        # Convert Pydantic model to dict
+                        metric_dict = metric.model_dump() if hasattr(metric, "model_dump") else metric
+
+                        await conn.execute(
+                            """
+                            INSERT INTO financial_metrics (
+                                document_id, finding_id, metric_name, metric_category,
+                                value, unit, period_type, period_start, period_end,
+                                fiscal_year, fiscal_quarter, source_cell, source_sheet,
+                                source_page, source_table_index, source_formula,
+                                is_actual, confidence_score, notes, metadata
+                            ) VALUES (
+                                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+                            )
+                            """,
+                            document_id,
+                            metric_dict.get("finding_id"),
+                            metric_dict.get("metric_name"),
+                            metric_dict.get("metric_category"),
+                            metric_dict.get("value"),
+                            metric_dict.get("unit"),
+                            metric_dict.get("period_type"),
+                            metric_dict.get("period_start"),
+                            metric_dict.get("period_end"),
+                            metric_dict.get("fiscal_year"),
+                            metric_dict.get("fiscal_quarter"),
+                            metric_dict.get("source_cell"),
+                            metric_dict.get("source_sheet"),
+                            metric_dict.get("source_page"),
+                            metric_dict.get("source_table_index"),
+                            metric_dict.get("source_formula"),
+                            metric_dict.get("is_actual", True),
+                            metric_dict.get("confidence_score"),
+                            metric_dict.get("notes"),
+                            json.dumps(metric_dict.get("metadata", {})),
+                        )
+                        stored_count += 1
+
+                    logger.info(
+                        "Financial metrics stored successfully",
+                        document_id=str(document_id),
+                        stored_count=stored_count,
+                    )
+
+                    return stored_count
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error storing financial metrics",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to store financial metrics: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def store_financial_metrics_and_update_status(
+        self,
+        document_id: UUID,
+        metrics: list[FinancialMetricCreate],
+        new_status: str = "complete",
+    ) -> int:
+        """
+        Store financial metrics and update document status in a single transaction.
+
+        Story: E3.9 - Financial Model Integration (AC: #6)
+
+        Args:
+            document_id: UUID of the source document
+            metrics: List of FinancialMetricCreate models to store
+            new_status: New document status (default: "complete")
+
+        Returns:
+            Number of metrics stored
+
+        Raises:
+            DatabaseError: If any operation fails (transaction rolls back)
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Storing financial metrics and updating status (transactional)",
+            document_id=str(document_id),
+            metrics_count=len(metrics),
+            new_status=new_status,
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    stored_count = 0
+
+                    for metric in metrics:
+                        metric_dict = metric.model_dump() if hasattr(metric, "model_dump") else metric
+
+                        await conn.execute(
+                            """
+                            INSERT INTO financial_metrics (
+                                document_id, finding_id, metric_name, metric_category,
+                                value, unit, period_type, period_start, period_end,
+                                fiscal_year, fiscal_quarter, source_cell, source_sheet,
+                                source_page, source_table_index, source_formula,
+                                is_actual, confidence_score, notes, metadata
+                            ) VALUES (
+                                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+                            )
+                            """,
+                            document_id,
+                            metric_dict.get("finding_id"),
+                            metric_dict.get("metric_name"),
+                            metric_dict.get("metric_category"),
+                            metric_dict.get("value"),
+                            metric_dict.get("unit"),
+                            metric_dict.get("period_type"),
+                            metric_dict.get("period_start"),
+                            metric_dict.get("period_end"),
+                            metric_dict.get("fiscal_year"),
+                            metric_dict.get("fiscal_quarter"),
+                            metric_dict.get("source_cell"),
+                            metric_dict.get("source_sheet"),
+                            metric_dict.get("source_page"),
+                            metric_dict.get("source_table_index"),
+                            metric_dict.get("source_formula"),
+                            metric_dict.get("is_actual", True),
+                            metric_dict.get("confidence_score"),
+                            metric_dict.get("notes"),
+                            json.dumps(metric_dict.get("metadata", {})),
+                        )
+                        stored_count += 1
+
+                    # Update document status
+                    await conn.execute(
+                        """
+                        UPDATE documents
+                        SET processing_status = $2,
+                            updated_at = NOW()
+                        WHERE id = $1
+                        """,
+                        document_id,
+                        new_status,
+                    )
+
+                    logger.info(
+                        "Financial metrics stored and status updated",
+                        document_id=str(document_id),
+                        stored_count=stored_count,
+                        new_status=new_status,
+                    )
+
+                    return stored_count
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error in transactional financial metrics storage",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to store financial metrics and update status: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def get_financial_metrics(
+        self,
+        document_id: UUID,
+    ) -> list[dict[str, Any]]:
+        """
+        Get all financial metrics for a document.
+
+        Story: E3.9 - Financial Model Integration (AC: #5)
+
+        Args:
+            document_id: UUID of the document
+
+        Returns:
+            List of financial metric records as dicts
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Fetching financial metrics for document",
+            document_id=str(document_id),
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, document_id, finding_id, metric_name, metric_category,
+                           value, unit, period_type, period_start, period_end,
+                           fiscal_year, fiscal_quarter, source_cell, source_sheet,
+                           source_page, source_table_index, source_formula,
+                           is_actual, confidence_score, notes, metadata,
+                           created_at, updated_at
+                    FROM financial_metrics
+                    WHERE document_id = $1
+                    ORDER BY metric_category, metric_name, fiscal_year DESC
+                    """,
+                    document_id,
+                )
+
+                metrics = [dict(row) for row in rows]
+
+                logger.info(
+                    "Financial metrics fetched successfully",
+                    document_id=str(document_id),
+                    metrics_count=len(metrics),
+                )
+
+                return metrics
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error fetching financial metrics",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to fetch financial metrics: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def query_financial_metrics(
+        self,
+        project_id: Optional[UUID] = None,
+        document_id: Optional[UUID] = None,
+        metric_name: Optional[str] = None,
+        metric_category: Optional[str] = None,
+        fiscal_year: Optional[int] = None,
+        is_actual: Optional[bool] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """
+        Query financial metrics with filters.
+
+        Story: E3.9 - Financial Model Integration (AC: #5)
+
+        Args:
+            project_id: Optional filter by project
+            document_id: Optional filter by document
+            metric_name: Optional filter by metric name
+            metric_category: Optional filter by category
+            fiscal_year: Optional filter by fiscal year
+            is_actual: Optional filter by actual vs projection
+            limit: Maximum results (default 100)
+            offset: Pagination offset (default 0)
+
+        Returns:
+            Tuple of (list of metrics, total count)
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Querying financial metrics",
+            project_id=str(project_id) if project_id else None,
+            document_id=str(document_id) if document_id else None,
+            metric_name=metric_name,
+            metric_category=metric_category,
+            fiscal_year=fiscal_year,
+            is_actual=is_actual,
+            limit=limit,
+            offset=offset,
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                # Build query with filters
+                base_query = """
+                    FROM financial_metrics fm
+                    JOIN documents d ON fm.document_id = d.id
+                    WHERE 1=1
+                """
+                params: list[Any] = []
+                param_idx = 1
+
+                if project_id:
+                    base_query += f" AND d.deal_id = ${param_idx}"
+                    params.append(project_id)
+                    param_idx += 1
+
+                if document_id:
+                    base_query += f" AND fm.document_id = ${param_idx}"
+                    params.append(document_id)
+                    param_idx += 1
+
+                if metric_name:
+                    base_query += f" AND fm.metric_name ILIKE ${param_idx}"
+                    params.append(f"%{metric_name}%")
+                    param_idx += 1
+
+                if metric_category:
+                    base_query += f" AND fm.metric_category = ${param_idx}"
+                    params.append(metric_category)
+                    param_idx += 1
+
+                if fiscal_year is not None:
+                    base_query += f" AND fm.fiscal_year = ${param_idx}"
+                    params.append(fiscal_year)
+                    param_idx += 1
+
+                if is_actual is not None:
+                    base_query += f" AND fm.is_actual = ${param_idx}"
+                    params.append(is_actual)
+                    param_idx += 1
+
+                # Get total count
+                count_query = f"SELECT COUNT(*) {base_query}"
+                total_count = await conn.fetchval(count_query, *params)
+
+                # Get paginated results
+                select_query = f"""
+                    SELECT fm.id, fm.document_id, fm.finding_id, fm.metric_name,
+                           fm.metric_category, fm.value, fm.unit, fm.period_type,
+                           fm.period_start, fm.period_end, fm.fiscal_year,
+                           fm.fiscal_quarter, fm.source_cell, fm.source_sheet,
+                           fm.source_page, fm.source_formula, fm.is_actual,
+                           fm.confidence_score, fm.notes, fm.created_at,
+                           d.name as document_name, d.deal_id as project_id
+                    {base_query}
+                    ORDER BY fm.metric_category, fm.metric_name, fm.fiscal_year DESC
+                    LIMIT ${param_idx} OFFSET ${param_idx + 1}
+                """
+                params.extend([limit, offset])
+
+                rows = await conn.fetch(select_query, *params)
+                metrics = [dict(row) for row in rows]
+
+                logger.info(
+                    "Financial metrics query completed",
+                    result_count=len(metrics),
+                    total_count=total_count,
+                )
+
+                return metrics, total_count
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error querying financial metrics",
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to query financial metrics: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def delete_financial_metrics(
+        self,
+        document_id: UUID,
+    ) -> int:
+        """
+        Delete all financial metrics for a document.
+
+        Used for retry/re-extraction scenarios.
+
+        Args:
+            document_id: UUID of the document
+
+        Returns:
+            Number of metrics deleted
+
+        Raises:
+            DatabaseError: If deletion fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Deleting financial metrics for document",
+            document_id=str(document_id),
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                result = await conn.execute(
+                    """
+                    DELETE FROM financial_metrics WHERE document_id = $1
+                    """,
+                    document_id,
+                )
+
+                rows_affected = int(result.split()[-1])
+
+                logger.info(
+                    "Financial metrics deleted",
+                    document_id=str(document_id),
+                    deleted_count=rows_affected,
+                )
+
+                return rows_affected
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error deleting financial metrics",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to delete financial metrics: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
     def _is_retryable_error(self, error: asyncpg.PostgresError) -> bool:
         """Check if a PostgreSQL error is retryable."""
         # Connection errors are retryable
@@ -983,6 +1435,502 @@ class SupabaseClient:
         }
 
         return error_code in retryable_codes
+
+    async def update_document_stage(
+        self,
+        document_id: UUID,
+        last_completed_stage: str,
+        processing_status: Optional[str] = None,
+    ) -> bool:
+        """
+        Update the last completed processing stage for a document.
+
+        Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2)
+
+        Args:
+            document_id: UUID of the document
+            last_completed_stage: Stage that was just completed (parsed, embedded, analyzed, complete)
+            processing_status: Optional new processing status
+
+        Returns:
+            True if update succeeded
+
+        Raises:
+            DatabaseError: If update fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Updating document stage",
+            document_id=str(document_id),
+            last_completed_stage=last_completed_stage,
+            processing_status=processing_status,
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                if processing_status:
+                    result = await conn.execute(
+                        """
+                        UPDATE documents
+                        SET last_completed_stage = $2,
+                            processing_status = $3,
+                            updated_at = NOW()
+                        WHERE id = $1
+                        """,
+                        document_id,
+                        last_completed_stage,
+                        processing_status,
+                    )
+                else:
+                    result = await conn.execute(
+                        """
+                        UPDATE documents
+                        SET last_completed_stage = $2,
+                            updated_at = NOW()
+                        WHERE id = $1
+                        """,
+                        document_id,
+                        last_completed_stage,
+                    )
+
+                rows_affected = int(result.split()[-1])
+                if rows_affected == 0:
+                    logger.warning(
+                        "No document found to update stage",
+                        document_id=str(document_id),
+                    )
+                    return False
+
+                logger.info(
+                    "Document stage updated",
+                    document_id=str(document_id),
+                    last_completed_stage=last_completed_stage,
+                )
+
+                return True
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error updating document stage",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to update document stage: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def get_document_stage(
+        self,
+        document_id: UUID,
+    ) -> Optional[str]:
+        """
+        Get the last completed processing stage for a document.
+
+        Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2)
+
+        Args:
+            document_id: UUID of the document
+
+        Returns:
+            The last completed stage, or None if not set
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        pool = await self._get_pool()
+
+        try:
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """
+                    SELECT last_completed_stage
+                    FROM documents
+                    WHERE id = $1
+                    """,
+                    document_id,
+                )
+
+                if row:
+                    return row["last_completed_stage"]
+                return None
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error getting document stage",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to get document stage: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def append_retry_history(
+        self,
+        document_id: UUID,
+        retry_entry: dict,
+        max_entries: int = 10,
+    ) -> bool:
+        """
+        Append a retry attempt to the document's retry history.
+
+        Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #4)
+
+        Args:
+            document_id: UUID of the document
+            retry_entry: Dict with attempt, stage, error_type, message, timestamp
+            max_entries: Maximum number of retry history entries to keep
+
+        Returns:
+            True if update succeeded
+
+        Raises:
+            DatabaseError: If update fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Appending retry history",
+            document_id=str(document_id),
+            retry_entry=retry_entry,
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                # Append to retry_history and keep only the last max_entries
+                result = await conn.execute(
+                    """
+                    UPDATE documents
+                    SET retry_history = (
+                        SELECT jsonb_agg(elem)
+                        FROM (
+                            SELECT elem
+                            FROM jsonb_array_elements(
+                                COALESCE(retry_history, '[]'::jsonb) || $2::jsonb
+                            ) elem
+                            ORDER BY elem->>'timestamp' DESC
+                            LIMIT $3
+                        ) sub
+                    ),
+                    updated_at = NOW()
+                    WHERE id = $1
+                    """,
+                    document_id,
+                    json.dumps([retry_entry]),
+                    max_entries,
+                )
+
+                rows_affected = int(result.split()[-1])
+                if rows_affected == 0:
+                    logger.warning(
+                        "No document found to append retry history",
+                        document_id=str(document_id),
+                    )
+                    return False
+
+                logger.info(
+                    "Retry history appended",
+                    document_id=str(document_id),
+                )
+
+                return True
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error appending retry history",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to append retry history: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def update_processing_error(
+        self,
+        document_id: UUID,
+        error_info: dict,
+    ) -> bool:
+        """
+        Update the structured processing error for a document.
+
+        Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #4)
+
+        Args:
+            document_id: UUID of the document
+            error_info: Structured error dict with error_type, category, message, etc.
+
+        Returns:
+            True if update succeeded
+
+        Raises:
+            DatabaseError: If update fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Updating processing error",
+            document_id=str(document_id),
+            error_type=error_info.get("error_type"),
+            category=error_info.get("category"),
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                result = await conn.execute(
+                    """
+                    UPDATE documents
+                    SET processing_error = $2,
+                        updated_at = NOW()
+                    WHERE id = $1
+                    """,
+                    document_id,
+                    json.dumps(error_info),
+                )
+
+                rows_affected = int(result.split()[-1])
+                if rows_affected == 0:
+                    logger.warning(
+                        "No document found to update processing error",
+                        document_id=str(document_id),
+                    )
+                    return False
+
+                logger.info(
+                    "Processing error updated",
+                    document_id=str(document_id),
+                )
+
+                return True
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error updating processing error",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to update processing error: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def clear_processing_error(
+        self,
+        document_id: UUID,
+    ) -> bool:
+        """
+        Clear the processing error for a document (e.g., on successful retry).
+
+        Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #4)
+
+        Args:
+            document_id: UUID of the document
+
+        Returns:
+            True if update succeeded
+
+        Raises:
+            DatabaseError: If update fails
+        """
+        pool = await self._get_pool()
+
+        try:
+            async with pool.acquire() as conn:
+                result = await conn.execute(
+                    """
+                    UPDATE documents
+                    SET processing_error = NULL,
+                        updated_at = NOW()
+                    WHERE id = $1
+                    """,
+                    document_id,
+                )
+
+                rows_affected = int(result.split()[-1])
+                return rows_affected > 0
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error clearing processing error",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to clear processing error: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def get_retry_history(
+        self,
+        document_id: UUID,
+    ) -> list[dict]:
+        """
+        Get the retry history for a document.
+
+        Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #4)
+
+        Args:
+            document_id: UUID of the document
+
+        Returns:
+            List of retry history entries
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        pool = await self._get_pool()
+
+        try:
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """
+                    SELECT retry_history
+                    FROM documents
+                    WHERE id = $1
+                    """,
+                    document_id,
+                )
+
+                if row and row["retry_history"]:
+                    return json.loads(row["retry_history"])
+                return []
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error getting retry history",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to get retry history: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def clear_stage_data(
+        self,
+        document_id: UUID,
+        stage: str,
+    ) -> bool:
+        """
+        Clear data from a specific processing stage (for retry).
+
+        Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2)
+
+        Args:
+            document_id: UUID of the document
+            stage: Stage to clear data for (parsed, embedded, analyzed)
+
+        Returns:
+            True if data was cleared
+
+        Raises:
+            DatabaseError: If operation fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Clearing stage data for retry",
+            document_id=str(document_id),
+            stage=stage,
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    if stage == "parsed":
+                        # Clear chunks (embeddings will be deleted by CASCADE)
+                        await conn.execute(
+                            """
+                            DELETE FROM document_chunks WHERE document_id = $1
+                            """,
+                            document_id,
+                        )
+                        # Also clear findings since they depend on chunks
+                        await conn.execute(
+                            """
+                            DELETE FROM findings WHERE document_id = $1
+                            """,
+                            document_id,
+                        )
+                        # Reset stage
+                        await conn.execute(
+                            """
+                            UPDATE documents
+                            SET last_completed_stage = NULL,
+                                updated_at = NOW()
+                            WHERE id = $1
+                            """,
+                            document_id,
+                        )
+
+                    elif stage == "embedded":
+                        # Clear embeddings from chunks
+                        await conn.execute(
+                            """
+                            UPDATE document_chunks
+                            SET embedding = NULL
+                            WHERE document_id = $1
+                            """,
+                            document_id,
+                        )
+                        # Clear findings
+                        await conn.execute(
+                            """
+                            DELETE FROM findings WHERE document_id = $1
+                            """,
+                            document_id,
+                        )
+                        # Reset stage to parsed
+                        await conn.execute(
+                            """
+                            UPDATE documents
+                            SET last_completed_stage = 'parsed',
+                                updated_at = NOW()
+                            WHERE id = $1
+                            """,
+                            document_id,
+                        )
+
+                    elif stage == "analyzed":
+                        # Clear findings only
+                        await conn.execute(
+                            """
+                            DELETE FROM findings WHERE document_id = $1
+                            """,
+                            document_id,
+                        )
+                        # Reset stage to embedded
+                        await conn.execute(
+                            """
+                            UPDATE documents
+                            SET last_completed_stage = 'embedded',
+                                updated_at = NOW()
+                            WHERE id = $1
+                            """,
+                            document_id,
+                        )
+
+                    logger.info(
+                        "Stage data cleared",
+                        document_id=str(document_id),
+                        stage=stage,
+                    )
+
+                    return True
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error clearing stage data",
+                document_id=str(document_id),
+                stage=stage,
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to clear stage data: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
 
 
 # Global client instance

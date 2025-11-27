@@ -1,6 +1,7 @@
 """
 Analyze document job handler for LLM-based finding extraction.
 Story: E3.5 - Implement LLM Analysis with Gemini 2.5 (Tiered Approach) (AC: #1, #4, #5)
+Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
 
 This handler processes analyze-document jobs from the pg-boss queue:
 1. Updates document status to 'analyzing'
@@ -10,6 +11,11 @@ This handler processes analyze-document jobs from the pg-boss queue:
 5. Stores findings in database
 6. Updates document status to 'analyzed'
 7. Enqueues next job (extract_financials for xlsx, or marks complete)
+
+Enhanced with E3.8:
+- Stage tracking via last_completed_stage
+- Error classification and retry decisions
+- Structured error reporting
 """
 
 import time
@@ -20,6 +26,7 @@ import structlog
 
 from src.config import Settings, get_settings
 from src.jobs.queue import Job, get_job_queue
+from src.jobs.retry_manager import RetryManager, get_retry_manager
 from src.llm.models import ModelTier, select_model_tier
 from src.models.findings import FindingCreate, finding_from_dict
 from src.storage.supabase_client import (
@@ -43,6 +50,11 @@ EXCEL_MIME_TYPES = {
     "application/vnd.ms-excel.sheet.macroenabled.12",
 }
 
+# PDF MIME types that may contain financial tables
+PDF_MIME_TYPES = {
+    "application/pdf",
+}
+
 
 def _create_gemini_client():
     """Create a Gemini client (lazy import to avoid import errors in tests)."""
@@ -57,12 +69,15 @@ class AnalyzeDocumentHandler:
 
     Orchestrates the LLM analysis pipeline:
     Load Chunks -> Select Model -> Extract Findings -> Store -> Update Status -> Enqueue Next
+
+    E3.8: Includes stage tracking and retry management.
     """
 
     def __init__(
         self,
         db_client: Optional[SupabaseClient] = None,
         llm_client: Optional[Any] = None,
+        retry_manager: Optional[RetryManager] = None,
         config: Optional[Settings] = None,
     ):
         """
@@ -71,10 +86,12 @@ class AnalyzeDocumentHandler:
         Args:
             db_client: Database client for storage
             llm_client: Gemini LLM client
+            retry_manager: Retry manager for stage tracking and error handling
             config: Application settings
         """
         self.db = db_client or get_supabase_client()
         self.llm_client = llm_client or _create_gemini_client()
+        self.retry_mgr = retry_manager or get_retry_manager()
         self.config = config or get_settings()
 
         logger.info("AnalyzeDocumentHandler initialized")
@@ -99,17 +116,26 @@ class AnalyzeDocumentHandler:
         document_id = UUID(job_data["document_id"])
         deal_id = job_data.get("deal_id")
         user_id = job_data.get("user_id")
+        is_retry = job_data.get("is_retry", False)
 
         logger.info(
             "Processing analyze-document job",
             job_id=job.id,
             document_id=str(document_id),
             retry_count=job.retry_count,
+            is_retry=is_retry,
         )
 
         try:
-            # Update status to analyzing
-            await self.db.update_document_status(document_id, "analyzing")
+            # E3.8: Prepare for retry if needed
+            if is_retry:
+                await self.retry_mgr.prepare_stage_retry(document_id, "analyzed")
+            else:
+                # Update status to analyzing
+                await self.db.update_document_status(document_id, "analyzing")
+
+            # Clear any previous error on start
+            await self.db.clear_processing_error(document_id)
 
             # Get document info for model selection and context
             doc = await self.db.get_document(document_id)
@@ -143,13 +169,17 @@ class AnalyzeDocumentHandler:
                 )
                 # Still mark as analyzed (empty document case)
                 await self.db.update_document_status(document_id, "analyzed")
+                # E3.8: Mark stage complete
+                await self.retry_mgr.mark_stage_complete(document_id, "analyzed")
 
-                # Determine next job
+                # Determine next job - Excel files still get financial extraction attempt
+                # (even if empty, the extractor will handle gracefully)
                 if file_type in EXCEL_MIME_TYPES:
                     next_job_id = await self._enqueue_next_job(
                         "extract-financials", document_id, deal_id, user_id
                     )
                 else:
+                    # No chunks means no tables, so PDFs go straight to complete
                     await self.db.update_document_status(document_id, "complete")
                     next_job_id = None
 
@@ -239,13 +269,33 @@ class AnalyzeDocumentHandler:
                 stored_count = 0
                 await self.db.update_document_status(document_id, "analyzed")
 
+            # E3.8: Mark analysis stage as complete
+            await self.retry_mgr.mark_stage_complete(document_id, "analyzed")
+
+            # Check if document has tables (for PDF financial extraction)
+            has_tables = any(
+                chunk.get("chunk_type") == "table" for chunk in chunks
+            )
+
             # Enqueue next job based on file type
+            # E3.9: Excel files always get financial extraction
+            # E3.9: PDFs with tables also get financial extraction
             if file_type in EXCEL_MIME_TYPES:
                 next_job_id = await self._enqueue_next_job(
                     "extract-financials", document_id, deal_id, user_id
                 )
+            elif file_type in PDF_MIME_TYPES and has_tables:
+                # PDF with financial tables - attempt extraction
+                logger.info(
+                    "PDF has tables, enqueuing financial extraction",
+                    document_id=str(document_id),
+                    table_count=sum(1 for c in chunks if c.get("chunk_type") == "table"),
+                )
+                next_job_id = await self._enqueue_next_job(
+                    "extract-financials", document_id, deal_id, user_id
+                )
             else:
-                # Non-Excel files are complete after analysis
+                # Non-Excel files without tables are complete after analysis
                 await self.db.update_document_status(document_id, "complete")
                 next_job_id = None
 
@@ -274,7 +324,7 @@ class AnalyzeDocumentHandler:
             return result
 
         except NON_RETRYABLE_ERRORS as e:
-            # Permanent failures - mark document as failed
+            # Permanent failures - use retry manager
             logger.error(
                 "analyze-document job failed permanently",
                 job_id=job.id,
@@ -283,7 +333,13 @@ class AnalyzeDocumentHandler:
                 error_type=type(e).__name__,
             )
 
-            await self._handle_permanent_failure(document_id, str(e))
+            # E3.8: Classify error and store structured error info
+            await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="analyzing",
+                retry_count=job.retry_count,
+            )
             raise
 
         except DatabaseError as e:
@@ -297,9 +353,13 @@ class AnalyzeDocumentHandler:
                 retryable=e.retryable,
             )
 
-            if not e.retryable:
-                await self._handle_permanent_failure(document_id, str(e))
-
+            # E3.8: Classify error and store structured error info
+            await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="analyzing",
+                retry_count=job.retry_count,
+            )
             raise
 
         except Exception as e:
@@ -317,7 +377,6 @@ class AnalyzeDocumentHandler:
                         document_id=str(document_id),
                         error=str(e),
                     )
-                    await self._handle_permanent_failure(document_id, str(e))
                 else:
                     logger.warning(
                         "analyze-document job failed (LLM error, may retry)",
@@ -325,16 +384,23 @@ class AnalyzeDocumentHandler:
                         document_id=str(document_id),
                         error=str(e),
                     )
-                raise
+            else:
+                # Unexpected errors - log
+                logger.error(
+                    "analyze-document job failed unexpectedly",
+                    job_id=job.id,
+                    document_id=str(document_id),
+                    error=str(e),
+                    error_type=error_type,
+                    exc_info=True,
+                )
 
-            # Unexpected errors - log and re-raise
-            logger.error(
-                "analyze-document job failed unexpectedly",
-                job_id=job.id,
-                document_id=str(document_id),
-                error=str(e),
-                error_type=error_type,
-                exc_info=True,
+            # E3.8: Classify error and store structured error info
+            await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="analyzing",
+                retry_count=job.retry_count,
             )
             raise
 
@@ -377,32 +443,6 @@ class AnalyzeDocumentHandler:
         )
 
         return job_id
-
-    async def _handle_permanent_failure(
-        self,
-        document_id: UUID,
-        error_message: str,
-    ) -> None:
-        """
-        Handle permanent job failure by updating document status.
-
-        Args:
-            document_id: UUID of the failed document
-            error_message: Error description
-        """
-        try:
-            await self.db.update_document_status(
-                document_id=document_id,
-                processing_status="analysis_failed",
-                error_message=error_message,
-            )
-        except Exception as e:
-            # Log but don't raise - the original error is more important
-            logger.error(
-                "Failed to update document status after failure",
-                document_id=str(document_id),
-                error=str(e),
-            )
 
 
 # Handler instance factory

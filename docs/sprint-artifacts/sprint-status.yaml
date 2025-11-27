@@ -294,12 +294,38 @@ development_status:
     - useProcessingQueue hook with polling
     - Integrated into Data Room above document list
     - Tests for components, hooks, and API endpoints
-  e3-8-implement-retry-logic-for-failed-processing: ready-for-dev
+  e3-8-implement-retry-logic-for-failed-processing: done
   e3-8-drafted: 2025-11-27
   e3-8-context-ready: 2025-11-27
+  e3-8-completed: 2025-11-27
   e3-8-jira-id: SCRUM-38
-  e3-9-financial-model-integration-extract-and-query-financial-metrics: backlog
+  e3-8-notes: |
+    Retry logic for failed processing completed. Key deliverables:
+    - ErrorClassifier with transient/permanent error classification
+    - ProcessingStage enum for stage-aware retry (parsing → embedding → analyzing)
+    - RetryManager with stage tracking, retry history, and rate limiting
+    - Manual retry controls: 60s cooldown, 5 total attempts max
+    - Stage-aware retry endpoints: /api/processing/retry/embedding, /api/processing/retry/analysis
+    - Enhanced UI: structured error display, retry history collapsible, stage-aware retry button
+    - 139 tests passing (95 error + 44 retry manager)
+    Code review fixes applied:
+    - Pattern priority in ErrorClassifier (specific before generic)
+    - Error handling in enqueue_stage_retry (prevent inconsistent state)
+    - Manual retry rate limiting and total attempt cap
+  e3-9-financial-model-integration-extract-and-query-financial-metrics: done
   e3-9-jira-id: SCRUM-39
+  e3-9-drafted: 2025-11-27
+  e3-9-completed: 2025-11-27
+  e3-9-reviewed: 2025-11-27
+  e3-9-notes: |
+    Financial model integration completed. Key deliverables:
+    - Database schema with financial_metrics table and RLS policies
+    - FinancialDocumentDetector with EN+DE pattern matching (30.0 confidence threshold)
+    - FinancialMetricExtractor parsing tables, values, periods, and formulas
+    - extract_financials job handler with retry integration
+    - API endpoints for querying metrics by project/document/category
+    - 82 tests passing with 87% coverage
+    Code review approved: Fixed PDF table financial extraction trigger
   epic-3-retrospective: optional
 
   # Epic 4: Collaborative Knowledge Workflow (14 stories)

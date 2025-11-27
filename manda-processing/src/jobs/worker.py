@@ -30,6 +30,7 @@ DEFAULT_WORKER_CONFIG: dict[str, WorkerConfig] = {
     "document-parse": WorkerConfig(batch_size=3, polling_interval_seconds=5),
     "generate-embeddings": WorkerConfig(batch_size=5, polling_interval_seconds=2),
     "analyze-document": WorkerConfig(batch_size=3, polling_interval_seconds=5),
+    "extract-financials": WorkerConfig(batch_size=3, polling_interval_seconds=5),
     "update-graph": WorkerConfig(batch_size=10, polling_interval_seconds=1),
 }
 
@@ -264,5 +265,7 @@ def setup_default_handlers(worker: Worker) -> None:
 
     worker.register("analyze-document", handle_analyze_document)
 
-    # Future handlers:
-    # worker.register("extract-financials", extract_financials_handler)
+    # Financial metric extraction handler (E3.9)
+    from src.jobs.handlers import handle_extract_financials
+
+    worker.register("extract-financials", handle_extract_financials)

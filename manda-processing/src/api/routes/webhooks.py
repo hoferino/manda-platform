@@ -1,9 +1,11 @@
 """
 Webhook endpoints for external triggers.
 Story: E3.3 - Implement Document Parsing Job Handler (AC: #1, #5)
+Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #5)
 
 This module provides webhook endpoints that trigger job processing:
 - /webhooks/document-uploaded: Triggered when a document is uploaded
+- /api/processing/retry/*: Stage-aware retry endpoints (E3.8)
 """
 
 import hmac
@@ -18,6 +20,7 @@ from pydantic import BaseModel, Field
 from src.api.dependencies import verify_api_key, verify_webhook_signature
 from src.config import get_settings
 from src.jobs.queue import get_job_queue
+from src.jobs.retry_manager import get_retry_manager
 
 logger = structlog.get_logger(__name__)
 
@@ -33,6 +36,8 @@ class DocumentUploadedPayload(BaseModel):
     gcs_path: str = Field(..., description="Full GCS path (gs://bucket/path)")
     file_type: str = Field(..., description="File MIME type or extension")
     file_name: Optional[str] = Field(None, description="Original filename")
+    is_retry: bool = Field(False, description="Whether this is a retry request (E3.8)")
+    last_completed_stage: Optional[str] = Field(None, description="Last completed processing stage (E3.8)")
 
 
 class WebhookResponse(BaseModel):
@@ -88,6 +93,7 @@ async def document_uploaded(
             "gcs_path": payload.gcs_path,
             "file_type": payload.file_type,
             "file_name": payload.file_name,
+            "is_retry": payload.is_retry,  # E3.8: Pass retry flag
         }
 
         job_id = await queue.enqueue("document-parse", job_data)
@@ -192,4 +198,175 @@ async def document_uploaded_batch(
     return results
 
 
-__all__ = ["router"]
+# ============================================================================
+# E3.8: Stage-Aware Retry Endpoints
+# ============================================================================
+
+class RetryPayload(BaseModel):
+    """Payload for retry endpoints (E3.8)."""
+
+    document_id: UUID = Field(..., description="UUID of the document to retry")
+    deal_id: UUID = Field(..., description="UUID of the parent deal")
+    user_id: UUID = Field(..., description="UUID of the user")
+    gcs_path: Optional[str] = Field(None, description="GCS path (optional, will be fetched if not provided)")
+    file_type: Optional[str] = Field(None, description="File MIME type")
+    file_name: Optional[str] = Field(None, description="Original filename")
+    is_retry: bool = Field(True, description="Flag indicating this is a retry")
+    last_completed_stage: Optional[str] = Field(None, description="Last completed stage")
+
+
+# Create a separate router for retry endpoints under /api/processing
+retry_router = APIRouter(prefix="/api/processing/retry")
+
+
+@retry_router.post(
+    "/embedding",
+    response_model=WebhookResponse,
+    summary="Retry embedding generation",
+    description="E3.8: Trigger embedding generation retry for a document.",
+)
+async def retry_embedding(
+    payload: RetryPayload,
+    api_key: str = Depends(verify_api_key),
+) -> WebhookResponse:
+    """
+    E3.8: Retry embedding generation for a document.
+
+    Called when a document has completed parsing but failed during embedding.
+    """
+    logger.info(
+        "Received embedding retry request",
+        document_id=str(payload.document_id),
+        last_completed_stage=payload.last_completed_stage,
+    )
+
+    try:
+        # Check if manual retry is allowed (rate limiting + total cap)
+        retry_manager = get_retry_manager()
+        can_retry, deny_reason = await retry_manager.can_manual_retry(payload.document_id)
+
+        if not can_retry:
+            logger.info(
+                "Manual retry denied",
+                document_id=str(payload.document_id),
+                reason=deny_reason,
+            )
+            raise HTTPException(
+                status_code=429,
+                detail=deny_reason or "Retry not allowed at this time",
+            )
+
+        queue = await get_job_queue()
+
+        job_data = {
+            "document_id": str(payload.document_id),
+            "deal_id": str(payload.deal_id),
+            "user_id": str(payload.user_id),
+            "is_retry": True,
+        }
+
+        job_id = await queue.enqueue("generate-embeddings", job_data)
+
+        logger.info(
+            "Embedding retry job enqueued",
+            document_id=str(payload.document_id),
+            job_id=job_id,
+        )
+
+        return WebhookResponse(
+            success=True,
+            message="Embedding retry job enqueued",
+            job_id=job_id,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Failed to enqueue embedding retry job",
+            document_id=str(payload.document_id),
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to enqueue embedding retry: {str(e)}",
+        )
+
+
+@retry_router.post(
+    "/analysis",
+    response_model=WebhookResponse,
+    summary="Retry LLM analysis",
+    description="E3.8: Trigger LLM analysis retry for a document.",
+)
+async def retry_analysis(
+    payload: RetryPayload,
+    api_key: str = Depends(verify_api_key),
+) -> WebhookResponse:
+    """
+    E3.8: Retry LLM analysis for a document.
+
+    Called when a document has completed embedding but failed during analysis.
+    """
+    logger.info(
+        "Received analysis retry request",
+        document_id=str(payload.document_id),
+        last_completed_stage=payload.last_completed_stage,
+    )
+
+    try:
+        # Check if manual retry is allowed (rate limiting + total cap)
+        retry_manager = get_retry_manager()
+        can_retry, deny_reason = await retry_manager.can_manual_retry(payload.document_id)
+
+        if not can_retry:
+            logger.info(
+                "Manual retry denied",
+                document_id=str(payload.document_id),
+                reason=deny_reason,
+            )
+            raise HTTPException(
+                status_code=429,
+                detail=deny_reason or "Retry not allowed at this time",
+            )
+
+        queue = await get_job_queue()
+
+        job_data = {
+            "document_id": str(payload.document_id),
+            "deal_id": str(payload.deal_id),
+            "user_id": str(payload.user_id),
+            "is_retry": True,
+        }
+
+        job_id = await queue.enqueue("analyze-document", job_data)
+
+        logger.info(
+            "Analysis retry job enqueued",
+            document_id=str(payload.document_id),
+            job_id=job_id,
+        )
+
+        return WebhookResponse(
+            success=True,
+            message="Analysis retry job enqueued",
+            job_id=job_id,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Failed to enqueue analysis retry job",
+            document_id=str(payload.document_id),
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to enqueue analysis retry: {str(e)}",
+        )
+
+
+__all__ = ["router", "retry_router"]

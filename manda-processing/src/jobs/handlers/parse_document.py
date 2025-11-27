@@ -1,6 +1,7 @@
 """
 Document parsing job handler.
 Story: E3.3 - Implement Document Parsing Job Handler (AC: #1-6)
+Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
 
 This handler processes parse_document jobs from the pg-boss queue:
 1. Downloads document from GCS
@@ -8,6 +9,11 @@ This handler processes parse_document jobs from the pg-boss queue:
 3. Stores chunks in database
 4. Updates document status
 5. Enqueues next job (generate_embeddings)
+
+Enhanced with E3.8:
+- Stage tracking via last_completed_stage
+- Error classification and retry decisions
+- Structured error reporting
 """
 
 import time
@@ -19,6 +25,7 @@ import structlog
 
 from src.config import Settings, get_settings
 from src.jobs.queue import Job, EnqueueOptions, get_job_queue
+from src.jobs.retry_manager import RetryManager, get_retry_manager
 from src.parsers import (
     ParseResult,
     ParseError,
@@ -63,6 +70,8 @@ class ParseDocumentHandler:
 
     Orchestrates the document parsing pipeline:
     GCS Download -> Parse -> Store Chunks -> Update Status -> Enqueue Next
+
+    E3.8: Includes stage tracking and retry management.
     """
 
     def __init__(
@@ -70,6 +79,7 @@ class ParseDocumentHandler:
         gcs_client: Optional[GCSClient] = None,
         db_client: Optional[SupabaseClient] = None,
         parser: Optional[Any] = None,
+        retry_manager: Optional[RetryManager] = None,
         config: Optional[Settings] = None,
     ):
         """
@@ -79,11 +89,13 @@ class ParseDocumentHandler:
             gcs_client: GCS client for file download
             db_client: Database client for storage
             parser: Document parser (DoclingParser or compatible)
+            retry_manager: Retry manager for stage tracking and error handling
             config: Application settings
         """
         self.gcs = gcs_client or get_gcs_client()
         self.db = db_client or get_supabase_client()
         self.parser = parser or _create_docling_parser()
+        self.retry_mgr = retry_manager or get_retry_manager()
         self.config = config or get_settings()
 
         logger.info("ParseDocumentHandler initialized")
@@ -111,6 +123,7 @@ class ParseDocumentHandler:
         deal_id = job_data.get("deal_id")
         user_id = job_data.get("user_id")
         file_name = job_data.get("file_name", "unknown")
+        is_retry = job_data.get("is_retry", False)
 
         logger.info(
             "Processing parse_document job",
@@ -119,11 +132,19 @@ class ParseDocumentHandler:
             gcs_path=gcs_path,
             file_type=file_type,
             retry_count=job.retry_count,
+            is_retry=is_retry,
         )
 
         try:
-            # Update status to processing
-            await self.db.update_document_status(document_id, "processing")
+            # E3.8: Prepare for retry if needed
+            if is_retry:
+                await self.retry_mgr.prepare_stage_retry(document_id, "parsed")
+            else:
+                # Update status to parsing
+                await self.db.update_document_status(document_id, "parsing")
+
+            # Clear any previous error on start
+            await self.db.clear_processing_error(document_id)
 
             # Download from GCS
             async with self.gcs.download_temp_file(gcs_path) as temp_path:
@@ -148,6 +169,9 @@ class ParseDocumentHandler:
                 formulas=parse_result.formulas,
                 new_status="parsed",
             )
+
+            # E3.8: Mark parsing stage as complete
+            await self.retry_mgr.mark_stage_complete(document_id, "parsed")
 
             # Enqueue the next job
             next_job_id = await self._enqueue_next_job(
@@ -180,7 +204,7 @@ class ParseDocumentHandler:
             return result
 
         except NON_RETRYABLE_ERRORS as e:
-            # Permanent failures - mark document as failed
+            # Permanent failures - use retry manager for classification and storage
             logger.error(
                 "parse_document job failed permanently",
                 job_id=job.id,
@@ -189,13 +213,19 @@ class ParseDocumentHandler:
                 error_type=type(e).__name__,
             )
 
-            await self._handle_permanent_failure(document_id, str(e))
+            # E3.8: Classify error and store structured error info
+            classified = await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="parsing",
+                retry_count=job.retry_count,
+            )
 
             # Re-raise to let worker mark job as failed
             raise
 
         except (GCSDownloadError, DatabaseError) as e:
-            # Potentially retryable errors
+            # Potentially retryable errors - classify and decide
             logger.warning(
                 "parse_document job failed (may retry)",
                 job_id=job.id,
@@ -205,13 +235,18 @@ class ParseDocumentHandler:
                 retryable=getattr(e, "retryable", True),
             )
 
-            if not getattr(e, "retryable", True):
-                await self._handle_permanent_failure(document_id, str(e))
+            # E3.8: Classify error and store structured error info
+            classified = await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="parsing",
+                retry_count=job.retry_count,
+            )
 
             raise
 
         except Exception as e:
-            # Unexpected errors - log and re-raise
+            # Unexpected errors - classify and re-raise
             logger.error(
                 "parse_document job failed unexpectedly",
                 job_id=job.id,
@@ -219,6 +254,14 @@ class ParseDocumentHandler:
                 error=str(e),
                 error_type=type(e).__name__,
                 exc_info=True,
+            )
+
+            # E3.8: Classify error and store structured error info
+            classified = await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="parsing",
+                retry_count=job.retry_count,
             )
 
             raise
@@ -264,32 +307,6 @@ class ParseDocumentHandler:
         )
 
         return job_id
-
-    async def _handle_permanent_failure(
-        self,
-        document_id: UUID,
-        error_message: str,
-    ) -> None:
-        """
-        Handle permanent job failure by updating document status.
-
-        Args:
-            document_id: UUID of the failed document
-            error_message: Error description
-        """
-        try:
-            await self.db.update_document_status(
-                document_id=document_id,
-                processing_status="failed",
-                error_message=error_message,
-            )
-        except Exception as e:
-            # Log but don't raise - the original error is more important
-            logger.error(
-                "Failed to update document status after failure",
-                document_id=str(document_id),
-                error=str(e),
-            )
 
 
 # Handler instance factory

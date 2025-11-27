@@ -10,7 +10,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import health, webhooks, search, processing
+from src.api.routes import health, webhooks, search, processing, financial_metrics
 from src.config import get_settings
 
 # Configure structured logging
@@ -88,8 +88,10 @@ def create_app() -> FastAPI:
     # Register routes
     app.include_router(health.router, tags=["Health"])
     app.include_router(webhooks.router, tags=["Webhooks"])
+    app.include_router(webhooks.retry_router, tags=["Retry"])  # E3.8: Stage-aware retry
     app.include_router(search.router, tags=["Search"])
     app.include_router(processing.router, tags=["Processing"])
+    app.include_router(financial_metrics.router, tags=["Financial Metrics"])  # E3.9
 
     return app
 

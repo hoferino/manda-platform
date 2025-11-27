@@ -3,6 +3,7 @@
  * Displays full document metadata in a slide-out sheet
  * Story: E2.5 - Create Document Metadata Management (AC: #2, #3, #4, #5, #6, #7)
  * Story: E3.6 - Processing Status Tracking and WebSocket Updates (AC: #5)
+ * Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #4, #5)
  *
  * Features:
  * - All document metadata display
@@ -10,8 +11,9 @@
  * - Category dropdown selection
  * - Folder move dialog
  * - Processing status with progress indicator
- * - Error display for failed documents
- * - Retry button for failed processing
+ * - Structured error display for failed documents (E3.8)
+ * - Retry history display (E3.8)
+ * - Stage-aware retry button for failed processing
  * - Findings count display
  * - Action buttons (Download, Delete)
  */
@@ -38,6 +40,10 @@ import {
   Folder,
   RefreshCw,
   FileSearch,
+  History,
+  ChevronDown,
+  ChevronUp,
+  Info,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -60,13 +66,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Document } from '@/lib/api/documents'
+import type { Document, ProcessingError, RetryHistoryEntry } from '@/lib/api/documents'
 import {
   formatFileSize,
   DOCUMENT_CATEGORIES,
   updateDocument,
   downloadDocument,
 } from '@/lib/api/documents'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import type { DocumentCategory } from '@/lib/gcs/client'
 import { ProcessingStatusBadge, isProcessingFailed, getStatusDescription } from './processing-status-badge'
 import { ProcessingProgress } from './processing-progress'
@@ -184,6 +195,9 @@ export function DocumentDetails({
 
   // E3.6: Retry processing state
   const [isRetrying, setIsRetrying] = useState(false)
+
+  // E3.8: Retry history display state
+  const [showRetryHistory, setShowRetryHistory] = useState(false)
 
   // Reset state when document changes
   useEffect(() => {
@@ -478,35 +492,123 @@ export function DocumentDetails({
               </p>
             </div>
 
-            {/* E3.6: Error message for failed processing */}
+            {/* E3.8: Enhanced error message for failed processing */}
             {isProcessingFailed(document.processingStatus) && document.processingError && (
-              <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">Processing Error</p>
-                    <p className="mt-1 text-xs">{document.processingError}</p>
+                  <div className="flex-1 min-w-0">
+                    {typeof document.processingError === 'object' ? (
+                      // E3.8: Structured error display
+                      <>
+                        <p className="font-medium">
+                          {(document.processingError as ProcessingError).user_message || 'Processing Error'}
+                        </p>
+                        {(document.processingError as ProcessingError).guidance && (
+                          <p className="mt-1 text-xs opacity-80">
+                            {(document.processingError as ProcessingError).guidance}
+                          </p>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                          <span className="inline-flex items-center gap-1 rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5">
+                            Stage: {(document.processingError as ProcessingError).stage || 'unknown'}
+                          </span>
+                          <span className={cn(
+                            "inline-flex items-center gap-1 rounded px-1.5 py-0.5",
+                            (document.processingError as ProcessingError).category === 'transient'
+                              ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300"
+                              : "bg-red-100 dark:bg-red-900"
+                          )}>
+                            {(document.processingError as ProcessingError).category === 'transient' ? 'Temporary' : 'Permanent'}
+                          </span>
+                          {(document.processingError as ProcessingError).retry_count > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded bg-red-100 dark:bg-red-900 px-1.5 py-0.5">
+                              Attempts: {(document.processingError as ProcessingError).retry_count}
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      // Legacy string error display
+                      <>
+                        <p className="font-medium">Processing Error</p>
+                        <p className="mt-1 text-xs break-words">{document.processingError as string}</p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* E3.6: Retry button for failed processing */}
+            {/* E3.8: Retry history display */}
+            {document.retryHistory && document.retryHistory.length > 0 && (
+              <Collapsible open={showRetryHistory} onOpenChange={setShowRetryHistory}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      Retry History ({document.retryHistory.length})
+                    </span>
+                    {showRetryHistory ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="space-y-2 rounded-md border p-2">
+                    {document.retryHistory.map((entry: RetryHistoryEntry, index: number) => (
+                      <div
+                        key={`${entry.timestamp}-${index}`}
+                        className="flex flex-col gap-1 border-b last:border-0 pb-2 last:pb-0 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Attempt {entry.attempt}</span>
+                          <span className="text-muted-foreground">
+                            {formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">
+                            {entry.stage}
+                          </Badge>
+                          <span className="truncate">{entry.error_type}</span>
+                        </div>
+                        <p className="text-muted-foreground truncate">{entry.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* E3.8: Enhanced retry button with stage-aware messaging */}
             {isProcessingFailed(document.processingStatus) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRetryProcessing}
-                disabled={isRetrying}
-                className="w-full"
-              >
-                {isRetrying ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetryProcessing}
+                  disabled={isRetrying}
+                  className="w-full"
+                >
+                  {isRetrying ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  {document.lastCompletedStage
+                    ? `Resume from ${document.lastCompletedStage}`
+                    : 'Retry Processing'}
+                </Button>
+                {document.lastCompletedStage && (
+                  <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+                    <Info className="h-3 w-3" />
+                    Will skip completed stages
+                  </p>
                 )}
-                Retry Processing
-              </Button>
+              </div>
             )}
 
             {/* E3.6: Findings count for completed analysis */}

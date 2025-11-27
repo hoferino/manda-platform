@@ -1,6 +1,7 @@
 """
 Embedding generation job handler.
 Story: E3.4 - Generate Embeddings for Semantic Search (AC: #1, #5)
+Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
 
 This handler processes generate_embeddings jobs from the pg-boss queue:
 1. Loads document chunks from database
@@ -8,6 +9,11 @@ This handler processes generate_embeddings jobs from the pg-boss queue:
 3. Stores embeddings in pgvector column
 4. Updates document status
 5. Enqueues next job (analyze_document)
+
+Enhanced with E3.8:
+- Stage tracking via last_completed_stage
+- Error classification and retry decisions
+- Structured error reporting
 """
 
 import time
@@ -18,6 +24,7 @@ import structlog
 
 from src.config import Settings, get_settings
 from src.jobs.queue import Job, get_job_queue
+from src.jobs.retry_manager import RetryManager, get_retry_manager
 from src.storage.supabase_client import (
     SupabaseClient,
     DatabaseError,
@@ -46,12 +53,15 @@ class GenerateEmbeddingsHandler:
 
     Orchestrates the embedding generation pipeline:
     Load Chunks -> Generate Embeddings -> Store in DB -> Update Status -> Enqueue Next
+
+    E3.8: Includes stage tracking and retry management.
     """
 
     def __init__(
         self,
         db_client: Optional[SupabaseClient] = None,
         embedding_client: Optional[Any] = None,
+        retry_manager: Optional[RetryManager] = None,
         config: Optional[Settings] = None,
     ):
         """
@@ -60,10 +70,12 @@ class GenerateEmbeddingsHandler:
         Args:
             db_client: Database client for storage
             embedding_client: OpenAI embedding client
+            retry_manager: Retry manager for stage tracking and error handling
             config: Application settings
         """
         self.db = db_client or get_supabase_client()
         self.embedding_client = embedding_client or _create_embedding_client()
+        self.retry_mgr = retry_manager or get_retry_manager()
         self.config = config or get_settings()
 
         logger.info("GenerateEmbeddingsHandler initialized")
@@ -89,6 +101,7 @@ class GenerateEmbeddingsHandler:
         chunks_count = job_data.get("chunks_count", 0)
         deal_id = job_data.get("deal_id")
         user_id = job_data.get("user_id")
+        is_retry = job_data.get("is_retry", False)
 
         logger.info(
             "Processing generate_embeddings job",
@@ -96,11 +109,19 @@ class GenerateEmbeddingsHandler:
             document_id=str(document_id),
             expected_chunks=chunks_count,
             retry_count=job.retry_count,
+            is_retry=is_retry,
         )
 
         try:
-            # Update status to processing
-            await self.db.update_document_status(document_id, "embedding")
+            # E3.8: Prepare for retry if needed
+            if is_retry:
+                await self.retry_mgr.prepare_stage_retry(document_id, "embedded")
+            else:
+                # Update status to embedding
+                await self.db.update_document_status(document_id, "embedding")
+
+            # Clear any previous error on start
+            await self.db.clear_processing_error(document_id)
 
             # Load chunks from database
             chunks = await self.db.get_chunks_by_document(document_id)
@@ -112,6 +133,8 @@ class GenerateEmbeddingsHandler:
                 )
                 # Still mark as embedded (empty document case)
                 await self.db.update_document_status(document_id, "embedded")
+                # E3.8: Mark stage complete
+                await self.retry_mgr.mark_stage_complete(document_id, "embedded")
                 return {
                     "success": True,
                     "document_id": str(document_id),
@@ -148,6 +171,9 @@ class GenerateEmbeddingsHandler:
                 new_status="embedded",
             )
 
+            # E3.8: Mark embedding stage as complete
+            await self.retry_mgr.mark_stage_complete(document_id, "embedded")
+
             # Enqueue the next job
             next_job_id = await self._enqueue_next_job(
                 document_id=document_id,
@@ -177,7 +203,7 @@ class GenerateEmbeddingsHandler:
             return result
 
         except NON_RETRYABLE_ERRORS as e:
-            # Permanent failures - mark document as failed
+            # Permanent failures - use retry manager
             logger.error(
                 "generate_embeddings job failed permanently",
                 job_id=job.id,
@@ -186,7 +212,13 @@ class GenerateEmbeddingsHandler:
                 error_type=type(e).__name__,
             )
 
-            await self._handle_permanent_failure(document_id, str(e))
+            # E3.8: Classify error and store structured error info
+            await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="embedding",
+                retry_count=job.retry_count,
+            )
             raise
 
         except DatabaseError as e:
@@ -200,9 +232,13 @@ class GenerateEmbeddingsHandler:
                 retryable=e.retryable,
             )
 
-            if not e.retryable:
-                await self._handle_permanent_failure(document_id, str(e))
-
+            # E3.8: Classify error and store structured error info
+            await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="embedding",
+                retry_count=job.retry_count,
+            )
             raise
 
         except Exception as e:
@@ -220,7 +256,6 @@ class GenerateEmbeddingsHandler:
                         document_id=str(document_id),
                         error=str(e),
                     )
-                    await self._handle_permanent_failure(document_id, str(e))
                 else:
                     logger.warning(
                         "generate_embeddings job failed (embedding error, may retry)",
@@ -228,16 +263,24 @@ class GenerateEmbeddingsHandler:
                         document_id=str(document_id),
                         error=str(e),
                     )
-                raise
 
-            # Unexpected errors - log and re-raise
-            logger.error(
-                "generate_embeddings job failed unexpectedly",
-                job_id=job.id,
-                document_id=str(document_id),
-                error=str(e),
-                error_type=error_type,
-                exc_info=True,
+            else:
+                # Unexpected errors - log
+                logger.error(
+                    "generate_embeddings job failed unexpectedly",
+                    job_id=job.id,
+                    document_id=str(document_id),
+                    error=str(e),
+                    error_type=error_type,
+                    exc_info=True,
+                )
+
+            # E3.8: Classify error and store structured error info
+            await self.retry_mgr.handle_job_failure(
+                document_id=document_id,
+                error=e,
+                current_stage="embedding",
+                retry_count=job.retry_count,
             )
             raise
 
@@ -278,32 +321,6 @@ class GenerateEmbeddingsHandler:
         )
 
         return job_id
-
-    async def _handle_permanent_failure(
-        self,
-        document_id: UUID,
-        error_message: str,
-    ) -> None:
-        """
-        Handle permanent job failure by updating document status.
-
-        Args:
-            document_id: UUID of the failed document
-            error_message: Error description
-        """
-        try:
-            await self.db.update_document_status(
-                document_id=document_id,
-                processing_status="embedding_failed",
-                error_message=error_message,
-            )
-        except Exception as e:
-            # Log but don't raise - the original error is more important
-            logger.error(
-                "Failed to update document status after failure",
-                document_id=str(document_id),
-                error=str(e),
-            )
 
 
 # Handler instance factory

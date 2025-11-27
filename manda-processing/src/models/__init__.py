@@ -13,7 +13,22 @@ from src.models.findings import (
     finding_from_dict,
 )
 
+from src.models.financial_metrics import (
+    MetricCategory,
+    PeriodType,
+    FinancialMetricBase,
+    FinancialMetricCreate,
+    FinancialMetric,
+    FinancialMetricResponse,
+    FinancialExtractionResult,
+    FinancialMetricsQueryParams,
+    FinancialMetricsListResponse,
+    METRIC_NORMALIZATION,
+    normalize_metric,
+)
+
 __all__ = [
+    # Findings
     "FindingType",
     "Domain",
     "ValidationStatus",
@@ -22,4 +37,16 @@ __all__ = [
     "Finding",
     "ExtractionResult",
     "finding_from_dict",
+    # Financial metrics
+    "MetricCategory",
+    "PeriodType",
+    "FinancialMetricBase",
+    "FinancialMetricCreate",
+    "FinancialMetric",
+    "FinancialMetricResponse",
+    "FinancialExtractionResult",
+    "FinancialMetricsQueryParams",
+    "FinancialMetricsListResponse",
+    "METRIC_NORMALIZATION",
+    "normalize_metric",
 ]
