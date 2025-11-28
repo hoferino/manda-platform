@@ -13,7 +13,8 @@ export default defineConfig({
 
     // TD-003: Parallel execution optimizations
     // Run tests in parallel across multiple threads
-    pool: 'threads',
+    pool: 'threads' as const,
+    // @ts-expect-error - vitest types are outdated for pool options
     poolOptions: {
       threads: {
         // Use all available CPU cores

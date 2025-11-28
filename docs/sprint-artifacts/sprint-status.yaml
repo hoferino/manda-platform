@@ -514,34 +514,94 @@ development_status:
     - Stage-aware processing pipeline
 
   # Epic 4: Collaborative Knowledge Workflow (14 stories)
-  epic-4: backlog
-  e4-1-build-knowledge-explorer-ui-main-interface: drafted
+  # CONTEXTED: 2025-11-28
+  # Tech Spec: docs/sprint-artifacts/tech-spec-epic-E4.md
+  # Key Decisions:
+  # - Knowledge Explorer as analyst's primary workspace
+  # - Findings Browser with table/card views, semantic search
+  # - Contradiction detection via Neo4j CONTRADICTS relationships
+  # - Gap analysis against IRL requirements
+  # - New tables: contradictions (findings already exists)
+  # - Dependencies: @tanstack/react-table, exceljs, csv-stringify
+  epic-4: contexted
+  epic-4-jira-id: SCRUM-47
+  epic-4-contexted: 2025-11-28
+  epic-4-tech-spec: docs/sprint-artifacts/tech-spec-epic-E4.md
+  e4-1-build-knowledge-explorer-ui-main-interface: done
+  e4-1-jira-id: SCRUM-48
   e4-1-drafted: 2025-11-28
-  e4-2-implement-findings-tab-with-filtering-and-validation: backlog
-  e4-3-implement-entities-tab-for-named-entity-browsing: backlog
-  e4-4-implement-patterns-tab-for-cross-domain-intelligence: backlog
-  e4-5-implement-contradictions-tab-with-conflict-resolution: backlog
-  e4-6-build-finding-detail-view-with-source-attribution: backlog
-  e4-7-implement-chat-based-finding-capture: backlog
-  e4-8-implement-excel-word-notes-upload-for-finding-extraction: backlog
-  e4-9-implement-collaborative-analysis-mode-analyst-reads-tells-agent: backlog
-  e4-10-implement-finding-validation-workflow: backlog
+  e4-1-context-ready: 2025-11-28
+  e4-1-completed: 2025-11-28
+  e4-1-notes: |
+    Knowledge Explorer UI main interface completed. Key deliverables:
+    - Database migration 00021: Added status and validation_history columns to findings
+    - API route /api/projects/[id]/findings with GET/POST, Zod validation, pagination
+    - TypeScript types in lib/types/findings.ts with helper functions
+    - Client service in lib/api/findings.ts for data fetching
+    - Knowledge Explorer page with tab navigation (Findings, Contradictions, Gap Analysis)
+    - FindingsBrowser with @tanstack/react-table DataTable
+    - Filter controls: document, domain, confidence range, status filters
+    - Shared badge components: ConfidenceBadge, DomainTag, StatusBadge
+    - 22 component tests for FindingsTable (rendering, pagination, sorting, actions, accessibility)
+    - Build passing with no TypeScript errors
+  e4-2-implement-semantic-search-for-findings: ready-for-review
+  e4-2-drafted: 2025-11-28
+  e4-2-jira-id: SCRUM-49
+  e4-2-completed: 2025-11-28
+  e4-2-notes: |
+    Semantic search for findings completed. Key deliverables:
+    - Embedding service (lib/services/embeddings.ts) with OpenAI text-embedding-3-large
+    - LRU cache for query embeddings with retry logic
+    - Database migration 00022: Updated findings.embedding to vector(3072), created HNSW index
+    - match_findings RPC function for pgvector cosine similarity search with filters
+    - Search API endpoint POST /api/projects/[id]/findings/search
+    - FindingSearch component with debounced input (300ms), Enter/Escape keys
+    - FindingsBrowser integration with URL state (?q= parameter)
+    - SimilarityBadge component for search results
+    - 37 tests (14 embedding service + 23 FindingSearch component)
+    - Build passing, all story tests passing
+  e4-3-implement-inline-finding-validation: backlog
+  e4-3-jira-id: SCRUM-50
+  e4-4-build-card-view-alternative-for-findings: backlog
+  e4-4-jira-id: SCRUM-51
+  e4-5-implement-source-attribution-links: backlog
+  e4-5-jira-id: SCRUM-52
+  e4-6-build-contradictions-view: backlog
+  e4-6-jira-id: SCRUM-53
+  e4-7-detect-contradictions-using-neo4j: backlog
+  e4-7-jira-id: SCRUM-54
+  e4-8-build-gap-analysis-view: backlog
+  e4-8-jira-id: SCRUM-55
+  e4-9-implement-finding-detail-view-with-full-context: backlog
+  e4-9-jira-id: SCRUM-56
+  e4-10-implement-export-findings-to-csv-excel: backlog
+  e4-10-jira-id: SCRUM-57
   e4-11-implement-contradiction-detection-and-flagging: backlog
+  e4-11-jira-id: SCRUM-58
   e4-12-build-bulk-actions-for-finding-management: backlog
-  e4-13-implement-export-findings-feature: backlog
+  e4-12-jira-id: SCRUM-59
+  e4-13-implement-export-findings-feature-advanced: backlog
+  e4-13-jira-id: SCRUM-60
   e4-14-build-real-time-knowledge-graph-updates: backlog
+  e4-14-jira-id: SCRUM-61
   epic-4-retrospective: optional
 
-  # Epic 5: Conversational Assistant (8 stories)
+  # Epic 5: Conversational Assistant (9 stories)
+  # Key Components:
+  # - Claude Sonnet 4.5 via LangChain ChatAnthropic adapter
+  # - LangGraph for conversation workflow orchestration
+  # - 11 chat tools for knowledge querying
+  # - WebSocket for real-time streaming responses
   epic-5: backlog
-  e5-1-build-chat-interface-ui-with-message-history: backlog
-  e5-2-implement-langgraph-agent-orchestration: backlog
-  e5-3-implement-12-agent-tools-for-knowledge-querying: backlog
-  e5-4-implement-streaming-response-with-websocket: backlog
-  e5-5-implement-conversation-persistence-and-history: backlog
-  e5-6-implement-source-citation-in-responses: backlog
-  e5-7-build-suggested-questions-feature: backlog
+  e5-1-integrate-claude-sonnet-via-langchain: backlog
+  e5-2-implement-langchain-agent-with-11-chat-tools: backlog
+  e5-3-build-chat-interface-with-conversation-history: backlog
+  e5-4-implement-source-citation-display-in-messages: backlog
+  e5-5-implement-quick-actions-and-suggested-followups: backlog
+  e5-6-add-conversation-context-and-multi-turn-support: backlog
+  e5-7-implement-confidence-indicators-and-uncertainty-handling: backlog
   e5-8-implement-chat-export-functionality: backlog
+  e5-9-implement-document-upload-via-chat-interface: backlog
   epic-5-retrospective: optional
 
   # Epic 6: IRL Management & Auto-Generation (8 stories)

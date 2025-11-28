@@ -1,0 +1,652 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context: E4-1 Build Knowledge Explorer UI Main Interface
+  Generated: 2025-11-28
+  Epic: E4 - Knowledge Explorer & Intelligence Display
+-->
+<story-context story-id="e4-1" epic="E4">
+
+  <!-- ================================================================== -->
+  <!-- STORY SUMMARY -->
+  <!-- ================================================================== -->
+  <story-summary>
+    <title>Build Knowledge Explorer UI Main Interface</title>
+    <goal>Create the primary Knowledge Explorer interface with tab navigation, filtering system, and layout structure that allows analysts to browse and explore extracted findings from documents.</goal>
+    <scope>
+      - Replace placeholder page with functional multi-tab interface
+      - Implement tab navigation: Findings, Insights, Contradictions, Gaps
+      - Build filter sidebar with domain/type/confidence/date filters
+      - Create responsive layout with collapsible filter panel
+      - Display mock findings data for UI development
+      - Integrate with existing workspace navigation
+    </scope>
+    <priority>P0 (Critical)</priority>
+    <story-points>8</story-points>
+  </story-summary>
+
+  <!-- ================================================================== -->
+  <!-- TECHNICAL CONTEXT -->
+  <!-- ================================================================== -->
+  <technical-context>
+
+    <database-schema>
+      <!-- Findings Table (from migration 00004 + 00017) -->
+      <table name="findings">
+        <description>Extracted facts from documents with pgvector embeddings for semantic search</description>
+        <columns>
+          <column name="id" type="uuid" primary-key="true">Primary identifier</column>
+          <column name="deal_id" type="uuid" fk="deals.id">Project/deal reference</column>
+          <column name="document_id" type="uuid" fk="documents.id" nullable="true">Source document</column>
+          <column name="user_id" type="uuid" fk="auth.users.id">Owner for RLS</column>
+          <column name="text" type="text">The finding content</column>
+          <column name="source_document" type="text" nullable="true">Source doc name</column>
+          <column name="page_number" type="int" nullable="true">Page reference</column>
+          <column name="confidence" type="float">Confidence score 0-1</column>
+          <column name="embedding" type="vector(1536)" nullable="true">For semantic search</column>
+          <column name="metadata" type="jsonb">Additional metadata (entities, categories)</column>
+          <column name="chunk_id" type="uuid" fk="document_chunks.id" nullable="true">Source chunk reference</column>
+          <column name="finding_type" type="finding_type_enum">metric, fact, risk, opportunity, contradiction</column>
+          <column name="domain" type="finding_domain_enum">financial, operational, market, legal, technical</column>
+          <column name="created_at" type="timestamptz">Creation timestamp</column>
+          <column name="updated_at" type="timestamptz">Last update timestamp</column>
+        </columns>
+        <indexes>
+          <index name="idx_findings_deal_id" columns="deal_id"/>
+          <index name="idx_findings_document_id" columns="document_id"/>
+          <index name="idx_findings_finding_type" columns="finding_type"/>
+          <index name="idx_findings_domain" columns="domain"/>
+          <index name="idx_findings_deal_type" columns="deal_id, finding_type" comment="Common query pattern"/>
+          <index name="idx_findings_embedding" type="ivfflat" columns="embedding vector_cosine_ops" comment="Vector similarity search"/>
+        </indexes>
+        <rls policy="findings_isolation_policy">User can only access own findings (auth.uid() = user_id)</rls>
+      </table>
+
+      <!-- Insights Table (from migration 00005) -->
+      <table name="insights">
+        <description>Cross-domain patterns and higher-level intelligence derived from findings</description>
+        <columns>
+          <column name="id" type="uuid" primary-key="true"/>
+          <column name="deal_id" type="uuid" fk="deals.id"/>
+          <column name="user_id" type="uuid" fk="auth.users.id"/>
+          <column name="title" type="text" nullable="true">Insight headline</column>
+          <column name="text" type="text">Detailed insight description</column>
+          <column name="insight_type" type="text">Pattern type (e.g., margin_compression, growth_anomaly)</column>
+          <column name="confidence" type="float" nullable="true">Confidence 0-1</column>
+          <column name="source_finding_ids" type="uuid[]" nullable="true">Supporting findings</column>
+          <column name="metadata" type="jsonb" nullable="true">Additional data</column>
+          <column name="created_at" type="timestamptz"/>
+        </columns>
+      </table>
+
+      <enums>
+        <enum name="finding_type_enum">
+          <value>metric</value>
+          <value>fact</value>
+          <value>risk</value>
+          <value>opportunity</value>
+          <value>contradiction</value>
+        </enum>
+        <enum name="finding_domain_enum">
+          <value>financial</value>
+          <value>operational</value>
+          <value>market</value>
+          <value>legal</value>
+          <value>technical</value>
+        </enum>
+      </enums>
+    </database-schema>
+
+    <existing-types>
+      <!-- TypeScript types from database.types.ts -->
+      <type name="Tables['findings']['Row']" location="lib/supabase/database.types.ts">
+        Full findings row type with all columns
+      </type>
+      <type name="Enums['finding_type_enum']" location="lib/supabase/database.types.ts">
+        'metric' | 'fact' | 'risk' | 'opportunity' | 'contradiction'
+      </type>
+      <type name="Enums['finding_domain_enum']" location="lib/supabase/database.types.ts">
+        'financial' | 'operational' | 'market' | 'legal' | 'technical'
+      </type>
+    </existing-types>
+
+    <existing-page>
+      <!-- Current placeholder implementation to replace -->
+      <file path="manda-app/app/projects/[id]/knowledge-explorer/page.tsx">
+        <description>Current placeholder page showing "Coming in Epic 3" badge. Must be replaced with actual Knowledge Explorer interface.</description>
+        <current-structure>
+          - Server component with metadata
+          - Uses PlaceholderSection component
+          - Icon: Brain from lucide-react
+        </current-structure>
+      </file>
+    </existing-page>
+
+  </technical-context>
+
+  <!-- ================================================================== -->
+  <!-- UI/UX REQUIREMENTS -->
+  <!-- ================================================================== -->
+  <ux-requirements source="docs/ux-design-specification.md">
+
+    <section-overview>
+      <title>Knowledge Explorer (Section 5.3)</title>
+      <purpose>Analyst's primary workspace for reviewing, validating, and exploring extracted intelligence. This is the core differentiator interface.</purpose>
+      <layout>Multi-panel interface with tabs for different content views</layout>
+    </section-overview>
+
+    <tabs>
+      <tab name="Findings Browser" primary="true">
+        <description>Table or card view of extracted findings</description>
+        <display-modes>
+          <mode name="Table View">Dense, scannable - columns: Finding, Source, Domain, Confidence, Status, Actions</mode>
+          <mode name="Card View">Visual, spacious - cards with preview, source, confidence badge</mode>
+        </display-modes>
+        <filters>
+          <filter name="By Document">Show findings from specific file</filter>
+          <filter name="By Domain">Financial, Operational, Market, Legal, Technical</filter>
+          <filter name="By Confidence">High (>80%), Medium (60-80%), Low (&lt;60%)</filter>
+          <filter name="By Status">Validated, Pending, Rejected</filter>
+          <filter name="By Type">Metric, Fact, Risk, Opportunity, Contradiction</filter>
+          <filter name="By Date">When extracted</filter>
+        </filters>
+      </tab>
+
+      <tab name="Cross-Domain Insights">
+        <description>Detected patterns across multiple domains</description>
+        <elements>Pattern name, confidence score, description, supporting findings, source documents</elements>
+      </tab>
+
+      <tab name="Contradictions">
+        <description>Side-by-side comparison of conflicting findings</description>
+        <layout>Finding A vs Finding B with confidence scores and resolution actions</layout>
+      </tab>
+
+      <tab name="Gap Analysis">
+        <description>Missing information identification</description>
+        <categories>IRL items not addressed, information gaps, incomplete analysis areas</categories>
+      </tab>
+    </tabs>
+
+    <finding-card-anatomy>
+      <element name="Finding Text">The extracted information (primary)</element>
+      <element name="Source Attribution">Document name, page/section/cell reference (clickable)</element>
+      <element name="Confidence Score">Visual indicator - badge with color + percentage</element>
+      <element name="Domain Tag">Financial, Operational, etc.</element>
+      <element name="Type Badge">Metric, Fact, Risk, Opportunity</element>
+      <element name="Validation Actions">Confirm, Reject, Edit, Comment (NOT in E4-1 scope)</element>
+    </finding-card-anatomy>
+
+    <visual-patterns>
+      <confidence-display>Color badge + percentage for clarity</confidence-display>
+      <colors>
+        <high-confidence>Green (&gt;80%)</high-confidence>
+        <medium-confidence>Yellow/Orange (60-80%)</medium-confidence>
+        <low-confidence>Red (&lt;60%)</low-confidence>
+      </colors>
+      <empty-states>
+        <no-results>Helpful message "No findings match your filters" with clear filters action</no-results>
+        <first-use>Guidance "Upload documents to start extracting insights"</first-use>
+      </empty-states>
+    </visual-patterns>
+
+    <responsive-behavior>
+      <desktop>Full sidebar visible, multi-column layout</desktop>
+      <tablet>Collapsible filter sidebar (icons only), tables become cards</tablet>
+    </responsive-behavior>
+
+  </ux-requirements>
+
+  <!-- ================================================================== -->
+  <!-- IMPLEMENTATION PATTERNS -->
+  <!-- ================================================================== -->
+  <implementation-patterns>
+
+    <tech-stack>
+      <framework>Next.js 16.0.4 with App Router</framework>
+      <react>React 19.2.0</react>
+      <ui-library>shadcn/ui + Tailwind CSS 4</ui-library>
+      <state>Zustand 5.0.8 for client state</state>
+      <icons>lucide-react 0.554.0</icons>
+      <testing>Vitest 4.0.14 + @testing-library/react 16.3.0</testing>
+      <e2e-testing>Playwright 1.57.0</e2e-testing>
+    </tech-stack>
+
+    <existing-ui-components location="manda-app/components/ui/">
+      <component name="button.tsx">Button variants: default, destructive, outline, secondary, ghost, link</component>
+      <component name="badge.tsx">Status/label badges</component>
+      <component name="card.tsx">Card, CardHeader, CardContent, CardTitle, CardDescription</component>
+      <component name="tabs.tsx">Tabs, TabsList, TabsTrigger, TabsContent</component>
+      <component name="table.tsx">Table, TableHeader, TableBody, TableRow, TableCell, etc.</component>
+      <component name="select.tsx">Select, SelectTrigger, SelectContent, SelectItem</component>
+      <component name="dropdown-menu.tsx">DropdownMenu with triggers and items</component>
+      <component name="skeleton.tsx">Loading skeletons</component>
+      <component name="scroll-area.tsx">Custom scrollable areas</component>
+      <component name="collapsible.tsx">Collapsible panels</component>
+      <component name="tooltip.tsx">Tooltips for additional info</component>
+      <component name="progress.tsx">Progress indicators</component>
+      <component name="sheet.tsx">Slide-out panels (for mobile filter sidebar)</component>
+    </existing-ui-components>
+
+    <api-route-pattern example="manda-app/app/api/projects/route.ts">
+      <structure>
+        - Use NextRequest/NextResponse
+        - Create Supabase client with createClient()
+        - Authenticate with supabase.auth.getUser()
+        - Return 401 for unauthenticated requests
+        - Handle errors with try/catch and proper status codes
+        - Use audit logging for important actions
+      </structure>
+      <code-example>
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const { data, error } = await supabase
+      .from('findings')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ data })
+  } catch (err) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+```
+      </code-example>
+    </api-route-pattern>
+
+    <react-hook-pattern example="manda-app/lib/hooks/useProcessingQueue.ts">
+      <structure>
+        - 'use client' directive
+        - TypeScript interfaces for options and return types
+        - useState for data, loading, error states
+        - useCallback for memoized functions
+        - useEffect for initial fetch and cleanup
+        - Optional polling support
+        - Pagination support with loadMore
+      </structure>
+      <suggested-hook name="useFindings">
+```typescript
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import type { Finding, FindingsFilters, FindingsResponse } from '@/lib/api/findings'
+
+export interface UseFindingsOptions {
+  pollingInterval?: number
+  limit?: number
+  enabled?: boolean
+  filters?: FindingsFilters
+}
+
+export interface UseFindingsResult {
+  findings: Finding[]
+  total: number
+  hasMore: boolean
+  isLoading: boolean
+  error: Error | null
+  refetch: () => Promise&lt;void&gt;
+  loadMore: () => Promise&lt;void&gt;
+}
+
+export function useFindings(
+  projectId: string | null | undefined,
+  options: UseFindingsOptions = {}
+): UseFindingsResult {
+  // Implementation following useProcessingQueue pattern
+}
+```
+      </suggested-hook>
+    </react-hook-pattern>
+
+    <component-pattern example="manda-app/components/data-room/document-card.tsx">
+      <structure>
+        - TypeScript interface for props
+        - JSDoc comments with story reference
+        - Functional component with destructured props
+        - Use shadcn/ui components as building blocks
+        - Handle loading/error states gracefully
+        - Support for onClick, onAction callbacks
+        - Accessibility: proper aria labels, keyboard support
+      </structure>
+    </component-pattern>
+
+    <page-structure example="manda-app/app/projects/[id]/data-room/page.tsx">
+      <structure>
+        - Server component for metadata
+        - Client component for interactive content
+        - Use dynamic params from route
+        - Handle loading states with suspense
+      </structure>
+    </page-structure>
+
+  </implementation-patterns>
+
+  <!-- ================================================================== -->
+  <!-- TESTING REQUIREMENTS -->
+  <!-- ================================================================== -->
+  <testing-requirements>
+
+    <unit-testing-pattern location="manda-app/__tests__/">
+      <framework>Vitest + @testing-library/react</framework>
+      <structure>
+        - describe() blocks for component/feature groups
+        - it() blocks for individual test cases
+        - beforeEach() for setup, vi.clearAllMocks()
+        - Mock external dependencies with vi.mock()
+        - Use userEvent.setup() for interaction tests
+        - Use waitFor() for async assertions
+        - Use render() from @testing-library/react
+      </structure>
+      <file-naming>__tests__/components/knowledge-explorer/finding-card.test.tsx</file-naming>
+      <example>
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+
+describe('FindingCard Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('Rendering', () => {
+    it('renders finding text', () => {
+      render(&lt;FindingCard finding={mockFinding} /&gt;)
+      expect(screen.getByText('Finding text here')).toBeInTheDocument()
+    })
+  })
+
+  describe('Interactions', () => {
+    it('calls onClick when clicked', async () => {
+      const user = userEvent.setup()
+      const onClick = vi.fn()
+      render(&lt;FindingCard finding={mockFinding} onClick={onClick} /&gt;)
+      await user.click(screen.getByRole('button'))
+      expect(onClick).toHaveBeenCalled()
+    })
+  })
+})
+```
+      </example>
+    </unit-testing-pattern>
+
+    <required-tests>
+      <component-tests>
+        <test>FindingCard renders all elements (text, source, confidence, domain, type)</test>
+        <test>FindingCard displays correct confidence color based on value</test>
+        <test>FindingsTable renders column headers correctly</test>
+        <test>FindingsTable handles empty state</test>
+        <test>FilterSidebar renders all filter options</test>
+        <test>FilterSidebar calls onChange when filters updated</test>
+        <test>Tab navigation switches between views</test>
+        <test>Collapsible filter panel toggles correctly</test>
+      </component-tests>
+      <hook-tests>
+        <test>useFindings fetches data on mount</test>
+        <test>useFindings handles filter changes</test>
+        <test>useFindings handles errors gracefully</test>
+        <test>useFindings supports pagination</test>
+      </hook-tests>
+      <accessibility-tests>
+        <test>Components have proper ARIA labels</test>
+        <test>Keyboard navigation works for all interactive elements</test>
+        <test>Focus management is correct</test>
+      </accessibility-tests>
+    </required-tests>
+
+  </testing-requirements>
+
+  <!-- ================================================================== -->
+  <!-- MOCK DATA -->
+  <!-- ================================================================== -->
+  <mock-data>
+    <description>For E4-1, use mock data to develop the UI before integrating with real API</description>
+
+    <mock-findings>
+```typescript
+export const mockFindings: Finding[] = [
+  {
+    id: 'finding-1',
+    deal_id: 'project-123',
+    document_id: 'doc-456',
+    text: 'Q3 2024 revenue increased 15% YoY to $12.5M',
+    source_document: 'financial-statements-2024.pdf',
+    page_number: 3,
+    confidence: 0.95,
+    finding_type: 'metric',
+    domain: 'financial',
+    metadata: { entity: 'revenue', period: 'Q3 2024' },
+    created_at: '2024-11-20T10:30:00Z',
+    updated_at: '2024-11-20T10:30:00Z',
+  },
+  {
+    id: 'finding-2',
+    deal_id: 'project-123',
+    document_id: 'doc-457',
+    text: 'Customer churn rate increased from 5% to 8% in H2',
+    source_document: 'operational-review.pdf',
+    page_number: 12,
+    confidence: 0.78,
+    finding_type: 'risk',
+    domain: 'operational',
+    metadata: { metric: 'churn_rate' },
+    created_at: '2024-11-19T14:20:00Z',
+    updated_at: '2024-11-19T14:20:00Z',
+  },
+  {
+    id: 'finding-3',
+    deal_id: 'project-123',
+    document_id: 'doc-458',
+    text: 'New product line expected to capture 10% market share by 2026',
+    source_document: 'market-analysis.pdf',
+    page_number: 8,
+    confidence: 0.65,
+    finding_type: 'opportunity',
+    domain: 'market',
+    metadata: { timeframe: '2026' },
+    created_at: '2024-11-18T09:15:00Z',
+    updated_at: '2024-11-18T09:15:00Z',
+  },
+  {
+    id: 'finding-4',
+    deal_id: 'project-123',
+    document_id: 'doc-459',
+    text: 'Pending litigation with former supplier - potential liability $500K',
+    source_document: 'legal-due-diligence.pdf',
+    page_number: 22,
+    confidence: 0.88,
+    finding_type: 'risk',
+    domain: 'legal',
+    metadata: { liability_amount: 500000 },
+    created_at: '2024-11-17T16:45:00Z',
+    updated_at: '2024-11-17T16:45:00Z',
+  },
+  {
+    id: 'finding-5',
+    deal_id: 'project-123',
+    document_id: 'doc-460',
+    text: 'EBITDA margin compressed from 25% to 21% due to rising input costs',
+    source_document: 'financial-statements-2024.pdf',
+    page_number: 5,
+    confidence: 0.92,
+    finding_type: 'fact',
+    domain: 'financial',
+    metadata: { metric: 'ebitda_margin' },
+    created_at: '2024-11-16T11:30:00Z',
+    updated_at: '2024-11-16T11:30:00Z',
+  },
+]
+```
+    </mock-findings>
+
+    <mock-insights>
+```typescript
+export const mockInsights: Insight[] = [
+  {
+    id: 'insight-1',
+    deal_id: 'project-123',
+    title: 'Margin Compression: Financial x Operational',
+    text: 'EBITDA margin decline correlates with increased operational complexity. Rising input costs combined with scaling challenges suggest structural pressure on profitability.',
+    insight_type: 'pattern',
+    confidence: 0.75,
+    source_finding_ids: ['finding-1', 'finding-5'],
+    metadata: { domains: ['financial', 'operational'] },
+    created_at: '2024-11-20T12:00:00Z',
+  },
+]
+```
+    </mock-insights>
+
+  </mock-data>
+
+  <!-- ================================================================== -->
+  <!-- FILE STRUCTURE SUGGESTION -->
+  <!-- ================================================================== -->
+  <suggested-file-structure>
+    <directory path="manda-app/app/projects/[id]/knowledge-explorer/">
+      <file name="page.tsx">Server component with metadata, renders KnowledgeExplorerContent</file>
+    </directory>
+
+    <directory path="manda-app/components/knowledge-explorer/">
+      <file name="index.ts">Barrel export for all components</file>
+      <file name="knowledge-explorer-content.tsx">Main client component with tabs and layout</file>
+      <file name="findings-browser.tsx">Findings tab content with table/card views</file>
+      <file name="finding-card.tsx">Individual finding card component</file>
+      <file name="findings-table.tsx">Table view of findings</file>
+      <file name="filter-sidebar.tsx">Filter panel component</file>
+      <file name="filter-badge.tsx">Active filter badge component</file>
+      <file name="confidence-badge.tsx">Confidence score display component</file>
+      <file name="domain-badge.tsx">Domain tag badge component</file>
+      <file name="type-badge.tsx">Finding type badge component</file>
+      <file name="insights-panel.tsx">Insights tab content (placeholder for E4-2)</file>
+      <file name="contradictions-panel.tsx">Contradictions tab content (placeholder)</file>
+      <file name="gaps-panel.tsx">Gaps tab content (placeholder)</file>
+      <file name="empty-state.tsx">Empty state component for each view</file>
+    </directory>
+
+    <directory path="manda-app/lib/api/">
+      <file name="findings.ts">API functions for fetching findings</file>
+    </directory>
+
+    <directory path="manda-app/lib/hooks/">
+      <file name="useFindings.ts">Hook for findings data with filtering/pagination</file>
+    </directory>
+
+    <directory path="manda-app/__tests__/components/knowledge-explorer/">
+      <file name="finding-card.test.tsx">FindingCard unit tests</file>
+      <file name="findings-browser.test.tsx">FindingsBrowser unit tests</file>
+      <file name="filter-sidebar.test.tsx">FilterSidebar unit tests</file>
+      <file name="knowledge-explorer-integration.test.tsx">Integration tests</file>
+    </directory>
+  </suggested-file-structure>
+
+  <!-- ================================================================== -->
+  <!-- ACCEPTANCE CRITERIA MAPPING -->
+  <!-- ================================================================== -->
+  <acceptance-criteria>
+    <criterion id="AC-1" description="Tab navigation between Findings/Insights/Contradictions/Gaps">
+      <implementation>
+        - Use shadcn/ui Tabs component
+        - Four tabs: Findings (default), Insights, Contradictions, Gaps
+        - Persist selected tab in URL or local state
+        - Badge indicators for counts (optional in E4-1)
+      </implementation>
+      <test>Tab navigation switches between views correctly</test>
+    </criterion>
+
+    <criterion id="AC-2" description="Filter sidebar with domain/type/confidence filters">
+      <implementation>
+        - Collapsible sidebar using Collapsible component
+        - Multi-select for domain: Financial, Operational, Market, Legal, Technical
+        - Multi-select for type: Metric, Fact, Risk, Opportunity, Contradiction
+        - Range slider or select for confidence: All, High, Medium, Low
+        - Date range filter for created_at
+        - Clear all filters action
+      </implementation>
+      <test>FilterSidebar renders all options and fires onChange</test>
+    </criterion>
+
+    <criterion id="AC-3" description="Findings displayed in table or card format">
+      <implementation>
+        - ViewToggle component (Table/Card) similar to DataRoom
+        - Table view: columns for text, source, domain, type, confidence, date
+        - Card view: FindingCard components in responsive grid
+        - Sortable columns in table view
+        - User preference persisted
+      </implementation>
+      <test>Both views render findings correctly with all metadata</test>
+    </criterion>
+
+    <criterion id="AC-4" description="Confidence scores with color-coded badges">
+      <implementation>
+        - ConfidenceBadge component
+        - High (>80%): green badge with percentage
+        - Medium (60-80%): yellow/orange badge
+        - Low (&lt;60%): red badge
+        - Tooltip with exact percentage on hover
+      </implementation>
+      <test>Badge colors match confidence thresholds</test>
+    </criterion>
+
+    <criterion id="AC-5" description="Responsive layout with collapsible filter panel">
+      <implementation>
+        - Desktop: sidebar visible by default (280px width)
+        - Tablet: sidebar collapsed to icons, expand on click
+        - Mobile: sidebar as Sheet (slide-in panel)
+        - Use media queries via Tailwind: md:, lg: breakpoints
+      </implementation>
+      <test>Layout adapts correctly at different breakpoints</test>
+    </criterion>
+
+    <criterion id="AC-6" description="Empty state when no findings match filters">
+      <implementation>
+        - EmptyState component with icon, message, action
+        - "No findings match your filters" with clear filters button
+        - "No findings yet" with link to Data Room when empty project
+      </implementation>
+      <test>Empty states display correct message based on context</test>
+    </criterion>
+  </acceptance-criteria>
+
+  <!-- ================================================================== -->
+  <!-- DEPENDENCIES & BLOCKERS -->
+  <!-- ================================================================== -->
+  <dependencies>
+    <dependency type="internal">
+      <item>Epic 1 workspace shell provides navigation structure</item>
+      <item>shadcn/ui components installed and configured</item>
+      <item>Supabase client setup for API calls</item>
+    </dependency>
+    <dependency type="data">
+      <item>Findings data comes from Epic 3 LLM analysis pipeline</item>
+      <item>For E4-1, use mock data - real API integration in E4-3</item>
+    </dependency>
+  </dependencies>
+
+  <!-- ================================================================== -->
+  <!-- OUT OF SCOPE FOR E4-1 -->
+  <!-- ================================================================== -->
+  <out-of-scope>
+    <item>Validation actions (confirm/reject/edit) - E4-4</item>
+    <item>Real-time updates via WebSocket/polling - E4-3</item>
+    <item>API integration with Supabase - E4-3</item>
+    <item>Knowledge graph visualization - Phase 2</item>
+    <item>Semantic search functionality - E4-6</item>
+    <item>Export functionality - future</item>
+  </out-of-scope>
+
+</story-context>

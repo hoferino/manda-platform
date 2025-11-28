@@ -1,0 +1,247 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E4</epicId>
+    <storyId>2</storyId>
+    <title>Implement Semantic Search for Findings</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-28</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-2-implement-semantic-search-for-findings.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to search findings using natural language</iWant>
+    <soThat>I can find relevant information quickly without manually scanning through hundreds of findings</soThat>
+    <tasks>
+      <task id="1" title="Create Search API Endpoint" ac="2,3,7">
+        <subtask>Create app/api/projects/[id]/findings/search/route.ts</subtask>
+        <subtask>Implement POST handler accepting { query: string, filters?: FindingFilters }</subtask>
+        <subtask>Add Zod schema for request validation</subtask>
+        <subtask>Call OpenAI API to generate query embedding</subtask>
+        <subtask>Implement pgvector similarity search with cosine distance</subtask>
+        <subtask>Return ranked results with similarity scores</subtask>
+        <subtask>Add error handling for OpenAI API failures</subtask>
+        <subtask>Add timeout handling (3s max)</subtask>
+      </task>
+      <task id="2" title="Create Embedding Service" ac="2,7">
+        <subtask>Create lib/services/embeddings.ts with generateEmbedding function</subtask>
+        <subtask>Configure OpenAI client with API key from environment</subtask>
+        <subtask>Use text-embedding-3-large model (3072 dimensions)</subtask>
+        <subtask>Implement retry logic for transient failures</subtask>
+        <subtask>Add in-memory cache for recent query embeddings (LRU cache)</subtask>
+        <subtask>Add unit tests for embedding service</subtask>
+      </task>
+      <task id="3" title="Update FindingsService for Search" ac="3,8">
+        <subtask>Add searchFindings(projectId, queryEmbedding, filters, limit) method to lib/api/findings.ts</subtask>
+        <subtask>Build pgvector query with filter conditions</subtask>
+        <subtask>Return results with similarity score included</subtask>
+        <subtask>Add TypeScript types for search response</subtask>
+      </task>
+      <task id="4" title="Build FindingSearch Component" ac="1,5,6">
+        <subtask>Create components/knowledge-explorer/findings/FindingSearch.tsx</subtask>
+        <subtask>Implement search input with debounced onChange (300ms)</subtask>
+        <subtask>Add search icon and clear (X) button</subtask>
+        <subtask>Handle Enter key for immediate search</subtask>
+        <subtask>Handle Escape key to clear search</subtask>
+        <subtask>Show loading spinner during search</subtask>
+        <subtask>Display empty state message for no results</subtask>
+      </task>
+      <task id="5" title="Integrate Search into FindingsBrowser" ac="4,8">
+        <subtask>Add FindingSearch to top of FindingsBrowser component</subtask>
+        <subtask>Create search state management (query, results, isSearching)</subtask>
+        <subtask>Replace table data with search results when searching</subtask>
+        <subtask>Show "Search Results" badge when viewing search results</subtask>
+        <subtask>Update filter count to show search result count</subtask>
+        <subtask>Coordinate search with existing filters</subtask>
+      </task>
+      <task id="6" title="Update URL State Management" ac="5">
+        <subtask>Add q query parameter for search query</subtask>
+        <subtask>Update URL when search is performed</subtask>
+        <subtask>Clear q parameter when search is cleared</subtask>
+        <subtask>Support direct navigation with search query in URL</subtask>
+      </task>
+      <task id="7" title="Write Tests" ac="All">
+        <subtask>Unit tests for embedding service (mock OpenAI calls)</subtask>
+        <subtask>Unit tests for search API endpoint</subtask>
+        <subtask>Component tests for FindingSearch</subtask>
+        <subtask>Integration test for full search flow</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Search Input in Findings Browser">
+      <requirement>Search input field prominently displayed at top of Findings Browser</requirement>
+      <requirement>Placeholder text guides user: "Search findings (e.g., 'revenue growth Q3')"</requirement>
+      <requirement>Search icon and clear (X) button integrated</requirement>
+      <requirement>Input debounced (300ms) to prevent excessive API calls</requirement>
+      <requirement>Enter key triggers immediate search</requirement>
+    </criterion>
+    <criterion id="AC2" title="Query Embedding Generation">
+      <requirement>Search query sent to OpenAI API for embedding generation</requirement>
+      <requirement>Uses same embedding model as document chunks (text-embedding-3-large, 3072 dimensions)</requirement>
+      <requirement>Error handling for API failures with user-friendly messages</requirement>
+      <requirement>Loading indicator shown during embedding generation</requirement>
+    </criterion>
+    <criterion id="AC3" title="pgvector Similarity Search">
+      <requirement>API endpoint POST /api/projects/[id]/findings/search performs similarity search</requirement>
+      <requirement>Query embedding compared against findings.embedding column using cosine similarity</requirement>
+      <requirement>Returns top 20 most relevant findings ranked by similarity score</requirement>
+      <requirement>Respects current filters (document, domain, status) to narrow search scope</requirement>
+      <requirement>Search completes within 3 seconds</requirement>
+    </criterion>
+    <criterion id="AC4" title="Search Results Display">
+      <requirement>Results replace current findings table content</requirement>
+      <requirement>Results ordered by relevance (highest similarity first)</requirement>
+      <requirement>Similarity score displayed as percentage (optional visual indicator)</requirement>
+      <requirement>Clear visual distinction that user is viewing search results (badge/banner)</requirement>
+      <requirement>Finding count updates to show "Showing X search results"</requirement>
+    </criterion>
+    <criterion id="AC5" title="Clear Search Functionality">
+      <requirement>Click X button clears search and returns to full findings list</requirement>
+      <requirement>Clearing search restores previous filter state</requirement>
+      <requirement>Keyboard shortcut: Escape clears search</requirement>
+      <requirement>URL updates to remove search query parameter</requirement>
+    </criterion>
+    <criterion id="AC6" title="Empty Search Results Handling">
+      <requirement>When no findings match, display helpful message: "No findings match your search"</requirement>
+      <requirement>Suggest trying different search terms</requirement>
+      <requirement>Option to clear search and view all findings</requirement>
+      <requirement>Don't show error state for zero results (it's a valid outcome)</requirement>
+    </criterion>
+    <criterion id="AC7" title="Performance Requirements">
+      <requirement>Total search time (embedding + query) less than 3 seconds</requirement>
+      <requirement>Loading indicator appears after 300ms</requirement>
+      <requirement>Results appear progressively if available</requirement>
+      <requirement>Cache recent query embeddings to speed up repeat searches</requirement>
+    </criterion>
+    <criterion id="AC8" title="Integration with Existing Filters">
+      <requirement>Search works alongside document, domain, confidence, and status filters</requirement>
+      <requirement>Filters narrow the search scope (search within filtered subset)</requirement>
+      <requirement>Active filters displayed alongside search query</requirement>
+      <requirement>"Clear All" clears both search and filters</requirement>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification">
+        <section>E4.2: Semantic Search</section>
+        <snippet>Semantic search flow: User enters query → Debounce 300ms → Generate embedding (OpenAI text-embedding-3) → pgvector similarity search → Return Top 20 → Display Results. EmbeddingService interface defines generateEmbedding(text) and semanticSearch(dealId, queryEmbedding, limit).</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="API Routes Section">
+        <section>REST API Routes</section>
+        <snippet>POST /api/projects/[id]/findings/search - Body: { query: string, limit?: number }, Response: { findings: Finding[], searchTime: number }. pgvector query: SELECT *, (embedding &lt;=&gt; $query_embedding) as similarity FROM findings WHERE deal_id = $deal_id ORDER BY embedding &lt;=&gt; $query_embedding LIMIT 20;</snippet>
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Architecture Document">
+        <section>Embeddings Configuration</section>
+        <snippet>Embeddings use OpenAI text-embedding-3-large (3072 dimensions). Industry-leading semantic search quality. pgvector with HNSW index for dimensions > 2000 (ivfflat limited to 2000 dims).</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e4-1-build-knowledge-explorer-ui-main-interface.md" title="Predecessor Story">
+        <section>Dev Agent Record</section>
+        <snippet>E4.1 completed: Database migration 00021 added status/validation_history. API route pattern uses Zod validation. FindingsBrowser manages filter state, passes to FindingsTable. Types defined in lib/types/findings.ts with helper functions.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <item path="manda-app/lib/types/findings.ts" kind="types" symbol="FindingFilters, Finding" lines="all" reason="Existing type definitions to extend with search-related types (SearchResponse, SimilarityResult)"/>
+      <item path="manda-app/lib/api/findings.ts" kind="client-service" symbol="getFindings, buildQueryString" lines="all" reason="Existing client service to add searchFindings() function following same error handling pattern"/>
+      <item path="manda-app/app/api/projects/[id]/findings/route.ts" kind="api-route" symbol="GET, POST" lines="all" reason="Reference for Zod schema pattern, auth middleware, query building. Search route will be separate file."/>
+      <item path="manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx" kind="component" symbol="FindingsBrowser" lines="all" reason="Main integration point - add FindingSearch component and search state management here"/>
+      <item path="manda-app/components/knowledge-explorer/findings/FindingFilters.tsx" kind="component" symbol="FindingFilters" lines="all" reason="Filters to coordinate with search - search narrows results within filtered subset"/>
+      <item path="manda-app/components/knowledge-explorer/findings/FindingsTable.tsx" kind="component" symbol="FindingsTable" lines="all" reason="Table to display search results with similarity score column when searching"/>
+      <item path="manda-app/supabase/migrations/00021_add_findings_status_column.sql" kind="migration" symbol="status, validation_history columns" lines="all" reason="Recent migration pattern to follow. findings.embedding column is vector(3072) per migration 00016"/>
+      <item path="manda-app/supabase/migrations/00016_update_embedding_dimension.sql" kind="migration" symbol="vector(3072), HNSW index" lines="all" reason="Confirms embedding dimensions are 3072 using HNSW index with cosine similarity"/>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="openai" version="required" purpose="Generate query embeddings using text-embedding-3-large. Already used in manda-processing."/>
+        <package name="@supabase/supabase-js" version="^2.84.0" purpose="pgvector queries via raw SQL for similarity search"/>
+        <package name="react" version="19.2.0" purpose="Hooks for search state management"/>
+        <package name="sonner" version="^2.0.7" purpose="Toast notifications for search errors/success"/>
+        <package name="lucide-react" version="^0.554.0" purpose="Search icon, X button icons"/>
+        <package name="zod" version="existing" purpose="Schema validation for search API request"/>
+      </ecosystem>
+      <environment>
+        <variable name="OPENAI_API_KEY" required="true" purpose="API key for embedding generation"/>
+      </environment>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Architecture">Use OpenAI text-embedding-3-large (3072 dimensions) - same as document chunks</constraint>
+    <constraint source="Architecture">pgvector cosine similarity: embedding &lt;=&gt; $query_embedding</constraint>
+    <constraint source="Tech Spec">Performance target: total search time &lt; 3 seconds</constraint>
+    <constraint source="Tech Spec">RLS policies ensure user can only search their own project's findings</constraint>
+    <constraint source="Story">Input debounced (300ms) to prevent excessive API calls</constraint>
+    <constraint source="Story">Return top 20 most relevant findings ranked by similarity score</constraint>
+    <constraint source="Story">Search respects current filters (document, domain, status) to narrow search scope</constraint>
+    <constraint source="DB">findings.embedding column is vector(3072) - must use matching embedding model</constraint>
+    <constraint source="DB">HNSW index on embeddings for fast similarity search</constraint>
+    <constraint source="Patterns">Follow existing API route pattern with Zod validation from e4-1</constraint>
+    <constraint source="Patterns">Follow existing client service pattern from lib/api/findings.ts</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Search API Endpoint" kind="REST endpoint">
+      <signature>POST /api/projects/[id]/findings/search</signature>
+      <request>{ query: string, filters?: FindingFilters, limit?: number }</request>
+      <response>{ findings: FindingWithSimilarity[], total: number, searchTime: number }</response>
+      <path>manda-app/app/api/projects/[id]/findings/search/route.ts</path>
+    </interface>
+    <interface name="searchFindings" kind="client function">
+      <signature>searchFindings(projectId: string, query: string, filters?: FindingFilters, limit?: number): Promise&lt;SearchResponse&gt;</signature>
+      <path>manda-app/lib/api/findings.ts</path>
+    </interface>
+    <interface name="generateEmbedding" kind="service function">
+      <signature>generateEmbedding(text: string): Promise&lt;number[]&gt;</signature>
+      <description>Uses OpenAI text-embedding-3-large to generate 3072-dimensional vector</description>
+      <path>manda-app/lib/services/embeddings.ts (NEW)</path>
+    </interface>
+    <interface name="pgvector Query Pattern" kind="SQL">
+      <signature>SELECT *, (embedding &lt;=&gt; $1::vector) as similarity FROM findings WHERE deal_id = $2 AND status != 'rejected' ORDER BY embedding &lt;=&gt; $1::vector LIMIT 20</signature>
+      <description>Cosine distance for similarity search with filter conditions</description>
+    </interface>
+    <interface name="FindingWithSimilarity" kind="TypeScript type">
+      <signature>interface FindingWithSimilarity extends Finding { similarity: number }</signature>
+      <path>manda-app/lib/types/findings.ts (extend)</path>
+    </interface>
+    <interface name="SearchResponse" kind="TypeScript type">
+      <signature>interface SearchResponse { findings: FindingWithSimilarity[], total: number, searchTime: number, cached?: boolean }</signature>
+      <path>manda-app/lib/types/findings.ts (NEW)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing uses Vitest + @testing-library/react. Test files placed in __tests__/components/knowledge-explorer/ following existing pattern from findings-table.test.tsx. Tests use describe/it blocks, vi.mock for external dependencies, userEvent.setup() for interactions, waitFor() for async assertions. Mock OpenAI API calls in unit tests. Use shared Supabase mock utilities from __tests__/utils/supabase-mock.ts.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/finding-search.test.tsx (NEW)</location>
+      <location>manda-app/__tests__/lib/services/embeddings.test.ts (NEW)</location>
+      <location>manda-app/__tests__/api/findings-search.test.ts (NEW)</location>
+    </locations>
+    <ideas>
+      <test ac="AC1">FindingSearch renders search input with placeholder text</test>
+      <test ac="AC1">FindingSearch shows search icon and clear button</test>
+      <test ac="AC1">FindingSearch debounces input by 300ms</test>
+      <test ac="AC1">FindingSearch triggers immediate search on Enter key</test>
+      <test ac="AC2">EmbeddingService calls OpenAI with correct model (text-embedding-3-large)</test>
+      <test ac="AC2">EmbeddingService handles API errors gracefully with retry</test>
+      <test ac="AC2">EmbeddingService uses LRU cache for recent queries</test>
+      <test ac="AC3">Search API endpoint returns findings sorted by similarity</test>
+      <test ac="AC3">Search API respects filter conditions (domain, status)</test>
+      <test ac="AC3">Search API completes within 3 seconds timeout</test>
+      <test ac="AC4">Search results display similarity score as percentage</test>
+      <test ac="AC4">Search results show "Search Results" badge when searching</test>
+      <test ac="AC5">Click X button clears search and restores full list</test>
+      <test ac="AC5">Escape key clears search</test>
+      <test ac="AC5">URL updates when search performed/cleared</test>
+      <test ac="AC6">Empty search results show helpful message</test>
+      <test ac="AC6">Empty state provides option to clear search</test>
+      <test ac="AC7">Loading indicator shows after 300ms</test>
+      <test ac="AC8">Search works with active filters applied</test>
+      <test ac="AC8">Clear All clears both search and filters</test>
+    </ideas>
+  </tests>
+</story-context>

@@ -32,7 +32,7 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 |--------------|--------|-----------|
 | **Backend Framework** | FastAPI 0.121+ (Python 3.11+) | Native integration with Docling, LangGraph, LLM libraries; eliminates Node.js ↔ Python bridge |
 | **Primary Database** | PostgreSQL 18 (Supabase) | Latest stable, pgvector 0.8+ support, auth built-in, storage included, RLS for data isolation |
-| **Vector Search** | pgvector 0.8+ | Latest semantic search with improved filtering; single database simplifies operations |
+| **Vector Search** | pgvector 0.8+ | Latest semantic search with improved filtering; single database simplifies operations. **Note:** HNSW index limited to 2000 dims - use `halfvec` cast for 3072-dim embeddings |
 | **Graph Database** | Neo4j 2025.01 | Latest stable with Java 21; cross-domain pattern relationships, contradiction tracking |
 | **Document Parser** | Docling | RAG-optimized, preserves Excel formulas, table extraction, OCR built-in |
 | **Job Queue** | pg-boss | Postgres-based for MVP simplicity; can migrate to Redis+Bull if needed |
@@ -76,6 +76,10 @@ Frontend:
 Data Layer:
   primary_database: PostgreSQL 18 (Supabase managed)
   vector_extension: pgvector 0.8+
+  # IMPORTANT: pgvector HNSW index has 2000-dimension limit
+  # For 3072-dim embeddings (text-embedding-3-large), use halfvec cast:
+  # CREATE INDEX ... USING hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops)
+  # See: https://github.com/pgvector/pgvector/issues/461
   graph_database: Neo4j 2025.01 (Community Edition)
   auth_database: Supabase Auth (built-in)
   file_storage: Google Cloud Storage
@@ -2130,6 +2134,24 @@ npm install
 
 ## Changelog
 
+### Version 2.9 (2025-11-28)
+**pgvector Index Documentation - HNSW Dimension Limit:**
+- **Critical Documentation Update:**
+  - pgvector HNSW index has 2000-dimension limit (not unlimited as previously documented)
+  - For 3072-dim embeddings (OpenAI text-embedding-3-large), must use `halfvec` cast
+  - Correct index syntax: `USING hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops)`
+  - Reference: https://github.com/pgvector/pgvector/issues/461
+- **Updated Documentation:**
+  - Decision Summary table: Added note about HNSW limit and halfvec workaround
+  - Data Layer config: Added YAML comment with correct index syntax
+  - tech-spec-epic-E3.md: Fixed index creation example
+  - tech-spec-epic-E4.md: Fixed schema, risks, and optimizations sections
+  - epics.md: Updated E3.4 acceptance criteria with correct dimensions
+- **Why This Matters:**
+  - IVFFlat also limited to 2000 dims (contrary to previous assumption)
+  - `halfvec` cast allows HNSW with any dimension while maintaining good performance
+  - This was discovered during E4.2 migration when index creation failed
+
 ### Version 2.8 (2025-11-28)
 **Test Infrastructure Enhancement - Tech Debt Sprint:**
 - **Test Framework Upgrade:**
@@ -2372,4 +2394,4 @@ npm install
 ---
 
 *Generated using BMAD Method architecture workflow*
-*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25 | Version 2.6: 2025-11-26 | Version 2.7: 2025-11-28 | Version 2.8: 2025-11-28*
+*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25 | Version 2.6: 2025-11-26 | Version 2.7: 2025-11-28 | Version 2.8: 2025-11-28 | Version 2.9: 2025-11-28*

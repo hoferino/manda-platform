@@ -409,9 +409,11 @@ export type Database = {
           metadata: Json | null
           page_number: number | null
           source_document: string | null
+          status: string | null
           text: string
           updated_at: string | null
           user_id: string
+          validation_history: Json | null
         }
         Insert: {
           chunk_id?: string | null
@@ -426,9 +428,11 @@ export type Database = {
           metadata?: Json | null
           page_number?: number | null
           source_document?: string | null
+          status?: string | null
           text: string
           updated_at?: string | null
           user_id: string
+          validation_history?: Json | null
         }
         Update: {
           chunk_id?: string | null
@@ -443,9 +447,11 @@ export type Database = {
           metadata?: Json | null
           page_number?: number | null
           source_document?: string | null
+          status?: string | null
           text?: string
           updated_at?: string | null
           user_id?: string
+          validation_history?: Json | null
         }
         Relationships: [
           {

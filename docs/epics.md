@@ -1595,7 +1595,8 @@ Then the job payload contains the document_id
 Given the embeddings job is processed
 When chunks are retrieved
 Then each chunk is sent to OpenAI embeddings API
-And the resulting vector (1536 dimensions) is stored in the database
+And the resulting vector (3072 dimensions from text-embedding-3-large) is stored in the database
+# Note: pgvector HNSW index limited to 2000 dims, use halfvec cast for indexing
 And the chunk_embeddings column is populated
 
 Given a document has 100 chunks
@@ -2090,31 +2091,34 @@ And cites sources for each period
 
 ### Stories
 
-#### Story E4.1: Build Findings Browser with Table View
+#### Story E4.1: Build Knowledge Explorer UI Main Interface
 
 **As an** M&A analyst
-**I want** to view all extracted findings in a table
-**So that** I can quickly scan and review intelligence
+**I want** to view all extracted findings in a table format with filtering, sorting, and pagination
+**So that** I can quickly scan and review the intelligence extracted from my deal documents
 
 **Description:**
-Implement the Findings Browser table view displaying all findings with columns for finding text, source, domain, confidence, and status. Include sorting, filtering, and pagination.
+Build the Knowledge Explorer main interface including page layout, tab navigation (Findings, Contradictions, Gap Analysis), and the Findings Browser with table view displaying all findings with columns for finding text, source, domain, confidence, and status. Include sorting, filtering, and pagination.
 
 **Technical Details:**
 - Route: `/projects/[id]/knowledge-explorer`
-- Default tab: Findings Browser
+- Tab navigation: Findings (default), Contradictions, Gap Analysis
+- Default tab: Findings Browser in table view
 - Table columns: Finding, Source, Domain, Confidence, Status, Actions
-- Use shadcn/ui DataTable component
+- Use shadcn/ui DataTable component with @tanstack/react-table
 - Sortable by: confidence, domain, date
 - Filterable by: document, domain, confidence range, status
 - Pagination: 50 items per page
-- Fetch from `findings` table
+- Fetch from `findings` table via API route
+- Shared badge components: ConfidenceBadge, DomainTag, StatusBadge
 
 **Acceptance Criteria:**
 
 ```gherkin
 Given I navigate to Knowledge Explorer
 When the page loads
-Then I see the Findings Browser in table view
+Then I see tab navigation (Findings, Contradictions, Gap Analysis)
+And Findings Browser is the default view
 And findings are displayed with all columns
 And the table shows 50 items per page
 
@@ -2144,14 +2148,17 @@ And pagination controls work correctly
 **UX Reference:** Knowledge Explorer - Findings Browser (Section 5.3)
 
 **Definition of Done:**
-- [ ] Findings Browser route created
-- [ ] Table view displays all columns
-- [ ] Sorting works on all columns
-- [ ] Filters implemented (document, domain, confidence, status)
-- [ ] Pagination works (50 per page)
-- [ ] Table responsive on desktop/tablet
-- [ ] Loading states implemented
-- [ ] Empty state for no findings
+- [x] Knowledge Explorer route created at `/projects/[id]/knowledge-explorer`
+- [x] Tab navigation implemented (Findings, Contradictions, Gap Analysis)
+- [x] Findings Browser with DataTable displays all columns
+- [x] Sorting works on all columns
+- [x] Filters implemented (document, domain, confidence, status)
+- [x] Pagination works (50 per page)
+- [x] Table responsive on desktop/tablet
+- [x] Loading states implemented
+- [x] Empty state for no findings
+- [x] API route with Zod validation
+- [x] TypeScript types for findings
 
 ---
 
@@ -2747,6 +2754,263 @@ And the export completes within 10 seconds
 - [ ] All findings exported (not just current page)
 - [ ] File downloads correctly
 - [ ] Performance acceptable (<10s for 500 findings)
+
+---
+
+#### Story E4.11: Implement Contradiction Detection and Flagging
+
+**As a** developer
+**I want** to detect contradictions between findings
+**So that** analysts can resolve conflicting information
+
+**Description:**
+Implement contradiction detection logic that compares findings using LLM analysis and stores `CONTRADICTS` relationships in Neo4j when conflicting information is found.
+
+**Technical Details:**
+- Job type: `detect_contradictions`
+- Run after document analysis completes
+- Group findings by topic/domain
+- Use Gemini 2.5 Pro to compare findings: "Do these findings contradict each other?"
+- If contradiction detected, create `CONTRADICTS` relationship in Neo4j
+- Store contradiction in `contradictions` table
+- Confidence threshold: >70% contradiction likelihood
+
+**Acceptance Criteria:**
+
+```gherkin
+Given two findings state different Q3 revenues
+When contradiction detection runs
+Then the LLM identifies the contradiction
+And a `CONTRADICTS` relationship is created in Neo4j
+And a record is added to the contradictions table
+
+Given findings are from different domains
+When contradiction detection runs
+Then only relevant comparisons are made
+And unrelated findings are not compared
+
+Given a contradiction is detected
+When I query the contradictions table
+Then I see: finding_a_id, finding_b_id, confidence, status
+And the status is "unresolved"
+
+Given no contradictions exist
+When detection runs
+Then no false positives are created
+And the contradictions table remains empty
+
+Given the LLM confidence is below 70%
+When a potential contradiction is found
+Then it is not flagged as a contradiction
+And analysts are not alerted
+```
+
+**Related FR:**
+- NFR-ACC-003: Contradiction Detection
+- FR-KB-004: Cross-Document Analysis
+
+**Architecture Reference:** Cross-Domain Intelligence (Phase 3 foundation)
+
+**Definition of Done:**
+- [ ] `detect_contradictions` job handler created
+- [ ] LLM comparison logic implemented
+- [ ] Neo4j `CONTRADICTS` relationships created
+- [ ] Contradictions table populated
+- [ ] Confidence threshold applied (>70%)
+- [ ] False positive rate minimized
+- [ ] Job runs after document analysis
+- [ ] Performance acceptable for large datasets
+
+---
+
+#### Story E4.12: Build Bulk Actions for Finding Management
+
+**As an** M&A analyst
+**I want** to perform bulk actions on multiple findings
+**So that** I can efficiently manage large numbers of findings
+
+**Description:**
+Add bulk selection and bulk action capabilities to the Findings Browser, allowing users to select multiple findings and perform actions like validate, reject, or categorize in batch.
+
+**Technical Details:**
+- Checkbox selection in table/card views
+- Select all / deselect all functionality
+- Bulk actions dropdown: Validate All, Reject All, Assign Domain, Export Selected
+- Batch API endpoint for efficient processing
+- Progress indicator for bulk operations
+- Undo capability for bulk actions
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I am in Findings Browser
+When I click the checkbox next to a finding
+Then the finding is selected
+And a selection count appears ("3 selected")
+
+Given multiple findings are selected
+When I click "Select All"
+Then all visible findings are selected
+And the count updates
+
+Given I have selected 10 findings
+When I click "Bulk Actions" → "Validate All"
+Then all 10 findings are validated
+And I see a success message
+And the UI updates for all findings
+
+Given I perform a bulk action
+When the operation completes
+Then I see an "Undo" option
+And clicking undo reverses the action
+
+Given I select findings across pages
+When I perform a bulk action
+Then only selected findings are affected
+And unselected findings remain unchanged
+```
+
+**Related FR:**
+- FR-KB-001: Structured Knowledge Storage (bulk management)
+
+**UX Reference:** Knowledge Explorer - Bulk Actions (implied)
+
+**Definition of Done:**
+- [ ] Checkbox selection implemented
+- [ ] Select all / deselect all works
+- [ ] Bulk actions dropdown with 4+ actions
+- [ ] Batch API endpoint created
+- [ ] Progress indicator for bulk operations
+- [ ] Undo capability implemented
+- [ ] Selection persists across view toggles
+- [ ] Performance acceptable for 100+ selections
+
+---
+
+#### Story E4.13: Implement Export Findings Feature
+
+**As an** M&A analyst
+**I want** to export findings to various formats
+**So that** I can use the intelligence in reports and presentations
+
+**Description:**
+Build comprehensive export functionality supporting CSV, Excel, and formatted report export with customizable field selection and formatting options.
+
+**Technical Details:**
+- Export modal with format selection
+- Field selection checkboxes (include/exclude columns)
+- Export all vs export filtered vs export selected
+- Excel export with formatting (headers, column widths, data types)
+- CSV with proper escaping
+- Report format with formatted sections
+- Background processing for large exports
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I click Export
+When the export modal opens
+Then I see format options: CSV, Excel, Report
+And I can select which fields to include
+
+Given I select specific fields
+When I export to Excel
+Then only selected fields are included
+And the export is properly formatted
+
+Given I have a filter applied
+When I export with "Export Filtered"
+Then only filtered findings are exported
+And the filter criteria is noted in the export
+
+Given I have findings selected
+When I export with "Export Selected"
+Then only selected findings are exported
+And unselected findings are excluded
+
+Given there are 1000 findings
+When I export all to Excel
+Then a progress indicator shows
+And the export completes successfully
+And the file is properly formatted
+```
+
+**Related FR:**
+- NFR-INT-002: Export Formats
+
+**Definition of Done:**
+- [ ] Export modal with format selection
+- [ ] Field selection implemented
+- [ ] CSV export with proper escaping
+- [ ] Excel export with formatting
+- [ ] Export filtered/selected options
+- [ ] Progress indicator for large exports
+- [ ] Background processing for >500 findings
+- [ ] All exports download correctly
+
+---
+
+#### Story E4.14: Build Real-Time Knowledge Graph Updates
+
+**As an** M&A analyst
+**I want** to see the knowledge graph update in real-time
+**So that** I can track how the system is learning from documents
+
+**Description:**
+Implement real-time updates to the Knowledge Explorer when new findings are extracted, contradictions are detected, or analysts validate findings. Use WebSocket/Supabase Realtime for push updates.
+
+**Technical Details:**
+- Supabase Realtime subscription to findings table
+- Supabase Realtime subscription to contradictions table
+- Real-time count updates in tab badges
+- Toast notifications for new findings
+- Optional auto-refresh toggle
+- Debounced updates to prevent UI thrashing
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I am viewing Knowledge Explorer
+When a new finding is extracted from a document
+Then the findings count updates in real-time
+And I see a toast notification "New finding extracted"
+
+Given the Contradictions tab is visible
+When a new contradiction is detected
+Then the contradictions count updates
+And the new contradiction appears in the list
+
+Given an analyst validates a finding
+When the validation is saved
+Then the finding status updates in real-time
+And other viewers see the update
+
+Given many findings are being processed
+When updates arrive rapidly
+Then updates are debounced
+And the UI remains responsive
+
+Given I toggle "Auto-refresh" off
+When new findings are extracted
+Then counts do not update automatically
+And I can manually refresh
+```
+
+**Related FR:**
+- FR-BG-004: Processing Transparency
+- NFR-USE-003: Feedback & Visibility
+
+**Architecture Reference:** Supabase Realtime subscriptions
+
+**Definition of Done:**
+- [ ] Supabase Realtime subscriptions set up
+- [ ] Findings table real-time updates
+- [ ] Contradictions table real-time updates
+- [ ] Tab badge counts update dynamically
+- [ ] Toast notifications for new items
+- [ ] Auto-refresh toggle implemented
+- [ ] Debouncing prevents UI thrashing
+- [ ] Connection status indicator
 
 ---
 

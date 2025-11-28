@@ -190,7 +190,11 @@ CREATE TABLE document_chunks (
 );
 
 CREATE INDEX idx_chunks_document ON document_chunks(document_id);
-CREATE INDEX idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops);
+-- IMPORTANT: pgvector HNSW index limited to 2000 dims, use halfvec cast for 3072-dim embeddings
+-- See: https://github.com/pgvector/pgvector/issues/461
+CREATE INDEX idx_chunks_embedding ON document_chunks
+    USING hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops)
+    WITH (m = 16, ef_construction = 64);
 
 -- 00016_create_findings_table.sql
 CREATE TABLE findings (
