@@ -1,6 +1,6 @@
 # Story 4.2: Implement Semantic Search for Findings
 
-Status: ready-for-review
+Status: done
 
 ## Story
 
@@ -63,63 +63,63 @@ so that **I can find relevant information quickly without manually scanning thro
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create Search API Endpoint** (AC: 2, 3, 7)
-  - [ ] Create `app/api/projects/[id]/findings/search/route.ts`
-  - [ ] Implement POST handler accepting `{ query: string, filters?: FindingFilters }`
-  - [ ] Add Zod schema for request validation
-  - [ ] Call OpenAI API to generate query embedding
-  - [ ] Implement pgvector similarity search with cosine distance
-  - [ ] Return ranked results with similarity scores
-  - [ ] Add error handling for OpenAI API failures
-  - [ ] Add timeout handling (3s max)
+- [x] **Task 1: Create Search API Endpoint** (AC: 2, 3, 7)
+  - [x] Create `app/api/projects/[id]/findings/search/route.ts`
+  - [x] Implement POST handler accepting `{ query: string, filters?: FindingFilters }`
+  - [x] Add Zod schema for request validation
+  - [x] Call OpenAI API to generate query embedding
+  - [x] Implement pgvector similarity search with cosine distance
+  - [x] Return ranked results with similarity scores
+  - [x] Add error handling for OpenAI API failures
+  - [x] Add timeout handling (3s max)
 
-- [ ] **Task 2: Create Embedding Service** (AC: 2, 7)
-  - [ ] Create `lib/services/embeddings.ts` with generateEmbedding function
-  - [ ] Configure OpenAI client with API key from environment
-  - [ ] Use text-embedding-3-large model (3072 dimensions)
-  - [ ] Implement retry logic for transient failures
-  - [ ] Add in-memory cache for recent query embeddings (LRU cache)
-  - [ ] Add unit tests for embedding service
+- [x] **Task 2: Create Embedding Service** (AC: 2, 7)
+  - [x] Create `lib/services/embeddings.ts` with generateEmbedding function
+  - [x] Configure OpenAI client with API key from environment
+  - [x] Use text-embedding-3-large model (3072 dimensions)
+  - [x] Implement retry logic for transient failures
+  - [x] Add in-memory cache for recent query embeddings (LRU cache)
+  - [x] Add unit tests for embedding service
 
-- [ ] **Task 3: Update FindingsService for Search** (AC: 3, 8)
-  - [ ] Add `searchFindings(projectId, queryEmbedding, filters, limit)` method to `lib/api/findings.ts`
-  - [ ] Build pgvector query with filter conditions
-  - [ ] Return results with similarity score included
-  - [ ] Add TypeScript types for search response
+- [x] **Task 3: Update FindingsService for Search** (AC: 3, 8)
+  - [x] Add `searchFindings(projectId, queryEmbedding, filters, limit)` method to `lib/api/findings.ts`
+  - [x] Build pgvector query with filter conditions
+  - [x] Return results with similarity score included
+  - [x] Add TypeScript types for search response
 
-- [ ] **Task 4: Build FindingSearch Component** (AC: 1, 5, 6)
-  - [ ] Create `components/knowledge-explorer/findings/FindingSearch.tsx`
-  - [ ] Implement search input with debounced onChange (300ms)
-  - [ ] Add search icon and clear (X) button
-  - [ ] Handle Enter key for immediate search
-  - [ ] Handle Escape key to clear search
-  - [ ] Show loading spinner during search
-  - [ ] Display empty state message for no results
+- [x] **Task 4: Build FindingSearch Component** (AC: 1, 5, 6)
+  - [x] Create `components/knowledge-explorer/findings/FindingSearch.tsx`
+  - [x] Implement search input with debounced onChange (300ms)
+  - [x] Add search icon and clear (X) button
+  - [x] Handle Enter key for immediate search
+  - [x] Handle Escape key to clear search
+  - [x] Show loading spinner during search
+  - [x] Display empty state message for no results
 
-- [ ] **Task 5: Integrate Search into FindingsBrowser** (AC: 4, 8)
-  - [ ] Add FindingSearch to top of FindingsBrowser component
-  - [ ] Create search state management (query, results, isSearching)
-  - [ ] Replace table data with search results when searching
-  - [ ] Show "Search Results" badge when viewing search results
-  - [ ] Update filter count to show search result count
-  - [ ] Coordinate search with existing filters
+- [x] **Task 5: Integrate Search into FindingsBrowser** (AC: 4, 8)
+  - [x] Add FindingSearch to top of FindingsBrowser component
+  - [x] Create search state management (query, results, isSearching)
+  - [x] Replace table data with search results when searching
+  - [x] Show "Search Results" badge when viewing search results
+  - [x] Update filter count to show search result count
+  - [x] Coordinate search with existing filters
 
-- [ ] **Task 6: Update URL State Management** (AC: 5)
-  - [ ] Add `q` query parameter for search query
-  - [ ] Update URL when search is performed
-  - [ ] Clear `q` parameter when search is cleared
-  - [ ] Support direct navigation with search query in URL
+- [x] **Task 6: Update URL State Management** (AC: 5)
+  - [x] Add `q` query parameter for search query
+  - [x] Update URL when search is performed
+  - [x] Clear `q` parameter when search is cleared
+  - [x] Support direct navigation with search query in URL
 
-- [ ] **Task 7: Write Tests** (AC: All)
-  - [ ] Unit tests for embedding service (mock OpenAI calls)
-  - [ ] Unit tests for search API endpoint
-  - [ ] Component tests for FindingSearch
+- [x] **Task 7: Write Tests** (AC: All)
+  - [x] Unit tests for embedding service (mock OpenAI calls)
+  - [x] Unit tests for search API endpoint
+  - [x] Component tests for FindingSearch
     - Renders search input correctly
     - Debounces input
     - Shows loading state
     - Clears on X click
     - Handles Escape key
-  - [ ] Integration test for full search flow
+  - [x] Integration test for full search flow
 
 ## Dev Notes
 

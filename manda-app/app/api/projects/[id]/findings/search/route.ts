@@ -117,19 +117,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Call the similarity search RPC function
-    // This function should be created in Supabase: match_findings
-    // Type assertion needed until migration is applied and types regenerated
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: searchResults, error: searchError } = await (supabase.rpc as any)('match_findings', {
-      query_embedding: queryEmbedding,
+    const { data: searchResults, error: searchError } = await supabase.rpc('match_findings', {
+      query_embedding: JSON.stringify(queryEmbedding),
       match_threshold: 0.0, // Return all results, let similarity ordering handle relevance
       match_count: limit,
       p_deal_id: projectId,
-      p_document_id: filters?.documentId || null,
-      p_domains: filters?.domain || null,
-      p_statuses: filters?.status || null,
-      p_confidence_min: filters?.confidenceMin ?? null,
-      p_confidence_max: filters?.confidenceMax ?? null,
+      p_document_id: filters?.documentId,
+      p_domains: filters?.domain,
+      p_statuses: filters?.status,
+      p_confidence_min: filters?.confidenceMin,
+      p_confidence_max: filters?.confidenceMax,
     })
 
     if (searchError) {
@@ -147,45 +144,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Transform results to API response format
-    const findings: FindingWithSimilarity[] = (searchResults || []).map(
-      (row: {
-        id: string
-        deal_id: string
-        document_id: string | null
-        chunk_id: string | null
-        user_id: string
-        text: string
-        source_document: string | null
-        page_number: number | null
-        confidence: number | null
-        finding_type: Finding['findingType']
-        domain: FindingDomain | null
-        status: FindingStatus | null
-        validation_history: ValidationEvent[] | null
-        metadata: Record<string, unknown> | null
-        created_at: string
-        updated_at: string | null
-        similarity: number
-      }) => ({
-        id: row.id,
-        dealId: row.deal_id,
-        documentId: row.document_id,
-        chunkId: row.chunk_id,
-        userId: row.user_id,
-        text: row.text,
-        sourceDocument: row.source_document,
-        pageNumber: row.page_number,
-        confidence: row.confidence,
-        findingType: row.finding_type,
-        domain: row.domain,
-        status: row.status || 'pending',
-        validationHistory: row.validation_history || [],
-        metadata: row.metadata,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        similarity: row.similarity,
-      })
-    )
+    // Using inferred types from Supabase generated types
+    const findings: FindingWithSimilarity[] = (searchResults || []).map((row) => ({
+      id: row.id,
+      dealId: row.deal_id,
+      documentId: row.document_id || null,
+      chunkId: row.chunk_id || null,
+      userId: row.user_id,
+      text: row.text,
+      sourceDocument: row.source_document || null,
+      pageNumber: row.page_number || null,
+      confidence: row.confidence || null,
+      findingType: row.finding_type as Finding['findingType'],
+      domain: row.domain as FindingDomain | null,
+      status: (row.status as FindingStatus) || 'pending',
+      validationHistory: (row.validation_history as unknown as ValidationEvent[]) || [],
+      metadata: row.metadata as Record<string, unknown> | null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at || null,
+      similarity: row.similarity,
+    }))
 
     const searchTime = Date.now() - startTime
 

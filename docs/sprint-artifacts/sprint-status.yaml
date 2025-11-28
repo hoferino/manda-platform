@@ -544,12 +544,13 @@ development_status:
     - Shared badge components: ConfidenceBadge, DomainTag, StatusBadge
     - 22 component tests for FindingsTable (rendering, pagination, sorting, actions, accessibility)
     - Build passing with no TypeScript errors
-  e4-2-implement-semantic-search-for-findings: ready-for-review
+  e4-2-implement-semantic-search-for-findings: done
   e4-2-drafted: 2025-11-28
   e4-2-jira-id: SCRUM-49
   e4-2-completed: 2025-11-28
+  e4-2-reviewed: 2025-11-28
   e4-2-notes: |
-    Semantic search for findings completed. Key deliverables:
+    Semantic search for findings completed and reviewed. Key deliverables:
     - Embedding service (lib/services/embeddings.ts) with OpenAI text-embedding-3-large
     - LRU cache for query embeddings with retry logic
     - Database migration 00022: Updated findings.embedding to vector(3072), created HNSW index
@@ -560,8 +561,23 @@ development_status:
     - SimilarityBadge component for search results
     - 37 tests (14 embedding service + 23 FindingSearch component)
     - Build passing, all story tests passing
-  e4-3-implement-inline-finding-validation: backlog
+    - Migration 00022 applied, Supabase types regenerated
+    - Type assertion removed after types regenerated
+  e4-3-implement-inline-finding-validation: done
+  e4-3-drafted: 2025-11-28
+  e4-3-context-ready: 2025-11-28
+  e4-3-completed: 2025-11-28
   e4-3-jira-id: SCRUM-50
+  e4-3-notes: |
+    Inline finding validation completed. Key deliverables:
+    - Validate API endpoint POST /api/projects/[id]/findings/[findingId]/validate
+    - PATCH API endpoint for editing findings text/status
+    - FindingActions component with validate/reject/edit buttons
+    - InlineEdit component with keyboard shortcuts (Enter save, Escape cancel)
+    - useUndoValidation hook with 5-second undo window
+    - Integration with FindingsBrowser and optimistic UI updates
+    - Toast notifications with undo action
+    - 56 tests passing (FindingActions, InlineEdit, useUndoValidation, validate API)
   e4-4-build-card-view-alternative-for-findings: backlog
   e4-4-jira-id: SCRUM-51
   e4-5-implement-source-attribution-links: backlog

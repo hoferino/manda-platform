@@ -1,0 +1,194 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>3</storyId>
+    <title>Implement Inline Finding Validation</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-28</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-3-implement-inline-finding-validation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to validate, reject, or edit findings inline within the Findings Browser</iWant>
+    <soThat>I can quickly curate the knowledge base, improving accuracy and confidence in extracted information without leaving my workflow</soThat>
+    <tasks>
+      <task id="1" ac="5">Create Validate API Endpoint
+        <subtask>Create app/api/projects/[id]/findings/[findingId]/validate/route.ts</subtask>
+        <subtask>Implement POST handler accepting { action: 'confirm' | 'reject' }</subtask>
+        <subtask>Add Zod schema for request validation</subtask>
+        <subtask>Implement status update logic with confidence adjustment (+5% on confirm)</subtask>
+        <subtask>Add validation event to validation_history JSONB</subtask>
+        <subtask>Add authorization check (user owns the project/deal)</subtask>
+        <subtask>Return updated finding with all fields</subtask>
+      </task>
+      <task id="2" ac="6">Enhance Findings PATCH Endpoint for Edit
+        <subtask>Update/create app/api/projects/[id]/findings/[findingId]/route.ts with PATCH handler</subtask>
+        <subtask>Accept { text?: string, status?: FindingStatus } body</subtask>
+        <subtask>Implement edit history tracking in validation_history</subtask>
+        <subtask>Preserve previousValue and newValue in history event</subtask>
+        <subtask>Return updated finding</subtask>
+      </task>
+      <task id="3" ac="7">Create FindingActions Component
+        <subtask>Create components/knowledge-explorer/findings/FindingActions.tsx</subtask>
+        <subtask>Implement Confirm button with onClick handler</subtask>
+        <subtask>Implement Reject button with onClick handler</subtask>
+        <subtask>Implement Edit button with onClick handler</subtask>
+        <subtask>Add loading states for each action</subtask>
+        <subtask>Add visual indicators for current status</subtask>
+        <subtask>Implement accessibility (ARIA labels, keyboard navigation)</subtask>
+      </task>
+      <task id="4" ac="3">Implement Inline Edit Mode
+        <subtask>Create inline editable text field for finding text</subtask>
+        <subtask>Add Save/Cancel buttons during edit mode</subtask>
+        <subtask>Implement Enter (save) and Escape (cancel) keyboard shortcuts</subtask>
+        <subtask>Handle focus management when entering/exiting edit mode</subtask>
+        <subtask>Validate text is not empty before saving</subtask>
+      </task>
+      <task id="5" ac="4">Implement Undo Functionality
+        <subtask>Add undo toast component with 5-second timer</subtask>
+        <subtask>Store previous state for undo capability</subtask>
+        <subtask>Implement revert API call on undo</subtask>
+        <subtask>Clear undo state when new action performed or timeout expires</subtask>
+        <subtask>Handle concurrent undo scenarios</subtask>
+      </task>
+      <task id="6" ac="1,2,8">Integrate FindingActions into FindingsTable
+        <subtask>Add FindingActions to each row in FindingsTable</subtask>
+        <subtask>Implement optimistic UI updates</subtask>
+        <subtask>Handle API failures with revert and error toast</subtask>
+        <subtask>Update finding count after status changes</subtask>
+        <subtask>Coordinate with filter state (hide rejected by default)</subtask>
+      </task>
+      <task id="7" ac="5,6">Add Client API Functions
+        <subtask>Add validateFinding(projectId, findingId, action) to lib/api/findings.ts</subtask>
+        <subtask>Add updateFinding(projectId, findingId, updates) to lib/api/findings.ts</subtask>
+        <subtask>Handle error responses with appropriate error types</subtask>
+        <subtask>Add TypeScript types for API payloads and responses</subtask>
+      </task>
+      <task id="8" ac="all">Write Tests
+        <subtask>Unit tests for FindingActions component</subtask>
+        <subtask>Unit tests for inline edit</subtask>
+        <subtask>API route tests for validate endpoint</subtask>
+        <subtask>API route tests for PATCH endpoint</subtask>
+        <subtask>Integration test for full validation flow</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Confirm Action in FindingsTable">Each finding row displays a checkmark button for confirmation. Clicking shows optimistic UI update (green checkmark). Status changes from pending to validated. Confidence increases by 5% (capped at 100%). Validation event recorded in validation_history with timestamp and userId. Toast notification confirms action.</criterion>
+    <criterion id="AC2" title="Reject Action in FindingsTable">Each finding row displays an X button for rejection. Clicking shows optimistic UI update (red X). Status changes from pending to rejected. Rejected findings hidden from default view. Validation event recorded. Toast notification confirms. Rejected findings accessible via Rejected status filter.</criterion>
+    <criterion id="AC3" title="Edit Finding Text">Edit icon (pencil) available on each row. Clicking opens inline text editor. Original text preserved in validation_history. Save/Cancel buttons. Edit event recorded with previousValue and newValue. Keyboard shortcuts: Enter saves, Escape cancels.</criterion>
+    <criterion id="AC4" title="Undo Validation Actions">After validate/reject, show brief undo toast (5 seconds). Clicking Undo reverts status to pending. Removes validation event from history. Returns confidence to previous value. Works for validate, reject, and edit actions.</criterion>
+    <criterion id="AC5" title="Validation API Endpoint">POST /api/projects/[id]/findings/[findingId]/validate accepts { action: 'confirm' | 'reject' }. Validates user ownership via RLS. Returns updated finding with new status, confidence, and validation_history. Error responses: 400, 404, 403.</criterion>
+    <criterion id="AC6" title="Edit API Endpoint">PATCH /api/projects/[id]/findings/[findingId] accepts { text?: string, status?: FindingStatus }. Validates user ownership via RLS. Records edit in validation_history. Returns updated finding. Error responses: 400, 404, 403.</criterion>
+    <criterion id="AC7" title="FindingActions Component">Dedicated FindingActions.tsx component. Disabled state when action in progress. Visual feedback for current status. Accessible: ARIA labels, keyboard navigation, focus management.</criterion>
+    <criterion id="AC8" title="Integration with FindingsBrowser">Actions work in both table view and search results mode. After validation/rejection, finding count updates. Optimistic updates revert on API failure. Coordinated state management with filters.</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="E4.3 Inline Validation" snippet="Defines validation flow architecture, FindingsService interface with validateFinding and updateFinding methods, and API endpoint contracts for POST /validate and PATCH endpoints." />
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="Finding Validation Flow" snippet="User clicks Confirm -> Optimistic UI Update -> API POST /validate -> Supabase Update (status, confidence, validation_history) -> Return updated finding -> UI confirms OR reverts on error." />
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="TypeScript Interfaces" snippet="Defines ValidationEvent interface with action, previousValue, newValue, timestamp, userId fields. Finding interface includes status and validationHistory fields." />
+      <doc path="docs/sprint-artifacts/stories/e4-2-implement-semantic-search-for-findings.md" title="Previous Story E4.2" section="Dev Agent Record" snippet="Completed implementation with embedding service, search API, FindingSearch component. Patterns established for API routes, client services, and component tests." />
+      <doc path="docs/sprint-artifacts/epics/epic-E4.md" title="Epic 4 Definition" section="Stories" snippet="E4.3: Implement Inline Finding Validation (Confirm/Reject/Edit) - P0 priority. Enables analysts to validate, reject, or edit findings inline within the Findings Browser." />
+    </docs>
+    <code>
+      <artifact path="manda-app/components/knowledge-explorer/findings/FindingsTable.tsx" kind="component" symbol="FindingsTable" lines="1-517" reason="Target component to integrate FindingActions. Already has action buttons (Check, X, Pencil) with onValidate and onEdit handlers. Need to add proper validation state management and inline edit mode." />
+      <artifact path="manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx" kind="component" symbol="FindingsBrowser" lines="1-323" reason="Container component managing validation state. Has handleValidate callback (lines 201-244) that calls validateFinding API. Currently shows toast.info for edit placeholder (line 248)." />
+      <artifact path="manda-app/lib/types/findings.ts" kind="types" symbol="Finding, FindingStatus, ValidationEvent" lines="1-214" reason="Type definitions already include ValidationEvent interface (lines 18-24) with action, previousValue, newValue, timestamp, userId. Finding interface has status and validationHistory fields." />
+      <artifact path="manda-app/lib/api/findings.ts" kind="service" symbol="validateFinding, updateFinding" lines="137-178" reason="Client API functions already exist. validateFinding (lines 160-178) calls POST /validate endpoint. updateFinding (lines 137-155) calls PATCH endpoint. Both return updated Finding." />
+      <artifact path="manda-app/app/api/projects/[id]/findings/route.ts" kind="api-route" symbol="GET, POST" lines="1-270" reason="Existing findings API route. Pattern to follow for new validate endpoint. Uses Zod validation, auth checks, RLS via deals table verification." />
+      <artifact path="manda-app/components/knowledge-explorer/shared/index.ts" kind="component" symbol="ConfidenceBadge, DomainTag, StatusBadge" reason="Shared badge components used in FindingsTable. StatusBadge shows pending/validated/rejected visual state." />
+    </code>
+    <dependencies>
+      <node>
+        <package name="react" version="19.2.0" />
+        <package name="next" version="16.0.4" />
+        <package name="@supabase/supabase-js" version="^2.84.0" />
+        <package name="@tanstack/react-table" version="^8.21.3" />
+        <package name="sonner" version="^2.0.7" purpose="Toast notifications - use for validation feedback and undo toasts" />
+        <package name="lucide-react" version="^0.554.0" purpose="Icons - Check, X, Pencil already imported in FindingsTable" />
+        <package name="zod" version="implicit" purpose="Request validation for API endpoints" />
+        <package name="zustand" version="^5.0.8" purpose="State management if needed for undo state" />
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="architecture">Use optimistic UI updates for instant feedback - show status change immediately, revert on API failure</constraint>
+    <constraint source="architecture">All mutations must update validation_history JSONB field for audit trail</constraint>
+    <constraint source="architecture">RLS policies ensure user can only validate their own project's findings - verify via deals table</constraint>
+    <constraint source="tech-spec">Status filter should exclude 'rejected' by default - already implemented in FindingFilters</constraint>
+    <constraint source="tech-spec">Confidence adjustment on validate: confidence = Math.min(1, (confidence || 0.5) + 0.05) - cap at 100%</constraint>
+    <constraint source="tech-spec">On reject: confidence unchanged, only status changes to 'rejected'</constraint>
+    <constraint source="pattern">Follow existing API route pattern from app/api/projects/[id]/findings/route.ts - Zod validation, auth check, project access verification</constraint>
+    <constraint source="pattern">Follow existing client API pattern from lib/api/findings.ts - return updated Finding, throw Error on failure</constraint>
+    <constraint source="pattern">Follow existing test pattern from __tests__/components/knowledge-explorer/findings-table.test.tsx - vitest, @testing-library/react, mock lucide-react</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Validate Endpoint" kind="REST endpoint">
+      <signature>POST /api/projects/[id]/findings/[findingId]/validate</signature>
+      <request>{ action: 'confirm' | 'reject' }</request>
+      <response>{ finding: Finding }</response>
+      <errors>400 (invalid action), 404 (not found), 403 (unauthorized), 401 (unauthenticated)</errors>
+      <path>manda-app/app/api/projects/[id]/findings/[findingId]/validate/route.ts</path>
+    </interface>
+    <interface name="Edit Endpoint" kind="REST endpoint">
+      <signature>PATCH /api/projects/[id]/findings/[findingId]</signature>
+      <request>{ text?: string, status?: FindingStatus }</request>
+      <response>{ finding: Finding }</response>
+      <errors>400 (invalid payload), 404 (not found), 403 (unauthorized)</errors>
+      <path>manda-app/app/api/projects/[id]/findings/[findingId]/route.ts</path>
+    </interface>
+    <interface name="validateFinding" kind="client function">
+      <signature>validateFinding(projectId: string, findingId: string, action: 'confirm' | 'reject'): Promise&lt;Finding&gt;</signature>
+      <path>manda-app/lib/api/findings.ts:160-178</path>
+      <note>Already implemented, calls POST /validate endpoint</note>
+    </interface>
+    <interface name="updateFinding" kind="client function">
+      <signature>updateFinding(projectId: string, findingId: string, updates: Partial&lt;Pick&lt;Finding, 'text' | 'status' | 'confidence'&gt;&gt;): Promise&lt;Finding&gt;</signature>
+      <path>manda-app/lib/api/findings.ts:137-155</path>
+      <note>Already implemented, calls PATCH endpoint</note>
+    </interface>
+    <interface name="ValidationEvent" kind="TypeScript interface">
+      <signature>{ action: 'validated' | 'rejected' | 'edited', previousValue?: string, newValue?: string, timestamp: string, userId: string }</signature>
+      <path>manda-app/lib/types/findings.ts:18-24</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing uses Vitest with @testing-library/react and jsdom. Component tests mock lucide-react icons.
+      API route tests should mock Supabase client using __tests__/utils/supabase-mock.ts utilities.
+      Follow the pattern established in findings-table.test.tsx: describe blocks for Rendering, Actions, Accessibility.
+      Use vi.fn() for callback mocks, fireEvent for interactions, within() for scoped queries.
+      Test accessibility with ARIA label assertions.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/ - Component tests</location>
+      <location>manda-app/__tests__/lib/api/ - API client tests</location>
+      <location>manda-app/__tests__/api/ - API route tests</location>
+    </locations>
+    <ideas>
+      <idea ac="1,2">Test FindingActions renders all three action buttons (Check, X, Pencil)</idea>
+      <idea ac="1">Test clicking Confirm button calls onValidate with 'confirm' action</idea>
+      <idea ac="2">Test clicking Reject button calls onValidate with 'reject' action</idea>
+      <idea ac="1,2">Test buttons are disabled when status already matches (validated/rejected)</idea>
+      <idea ac="7">Test loading state shows spinner when action in progress</idea>
+      <idea ac="3">Test clicking Edit button enters inline edit mode</idea>
+      <idea ac="3">Test inline edit: Enter key saves, Escape key cancels</idea>
+      <idea ac="3">Test inline edit: empty text shows validation error</idea>
+      <idea ac="4">Test undo toast appears after validation action</idea>
+      <idea ac="4">Test clicking Undo reverts finding to previous state</idea>
+      <idea ac="5">Test validate endpoint returns 400 for invalid action</idea>
+      <idea ac="5">Test validate endpoint returns 404 for non-existent finding</idea>
+      <idea ac="5">Test validate endpoint increases confidence by 5% on confirm</idea>
+      <idea ac="6">Test PATCH endpoint records edit in validation_history</idea>
+      <idea ac="8">Test optimistic update reverts on API failure</idea>
+    </ideas>
+  </tests>
+</story-context>

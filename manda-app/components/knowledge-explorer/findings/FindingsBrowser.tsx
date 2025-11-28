@@ -3,12 +3,15 @@
  * Container for the Findings tab in Knowledge Explorer
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface (AC: #2, #4, #5)
  * Story: E4.2 - Implement Semantic Search for Findings (AC: #4, #5, #8)
+ * Story: E4.3 - Implement Inline Finding Validation (AC: #1, #2, #3, #4, #8)
  *
  * Combines:
  * - FindingSearch for semantic search
  * - FindingFilters for filtering controls
  * - FindingsTable for data display
  * - Data fetching with React state management
+ * - Validation with undo support
+ * - Inline editing
  */
 
 'use client'
@@ -19,13 +22,16 @@ import { toast } from 'sonner'
 import { FindingSearch, EmptySearchResults } from './FindingSearch'
 import { FindingFilters } from './FindingFilters'
 import { FindingsTable } from './FindingsTable'
-import { getFindings, validateFinding, searchFindings } from '@/lib/api/findings'
+import { InlineEdit } from './InlineEdit'
+import { useUndoValidation, type UndoState } from './useUndoValidation'
+import { getFindings, validateFinding, updateFinding, searchFindings } from '@/lib/api/findings'
 import type {
   Finding,
   FindingFilters as FilterType,
   FindingsResponse,
   SearchResponse,
   FindingWithSimilarity,
+  FindingStatus,
 } from '@/lib/types/findings'
 
 interface FindingsBrowserProps {
@@ -59,8 +65,70 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
   const [searchResults, setSearchResults] = useState<SearchResponse | null>(null)
   const [isSearching, setIsSearching] = useState(false)
 
+  // Edit state
+  const [editingFindingId, setEditingFindingId] = useState<string | null>(null)
+  const [editingFinding, setEditingFinding] = useState<Finding | null>(null)
+
   // Determine if we're in search mode
   const isSearchMode = searchQuery.trim().length > 0 && searchResults !== null
+
+  // Undo handler
+  const handleUndo = useCallback(
+    async (undoState: UndoState) => {
+      try {
+        // Revert to previous state via API
+        await updateFinding(projectId, undoState.findingId, {
+          status: undoState.previousStatus,
+          confidence: undoState.previousConfidence ?? undefined,
+          ...(undoState.previousText !== undefined ? { text: undoState.previousText } : {}),
+        })
+
+        // Update local state
+        const revertFinding = (f: Finding): Finding =>
+          f.id === undoState.findingId
+            ? {
+                ...f,
+                status: undoState.previousStatus,
+                confidence: undoState.previousConfidence,
+                ...(undoState.previousText !== undefined ? { text: undoState.previousText } : {}),
+              }
+            : f
+
+        if (isSearchMode && searchResults) {
+          setSearchResults((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  findings: prev.findings.map((f) => revertFinding(f) as FindingWithSimilarity),
+                }
+              : prev
+          )
+        } else {
+          setData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  findings: prev.findings.map(revertFinding),
+                }
+              : prev
+          )
+        }
+
+        toast.success('Action undone')
+      } catch (err) {
+        console.error('Undo failed:', err)
+        toast.error('Failed to undo action')
+        throw err
+      }
+    },
+    [projectId, isSearchMode, searchResults]
+  )
+
+  // Use undo hook
+  const { saveUndoState, performUndo, clearUndo } = useUndoValidation({
+    timeout: 5000, // 5 seconds
+    onUndo: handleUndo,
+  })
 
   // Update URL when search query changes
   const updateSearchUrl = useCallback(
@@ -197,68 +265,222 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
     }))
   }, [])
 
-  // Handle validation action
+  // Get finding by ID from current data
+  const getFindingById = useCallback(
+    (findingId: string): Finding | undefined => {
+      if (isSearchMode && searchResults) {
+        return searchResults.findings.find((f) => f.id === findingId)
+      }
+      return data?.findings.find((f) => f.id === findingId)
+    },
+    [isSearchMode, searchResults, data]
+  )
+
+  // Handle validation action with optimistic update and undo
   const handleValidate = useCallback(
     async (findingId: string, action: 'confirm' | 'reject') => {
+      // Clear any existing undo state (new action performed)
+      clearUndo()
+
+      const finding = getFindingById(findingId)
+      if (!finding) {
+        toast.error('Finding not found')
+        return
+      }
+
+      const previousStatus = finding.status
+      const previousConfidence = finding.confidence
+      const newStatus: FindingStatus = action === 'confirm' ? 'validated' : 'rejected'
+      const newConfidence =
+        action === 'confirm' ? Math.min(1, (finding.confidence || 0.5) + 0.05) : finding.confidence
+
+      // Optimistic update
+      const updateFindingOptimistic = (f: Finding): Finding =>
+        f.id === findingId ? { ...f, status: newStatus, confidence: newConfidence } : f
+
+      if (isSearchMode && searchResults) {
+        setSearchResults((prev) =>
+          prev
+            ? {
+                ...prev,
+                findings: prev.findings.map(
+                  (f) => updateFindingOptimistic(f) as FindingWithSimilarity
+                ),
+              }
+            : prev
+        )
+      } else {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                findings: prev.findings.map(updateFindingOptimistic),
+              }
+            : prev
+        )
+      }
+
       try {
         await validateFinding(projectId, findingId, action)
 
-        const newStatus = action === 'confirm' ? 'validated' : 'rejected'
+        // Save undo state after successful API call
+        saveUndoState(
+          { ...finding, status: previousStatus, confidence: previousConfidence },
+          action === 'confirm' ? 'validate' : 'reject'
+        )
 
-        // Optimistic update for both search results and regular data
-        if (isSearchMode && searchResults) {
-          setSearchResults((prev) => {
-            if (!prev) return prev
-            return {
-              ...prev,
-              findings: prev.findings.map((f) =>
-                f.id === findingId ? { ...f, status: newStatus } : f
-              ) as FindingWithSimilarity[],
-            }
-          })
-        } else {
-          setData((prev) => {
-            if (!prev) return prev
-            return {
-              ...prev,
-              findings: prev.findings.map((f) =>
-                f.id === findingId ? { ...f, status: newStatus } : f
-              ) as Finding[],
-            }
-          })
-        }
-
-        toast.success(action === 'confirm' ? 'Finding validated' : 'Finding rejected')
+        // Show success toast with undo option
+        toast.success(action === 'confirm' ? 'Finding validated' : 'Finding rejected', {
+          action: {
+            label: 'Undo',
+            onClick: () => performUndo(),
+          },
+          duration: 5000,
+        })
       } catch (err) {
         console.error('Validation error:', err)
         toast.error('Failed to update finding')
-        // Refetch to restore correct state
-        if (isSearchMode) {
-          performSearch(searchQuery)
+
+        // Revert optimistic update on error
+        const revertFinding = (f: Finding): Finding =>
+          f.id === findingId ? { ...f, status: previousStatus, confidence: previousConfidence } : f
+
+        if (isSearchMode && searchResults) {
+          setSearchResults((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  findings: prev.findings.map((f) => revertFinding(f) as FindingWithSimilarity),
+                }
+              : prev
+          )
         } else {
-          fetchFindings()
+          setData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  findings: prev.findings.map(revertFinding),
+                }
+              : prev
+          )
         }
       }
     },
-    [projectId, fetchFindings, isSearchMode, searchResults, searchQuery, performSearch]
+    [
+      projectId,
+      getFindingById,
+      isSearchMode,
+      searchResults,
+      saveUndoState,
+      performUndo,
+      clearUndo,
+    ]
   )
 
-  // Handle edit action (placeholder for E4.3)
+  // Handle edit action - open inline edit mode
   const handleEdit = useCallback((finding: Finding) => {
-    toast.info('Edit functionality coming in E4.3')
+    setEditingFindingId(finding.id)
+    setEditingFinding(finding)
+  }, [])
+
+  // Handle save edit
+  const handleSaveEdit = useCallback(
+    async (newText: string) => {
+      if (!editingFinding) return
+
+      const previousText = editingFinding.text
+
+      // Optimistic update
+      const updateFindingText = (f: Finding): Finding =>
+        f.id === editingFinding.id ? { ...f, text: newText } : f
+
+      if (isSearchMode && searchResults) {
+        setSearchResults((prev) =>
+          prev
+            ? {
+                ...prev,
+                findings: prev.findings.map((f) => updateFindingText(f) as FindingWithSimilarity),
+              }
+            : prev
+        )
+      } else {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                findings: prev.findings.map(updateFindingText),
+              }
+            : prev
+        )
+      }
+
+      try {
+        await updateFinding(projectId, editingFinding.id, { text: newText })
+
+        // Save undo state
+        saveUndoState(editingFinding, 'edit', previousText)
+
+        // Close edit mode
+        setEditingFindingId(null)
+        setEditingFinding(null)
+
+        // Show success toast with undo option
+        toast.success('Finding updated', {
+          action: {
+            label: 'Undo',
+            onClick: () => performUndo(),
+          },
+          duration: 5000,
+        })
+      } catch (err) {
+        console.error('Edit error:', err)
+        toast.error('Failed to update finding')
+
+        // Revert optimistic update
+        const revertFinding = (f: Finding): Finding =>
+          f.id === editingFinding.id ? { ...f, text: previousText } : f
+
+        if (isSearchMode && searchResults) {
+          setSearchResults((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  findings: prev.findings.map((f) => revertFinding(f) as FindingWithSimilarity),
+                }
+              : prev
+          )
+        } else {
+          setData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  findings: prev.findings.map(revertFinding),
+                }
+              : prev
+          )
+        }
+
+        throw err // Re-throw to let InlineEdit handle the error
+      }
+    },
+    [projectId, editingFinding, isSearchMode, searchResults, saveUndoState, performUndo]
+  )
+
+  // Handle cancel edit
+  const handleCancelEdit = useCallback(() => {
+    setEditingFindingId(null)
+    setEditingFinding(null)
   }, [])
 
   // Determine which data to display
   const displayFindings: Finding[] = isSearchMode
-    ? (searchResults?.findings || [])
-    : (data?.findings || [])
+    ? searchResults?.findings || []
+    : data?.findings || []
 
-  const displayTotal = isSearchMode
-    ? (searchResults?.total || 0)
-    : (data?.total || 0)
+  const displayTotal = isSearchMode ? searchResults?.total || 0 : data?.total || 0
 
   // Calculate pagination (only for non-search mode)
-  const totalPages = isSearchMode ? 1 : (data ? Math.ceil(data.total / (filters.limit || 50)) : 1)
+  const totalPages = isSearchMode ? 1 : data ? Math.ceil(data.total / (filters.limit || 50)) : 1
 
   // Show empty search results
   const showEmptySearchResults = isSearchMode && !isSearching && displayFindings.length === 0
@@ -282,7 +504,7 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
         onFiltersChange={handleFiltersChange}
         documents={documents}
         isLoading={isLoading || isSearching}
-        totalCount={isSearchMode ? (searchResults?.total || 0) : (data?.total || 0)}
+        totalCount={isSearchMode ? searchResults?.total || 0 : data?.total || 0}
         filteredCount={displayFindings.length}
         isSearchMode={isSearchMode}
         onClearAll={isSearchMode ? handleClearSearch : undefined}
@@ -292,6 +514,19 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
           {error}
+        </div>
+      )}
+
+      {/* Inline Edit Panel */}
+      {editingFinding && (
+        <div className="rounded-lg border bg-muted/50 p-4">
+          <div className="mb-2 text-sm font-medium">Editing Finding</div>
+          <InlineEdit
+            value={editingFinding.text}
+            onSave={handleSaveEdit}
+            onCancel={handleCancelEdit}
+            isEditing={true}
+          />
         </div>
       )}
 
@@ -305,7 +540,7 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
         <FindingsTable
           findings={displayFindings}
           isLoading={isLoading || isSearching}
-          page={isSearchMode ? 1 : (filters.page || 1)}
+          page={isSearchMode ? 1 : filters.page || 1}
           totalPages={totalPages}
           total={displayTotal}
           sortBy={filters.sortBy}

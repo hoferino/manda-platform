@@ -1,0 +1,265 @@
+/**
+ * Individual Finding API Route
+ * Handles GET and PATCH operations for individual findings
+ * Story: E4.3 - Implement Inline Finding Validation (AC: 6)
+ *
+ * GET /api/projects/[id]/findings/[findingId] - Get finding with context
+ * PATCH /api/projects/[id]/findings/[findingId] - Update finding text/status
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import type { Finding, FindingStatus, ValidationEvent } from '@/lib/types/findings'
+import type { Json } from '@/lib/supabase/database.types'
+
+interface RouteContext {
+  params: Promise<{ id: string; findingId: string }>
+}
+
+/**
+ * GET /api/projects/[id]/findings/[findingId]
+ * Get a single finding with full context
+ */
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    const { id: projectId, findingId } = await context.params
+
+    const supabase = await createClient()
+
+    // Authenticate user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Verify user has access to this project
+    const { data: project, error: projectError } = await supabase
+      .from('deals')
+      .select('id')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    // Fetch the finding
+    const { data: findingData, error: findingError } = await supabase
+      .from('findings')
+      .select('*')
+      .eq('id', findingId)
+      .eq('deal_id', projectId)
+      .single()
+
+    if (findingError || !findingData) {
+      return NextResponse.json({ error: 'Finding not found' }, { status: 404 })
+    }
+
+    // Transform to API response format
+    const extendedRow = findingData as typeof findingData & {
+      status?: string
+      validation_history?: Json
+    }
+
+    const finding: Finding = {
+      id: findingData.id,
+      dealId: findingData.deal_id,
+      documentId: findingData.document_id,
+      chunkId: findingData.chunk_id,
+      userId: findingData.user_id,
+      text: findingData.text,
+      sourceDocument: findingData.source_document,
+      pageNumber: findingData.page_number,
+      confidence: findingData.confidence,
+      findingType: findingData.finding_type,
+      domain: findingData.domain,
+      status: (extendedRow.status as FindingStatus) || 'pending',
+      validationHistory: (extendedRow.validation_history as unknown as ValidationEvent[]) || [],
+      metadata: findingData.metadata as Record<string, unknown> | null,
+      createdAt: findingData.created_at,
+      updatedAt: findingData.updated_at,
+    }
+
+    return NextResponse.json({ finding })
+  } catch (err) {
+    console.error('[api/findings/[findingId]] GET Error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// PATCH request body validation schema
+const UpdateFindingSchema = z.object({
+  text: z.string().min(1, 'Text cannot be empty').optional(),
+  status: z.enum(['pending', 'validated', 'rejected']).optional(),
+  confidence: z.number().min(0).max(1).optional(),
+})
+
+/**
+ * PATCH /api/projects/[id]/findings/[findingId]
+ * Update a finding's text, status, or confidence
+ * Records edit in validation_history with previous and new values
+ */
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  try {
+    const { id: projectId, findingId } = await context.params
+
+    // Validate request body
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
+    const parseResult = UpdateFindingSchema.safeParse(body)
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: parseResult.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const updates = parseResult.data
+
+    // Ensure at least one field is being updated
+    if (!updates.text && !updates.status && updates.confidence === undefined) {
+      return NextResponse.json(
+        { error: 'At least one field (text, status, or confidence) must be provided' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = await createClient()
+
+    // Authenticate user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Verify user has access to this project
+    const { data: project, error: projectError } = await supabase
+      .from('deals')
+      .select('id')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    // Fetch the current finding
+    const { data: existingFinding, error: findingError } = await supabase
+      .from('findings')
+      .select('*')
+      .eq('id', findingId)
+      .eq('deal_id', projectId)
+      .single()
+
+    if (findingError || !existingFinding) {
+      return NextResponse.json({ error: 'Finding not found' }, { status: 404 })
+    }
+
+    // Get current validation history
+    const extendedFinding = existingFinding as typeof existingFinding & {
+      status?: string
+      validation_history?: Json
+    }
+    const currentHistory = (extendedFinding.validation_history as unknown as ValidationEvent[]) || []
+
+    // Build update object and create validation events for changes
+    const updateData: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    }
+    const newEvents: ValidationEvent[] = []
+
+    // Handle text update - record edit in history
+    if (updates.text !== undefined && updates.text !== existingFinding.text) {
+      updateData.text = updates.text
+
+      newEvents.push({
+        action: 'edited',
+        previousValue: existingFinding.text,
+        newValue: updates.text,
+        timestamp: new Date().toISOString(),
+        userId: user.id,
+      })
+    }
+
+    // Handle status update
+    if (updates.status !== undefined && updates.status !== extendedFinding.status) {
+      updateData.status = updates.status
+
+      // Record status change in history
+      const action = updates.status === 'validated' ? 'validated' : updates.status === 'rejected' ? 'rejected' : 'edited'
+      newEvents.push({
+        action,
+        previousValue: extendedFinding.status || 'pending',
+        newValue: updates.status,
+        timestamp: new Date().toISOString(),
+        userId: user.id,
+      })
+    }
+
+    // Handle confidence update
+    if (updates.confidence !== undefined) {
+      updateData.confidence = updates.confidence
+    }
+
+    // Add new events to history
+    if (newEvents.length > 0) {
+      updateData.validation_history = [...currentHistory, ...newEvents] as unknown as Json
+    }
+
+    // Update the finding
+    const { data: updatedFinding, error: updateError } = await supabase
+      .from('findings')
+      .update(updateData)
+      .eq('id', findingId)
+      .eq('deal_id', projectId)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('[api/findings/[findingId]] PATCH Error:', updateError)
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    // Transform to API response format
+    const updatedExtended = updatedFinding as typeof updatedFinding & {
+      status?: string
+      validation_history?: Json
+    }
+
+    const finding: Finding = {
+      id: updatedFinding.id,
+      dealId: updatedFinding.deal_id,
+      documentId: updatedFinding.document_id,
+      chunkId: updatedFinding.chunk_id,
+      userId: updatedFinding.user_id,
+      text: updatedFinding.text,
+      sourceDocument: updatedFinding.source_document,
+      pageNumber: updatedFinding.page_number,
+      confidence: updatedFinding.confidence,
+      findingType: updatedFinding.finding_type,
+      domain: updatedFinding.domain,
+      status: (updatedExtended.status as FindingStatus) || 'pending',
+      validationHistory: (updatedExtended.validation_history as unknown as ValidationEvent[]) || [],
+      metadata: updatedFinding.metadata as Record<string, unknown> | null,
+      createdAt: updatedFinding.created_at,
+      updatedAt: updatedFinding.updated_at,
+    }
+
+    return NextResponse.json({ finding })
+  } catch (err) {
+    console.error('[api/findings/[findingId]] PATCH Error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
