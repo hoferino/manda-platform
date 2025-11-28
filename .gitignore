@@ -59,3 +59,7 @@ temp/
 
 # MCP
 .mcp.json
+
+# Additional ignores
+.venv*/
+.coverage*
