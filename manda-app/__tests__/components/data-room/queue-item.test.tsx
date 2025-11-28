@@ -72,7 +72,8 @@ describe('QueueItem Component', () => {
 
     it('displays time in queue for queued job', () => {
       render(<QueueItem job={mockQueuedJob} />)
-      expect(screen.getByText('60s')).toBeInTheDocument()
+      // 60 seconds formats as "1m" (formatTimeInQueue: seconds < 60 returns "Xs", else returns "Xm")
+      expect(screen.getByText('1m')).toBeInTheDocument()
     })
 
     it('displays processing stage for active job', () => {

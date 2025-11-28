@@ -234,9 +234,9 @@ describe('ProcessingQueue Component', () => {
       // Click to collapse
       await user.click(screen.getByText('Processing Queue'))
 
-      // Content should be hidden
+      // Content should be removed from DOM when collapsed
       await waitFor(() => {
-        expect(screen.queryByText('queued-doc.pdf')).not.toBeVisible()
+        expect(screen.queryByText('queued-doc.pdf')).not.toBeInTheDocument()
       })
     })
   })
