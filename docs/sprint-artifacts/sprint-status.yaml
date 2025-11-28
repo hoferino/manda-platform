@@ -515,7 +515,8 @@ development_status:
 
   # Epic 4: Collaborative Knowledge Workflow (14 stories)
   epic-4: backlog
-  e4-1-build-knowledge-explorer-ui-main-interface: backlog
+  e4-1-build-knowledge-explorer-ui-main-interface: drafted
+  e4-1-drafted: 2025-11-28
   e4-2-implement-findings-tab-with-filtering-and-validation: backlog
   e4-3-implement-entities-tab-for-named-entity-browsing: backlog
   e4-4-implement-patterns-tab-for-cross-domain-intelligence: backlog
