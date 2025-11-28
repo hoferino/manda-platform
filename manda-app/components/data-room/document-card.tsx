@@ -122,6 +122,7 @@ export function DocumentCard({
       onDragStart={handleDragStart}
       role="button"
       tabIndex={0}
+      data-testid="document-item"
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()

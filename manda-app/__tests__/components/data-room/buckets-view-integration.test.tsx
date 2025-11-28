@@ -4,6 +4,12 @@ import { BucketsView } from '@/components/data-room/buckets-view'
 import * as documentsApi from '@/lib/api/documents'
 import * as foldersApi from '@/lib/api/folders'
 import * as supabaseClient from '@/lib/supabase/client'
+import {
+  createMockSupabaseClient,
+  createMockDocument,
+  createMockFolder,
+  type MockQueryBuilder,
+} from '@/__tests__/utils/supabase-mock'
 
 // Mock dependencies
 vi.mock('@/lib/api/documents', () => ({
@@ -36,21 +42,18 @@ vi.mock('@/components/ui/button', () => ({
 
 describe('BucketsView Integration', () => {
   const mockProjectId = 'test-project-id'
-  const mockSupabase = {
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn(),
-  }
+  let mocks: MockQueryBuilder
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
-    // Setup Supabase mock
-    ;(supabaseClient.createClient as any).mockReturnValue(mockSupabase)
-    
+
+    // TD-004: Use shared Supabase test utilities
+    const { client, mocks: queryMocks } = createMockSupabaseClient()
+    mocks = queryMocks
+    ;(supabaseClient.createClient as any).mockReturnValue(client)
+
     // Default mock responses
-    mockSupabase.order.mockResolvedValue({ data: [], error: null })
+    mocks.order.mockResolvedValue({ data: [], error: null })
     ;(foldersApi.getFolders as any).mockResolvedValue({ folders: [], error: null })
   })
 
@@ -63,32 +66,30 @@ describe('BucketsView Integration', () => {
   })
 
   it('renders buckets from folders and documents', async () => {
-    // Mock data
+    // TD-004: Use data factories from shared utilities
     const mockDocuments = [
-      {
+      createMockDocument({
         id: 'doc1',
         deal_id: mockProjectId,
         name: 'Financial Report.pdf',
         file_size: 1024,
         mime_type: 'application/pdf',
         folder_path: 'Financials/Q1',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
+      }),
     ]
 
     const mockFolders = [
-      {
+      createMockFolder({
         id: 'folder1',
         deal_id: mockProjectId,
         name: 'Legal',
         path: 'Legal',
         parent_path: null,
-      }
+      }),
     ]
 
     // Setup mocks
-    mockSupabase.order.mockResolvedValue({ data: mockDocuments, error: null })
+    mocks.order.mockResolvedValue({ data: mockDocuments, error: null })
     ;(foldersApi.getFolders as any).mockResolvedValue({ folders: mockFolders, error: null })
 
     render(<BucketsView projectId={mockProjectId} />)
@@ -102,19 +103,17 @@ describe('BucketsView Integration', () => {
   })
 
   it('handles bucket expansion and navigation', async () => {
-    // Mock data with nested structure
+    // TD-004: Use data factories from shared utilities
     const mockDocuments = [
-      {
+      createMockDocument({
         id: 'doc1',
         deal_id: mockProjectId,
         name: 'Q1 Report.pdf',
         folder_path: 'Financials/Reports',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
+      }),
     ]
 
-    mockSupabase.order.mockResolvedValue({ data: mockDocuments, error: null })
+    mocks.order.mockResolvedValue({ data: mockDocuments, error: null })
     ;(foldersApi.getFolders as any).mockResolvedValue({ folders: [], error: null })
 
     render(<BucketsView projectId={mockProjectId} />)
@@ -140,18 +139,18 @@ describe('BucketsView Integration', () => {
   })
 
   it('handles file upload flow', async () => {
-    // Mock data
+    // TD-004: Use data factories from shared utilities
     const mockFolders = [
-      {
+      createMockFolder({
         id: 'folder1',
         deal_id: mockProjectId,
         name: 'Uploads',
         path: 'Uploads',
         parent_path: null,
-      }
+      }),
     ]
 
-    mockSupabase.order.mockResolvedValue({ data: [], error: null })
+    mocks.order.mockResolvedValue({ data: [], error: null })
     ;(foldersApi.getFolders as any).mockResolvedValue({ folders: mockFolders, error: null })
     ;(documentsApi.uploadDocument as any).mockResolvedValue({ success: true })
 

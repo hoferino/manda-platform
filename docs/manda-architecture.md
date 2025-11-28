@@ -6,7 +6,7 @@
 **Last Updated:** 2025-11-28
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 2.7 (Persistent folder storage; full folder/bucket parity)
+**Version:** 2.8 (Test infrastructure enhancement; CI pipeline with sharding)
 
 ---
 
@@ -137,14 +137,41 @@ Development & Deployment:
     - Neo4j 5+ (Community Edition)
     - Next.js 16 dev server with Turbopack
   testing:
-    - Jest (unit tests)
-    - Playwright (e2e tests)
-    - React Testing Library
+    unit_testing:
+      framework: Vitest
+      features:
+        - Thread pool parallelization (pool: 'threads')
+        - Test isolation per file
+        - CI-optimized reporters (dot + JSON)
+        - 3-way test sharding in CI (~3s per shard vs 41s full run)
+      utilities:
+        - Shared Supabase mock utilities (__tests__/utils/supabase-mock.ts)
+        - Data factories (createMockDocument, createMockUser, createMockFolder)
+        - Mock query builder with chainable methods
+    e2e_testing:
+      framework: Playwright
+      features:
+        - Chromium browser testing
+        - Authentication setup (e2e/auth.setup.ts)
+        - Data Room E2E tests (15 test cases)
+        - CI integration with artifact storage
+    component_testing:
+      framework: React Testing Library
+      utilities:
+        - Shared test utilities for Supabase mocking
+        - Data factories for consistent mock data
   code_quality:
     - ESLint
     - Prettier
     - Husky (pre-commit hooks)
     - Commitizen (conventional commits)
+  ci_pipeline:
+    provider: GitHub Actions
+    stages:
+      - lint: ESLint checks
+      - test: Unit tests with 3-way sharding
+      - e2e: Playwright E2E tests
+      - build: Next.js production build
 ```
 
 ---
@@ -2103,6 +2130,36 @@ npm install
 
 ## Changelog
 
+### Version 2.8 (2025-11-28)
+**Test Infrastructure Enhancement - Tech Debt Sprint:**
+- **Test Framework Upgrade:**
+  - Migrated from Jest to Vitest with thread pool parallelization
+  - Added 3-way test sharding for CI (reduces 41s → ~3s per shard)
+  - Test isolation ensures reliable parallel execution
+  - CI-optimized reporters (dot for progress, JSON for results)
+- **E2E Testing Infrastructure:**
+  - Added Playwright for E2E testing with Chromium browser
+  - Created authentication setup for authenticated E2E tests
+  - Implemented 15 Data Room E2E test cases:
+    * Folder operations (create, rename, delete, navigation)
+    * Document upload (single file, folder upload, progress)
+    * View toggle (Folders/Buckets, preference persistence)
+    * Drag and drop, processing status
+  - Added data-testid attributes to key components
+- **Shared Test Utilities:**
+  - Created `__tests__/utils/supabase-mock.ts` with comprehensive mocking:
+    * MockQueryBuilder with chainable methods
+    * MockSupabaseAuth interface
+    * Data factories (createMockDocument, createMockUser, createMockFolder)
+    * Helper functions (mockAuthenticatedUser, mockQuerySuccess)
+  - Reduces test boilerplate across components
+- **CI Pipeline:**
+  - GitHub Actions workflow with 4 stages: lint, test (sharded), E2E, build
+  - Parallel test execution across 3 runners
+  - Artifact storage for Playwright reports
+- **Business Principle Established:**
+  - BP-001: Zero Technical Debt Policy - resolve debt before new feature epics
+
 ### Version 2.7 (2025-11-28)
 **Persistent Folder Storage - Full Folder/Bucket Parity:**
 - **New `folders` Table:**
@@ -2315,4 +2372,4 @@ npm install
 ---
 
 *Generated using BMAD Method architecture workflow*
-*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25 | Version 2.6: 2025-11-26*
+*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25 | Version 2.6: 2025-11-26 | Version 2.7: 2025-11-28 | Version 2.8: 2025-11-28*

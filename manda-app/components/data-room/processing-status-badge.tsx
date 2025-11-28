@@ -149,6 +149,8 @@ export function ProcessingStatusBadge({
         config.color,
         className
       )}
+      data-testid="processing-status"
+      data-status={status}
     >
       <Icon
         className={cn(

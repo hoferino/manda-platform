@@ -113,7 +113,7 @@ export function FolderTree({
   }, [onDropDocument])
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-testid="folder-tree">
       {/* Header with New Folder button */}
       <div className="flex items-center justify-between border-b px-3 py-2">
         <span className="text-sm font-medium">Folders</span>
@@ -123,6 +123,7 @@ export function FolderTree({
           className="h-7 w-7 p-0"
           onClick={() => onCreateFolder(null)}
           title="New Folder"
+          data-testid="create-folder-button"
         >
           <Plus className="h-4 w-4" />
         </Button>

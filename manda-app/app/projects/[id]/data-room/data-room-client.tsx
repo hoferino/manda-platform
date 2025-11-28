@@ -733,7 +733,7 @@ export function DataRoomClient({
       {/* Action bar */}
       <div className="flex items-center justify-between border-b px-4 py-2">
         {/* E3.6: Realtime connection status indicator */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="realtime-status" data-status={realtimeStatus}>
           {realtimeStatus === 'connected' ? (
             <>
               <Wifi className="h-4 w-4 text-green-500" />

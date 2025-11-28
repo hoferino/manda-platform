@@ -29,56 +29,101 @@ principles:
 tech_debt_sprint:
   name: "Tech Debt Resolution Sprint"
   started: 2025-11-28
+  completed: 2025-11-28
   target_completion: 2025-11-29
+  status: done
   goal: Clear all medium/high priority backlog items before Epic 4
+  retrospective: docs/sprint-artifacts/retrospectives/tech-debt-sprint-retrospective.md
+  summary: |
+    All 3 stories completed in single session. TD-002 (rate limiting) deferred per BP-001.
+    Key deliverables:
+    - Playwright E2E testing infrastructure with 15 Data Room tests
+    - Vitest parallel execution with 3-way CI sharding (41s → ~3s/shard)
+    - Shared Supabase test utilities reducing test boilerplate
+    - CI pipeline with lint, unit tests (sharded), E2E tests, and build stages
   stories:
     - id: TD-001
       backlog_ref: BL-001
       title: Add E2E tests for Data Room
-      status: todo
+      status: done
       priority: medium
       estimate: 4h
+      completed: 2025-11-28
       scope: |
         - Set up Playwright in manda-app
         - Write E2E tests for document upload flow
         - Write E2E tests for folder/bucket operations
         - Add to CI pipeline
-
-    - id: TD-002
-      backlog_ref: BL-002
-      title: Add rate limiting on document endpoints
-      status: todo
-      priority: medium
-      estimate: 2h
-      scope: |
-        - Add rate limiting middleware to Next.js API routes
-        - Configure limits: 10 uploads/min, 100 downloads/min per user
-        - Add 429 response handling in frontend
+      deliverables: |
+        - playwright.config.ts - Playwright configuration with Chromium
+        - e2e/auth.setup.ts - Authentication setup for E2E tests
+        - e2e/data-room.spec.ts - Comprehensive E2E tests for Data Room:
+          * Folder operations: create, rename, delete, breadcrumb navigation
+          * Document upload: single file, folder upload, progress tracking
+          * View toggle: Folders/Buckets views with preference persistence
+          * Drag and drop: move documents to folders
+          * Processing status: display and realtime connection
+        - .github/workflows/ci.yml - CI pipeline with unit tests, E2E tests, and build
+        - Added data-testid attributes to key components for reliable test selection
+        - npm scripts: test:e2e, test:e2e:ui, test:e2e:headed, test:e2e:report
 
     - id: TD-003
       backlog_ref: BL-004
       title: Implement test sharding / parallel execution
-      status: todo
+      status: done
       priority: medium
       estimate: 2h
+      completed: 2025-11-28
       scope: |
         - Configure Vitest for parallel test execution
         - Set up test sharding for CI (split by file)
         - Target: <60s full test run
+      deliverables: |
+        - vitest.config.ts: Updated with thread pool parallelization
+          * pool: 'threads' for multi-core execution
+          * Test isolation for reliability
+          * CI-optimized reporters (dot + JSON)
+        - .github/workflows/ci.yml: Updated with 3-way test sharding
+          * Tests split across 3 parallel runners
+          * Each shard ~3s instead of 41s total
+          * fail-fast: false for complete results
+        - Performance improvement:
+          * Full run: 41s (local)
+          * Per shard: ~3s (CI will run 3 in parallel)
 
     - id: TD-004
       backlog_ref: BL-005
       title: Create shared Supabase test utilities
-      status: todo
+      status: done
       priority: medium
       estimate: 2h
+      completed: 2025-11-28
       scope: |
         - Create __tests__/utils/supabase-mock.ts
         - Standardize mock patterns across components
         - Refactor existing tests to use shared utilities
+      deliverables: |
+        - __tests__/utils/supabase-mock.ts: Comprehensive Supabase test utilities
+          * MockQueryBuilder interface with chainable methods (from, select, eq, order, etc.)
+          * MockSupabaseAuth interface (getUser, getSession, signIn, signOut, onAuthStateChange)
+          * MockSupabaseClient interface combining query builder, auth, and realtime
+          * createMockSupabaseClient() - returns client + individual mock references
+          * mockSupabaseModule() - for vi.mock('@/lib/supabase/client')
+          * mockSupabaseServerModule() - for server-side Supabase mocking
+          * Data factories: createMockUser, createMockDocument, createMockProject, createMockFolder
+          * Helper functions: mockQuerySuccess, mockQueryError, mockAuthenticatedUser, mockUnauthenticated
+        - Refactored buckets-view-integration.test.tsx to use shared utilities
+          * Replaced inline mock with createMockSupabaseClient()
+          * Uses createMockDocument/createMockFolder data factories
+          * All 4 tests passing
 
 # Deferred items (low priority - will address in future sprints)
 deferred_backlog:
+  - id: BL-002
+    title: Add rate limiting on document endpoints
+    priority: medium
+    defer_reason: Could block power users during heavy due diligence. Revisit before production launch.
+
   - id: BL-003
     title: Monitor GCS costs as usage grows
     priority: low

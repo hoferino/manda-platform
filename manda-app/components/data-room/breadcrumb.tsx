@@ -18,7 +18,7 @@ export function Breadcrumb({ folderPath, onNavigate }: BreadcrumbProps) {
   const segments = folderPath ? folderPath.split('/').filter(Boolean) : []
 
   return (
-    <nav className="flex items-center gap-1 text-sm">
+    <nav className="flex items-center gap-1 text-sm" data-testid="breadcrumb">
       {/* Root / Home */}
       <button
         className={cn(

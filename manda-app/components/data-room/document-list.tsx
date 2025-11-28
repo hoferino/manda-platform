@@ -57,7 +57,7 @@ export function DocumentList({
   }
 
   return (
-    <div className="flex flex-col divide-y">
+    <div className="flex flex-col divide-y" data-testid="document-list">
       {/* Header row */}
       <DocumentCardHeader />
 
