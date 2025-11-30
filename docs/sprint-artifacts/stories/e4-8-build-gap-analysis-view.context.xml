@@ -1,0 +1,373 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E4</epicId>
+    <storyId>E4.8</storyId>
+    <title>Build Gap Analysis View</title>
+    <status>ready-for-dev</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-8-build-gap-analysis-view.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to identify missing information based on IRL requirements and knowledge base analysis</iWant>
+    <soThat>I can request additional documents from sellers and ensure complete due diligence coverage</soThat>
+    <tasks>
+      <task id="1" title="Create Gap Types and API Client" acs="1,2,3,4,8">
+        <subtask>Create lib/types/gaps.ts with Gap, GapCategory, GapPriority interfaces</subtask>
+        <subtask>Create lib/api/gaps.ts with getProjectGaps, resolveGap, createIrlFromGap functions</subtask>
+        <subtask>Define gap categories: 'irl_missing', 'information_gap', 'incomplete_analysis'</subtask>
+        <subtask>Add helper functions for gap status and priority display</subtask>
+      </task>
+      <task id="2" title="Create Gap API Routes" acs="2,3,5,6,7">
+        <subtask>Create app/api/projects/[id]/gaps/route.ts for GET (list gaps)</subtask>
+        <subtask>Implement IRL gap detection: compare irl_items vs documents.irl_item_id</subtask>
+        <subtask>Implement information gap detection: analyze finding domain coverage</subtask>
+        <subtask>Create app/api/projects/[id]/gaps/[gapId]/resolve/route.ts for POST</subtask>
+        <subtask>Create app/api/projects/[id]/gaps/[gapId]/add-to-irl/route.ts for POST</subtask>
+        <subtask>Add Zod validation schemas for all routes</subtask>
+      </task>
+      <task id="3" title="Build GapAnalysisView Component" acs="1,8">
+        <subtask>Create components/knowledge-explorer/gaps/GapAnalysisView.tsx</subtask>
+        <subtask>Implement category sections: IRL Gaps, Information Gaps</subtask>
+        <subtask>Add filter controls: category, status, priority</subtask>
+        <subtask>Add statistics summary header</subtask>
+        <subtask>Integrate with useGaps hook for data fetching</subtask>
+        <subtask>Add loading skeletons and empty states</subtask>
+      </task>
+      <task id="4" title="Build GapCard Component" acs="4,5,6,7">
+        <subtask>Create components/knowledge-explorer/gaps/GapCard.tsx</subtask>
+        <subtask>Display: category, description, priority badge, source</subtask>
+        <subtask>Add expandable details section</subtask>
+        <subtask>Add action buttons: Add to IRL, Mark N/A, Add Manual Finding</subtask>
+      </task>
+      <task id="5" title="Build GapActions Component" acs="5,6,7">
+        <subtask>Create components/knowledge-explorer/gaps/GapActions.tsx</subtask>
+        <subtask>Implement "Add to IRL" with success toast</subtask>
+        <subtask>Implement "Mark N/A" with confirmation dialog</subtask>
+        <subtask>Create AddManualFindingModal component</subtask>
+        <subtask>Add undo functionality for Mark N/A (5s window)</subtask>
+      </task>
+      <task id="6" title="Integrate into KnowledgeExplorerClient" acs="1">
+        <subtask>Replace PlaceholderTab with GapAnalysisView</subtask>
+        <subtask>Pass projectId and documents props</subtask>
+        <subtask>Update gapsCount from API data</subtask>
+      </task>
+      <task id="7" title="Write Component Tests" acs="all">
+        <subtask>Test GapAnalysisView rendering with gaps data</subtask>
+        <subtask>Test GapCard display and actions</subtask>
+        <subtask>Test filter controls and sorting</subtask>
+        <subtask>Test Add to IRL workflow</subtask>
+        <subtask>Test Mark N/A with undo</subtask>
+        <subtask>Test Add Manual Finding modal</subtask>
+        <subtask>Test empty state display</subtask>
+        <subtask>Ensure accessibility (ARIA labels, keyboard navigation)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Gap Analysis Tab Navigation">
+      <requirement>Gap Analysis tab displays gap categories when clicked</requirement>
+      <requirement>Tab badge shows total gap count (IRL gaps + information gaps)</requirement>
+      <requirement>Default view shows all gaps sorted by priority (High first)</requirement>
+      <requirement>Loading skeleton shown while fetching gaps</requirement>
+    </criterion>
+    <criterion id="AC2" title="IRL Gaps Display">
+      <requirement>Compare IRL items against uploaded documents</requirement>
+      <requirement>Display "IRL Items Not Received" section with count</requirement>
+      <requirement>Each gap shows: IRL item name, category, required status</requirement>
+      <requirement>Link to related IRL item in IRL panel</requirement>
+      <requirement>Example: "3 IRL items not received" with itemized list</requirement>
+    </criterion>
+    <criterion id="AC3" title="Information Gaps Detection">
+      <requirement>Display "Information Gaps" section with missing data points</requirement>
+      <requirement>Each gap shows: description, domain affected, priority</requirement>
+      <requirement>Gaps derived from findings coverage analysis by domain</requirement>
+      <requirement>Example: "5-year revenue forecast not found in any document"</requirement>
+      <requirement>Include domains with no or sparse findings</requirement>
+    </criterion>
+    <criterion id="AC4" title="Gap Card Display">
+      <requirement>Card shows: category badge, description, priority badge (High/Medium/Low)</requirement>
+      <requirement>Priority color coding: High (red), Medium (yellow), Low (gray)</requirement>
+      <requirement>Expandable details section with related findings/documents</requirement>
+      <requirement>Source attribution showing where gap was detected</requirement>
+    </criterion>
+    <criterion id="AC5" title="Add to IRL Action">
+      <requirement>"Add to IRL" button available on information gaps</requirement>
+      <requirement>Creates new IRL item with gap description</requirement>
+      <requirement>Gap marked as "addressed" (moves to resolved section)</requirement>
+      <requirement>Toast notification confirms action</requirement>
+      <requirement>Works with existing lib/api/irl.ts functions</requirement>
+    </criterion>
+    <criterion id="AC6" title="Mark N/A Action">
+      <requirement>"Mark N/A" button with confirmation dialog</requirement>
+      <requirement>Gap removed from active gaps list</requirement>
+      <requirement>Stored in resolved gaps with "not_applicable" status</requirement>
+      <requirement>Can be undone within 5 seconds (undo toast)</requirement>
+    </criterion>
+    <criterion id="AC7" title="Add Manual Finding Action">
+      <requirement>"Add Manual Finding" opens modal form</requirement>
+      <requirement>Form fields: text, domain, confidence (default: 1.0), source notes</requirement>
+      <requirement>Creates finding record in findings table</requirement>
+      <requirement>Gap marked as "resolved" automatically</requirement>
+      <requirement>New finding appears in Findings Browser</requirement>
+    </criterion>
+    <criterion id="AC8" title="Gap Statistics Summary">
+      <requirement>Header shows: Total gaps, IRL gaps, Information gaps</requirement>
+      <requirement>Progress indicator: "X of Y gaps resolved"</requirement>
+      <requirement>Filter by category: All, IRL, Information, Resolved</requirement>
+      <requirement>Sort by: Priority, Category, Created date</requirement>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Epic Technical Specification: Collaborative Knowledge Workflow</title>
+        <section>E4.8: Build Gap Analysis View</section>
+        <snippet>Categories: IRL Items Not Received, Information Gaps, Incomplete Analysis. Gap priorities: High, Medium, Low. Actions: Add to IRL, Mark N/A, Add Manual Finding. Gap detection via IRL comparison and findings domain coverage analysis.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>Manda UX Design Specification</title>
+        <section>5.3 Knowledge Explorer - Gap Analysis</section>
+        <snippet>Gap Card shows: category, description, priority. Priority color coding for visual hierarchy. Actions available directly on card: Add to IRL, Mark as not applicable, Add manual finding.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E4.md</path>
+        <title>Epic 4: Collaborative Knowledge Workflow</title>
+        <section>Story E4.8</section>
+        <snippet>Build Gap Analysis View - identifies missing information based on IRL requirements. Covers FR-KB-004 (Cross-Document Analysis).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e4-7-detect-contradictions-using-neo4j.md</path>
+        <title>Story 4.7: Detect Contradictions Using Neo4j</title>
+        <section>Completion Notes</section>
+        <snippet>ContradictionDetector LLM service pattern, pipeline integration after analyze-document, Supabase storage patterns (get_findings_by_deal, store_contradiction) available for reuse. 33 unit tests.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-prd.md</path>
+        <title>Manda Product Requirements Document</title>
+        <section>FR-KB-004 Cross-Document Analysis</section>
+        <snippet>System shall identify contradictions between documents, surface missing information gaps, track information evolution over time, and flag inconsistencies automatically. Gap Analysis workflow: User requests gap analysis → System compares IRL requests vs received documents → System identifies missing information in knowledge base → System suggests follow-up questions for seller → User exports updated IRL or follow-up request list.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-prd.md</path>
+        <title>Manda Product Requirements Document</title>
+        <section>FR-IRL-003 IRL-Document Linking</section>
+        <snippet>Map received documents to IRL items. Trigger processing when IRL items fulfilled. Track coverage (which requests have responses). Identify missing information gaps.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-prd.md</path>
+        <title>Manda Product Requirements Document</title>
+        <section>Agent Tools - find_gaps</section>
+        <snippet>find_gaps(category) - Identify missing information. One of 11 chat tools for knowledge querying. Returns gaps by category for analyst review.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Knowledge Base - Insight Types</section>
+        <snippet>Insight node types include: "pattern", "contradiction", "gap". Gap insights stored in Neo4j with relationships to findings and documents. find_gaps_tool is one of 11 agent tools for intelligence operations.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/KnowledgeExplorerClient.tsx</path>
+        <kind>component</kind>
+        <symbol>KnowledgeExplorerClient</symbol>
+        <lines>1-139</lines>
+        <reason>Main client component with tab navigation. Contains PlaceholderTab for Gap Analysis that needs to be replaced with GapAnalysisView. Tab badge logic for gapsCount already implemented.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/contradictions/ContradictionsView.tsx</path>
+        <kind>component</kind>
+        <symbol>ContradictionsView</symbol>
+        <lines>1-331</lines>
+        <reason>Reference pattern for building GapAnalysisView. Same structure: filter bar, status dropdown, count display, loading skeleton, error state, empty state, list rendering, URL state management.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/contradictions/ContradictionCard.tsx</path>
+        <kind>component</kind>
+        <symbol>ContradictionCard</symbol>
+        <reason>Reference pattern for GapCard component structure with expandable details and action buttons.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/contradictions/ContradictionActions.tsx</path>
+        <kind>component</kind>
+        <symbol>ContradictionActions</symbol>
+        <reason>Reference pattern for GapActions component with dialog-based actions and toast notifications.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/api/irl.ts</path>
+        <kind>service</kind>
+        <symbol>getProjectIRL, linkDocumentToIRLItem</symbol>
+        <lines>1-312</lines>
+        <reason>IRL API functions to reuse for gap detection. getProjectIRL returns IRLItems with documentId (null = gap). DO NOT recreate these functions.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/api/contradictions.ts</path>
+        <kind>service</kind>
+        <symbol>getContradictions, resolveContradiction</symbol>
+        <lines>1-182</lines>
+        <reason>Reference pattern for gaps.ts API client. Same structure: buildQueryString, fetch with filters, resolve action.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/findings.ts</path>
+        <kind>types</kind>
+        <symbol>Finding, FindingDomain, FINDING_DOMAINS</symbol>
+        <lines>1-214</lines>
+        <reason>Finding type definitions and domain enums to reuse. Information gaps derived from domain coverage analysis.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/contradictions.ts</path>
+        <kind>types</kind>
+        <symbol>ContradictionStatus, CONTRADICTION_FILTER_OPTIONS</symbol>
+        <reason>Reference pattern for gaps.ts type definitions and filter options.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/ConfidenceBadge.tsx</path>
+        <kind>component</kind>
+        <symbol>ConfidenceBadge</symbol>
+        <reason>Shared component for confidence display. Reuse for gap priority display.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/DomainTag.tsx</path>
+        <kind>component</kind>
+        <symbol>DomainTag</symbol>
+        <reason>Shared component for domain display. Reuse for gap category badges.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/StatusBadge.tsx</path>
+        <kind>component</kind>
+        <symbol>StatusBadge</symbol>
+        <reason>Shared component for status display. Reuse for gap status (active, resolved, not_applicable).</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/FindingActions.tsx</path>
+        <kind>component</kind>
+        <symbol>FindingActions</symbol>
+        <reason>Reference for inline action buttons pattern with undo functionality.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/supabase/migrations/00014_create_irl_items_table.sql</path>
+        <kind>migration</kind>
+        <symbol>irl_items table</symbol>
+        <reason>IRL items schema: id, irl_id, category, name, description, required, sort_order. Documents linked via irl_item_id column.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/supabase/migrations/00004_create_findings_table.sql</path>
+        <kind>migration</kind>
+        <symbol>findings table</symbol>
+        <reason>Findings schema with domain column for coverage analysis. Use finding_domain_enum for domain filtering.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/contradictions/route.ts</path>
+        <kind>api</kind>
+        <symbol>GET /api/projects/[id]/contradictions</symbol>
+        <reason>Reference pattern for gaps API route structure with Zod validation and Supabase queries.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="Node.js">
+        <package name="next" version="15.x">App Router API routes</package>
+        <package name="react" version="19.x">UI components</package>
+        <package name="@supabase/supabase-js" version="^2.84.0">Database client</package>
+        <package name="zod" version="^3.x">API validation schemas</package>
+        <package name="sonner" version="^2.0.7">Toast notifications</package>
+        <package name="lucide-react" version="^0.554.0">Icons (HelpCircle, Plus, X, etc.)</package>
+        <package name="@tanstack/react-table" version="^8.x">DataTable (if needed for gap list)</package>
+      </ecosystem>
+      <uiComponents>
+        <component name="shadcn/ui">Card, Badge, Button, Select, Dialog, Alert, Skeleton, Tabs</component>
+      </uiComponents>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Follow ContradictionsView pattern for component structure: filter bar, status filter, count display, loading/error/empty states, list rendering</constraint>
+    <constraint type="pattern">Use URL state management for filter persistence (useSearchParams, useRouter)</constraint>
+    <constraint type="pattern">Implement optimistic UI updates with toast notifications</constraint>
+    <constraint type="pattern">Use Zod schemas for all API route validation</constraint>
+    <constraint type="data">IRL gaps: Query irl_items where documentId is null (no linked document)</constraint>
+    <constraint type="data">Information gaps: Count findings per domain, identify domains with sparse coverage (&lt;3 findings)</constraint>
+    <constraint type="integration">Reuse lib/api/irl.ts functions for IRL operations - DO NOT recreate</constraint>
+    <constraint type="integration">Creating findings uses POST /api/projects/[id]/findings endpoint</constraint>
+    <constraint type="ux">Priority color coding: High (red/destructive), Medium (yellow/warning), Low (gray/secondary)</constraint>
+    <constraint type="ux">5-second undo window for Mark N/A action using toast with action button</constraint>
+    <constraint type="testing">Follow existing test patterns in __tests__/components/knowledge-explorer/</constraint>
+    <constraint type="accessibility">Include ARIA labels on all interactive elements, support keyboard navigation</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Gap API - List Gaps" kind="REST endpoint">
+      <signature>GET /api/projects/[id]/gaps</signature>
+      <path>manda-app/app/api/projects/[id]/gaps/route.ts</path>
+      <response>{ gaps: Gap[], irlGaps: number, infoGaps: number, total: number }</response>
+    </interface>
+    <interface name="Gap API - Resolve Gap" kind="REST endpoint">
+      <signature>POST /api/projects/[id]/gaps/[gapId]/resolve</signature>
+      <path>manda-app/app/api/projects/[id]/gaps/[gapId]/resolve/route.ts</path>
+      <body>{ status: 'resolved' | 'not_applicable', note?: string }</body>
+    </interface>
+    <interface name="Gap API - Add to IRL" kind="REST endpoint">
+      <signature>POST /api/projects/[id]/gaps/[gapId]/add-to-irl</signature>
+      <path>manda-app/app/api/projects/[id]/gaps/[gapId]/add-to-irl/route.ts</path>
+      <body>{ irlId: string }</body>
+    </interface>
+    <interface name="Gap Types" kind="TypeScript interface">
+      <signature>interface Gap { id, dealId, category, description, priority, status, relatedIrlItemId?, resolvedAt? }</signature>
+      <path>manda-app/lib/types/gaps.ts</path>
+    </interface>
+    <interface name="IRL API" kind="existing function">
+      <signature>getProjectIRL(projectId: string): Promise&lt;{ irl: IRL | null, error?: string }&gt;</signature>
+      <path>manda-app/lib/api/irl.ts:66</path>
+    </interface>
+    <interface name="Findings API - Create Finding" kind="REST endpoint">
+      <signature>POST /api/projects/[id]/findings</signature>
+      <path>manda-app/app/api/projects/[id]/findings/route.ts</path>
+      <body>{ text, domain, findingType, confidence, sourceDocument? }</body>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Vitest for unit and component tests. Use React Testing Library for component testing.
+      Follow existing patterns in __tests__/components/knowledge-explorer/.
+      Mock Supabase client using @/__tests__/utils/supabase-mock.ts utilities.
+      Test loading, error, empty states for all data-fetching components.
+      Include accessibility tests: ARIA labels, keyboard navigation, screen reader support.
+      Aim for coverage comparable to ContradictionsView tests (~80%+).
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/gaps/GapAnalysisView.test.tsx</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/gaps/GapCard.test.tsx</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/gaps/GapActions.test.tsx</location>
+      <location>manda-app/__tests__/api/gaps.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test GapAnalysisView renders tab content when Gap Analysis tab is active</idea>
+      <idea ac="AC1">Test loading skeleton displays while fetching</idea>
+      <idea ac="AC2">Test IRL gaps section shows items without linked documents</idea>
+      <idea ac="AC2">Test gap count badge updates correctly</idea>
+      <idea ac="AC3">Test information gaps derived from domain coverage analysis</idea>
+      <idea ac="AC4">Test GapCard renders category badge, description, priority badge</idea>
+      <idea ac="AC4">Test priority color coding (High=red, Medium=yellow, Low=gray)</idea>
+      <idea ac="AC4">Test expandable details section toggle</idea>
+      <idea ac="AC5">Test "Add to IRL" button creates IRL item and shows toast</idea>
+      <idea ac="AC5">Test gap status updates to "addressed" after Add to IRL</idea>
+      <idea ac="AC6">Test "Mark N/A" shows confirmation dialog</idea>
+      <idea ac="AC6">Test undo toast appears with 5-second window</idea>
+      <idea ac="AC6">Test undo reverts gap status</idea>
+      <idea ac="AC7">Test "Add Manual Finding" modal opens with form</idea>
+      <idea ac="AC7">Test form validation (text required, domain required)</idea>
+      <idea ac="AC7">Test finding creation updates gap status to "resolved"</idea>
+      <idea ac="AC8">Test statistics header shows correct counts</idea>
+      <idea ac="AC8">Test filter by category works (All, IRL, Information, Resolved)</idea>
+      <idea ac="AC8">Test sort by priority, category, created date</idea>
+      <idea ac="AC8">Test URL state persistence for filters</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -82,9 +82,7 @@ export async function POST(
 
     const jobPayload: DetectContradictionsJobPayload = {
       deal_id: projectId,
-      user_id: user.id,
       // No document_id - this is a project-wide detection
-      manual_trigger: true,
     }
 
     const jobId = await boss.send('detect-contradictions', jobPayload, {

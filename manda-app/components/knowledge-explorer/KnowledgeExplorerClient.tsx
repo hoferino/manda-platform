@@ -3,12 +3,13 @@
  * Main client component for Knowledge Explorer with tab navigation
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface (AC: #1)
  * Story: E4.6 - Build Contradictions View (AC: #1)
+ * Story: E4.8 - Build Gap Analysis View (AC: #1)
  *
  * Features:
  * - Tab navigation: Findings, Contradictions, Gap Analysis
  * - Findings Browser as default view
  * - Contradictions View for resolving conflicts
- * - Placeholder tabs for future stories
+ * - Gap Analysis View for identifying missing information
  */
 
 'use client'
@@ -16,9 +17,9 @@
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FindingsBrowser } from './findings'
 import { ContradictionsView } from './contradictions'
+import { GapAnalysisView } from './gaps'
 import { FileText, AlertTriangle, HelpCircle } from 'lucide-react'
 
 interface KnowledgeExplorerClientProps {
@@ -91,48 +92,10 @@ export function KnowledgeExplorerClient({
           </TabsContent>
 
           <TabsContent value="gaps" className="h-full m-0 p-6">
-            <PlaceholderTab
-              title="Gap Analysis"
-              description="Identify missing information based on IRL requirements and industry standards."
-              icon={HelpCircle}
-              epic={4}
-              story="E4.8"
-            />
+            <GapAnalysisView projectId={projectId} />
           </TabsContent>
         </div>
       </Tabs>
     </div>
-  )
-}
-
-// Placeholder component for future tabs
-function PlaceholderTab({
-  title,
-  description,
-  icon: Icon,
-  epic,
-  story,
-}: {
-  title: string
-  description: string
-  icon: typeof FileText
-  epic: number
-  story: string
-}) {
-  return (
-    <Card className="border-dashed">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-          <Icon className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="text-center">
-        <Badge variant="outline" className="text-xs">
-          Coming in Epic {epic} - Story {story}
-        </Badge>
-      </CardContent>
-    </Card>
   )
 }
