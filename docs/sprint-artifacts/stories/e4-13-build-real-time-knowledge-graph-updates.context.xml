@@ -1,0 +1,251 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>13</storyId>
+    <title>Build Real-Time Knowledge Graph Updates</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-13-build-real-time-knowledge-graph-updates.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to see the knowledge graph update in real-time as new findings are extracted, contradictions detected, or validations occur</iWant>
+    <soThat>I can track how the system is learning from documents and stay informed of changes without manual refreshing</soThat>
+    <tasks>
+      <task id="1" ac="1,2,7">Create useFindingsRealtime Hook - Subscribe to findings table, handle INSERT/UPDATE/DELETE, debounced callbacks, reconnection logic</task>
+      <task id="2" ac="1,3,7">Create useContradictionsRealtime Hook - Subscribe to contradictions table, handle events, track resolved/unresolved counts</task>
+      <task id="3" ac="1,4,6,8">Create useKnowledgeExplorerRealtime Hook - Composite hook combining findings and contradictions, aggregate status, auto-refresh toggle</task>
+      <task id="4" ac="8">Create ConnectionStatusIndicator Component - Status dot (green/yellow/red), tooltip, click-to-reconnect</task>
+      <task id="5" ac="6">Create AutoRefreshToggle Component - Switch with localStorage persistence, keyboard shortcut (Ctrl/Cmd+Shift+R)</task>
+      <task id="6" ac="5">Create RealtimeToastHandler Component - Toast notifications for new findings/contradictions, max 3 queue, clickable navigation</task>
+      <task id="7" ac="1-8">Integrate Realtime into KnowledgeExplorerClient - Add hooks, status indicator, toggle, toast handler to header</task>
+      <task id="8" ac="2,4">Update FindingsBrowser for Realtime Updates - Accept onRealtimeUpdate callback, invalidate React Query cache, handle optimistic updates</task>
+      <task id="9" ac="3,4">Update ContradictionsView for Realtime Updates - Accept onRealtimeUpdate callback, handle new contradictions and resolutions</task>
+      <task id="10" ac="1,2,3,7">Write Hook Unit Tests - Test subscriptions, cleanup, debouncing, reconnection logic</task>
+      <task id="11" ac="4,5,6,8">Write Component Tests - Test ConnectionStatusIndicator, AutoRefreshToggle, RealtimeToastHandler</task>
+      <task id="12" ac="all">Write Integration Tests - Test full Knowledge Explorer with realtime, badge updates, no subscription leaks</task>
+      <task id="13" ac="all">Verify Build and All Tests Pass - Full test suite, production build, manual testing</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Supabase Realtime Subscription Setup - Subscriptions to findings/contradictions filtered by project_id, handle INSERT/UPDATE/DELETE, connection status indicator, exponential backoff reconnection (max 5 attempts)</ac>
+    <ac id="2">Findings Table Real-Time Updates - New findings appear automatically, status/text updates reflect immediately, deletions remove from view, 100ms debounce</ac>
+    <ac id="3">Contradictions Table Real-Time Updates - Badge count updates on new contradiction, list updates automatically, resolution status reflects immediately</ac>
+    <ac id="4">Tab Badge Count Updates - Findings/contradictions counts update in tab badges, debounced to avoid flickering</ac>
+    <ac id="5">Toast Notifications for New Items - Toast on new finding/contradiction/processing complete, 5-second auto-hide, clickable to navigate, max 3 simultaneous</ac>
+    <ac id="6">Auto-Refresh Toggle - Toggle switch in header (default: ON), pauses updates when OFF, manual refresh button, localStorage persistence per project, keyboard shortcut Ctrl/Cmd+Shift+R</ac>
+    <ac id="7">Debouncing and UI Performance - 100ms batch window, responsive during high-frequency updates, "Updating..." indicator for large batches, efficient React Query invalidation, no subscription leaks</ac>
+    <ac id="8">Connection Status Indicator - Small status dot (green=connected, yellow=connecting, red=disconnected), hover tooltip with full status, click-to-reconnect on disconnected</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Epic 4 Technical Specification</title>
+        <section>Non-Functional Requirements, Architecture Pattern</section>
+        <snippet>Performance targets: pagination &lt;300ms, optimistic updates for mutations, debounced inputs (300ms search, 100ms realtime). Supabase Realtime for WebSocket connections, React Query for caching.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E4.md</path>
+        <title>Epic 4: Collaborative Knowledge Workflow</title>
+        <section>Stories</section>
+        <snippet>E4.14: Build Real-Time Knowledge Graph Updates - last story in Epic 4, implements real-time visibility into knowledge extraction.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Platform Architecture</title>
+        <section>Technology Stack</section>
+        <snippet>Supabase Realtime for WebSocket connections, Row-Level Security for project isolation, React Query for client-side caching.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>manda-app/lib/hooks/useDocumentUpdates.ts</path>
+        <kind>hook</kind>
+        <symbol>useDocumentUpdates</symbol>
+        <lines>1-280</lines>
+        <reason>PRIMARY PATTERN: Existing Supabase Realtime subscription hook to follow. Contains channel subscription, event handling, connection status tracking, exponential backoff reconnection, and cleanup patterns.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/KnowledgeExplorerClient.tsx</path>
+        <kind>component</kind>
+        <symbol>KnowledgeExplorerClient</symbol>
+        <lines>1-102</lines>
+        <reason>TARGET: Main component to integrate realtime hooks, status indicator, and toggle. Currently receives findingsCount, contradictionsCount as props - needs realtime updates.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx</path>
+        <kind>component</kind>
+        <symbol>FindingsBrowser</symbol>
+        <lines>1-919</lines>
+        <reason>TARGET: Needs to accept onRealtimeUpdate callback, handle optimistic updates for INSERT/UPDATE/DELETE events, maintain scroll position.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/contradictions/ContradictionsView.tsx</path>
+        <kind>component</kind>
+        <symbol>ContradictionsView</symbol>
+        <lines>1-331</lines>
+        <reason>TARGET: Needs to accept onRealtimeUpdate callback, handle new contradictions and resolution updates.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/types/findings.ts</path>
+        <kind>types</kind>
+        <symbol>Finding, FindingStatus, FindingsResponse</symbol>
+        <lines>1-214</lines>
+        <reason>Type definitions for findings including Finding interface, status types, and response structures needed for realtime event handling.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/types/contradictions.ts</path>
+        <kind>types</kind>
+        <symbol>Contradiction, ContradictionStatus, ContradictionWithFindings</symbol>
+        <lines>1-175</lines>
+        <reason>Type definitions for contradictions including Contradiction interface, status types, and mapContradictionFromDb helper for database record transformation.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/hooks/index.ts</path>
+        <kind>barrel</kind>
+        <symbol>exports</symbol>
+        <lines>1-24</lines>
+        <reason>MODIFY: Export barrel file - needs to export new realtime hooks (useFindingsRealtime, useContradictionsRealtime, useKnowledgeExplorerRealtime).</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/index.ts</path>
+        <kind>barrel</kind>
+        <symbol>exports</symbol>
+        <lines>1-37</lines>
+        <reason>MODIFY: May need to export any new realtime-related components if created in findings folder.</reason>
+      </file>
+      <file>
+        <path>manda-app/__tests__/utils/supabase-mock.ts</path>
+        <kind>test-utils</kind>
+        <symbol>createMockSupabaseClient, createMockRealtimeChannel, MockRealtimeChannel</symbol>
+        <lines>1-424</lines>
+        <reason>REUSE: Test utilities for mocking Supabase client and realtime channels. Contains createMockRealtimeChannel() with on(), subscribe(), unsubscribe() mocks.</reason>
+      </file>
+      <file>
+        <path>manda-app/__tests__/lib/hooks/useDocumentUpdates.test.ts</path>
+        <kind>test</kind>
+        <symbol>useDocumentUpdates tests</symbol>
+        <lines>1-119</lines>
+        <reason>PATTERN: Test patterns for realtime hook testing. Tests helper functions (didProcessingStatusChange, didProcessingComplete, didProcessingFail) - follow similar pattern for new hooks.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <node>
+        <package>@supabase/supabase-js</package>
+        <version>^2.84.0</version>
+        <usage>Supabase client with Realtime support - RealtimeChannel, RealtimePostgresChangesPayload types</usage>
+      </node>
+      <node>
+        <package>sonner</package>
+        <version>^2.0.7</version>
+        <usage>Toast notifications - toast.success(), toast.error() with action buttons</usage>
+      </node>
+      <node>
+        <package>zustand</package>
+        <version>^5.0.8</version>
+        <usage>State management - may be useful for global realtime state if needed across components</usage>
+      </node>
+      <node>
+        <package>lucide-react</package>
+        <version>^0.554.0</version>
+        <usage>Icons - Wifi, WifiOff, RefreshCw, Bell for status indicator and toggle</usage>
+      </node>
+      <node>
+        <package>@radix-ui/react-tooltip</package>
+        <version>^1.2.8</version>
+        <usage>Tooltip component for connection status hover info</usage>
+      </node>
+      <devNode>
+        <package>vitest</package>
+        <version>^4.0.14</version>
+        <usage>Testing framework - vi.fn(), vi.mock(), describe/it/expect</usage>
+      </devNode>
+      <devNode>
+        <package>@testing-library/react</package>
+        <version>^16.3.0</version>
+        <usage>Component testing - render, screen, fireEvent, waitFor</usage>
+      </devNode>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec">Performance: Pagination navigation &lt;300ms, optimistic updates for mutations</constraint>
+    <constraint source="tech-spec">Debouncing: 300ms for search inputs, 100ms for realtime event batching</constraint>
+    <constraint source="architecture">Supabase Realtime: Channel naming pattern "{table}:project={projectId}", filter "deal_id=eq.${projectId}"</constraint>
+    <constraint source="architecture">Row-Level Security: RLS policies ensure project isolation - subscriptions automatically filtered</constraint>
+    <constraint source="dev-notes">Connection handling: SUBSCRIBED, CLOSED, CHANNEL_ERROR states, exponential backoff (max 30s delay)</constraint>
+    <constraint source="dev-notes">Cleanup: Unsubscribe on component unmount to prevent memory leaks</constraint>
+    <constraint source="existing-code">Follow useDocumentUpdates hook pattern exactly for consistency</constraint>
+    <constraint source="existing-code">Toast patterns: success toasts with action button (Undo), 5-second duration</constraint>
+    <constraint source="existing-code">localStorage pattern: key format for user preferences per project</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Supabase Realtime Channel</name>
+      <kind>WebSocket subscription</kind>
+      <signature>supabase.channel(name).on('postgres_changes', { event: '*', schema: 'public', table: 'findings', filter: 'deal_id=eq.{projectId}' }, callback).subscribe()</signature>
+      <path>manda-app/lib/hooks/useDocumentUpdates.ts:185-214</path>
+    </interface>
+    <interface>
+      <name>ConnectionStatus type</name>
+      <kind>TypeScript type</kind>
+      <signature>type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error'</signature>
+      <path>manda-app/lib/hooks/useDocumentUpdates.ts:57</path>
+    </interface>
+    <interface>
+      <name>RealtimePostgresChangesPayload</name>
+      <kind>Supabase type</kind>
+      <signature>RealtimePostgresChangesPayload&lt;T&gt; with eventType: 'INSERT' | 'UPDATE' | 'DELETE', new: T, old: T</signature>
+      <path>@supabase/supabase-js</path>
+    </interface>
+    <interface>
+      <name>KnowledgeExplorerClientProps</name>
+      <kind>React props</kind>
+      <signature>{ projectId: string, documents: { id: string; name: string }[], findingsCount?: number, contradictionsCount?: number, gapsCount?: number }</signature>
+      <path>manda-app/components/knowledge-explorer/KnowledgeExplorerClient.tsx:25-31</path>
+    </interface>
+    <interface>
+      <name>toast (sonner)</name>
+      <kind>function</kind>
+      <signature>toast.success(message, { action?: { label: string, onClick: () => void }, duration?: number })</signature>
+      <path>sonner</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing uses Vitest (^4.0.14) with React Testing Library (^16.3.0). Tests are colocated in __tests__ folder mirroring src structure.
+      Mock Supabase client using createMockSupabaseClient() and createMockRealtimeChannel() from __tests__/utils/supabase-mock.ts.
+      Use vi.mock() for module mocking, vi.fn() for function spies. Tests should cover subscription setup, event handling, cleanup on unmount, and error states.
+      Component tests should verify rendering, user interactions (click, keyboard shortcuts), accessibility (aria-labels), and state changes.
+      Current test count: 800+ tests with 85-93% backend coverage.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/hooks/</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/</location>
+      <location>manda-app/__tests__/utils/supabase-mock.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test useFindingsRealtime: subscription setup with correct channel name and filter, cleanup on unmount, reconnection on CLOSED status</idea>
+      <idea ac="1">Test useContradictionsRealtime: subscription setup, resolved/unresolved count tracking, event transformation</idea>
+      <idea ac="2">Test findings INSERT event: new finding appears in list, count updates</idea>
+      <idea ac="2">Test findings UPDATE event: status change reflects immediately, optimistic update pattern</idea>
+      <idea ac="2">Test findings DELETE event: finding removed from list</idea>
+      <idea ac="3">Test contradictions INSERT event: badge count updates, new item in list</idea>
+      <idea ac="3">Test contradictions UPDATE event: resolution status changes in place</idea>
+      <idea ac="5">Test toast notification on new finding: correct message with document name</idea>
+      <idea ac="5">Test toast queue: max 3 simultaneous, queue additional</idea>
+      <idea ac="6">Test AutoRefreshToggle: toggle state persists to localStorage, keyboard shortcut works</idea>
+      <idea ac="6">Test paused state: updates queued but not applied when toggle OFF</idea>
+      <idea ac="7">Test debouncing: multiple rapid updates within 100ms batched</idea>
+      <idea ac="7">Test no subscription leaks: channel.unsubscribe() called on unmount</idea>
+      <idea ac="8">Test ConnectionStatusIndicator: correct color for each status, tooltip content, click-to-reconnect</idea>
+    </ideas>
+  </tests>
+</story-context>

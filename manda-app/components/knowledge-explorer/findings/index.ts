@@ -5,6 +5,7 @@
  * Story: E4.9 - Implement Finding Detail View with Full Context
  * Story: E4.10 - Implement Export Findings to CSV/Excel
  * Story: E4.11 - Build Bulk Actions for Finding Management
+ * Story: E4.12 - Implement Export Findings Feature (Advanced)
  */
 
 export { FindingsBrowser } from './FindingsBrowser'
@@ -23,3 +24,13 @@ export { SelectionToolbar, type SelectionToolbarProps } from './SelectionToolbar
 export { BulkConfirmDialog, type BulkConfirmDialogProps, type BulkAction } from './BulkConfirmDialog'
 export { useBulkUndo, type BulkUndoState } from './useBulkUndo'
 export { UndoToast, type UndoToastProps } from './UndoToast'
+// E4.12: Advanced Export
+export {
+  ExportModal,
+  type ExportModalProps,
+  type ExportFormat,
+  type ExportScope,
+  type ExportField,
+  type ExportHistoryItem,
+  EXPORT_FIELDS,
+} from './ExportModal'

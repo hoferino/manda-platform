@@ -21,3 +21,32 @@ export {
   type UseProcessingQueueOptions,
   type UseProcessingQueueResult,
 } from './useProcessingQueue'
+
+// E4.13 - Knowledge Explorer Realtime Updates
+export {
+  useFindingsRealtime,
+  didFindingStatusChange,
+  didFindingGetValidated,
+  didFindingGetRejected,
+  type FindingUpdate,
+  type FindingUpdateType,
+  type UseFindingsRealtimeOptions,
+} from './useFindingsRealtime'
+
+export {
+  useContradictionsRealtime,
+  didContradictionStatusChange,
+  didContradictionGetResolved,
+  isContradictionUnresolved,
+  type ContradictionUpdate,
+  type ContradictionUpdateType,
+  type UseContradictionsRealtimeOptions,
+} from './useContradictionsRealtime'
+
+export {
+  useKnowledgeExplorerRealtime,
+  type RealtimeEvent,
+  type AggregateConnectionStatus,
+  type UseKnowledgeExplorerRealtimeOptions,
+  type UseKnowledgeExplorerRealtimeResult,
+} from './useKnowledgeExplorerRealtime'

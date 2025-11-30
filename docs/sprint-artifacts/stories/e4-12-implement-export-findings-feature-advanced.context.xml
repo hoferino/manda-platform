@@ -1,0 +1,194 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>12</storyId>
+    <title>Implement Export Findings Feature (Advanced)</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-12-implement-export-findings-feature-advanced.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to export findings to various formats with customizable field selection and export scope options</iWant>
+    <soThat>I can use the intelligence in reports and presentations with exactly the columns and data I need</soThat>
+    <tasks>
+      <task id="1" acs="1,10">Create ExportModal Component - Use shadcn/ui Dialog, add format selection with icons (CSV/Excel/Report), implement Cancel/Export buttons, ARIA attributes, Escape key handling</task>
+      <task id="2" acs="2">Implement Field Selection UI - Checkbox for each exportable field (Finding Text, Source Document, Page/Cell, Domain, Type, Confidence, Status, Created Date), Select All/Deselect All, validate at least one selected, drag-and-drop reordering (stretch)</task>
+      <task id="3" acs="3">Implement Export Scope Selection - Radio buttons for All/Filtered/Selected, counts for each option, conditional enable for Selected based on selection state</task>
+      <task id="4" acs="4,8">Update CSV Export for Field Selection - Accept selectedFields array, filter/reorder columns, optional filter criteria comment row</task>
+      <task id="5" acs="5,8">Update Excel Export for Field Selection - Use selectedFields, conditional formatting for status, percentage for confidence, date formatting, auto-fit columns</task>
+      <task id="6" acs="6">Implement Report Format Export - HTML template with metadata header, group findings by domain, confidence bar visualization, summary statistics</task>
+      <task id="7" acs="7">Implement Background Processing - Export job queue for >500 findings, progress tracking state, progress indicator UI, cancel functionality, toast notification with download</task>
+      <task id="8" acs="9">Implement Export History - localStorage storage for last 5 exports, show filename/date/count/format, re-download from history, clear history, 1-hour expiry</task>
+      <task id="9" acs="1-10">Integrate ExportModal into FindingsBrowser - Replace ExportDropdown trigger with modal, pass filter/selection state, wire up handlers</task>
+      <task id="10" acs="all">Write Component Tests - ExportModal, FieldSelector, ExportScopeSelector, ExportProgress, ExportHistory, accessibility</task>
+      <task id="11" acs="4,5,6,7">Write API and Integration Tests - Field-filtered CSV/Excel, report format generation, background processing, large export handling</task>
+      <task id="12" acs="all">Verify Build and All Tests Pass - Full test suite, production build, manual testing, accessibility audit</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" name="Export Modal with Format Selection">Clicking Export button opens modal with CSV/Excel/Report format options, descriptions, Cancel/Export buttons, keyboard accessible (Escape to close, Tab navigation)</criterion>
+    <criterion id="AC2" name="Field Selection Checkboxes">Fields section with checkboxes for Finding Text, Source Document, Page/Cell, Domain, Type, Confidence, Status, Created Date; all checked by default; Select All/Deselect All; at least one required; order determines export column order</criterion>
+    <criterion id="AC3" name="Export Scope Selection">Radio buttons for Export All, Export Filtered, Export Selected; counts shown for each; Selected only enabled with selection; default based on filter state</criterion>
+    <criterion id="AC4" name="CSV Export with Selected Fields">CSV includes only selected fields in selected order, UTF-8 BOM, proper escaping, filename includes export type (all/filtered/selected)</criterion>
+    <criterion id="AC5" name="Excel Export with Formatting">Excel with selected fields, bold header with freeze pane, auto-fit columns, confidence as percentage, status with conditional colors, formatted dates</criterion>
+    <criterion id="AC6" name="Report Format Export">Formatted HTML with metadata header (project, date, filters, count), findings grouped by domain, confidence bar visualization, summary statistics (count by domain/status, confidence distribution)</criterion>
+    <criterion id="AC7" name="Background Processing for Large Exports">Processing progress for >500 findings, non-blocking UI, toast notification when ready with download link, cancel button available</criterion>
+    <criterion id="AC8" name="Filter Criteria in Export">CSV/Excel optional filter criteria row, Report format shows criteria in header section</criterion>
+    <criterion id="AC9" name="Export History and Re-download">Recent 5 exports accessible from modal, show filename/date/count/format, re-download without regenerating (1-hour storage), clear history option</criterion>
+    <criterion id="AC10" name="Accessibility">ARIA dialog pattern with focus trap, labeled checkboxes, grouped radio buttons with fieldset/legend, progress live region, screen reader announces completion</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="Non-Functional Requirements" snippet="Export 500 findings less than 10s. Server-side generation for large datasets. Maximum 5000 findings per export to prevent timeout." />
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="APIs and Interfaces" snippet="POST /api/projects/[id]/findings/export - Body: { format: 'csv' | 'xlsx', filters?: FindingFilters }. Response: Binary file download." />
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="Dependencies" snippet="New Dependencies: @tanstack/react-table, exceljs, csv-stringify. All already installed in package.json." />
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="5.3 Knowledge Explorer" snippet="Finding Card/Row Elements include Validation Actions with visual confirmation patterns. Export actions should follow similar patterns." />
+      <doc path="docs/sprint-artifacts/stories/e4-10-implement-export-findings-to-csv-excel.md" title="E4.10 Story (Done)" section="Completion Notes" snippet="Basic CSV/Excel export implemented. ExportDropdown component, export API route, exceljs/csv-stringify integration complete. 23 tests passing." />
+      <doc path="docs/sprint-artifacts/stories/e4-11-build-bulk-actions-for-finding-management.md" title="E4.11 Story (Done)" section="Completion Notes" snippet="Selection state via useSelectionState hook available. BulkConfirmDialog modal pattern reusable. 829 total tests passing." />
+    </docs>
+    <code>
+      <artifact path="manda-app/components/knowledge-explorer/findings/ExportDropdown.tsx" kind="component" symbol="ExportDropdown" lines="1-186" reason="EXISTING export dropdown - will be replaced by ExportModal trigger. Contains exportFindings call pattern to reuse." />
+      <artifact path="manda-app/app/api/projects/[id]/findings/export/route.ts" kind="api-route" symbol="POST handler" lines="1-369" reason="EXISTING export API - MODIFY to add field selection, scope, report format. Contains CSV/Excel generation logic." />
+      <artifact path="manda-app/lib/api/findings.ts" kind="service" symbol="exportFindings" lines="304-345" reason="EXISTING client function - MODIFY to support field selection, scope, report format parameters." />
+      <artifact path="manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx" kind="component" symbol="FindingsBrowser" lines="1-886" reason="MODIFY - Replace ExportDropdown with ExportModal. Pass selection state from useSelectionState for 'Export Selected' scope." />
+      <artifact path="manda-app/components/knowledge-explorer/findings/BulkConfirmDialog.tsx" kind="component" symbol="BulkConfirmDialog" lines="1-131" reason="REFERENCE for modal dialog pattern using AlertDialog. Reuse structure for ExportModal." />
+      <artifact path="manda-app/components/knowledge-explorer/findings/useSelectionState.ts" kind="hook" symbol="useSelectionState" lines="1-136" reason="USE for 'Export Selected' scope. Provides selectedIds, selectedIdsArray, count." />
+      <artifact path="manda-app/components/ui/dialog.tsx" kind="ui-component" symbol="Dialog" reason="USE for ExportModal - shadcn/ui dialog component (different from AlertDialog used in BulkConfirmDialog)." />
+      <artifact path="manda-app/components/ui/checkbox.tsx" kind="ui-component" symbol="Checkbox" reason="USE for field selection checkboxes." />
+      <artifact path="manda-app/components/ui/radio-group.tsx" kind="ui-component" symbol="RadioGroup, RadioGroupItem" reason="USE for export scope selection (All/Filtered/Selected)." />
+      <artifact path="manda-app/__tests__/components/knowledge-explorer/findings/ExportDropdown.test.tsx" kind="test" symbol="ExportDropdown tests" lines="1-338" reason="REFERENCE for testing patterns - vitest, @testing-library/react, mock patterns." />
+    </code>
+    <dependencies>
+      <node>
+        <package name="exceljs" version="^4.4.0" purpose="Excel generation with formatting" />
+        <package name="csv-stringify" version="^6.6.0" purpose="CSV generation with proper escaping" />
+        <package name="@radix-ui/react-dialog" version="^1.1.15" purpose="Modal dialog component via shadcn/ui" />
+        <package name="@radix-ui/react-checkbox" version="^1.3.3" purpose="Field selection checkboxes" />
+        <package name="@radix-ui/react-radio-group" version="^1.3.8" purpose="Export scope radio buttons" />
+        <package name="sonner" version="^2.0.7" purpose="Toast notifications" />
+        <package name="date-fns" version="^4.1.0" purpose="Date formatting for filenames" />
+        <package name="lucide-react" version="^0.554.0" purpose="Icons (Download, FileSpreadsheet, FileText, etc.)" />
+      </node>
+      <dev>
+        <package name="vitest" version="^4.0.14" purpose="Test framework" />
+        <package name="@testing-library/react" version="^16.3.0" purpose="Component testing utilities" />
+        <package name="@testing-library/user-event" version="^14.6.1" purpose="User interaction simulation" />
+      </dev>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Tech Spec">Export 500 findings must complete in less than 10 seconds</constraint>
+    <constraint source="Tech Spec">Maximum 5000 findings per export to prevent timeout</constraint>
+    <constraint source="Tech Spec">Server-side generation via POST /api/projects/[id]/findings/export</constraint>
+    <constraint source="Story">Background processing threshold: 500 findings (show progress for larger)</constraint>
+    <constraint source="Story">Export history: localStorage, 5 recent, 1-hour expiry</constraint>
+    <constraint source="Story">Report format: HTML initially (PDF as stretch goal - requires server-side rendering)</constraint>
+    <constraint source="Architecture">RLS policies on findings table - user can only export their own deal's findings</constraint>
+    <constraint source="Previous Story">DO NOT recreate lib/api/findings.ts - EXTEND existing exportFindings function</constraint>
+    <constraint source="Previous Story">DO NOT recreate export API route - MODIFY existing route.ts</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Export API Request (Enhanced)" kind="REST endpoint">
+      <signature>POST /api/projects/[id]/findings/export</signature>
+      <body>{
+  format: 'csv' | 'xlsx' | 'report',
+  fields?: string[],  // NEW: Selected fields in order
+  scope?: 'all' | 'filtered' | 'selected',  // NEW: Export scope
+  findingIds?: string[],  // NEW: For 'selected' scope only
+  includeFilterCriteria?: boolean,  // NEW: Add filter info to export
+  filters?: ExportFilters  // Existing: Applied filters
+}</body>
+      <response>Binary file with Content-Type and Content-Disposition headers</response>
+      <path>manda-app/app/api/projects/[id]/findings/export/route.ts</path>
+    </interface>
+    <interface name="ExportFilters" kind="TypeScript interface">
+      <signature>interface ExportFilters</signature>
+      <body>{
+  documentId?: string
+  domain?: FindingDomain[]
+  findingType?: FindingType[]
+  status?: FindingStatus[]
+  confidenceMin?: number
+  confidenceMax?: number
+}</body>
+      <path>manda-app/lib/api/findings.ts</path>
+    </interface>
+    <interface name="exportFindings (Enhanced)" kind="function signature">
+      <signature>exportFindings(projectId, format, options): Promise&lt;ExportResult&gt;</signature>
+      <body>options: {
+  filters?: ExportFilters,
+  fields?: string[],
+  scope?: 'all' | 'filtered' | 'selected',
+  findingIds?: string[],
+  includeFilterCriteria?: boolean,
+  searchQuery?: string
+}</body>
+      <path>manda-app/lib/api/findings.ts</path>
+    </interface>
+    <interface name="ExportModalProps" kind="component props">
+      <signature>interface ExportModalProps</signature>
+      <body>{
+  isOpen: boolean
+  onOpenChange: (open: boolean) =&gt; void
+  projectId: string
+  filters: ExportFilters
+  findingCount: number  // For 'all' scope
+  filteredCount: number  // For 'filtered' scope
+  selectedIds: Set&lt;string&gt;  // From useSelectionState
+  searchQuery?: string
+}</body>
+      <path>manda-app/components/knowledge-explorer/findings/ExportModal.tsx (NEW)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Tests use Vitest (v4.0.14) with @testing-library/react (v16.3.0) and @testing-library/user-event (v14.6.1).
+      Component tests mock external dependencies (API calls via vi.mock, toast via vi.mock('sonner')).
+      Each test file includes describe blocks organized by feature/AC.
+      Accessibility tests verify ARIA labels, keyboard navigation, focus management.
+      Use userEvent.setup() for realistic user interactions.
+      829 tests currently passing - maintain or increase coverage.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/ExportModal.test.tsx (NEW)</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/FieldSelector.test.tsx (NEW)</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/ExportScopeSelector.test.tsx (NEW)</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/ExportProgress.test.tsx (NEW)</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/ExportHistory.test.tsx (NEW)</location>
+      <location>manda-app/__tests__/api/findings/export-enhanced.test.ts (NEW or extend existing)</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test ExportModal renders with three format options (CSV, Excel, Report), Cancel/Export buttons</idea>
+      <idea ac="1">Test Escape key closes modal</idea>
+      <idea ac="1">Test Tab navigation through modal elements</idea>
+      <idea ac="2">Test FieldSelector shows all 8 field checkboxes</idea>
+      <idea ac="2">Test Select All checks all fields</idea>
+      <idea ac="2">Test Deselect All unchecks all fields</idea>
+      <idea ac="2">Test Export button disabled when no fields selected</idea>
+      <idea ac="3">Test scope radio buttons render with counts</idea>
+      <idea ac="3">Test 'Export Selected' disabled when no selection</idea>
+      <idea ac="3">Test default scope is 'filtered' when filters active</idea>
+      <idea ac="4">Test CSV export API accepts fields array</idea>
+      <idea ac="4">Test CSV output contains only selected columns</idea>
+      <idea ac="5">Test Excel export applies conditional formatting to status</idea>
+      <idea ac="5">Test Excel confidence column formatted as percentage</idea>
+      <idea ac="6">Test report format groups findings by domain</idea>
+      <idea ac="6">Test report includes summary statistics</idea>
+      <idea ac="7">Test progress indicator shown for >500 findings</idea>
+      <idea ac="7">Test cancel button stops export</idea>
+      <idea ac="8">Test filter criteria appears in CSV when option enabled</idea>
+      <idea ac="9">Test export history shows last 5 exports</idea>
+      <idea ac="9">Test re-download from history works</idea>
+      <idea ac="10">Test ARIA labels on all interactive elements</idea>
+      <idea ac="10">Test screen reader announcements for export completion</idea>
+    </ideas>
+  </tests>
+</story-context>

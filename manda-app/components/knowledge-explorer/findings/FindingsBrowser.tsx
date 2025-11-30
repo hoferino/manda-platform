@@ -33,7 +33,7 @@ import { FindingFilters } from './FindingFilters'
 import { FindingsTable } from './FindingsTable'
 import { FindingsCardGrid } from './FindingsCardGrid'
 import { FindingDetailPanel } from './FindingDetailPanel'
-import { ExportDropdown } from './ExportDropdown'
+import { ExportModal } from './ExportModal'
 import { InlineEdit } from './InlineEdit'
 import { useUndoValidation, type UndoState } from './useUndoValidation'
 import { ViewToggle, useViewPreference, type ViewMode } from '../shared'
@@ -57,6 +57,8 @@ import type {
 interface FindingsBrowserProps {
   projectId: string
   documents: { id: string; name: string }[]
+  /** Callback to register refresh function for realtime updates (E4.13) */
+  onRegisterRefresh?: (refresh: () => void) => void
 }
 
 const DEFAULT_FILTERS: FilterType = {
@@ -66,7 +68,7 @@ const DEFAULT_FILTERS: FilterType = {
   limit: 50,
 }
 
-export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) {
+export function FindingsBrowser({ projectId, documents, onRegisterRefresh }: FindingsBrowserProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -118,6 +120,9 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
   const [bulkAction, setBulkAction] = useState<BulkAction>('validate')
   const [isBulkProcessing, setIsBulkProcessing] = useState(false)
+
+  // E4.12: Export modal state
+  const [exportModalOpen, setExportModalOpen] = useState(false)
 
   // Memoize export filters to avoid recreating object on each render
   const exportFilters: ExportFilters = useMemo(() => ({
@@ -290,6 +295,13 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
       fetchFindings()
     }
   }, [fetchFindings, isSearchMode])
+
+  // E4.13: Register refresh function for realtime updates
+  useEffect(() => {
+    if (onRegisterRefresh) {
+      onRegisterRefresh(fetchFindings)
+    }
+  }, [onRegisterRefresh, fetchFindings])
 
   // Handle initial search from URL
   useEffect(() => {
@@ -752,13 +764,31 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
 
         {/* View Toggle and Export */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <ExportDropdown
-            projectId={projectId}
-            filters={exportFilters}
-            findingCount={displayTotal}
-            searchQuery={isSearchMode ? searchQuery : undefined}
-            disabled={isLoading || isSearching}
-          />
+          <button
+            type="button"
+            onClick={() => setExportModalOpen(true)}
+            disabled={isLoading || isSearching || displayTotal === 0}
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+            aria-label={displayTotal === 0 ? 'No findings to export' : `Export ${displayTotal} findings`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" x2="12" y1="15" y2="3" />
+            </svg>
+            Export
+          </button>
           <ViewToggle
             value={viewMode}
             onChange={setViewMode}
@@ -880,6 +910,18 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
           onDismiss={clearBulkUndo}
         />
       )}
+
+      {/* E4.12: Export Modal */}
+      <ExportModal
+        isOpen={exportModalOpen}
+        onOpenChange={setExportModalOpen}
+        projectId={projectId}
+        filters={exportFilters}
+        findingCount={data?.total || 0}
+        filteredCount={displayTotal}
+        selectedIds={selectedIds}
+        searchQuery={isSearchMode ? searchQuery : undefined}
+      />
     </div>
   )
 }

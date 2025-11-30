@@ -523,10 +523,27 @@ development_status:
   # - Gap analysis against IRL requirements
   # - New tables: contradictions (findings already exists)
   # - Dependencies: @tanstack/react-table, exceljs, csv-stringify
-  epic-4: contexted
+  epic-4: done
   epic-4-jira-id: SCRUM-47
   epic-4-contexted: 2025-11-28
+  epic-4-completed: 2025-11-30
   epic-4-tech-spec: docs/sprint-artifacts/tech-spec-epic-E4.md
+  epic-4-notes: |
+    All 13 stories completed. Duration: 3 days (Nov 28-30).
+    Key deliverables:
+    - Knowledge Explorer with Findings, Contradictions, Gap Analysis tabs
+    - Findings Browser with table/card views, semantic search, source attribution
+    - Real-time updates via Supabase Realtime WebSocket subscriptions
+    - Contradiction detection with Neo4j integration
+    - Gap analysis against IRL requirements
+    - Export to CSV, Excel, and HTML report formats
+    - Bulk actions for finding management
+    - 1000+ tests with comprehensive coverage
+    Key patterns established:
+    - Supabase Realtime subscription hooks
+    - Composite hooks for state management
+    - URL state for filter/view persistence
+    - Virtual scrolling for large datasets
   e4-1-build-knowledge-explorer-ui-main-interface: done
   e4-1-jira-id: SCRUM-48
   e4-1-drafted: 2025-11-28
@@ -706,12 +723,41 @@ development_status:
     - Integration with FindingsBrowser for full bulk action workflow
     - 110+ new tests (hooks, components, API) - 829 total tests passing
     - Build passing with all TypeScript checks
-  e4-12-implement-export-findings-feature-advanced: backlog
+  e4-12-implement-export-findings-feature-advanced: done
   e4-12-jira-id: SCRUM-60
+  e4-12-drafted: 2025-11-30
+  e4-12-context-ready: 2025-11-30
+  e4-12-completed: 2025-11-30
   e4-12-note: "Renumbered from E4.13 after duplicate E4.11 removal"
-  e4-13-build-real-time-knowledge-graph-updates: backlog
+  e4-12-completion-notes: |
+    - Created ExportModal component with format selection (CSV, Excel, Report)
+    - Field selection UI with Select All/Deselect All buttons
+    - Export scope selection (All findings, Filtered findings, Selected findings)
+    - Progress indicator for large exports (>500 findings)
+    - Export history with localStorage and re-download capability (1-hour expiry)
+    - Report format generating formatted HTML grouped by domain with statistics
+    - Updated export API route to support field selection, scope, and report format
+    - Integrated ExportModal into FindingsBrowser replacing ExportDropdown
+    - 62 tests passing (29 API + 33 component)
+    - Build passing with all TypeScript checks
+  e4-13-build-real-time-knowledge-graph-updates: done
   e4-13-jira-id: SCRUM-61
-  e4-13-note: "Renumbered from E4.14 after duplicate E4.11 removal"
+  e4-13-drafted: 2025-11-30
+  e4-13-context-ready: 2025-11-30
+  e4-13-completed: 2025-11-30
+  e4-13-note: "Renumbered from E4.14 after duplicate E4.11 removal. Last story in Epic 4."
+  e4-13-completion-notes: |
+    - Created useFindingsRealtime hook for findings table subscriptions
+    - Created useContradictionsRealtime hook for contradictions table subscriptions
+    - Created useKnowledgeExplorerRealtime composite hook with auto-refresh toggle
+    - Created ConnectionStatusIndicator (green/yellow/red dot with tooltip)
+    - Created AutoRefreshToggle with localStorage persistence and keyboard shortcut
+    - Created RealtimeToastHandler for toast notifications on new findings/contradictions
+    - Created switch.tsx shadcn/ui component (was missing)
+    - Integrated into KnowledgeExplorerClient with badge count updates
+    - 100ms debouncing, exponential backoff reconnection, subscription cleanup
+    - Comprehensive tests: hook unit tests, component tests, integration tests
+    - Build passing with all TypeScript checks
   epic-4-retrospective: optional
 
   # Epic 5: Conversational Assistant (9 stories)

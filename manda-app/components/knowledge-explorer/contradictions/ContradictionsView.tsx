@@ -41,6 +41,8 @@ import { cn } from '@/lib/utils'
 export interface ContradictionsViewProps {
   projectId: string
   className?: string
+  /** Callback to register refresh function for realtime updates (E4.13) */
+  onRegisterRefresh?: (refresh: () => void) => void
 }
 
 /**
@@ -162,7 +164,7 @@ function getFilterIcon(status: ContradictionStatus | 'all') {
   }
 }
 
-export function ContradictionsView({ projectId, className }: ContradictionsViewProps) {
+export function ContradictionsView({ projectId, className, onRegisterRefresh }: ContradictionsViewProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -200,6 +202,13 @@ export function ContradictionsView({ projectId, className }: ContradictionsViewP
   useEffect(() => {
     fetchContradictions()
   }, [fetchContradictions])
+
+  // E4.13: Register refresh function for realtime updates
+  useEffect(() => {
+    if (onRegisterRefresh) {
+      onRegisterRefresh(fetchContradictions)
+    }
+  }, [onRegisterRefresh, fetchContradictions])
 
   // Update URL when filter changes
   const handleStatusChange = useCallback(
