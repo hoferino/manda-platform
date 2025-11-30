@@ -6,11 +6,13 @@
  * Story: E4.3 - Implement Inline Finding Validation (AC: #1, #2, #3, #4, #8)
  * Story: E4.4 - Build Card View Alternative for Findings (AC: #2, #3, #4, #5, #6)
  * Story: E4.9 - Implement Finding Detail View with Full Context (AC: #1, #7, #8)
+ * Story: E4.10 - Implement Export Findings to CSV/Excel (AC: #1, #4, #5)
  *
  * Combines:
  * - FindingSearch for semantic search
  * - FindingFilters for filtering controls
  * - ViewToggle for Table/Card view switching
+ * - ExportDropdown for CSV/Excel export
  * - FindingsTable for table data display
  * - FindingsCardGrid for card data display
  * - FindingDetailPanel for slide-out detail view
@@ -21,7 +23,7 @@
 
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import { FindingSearch, EmptySearchResults } from './FindingSearch'
@@ -29,10 +31,12 @@ import { FindingFilters } from './FindingFilters'
 import { FindingsTable } from './FindingsTable'
 import { FindingsCardGrid } from './FindingsCardGrid'
 import { FindingDetailPanel } from './FindingDetailPanel'
+import { ExportDropdown } from './ExportDropdown'
 import { InlineEdit } from './InlineEdit'
 import { useUndoValidation, type UndoState } from './useUndoValidation'
 import { ViewToggle, useViewPreference, type ViewMode } from '../shared'
 import { getFindings, validateFinding, updateFinding, searchFindings } from '@/lib/api/findings'
+import type { ExportFilters } from '@/lib/api/findings'
 import type {
   Finding,
   FindingFilters as FilterType,
@@ -88,6 +92,23 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
 
   // Determine if we're in search mode
   const isSearchMode = searchQuery.trim().length > 0 && searchResults !== null
+
+  // Memoize export filters to avoid recreating object on each render
+  const exportFilters: ExportFilters = useMemo(() => ({
+    documentId: filters.documentId,
+    domain: filters.domain,
+    findingType: filters.findingType,
+    status: filters.status,
+    confidenceMin: filters.confidenceMin,
+    confidenceMax: filters.confidenceMax,
+  }), [
+    filters.documentId,
+    filters.domain,
+    filters.findingType,
+    filters.status,
+    filters.confidenceMin,
+    filters.confidenceMax,
+  ])
 
   // Undo handler
   const handleUndo = useCallback(
@@ -588,12 +609,20 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
           onClearAll={isSearchMode ? handleClearSearch : undefined}
         />
 
-        {/* View Toggle */}
-        <ViewToggle
-          value={viewMode}
-          onChange={setViewMode}
-          className="flex-shrink-0"
-        />
+        {/* View Toggle and Export */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <ExportDropdown
+            projectId={projectId}
+            filters={exportFilters}
+            findingCount={displayTotal}
+            searchQuery={isSearchMode ? searchQuery : undefined}
+            disabled={isLoading || isSearching}
+          />
+          <ViewToggle
+            value={viewMode}
+            onChange={setViewMode}
+          />
+        </div>
       </div>
 
       {/* Error state */}

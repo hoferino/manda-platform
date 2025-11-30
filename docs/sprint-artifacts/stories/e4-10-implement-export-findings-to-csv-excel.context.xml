@@ -1,0 +1,374 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>10</storyId>
+    <title>Implement Export Findings to CSV/Excel</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-10-implement-export-findings-to-csv-excel.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to export findings to CSV and Excel formats</iWant>
+    <soThat>I can share extracted intelligence with colleagues, import it into other tools, or create offline backups of validated findings</soThat>
+    <tasks>
+      <task id="1" ac="3">
+        <title>Install Export Dependencies</title>
+        <subtasks>
+          <subtask>Add exceljs package for Excel generation</subtask>
+          <subtask>Add csv-stringify package for CSV generation</subtask>
+          <subtask>Verify TypeScript types available</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2,3,6">
+        <title>Create Export API Route</title>
+        <subtasks>
+          <subtask>Create app/api/projects/[id]/findings/export/route.ts</subtask>
+          <subtask>Implement POST handler with format and filters parameters</subtask>
+          <subtask>Add Zod schema for request validation</subtask>
+          <subtask>Implement CSV generation using csv-stringify</subtask>
+          <subtask>Implement Excel generation using exceljs</subtask>
+          <subtask>Set appropriate response headers for file download</subtask>
+          <subtask>Add 5000 finding limit with truncation</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="1,4,5,7">
+        <title>Create ExportDropdown Component</title>
+        <subtasks>
+          <subtask>Create components/knowledge-explorer/findings/ExportDropdown.tsx</subtask>
+          <subtask>Use shadcn/ui DropdownMenu component</subtask>
+          <subtask>Add CSV and Excel options with icons</subtask>
+          <subtask>Show finding count in dropdown items</subtask>
+          <subtask>Implement loading state during export</subtask>
+          <subtask>Add disabled state when no findings</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="6">
+        <title>Add Export API Client Function</title>
+        <subtasks>
+          <subtask>Add exportFindings function to lib/api/findings.ts</subtask>
+          <subtask>Handle binary response and trigger download</subtask>
+          <subtask>Accept format and filters parameters</subtask>
+          <subtask>Return filename for toast notification</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="1,4,5">
+        <title>Integrate Export into FindingsBrowser</title>
+        <subtasks>
+          <subtask>Add ExportDropdown to FindingsBrowser toolbar</subtask>
+          <subtask>Pass current filters and finding count to ExportDropdown</subtask>
+          <subtask>Pass current search query if in search mode</subtask>
+          <subtask>Add toast notifications for success/error</subtask>
+          <subtask>Handle large export warning</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="3">
+        <title>Style Excel Output</title>
+        <subtasks>
+          <subtask>Apply header row formatting (bold, background color)</subtask>
+          <subtask>Add freeze panes for header row</subtask>
+          <subtask>Auto-size columns based on content</subtask>
+          <subtask>Apply conditional formatting for confidence (green/yellow/red)</subtask>
+          <subtask>Apply cell colors for domain badges</subtask>
+        </subtasks>
+      </task>
+      <task id="7" ac="all">
+        <title>Write Component Tests</title>
+        <subtasks>
+          <subtask>Test ExportDropdown rendering and interactions</subtask>
+          <subtask>Test dropdown menu keyboard navigation</subtask>
+          <subtask>Test disabled state when no findings</subtask>
+          <subtask>Test loading state during export</subtask>
+          <subtask>Test accessibility (ARIA labels, focus management)</subtask>
+        </subtasks>
+      </task>
+      <task id="8" ac="2,3,6">
+        <title>Write API Route Tests</title>
+        <subtasks>
+          <subtask>Test CSV export with mock findings</subtask>
+          <subtask>Test Excel export with mock findings</subtask>
+          <subtask>Test filter application in export</subtask>
+          <subtask>Test 5000 finding limit enforcement</subtask>
+          <subtask>Test error handling (invalid format, no findings)</subtask>
+          <subtask>Test authentication/authorization</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" title="Export Button in Findings Browser">
+      <requirement>Export button visible in the Findings Browser toolbar (next to view toggle)</requirement>
+      <requirement>Dropdown menu with format options: CSV, Excel (xlsx)</requirement>
+      <requirement>Button shows "Export" with download icon</requirement>
+      <requirement>Disabled state when no findings available</requirement>
+      <requirement>Keyboard accessible (Enter/Space to open dropdown)</requirement>
+    </criterion>
+    <criterion id="2" title="CSV Export">
+      <requirement>Exports findings to a CSV file with proper escaping</requirement>
+      <requirement>Columns: Finding Text, Domain, Type, Confidence, Status, Source Document, Page/Cell Reference, Created Date</requirement>
+      <requirement>Respects current filters (only exports filtered findings)</requirement>
+      <requirement>UTF-8 encoding for international characters</requirement>
+      <requirement>Filename format: findings-{project-name}-{date}.csv</requirement>
+      <requirement>Download triggers immediately on selection</requirement>
+    </criterion>
+    <criterion id="3" title="Excel Export">
+      <requirement>Exports findings to an xlsx file using exceljs</requirement>
+      <requirement>Single worksheet named "Findings"</requirement>
+      <requirement>Header row with bold formatting and freeze panes</requirement>
+      <requirement>Columns auto-sized to content width</requirement>
+      <requirement>Confidence column formatted as percentage</requirement>
+      <requirement>Domain and Status columns with color-coded cells matching UI badges</requirement>
+      <requirement>Filename format: findings-{project-name}-{date}.xlsx</requirement>
+    </criterion>
+    <criterion id="4" title="Filter-Aware Export">
+      <requirement>Export respects all active filters (document, domain, type, confidence range, status)</requirement>
+      <requirement>Export respects current search query (if semantic search is active)</requirement>
+      <requirement>Export count shown in confirmation: "Export 42 findings?"</requirement>
+      <requirement>Maximum export limit of 5000 findings to prevent timeout</requirement>
+      <requirement>Warning shown if export would exceed limit: "Only first 5000 findings will be exported"</requirement>
+    </criterion>
+    <criterion id="5" title="Export Progress and Feedback">
+      <requirement>Loading spinner shown during export generation</requirement>
+      <requirement>Toast notification on successful export: "Exported X findings to {filename}"</requirement>
+      <requirement>Error toast if export fails: "Export failed: {reason}"</requirement>
+      <requirement>For large exports (>500 findings), show progress indicator</requirement>
+    </criterion>
+    <criterion id="6" title="Server-Side Generation">
+      <requirement>Export generated server-side via API route POST /api/projects/[id]/findings/export</requirement>
+      <requirement>Request body: { format: 'csv' | 'xlsx', filters: FindingFilters }</requirement>
+      <requirement>Response: Binary file with appropriate Content-Type and Content-Disposition headers</requirement>
+      <requirement>API validates user has access to project (RLS)</requirement>
+    </criterion>
+    <criterion id="7" title="Accessibility">
+      <requirement>Export dropdown menu accessible via keyboard</requirement>
+      <requirement>Screen reader announces export completion</requirement>
+      <requirement>Focus management returns to export button after completion</requirement>
+      <requirement>ARIA labels for export button and dropdown items</requirement>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Epic 4 Technical Specification</title>
+        <section>E4.10: Export Findings to CSV/Excel</section>
+        <snippet>POST /api/projects/[id]/findings/export with body { format: 'csv' | 'xlsx', filters?: FindingFilters }. Response: Binary file download. Target performance: Export 500 findings &lt; 10s. Dependencies: exceljs, csv-stringify.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Epic 4 Technical Specification</title>
+        <section>Non-Functional Requirements - Performance</section>
+        <snippet>Export 500 findings: &lt; 10s (Export button to download complete). Pagination navigation: &lt; 300ms.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Epic 4 Technical Specification</title>
+        <section>Dependencies to Add</section>
+        <snippet>@tanstack/react-table for DataTable; exceljs for Excel export functionality; csv-stringify for CSV export functionality.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e4-9-implement-finding-detail-view-with-full-context.md</path>
+        <title>Story E4.9 - Finding Detail View (Previous Story)</title>
+        <section>Completion Notes</section>
+        <snippet>173 tests - maintain similar coverage. Use Zod validation for request body. FindingFilters interface exists in lib/types/findings.ts. buildQueryString function in lib/api/findings.ts for filter handling.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>manda-app/lib/api/findings.ts</path>
+        <kind>api-client</kind>
+        <symbol>buildQueryString, getFindings, createFinding, updateFinding, validateFinding, searchFindings, getFindingById</symbol>
+        <lines>1-267</lines>
+        <reason>EXTEND - Add exportFindings function for binary download. Reuse buildQueryString for consistent filter handling.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/types/findings.ts</path>
+        <kind>types</kind>
+        <symbol>FindingFilters, Finding, FindingDomain, FindingType, FindingStatus, FINDING_DOMAINS, FINDING_STATUSES</symbol>
+        <lines>1-214</lines>
+        <reason>Reuse FindingFilters for export request. Use FINDING_DOMAINS/FINDING_STATUSES for Excel cell colors.</reason>
+      </file>
+      <file>
+        <path>manda-app/app/api/projects/[id]/findings/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>GET, POST, FindingsQuerySchema</symbol>
+        <lines>1-270</lines>
+        <reason>Reference for API pattern, Zod validation, RLS access check, finding transformation.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx</path>
+        <kind>component</kind>
+        <symbol>FindingsBrowser</symbol>
+        <lines>1-676</lines>
+        <reason>MODIFY - Add ExportDropdown to toolbar, pass filters and finding count.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/index.ts</path>
+        <kind>barrel-export</kind>
+        <symbol>exports</symbol>
+        <lines>1-17</lines>
+        <reason>MODIFY - Add ExportDropdown export.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/ui/dropdown-menu.tsx</path>
+        <kind>ui-component</kind>
+        <symbol>DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem</symbol>
+        <lines>1-258</lines>
+        <reason>USE - Build ExportDropdown component with these shadcn/ui primitives.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/ui/button.tsx</path>
+        <kind>ui-component</kind>
+        <symbol>Button</symbol>
+        <reason>USE - Export button with loading state via disabled prop.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/shared/ViewToggle.tsx</path>
+        <kind>component</kind>
+        <symbol>ViewToggle</symbol>
+        <reason>Reference for toolbar button pattern - ExportDropdown goes next to ViewToggle.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <node>
+        <package>exceljs</package>
+        <version>^4.4.0</version>
+        <purpose>Server-side Excel xlsx file generation with formatting support</purpose>
+        <install>npm install exceljs</install>
+      </node>
+      <node>
+        <package>csv-stringify</package>
+        <version>^6.5.0</version>
+        <purpose>Server-side CSV generation with proper escaping and UTF-8 support</purpose>
+        <install>npm install csv-stringify</install>
+      </node>
+      <existing>
+        <package>@radix-ui/react-dropdown-menu</package>
+        <version>^2.1.16</version>
+        <purpose>Already installed - used by shadcn/ui dropdown-menu component</purpose>
+      </existing>
+      <existing>
+        <package>sonner</package>
+        <version>^2.0.7</version>
+        <purpose>Already installed - toast notifications for export success/error</purpose>
+      </existing>
+      <existing>
+        <package>lucide-react</package>
+        <version>^0.554.0</version>
+        <purpose>Already installed - Download, FileSpreadsheet, FileText icons</purpose>
+      </existing>
+      <existing>
+        <package>date-fns</package>
+        <version>^4.1.0</version>
+        <purpose>Already installed - format date for filename</purpose>
+      </existing>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec">Server-side generation required to handle large datasets</constraint>
+    <constraint source="tech-spec">Maximum 5000 findings per export to prevent timeout</constraint>
+    <constraint source="tech-spec">Target performance: Export 500 findings &lt; 10s</constraint>
+    <constraint source="architecture">RLS policies on findings table - API must verify user access via deals table</constraint>
+    <constraint source="dev-notes">Reuse buildQueryString from lib/api/findings.ts for consistent filter handling</constraint>
+    <constraint source="dev-notes">Do not recreate lib/api/findings.ts - extend with exportFindings function</constraint>
+    <constraint source="patterns">Use Zod validation for API request body (per E4.9 pattern)</constraint>
+    <constraint source="patterns">Return appropriate HTTP status codes with error messages</constraint>
+    <constraint source="a11y">ARIA labels required for export button and dropdown items</constraint>
+    <constraint source="a11y">Focus management returns to export button after completion</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>POST /api/projects/[id]/findings/export</name>
+      <kind>REST endpoint</kind>
+      <signature>POST /api/projects/{projectId}/findings/export
+Body: { format: 'csv' | 'xlsx', filters?: FindingFilters, searchQuery?: string }
+Response: Binary file with Content-Type: text/csv or application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+Headers: Content-Disposition: attachment; filename="findings-{project-name}-{date}.{ext}"</signature>
+      <path>manda-app/app/api/projects/[id]/findings/export/route.ts</path>
+    </interface>
+    <interface>
+      <name>exportFindings</name>
+      <kind>API client function</kind>
+      <signature>async function exportFindings(
+  projectId: string,
+  format: 'csv' | 'xlsx',
+  filters?: FindingFilters,
+  searchQuery?: string
+): Promise&lt;{ filename: string }&gt;</signature>
+      <path>manda-app/lib/api/findings.ts</path>
+    </interface>
+    <interface>
+      <name>ExportDropdownProps</name>
+      <kind>component props</kind>
+      <signature>interface ExportDropdownProps {
+  projectId: string
+  filters: FindingFilters
+  findingCount: number
+  searchQuery?: string
+  disabled?: boolean
+  className?: string
+}</signature>
+      <path>manda-app/components/knowledge-explorer/findings/ExportDropdown.tsx</path>
+    </interface>
+    <interface>
+      <name>FindingFilters</name>
+      <kind>existing type</kind>
+      <signature>interface FindingFilters {
+  documentId?: string
+  domain?: FindingDomain[]
+  findingType?: FindingType[]
+  confidenceMin?: number
+  confidenceMax?: number
+  status?: FindingStatus[]
+  sortBy?: 'confidence' | 'createdAt' | 'domain'
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  limit?: number
+}</signature>
+      <path>manda-app/lib/types/findings.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Vitest for unit/integration tests with React Testing Library.
+      Tests located in __tests__/ directory mirroring src structure.
+      Mock Supabase client using shared utilities from __tests__/utils/supabase-mock.ts.
+      Test coverage target: maintain similar to E4.9 (173 tests).
+      Use data-testid attributes for reliable test selection.
+      API route tests should mock Supabase responses and verify correct response headers.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/ExportDropdown.test.tsx</location>
+      <location>manda-app/__tests__/api/projects/findings/export.test.ts</location>
+      <location>manda-app/__tests__/lib/api/findings.test.ts (extend existing)</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test ExportDropdown renders with Download icon and "Export" text</idea>
+      <idea ac="1">Test dropdown opens on click and shows CSV/Excel options</idea>
+      <idea ac="1">Test disabled state when findingCount is 0</idea>
+      <idea ac="1">Test keyboard navigation (Enter opens, Arrow keys navigate, Escape closes)</idea>
+      <idea ac="2">Test CSV export API returns correct Content-Type header</idea>
+      <idea ac="2">Test CSV export contains all required columns in correct order</idea>
+      <idea ac="2">Test CSV properly escapes special characters (commas, quotes, newlines)</idea>
+      <idea ac="3">Test Excel export API returns correct Content-Type header</idea>
+      <idea ac="3">Test Excel export creates worksheet named "Findings"</idea>
+      <idea ac="4">Test export applies FindingFilters correctly (mock DB query verification)</idea>
+      <idea ac="4">Test export respects 5000 limit (mock 6000 findings, verify only 5000 exported)</idea>
+      <idea ac="5">Test loading spinner shown during export (component state)</idea>
+      <idea ac="5">Test success toast appears with filename after export</idea>
+      <idea ac="5">Test error toast appears on API failure</idea>
+      <idea ac="6">Test API returns 401 when not authenticated</idea>
+      <idea ac="6">Test API returns 404 when project not found</idea>
+      <idea ac="6">Test API returns 400 for invalid format parameter</idea>
+      <idea ac="7">Test ARIA labels present on export button and dropdown items</idea>
+      <idea ac="7">Test focus returns to trigger button after selection</idea>
+    </ideas>
+  </tests>
+</story-context>

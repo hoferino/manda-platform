@@ -264,3 +264,81 @@ export async function getFindingById(
   const result = await response.json()
   return result.finding
 }
+
+/**
+ * Export format type
+ */
+export type ExportFormat = 'csv' | 'xlsx'
+
+/**
+ * Export filters (subset of FindingFilters for export)
+ */
+export interface ExportFilters {
+  documentId?: string
+  domain?: FindingDomain[]
+  findingType?: FindingType[]
+  status?: FindingStatus[]
+  confidenceMin?: number
+  confidenceMax?: number
+}
+
+/**
+ * Export result with filename
+ */
+export interface ExportResult {
+  filename: string
+  count: number
+}
+
+/**
+ * Export findings to CSV or Excel
+ * Story: E4.10 - Implement Export Findings to CSV/Excel (AC: #2, #3, #6)
+ *
+ * @param projectId - The project/deal ID
+ * @param format - Export format ('csv' or 'xlsx')
+ * @param filters - Optional filters to apply to export
+ * @param searchQuery - Optional search query (for semantic search exports)
+ * @returns ExportResult with filename and count
+ */
+export async function exportFindings(
+  projectId: string,
+  format: ExportFormat,
+  filters?: ExportFilters,
+  searchQuery?: string
+): Promise<ExportResult> {
+  const response = await fetch(`/api/projects/${projectId}/findings/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      format,
+      filters,
+      searchQuery,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(errorData.error || 'Export failed')
+  }
+
+  // Get metadata from headers
+  const filename = response.headers.get('X-Export-Filename') || `findings-export.${format}`
+  const count = parseInt(response.headers.get('X-Export-Count') || '0', 10)
+
+  // Get blob and trigger download
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+
+  // Create download link and trigger click
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+
+  // Cleanup
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+
+  return { filename, count }
+}

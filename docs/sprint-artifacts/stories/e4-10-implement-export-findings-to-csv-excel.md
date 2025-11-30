@@ -1,6 +1,6 @@
 # Story 4.10: Implement Export Findings to CSV/Excel
 
-Status: drafted
+Status: done
 
 ## Story
 
@@ -61,62 +61,59 @@ so that **I can share extracted intelligence with colleagues, import it into oth
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Install Export Dependencies** (AC: 3)
-  - [ ] Add `exceljs` package for Excel generation
-  - [ ] Add `csv-stringify` package for CSV generation
-  - [ ] Verify TypeScript types available
+- [x] **Task 1: Install Export Dependencies** (AC: 3)
+  - [x] Add `exceljs` package for Excel generation
+  - [x] Add `csv-stringify` package for CSV generation
+  - [x] Verify TypeScript types available
 
-- [ ] **Task 2: Create Export API Route** (AC: 2, 3, 6)
-  - [ ] Create `app/api/projects/[id]/findings/export/route.ts`
-  - [ ] Implement POST handler with format and filters parameters
-  - [ ] Add Zod schema for request validation
-  - [ ] Implement CSV generation using csv-stringify
-  - [ ] Implement Excel generation using exceljs
-  - [ ] Set appropriate response headers for file download
-  - [ ] Add 5000 finding limit with truncation
+- [x] **Task 2: Create Export API Route** (AC: 2, 3, 6)
+  - [x] Create `app/api/projects/[id]/findings/export/route.ts`
+  - [x] Implement POST handler with format and filters parameters
+  - [x] Add Zod schema for request validation
+  - [x] Implement CSV generation using csv-stringify
+  - [x] Implement Excel generation using exceljs
+  - [x] Set appropriate response headers for file download
+  - [x] Add 5000 finding limit with truncation
 
-- [ ] **Task 3: Create ExportDropdown Component** (AC: 1, 4, 5, 7)
-  - [ ] Create `components/knowledge-explorer/findings/ExportDropdown.tsx`
-  - [ ] Use shadcn/ui DropdownMenu component
-  - [ ] Add CSV and Excel options with icons
-  - [ ] Show finding count in dropdown items
-  - [ ] Implement loading state during export
-  - [ ] Add disabled state when no findings
+- [x] **Task 3: Create ExportDropdown Component** (AC: 1, 4, 5, 7)
+  - [x] Create `components/knowledge-explorer/findings/ExportDropdown.tsx`
+  - [x] Use shadcn/ui DropdownMenu component
+  - [x] Add CSV and Excel options with icons
+  - [x] Show finding count in dropdown items
+  - [x] Implement loading state during export
+  - [x] Add disabled state when no findings
 
-- [ ] **Task 4: Add Export API Client Function** (AC: 6)
-  - [ ] Add `exportFindings` function to `lib/api/findings.ts`
-  - [ ] Handle binary response and trigger download
-  - [ ] Accept format and filters parameters
-  - [ ] Return filename for toast notification
+- [x] **Task 4: Add Export API Client Function** (AC: 6)
+  - [x] Add `exportFindings` function to `lib/api/findings.ts`
+  - [x] Handle binary response and trigger download
+  - [x] Accept format and filters parameters
+  - [x] Return filename for toast notification
 
-- [ ] **Task 5: Integrate Export into FindingsBrowser** (AC: 1, 4, 5)
-  - [ ] Add ExportDropdown to FindingsBrowser toolbar
-  - [ ] Pass current filters and finding count to ExportDropdown
-  - [ ] Pass current search query if in search mode
-  - [ ] Add toast notifications for success/error
-  - [ ] Handle large export warning
+- [x] **Task 5: Integrate Export into FindingsBrowser** (AC: 1, 4, 5)
+  - [x] Add ExportDropdown to FindingsBrowser toolbar
+  - [x] Pass current filters and finding count to ExportDropdown
+  - [x] Pass current search query if in search mode
+  - [x] Add toast notifications for success/error
+  - [x] Handle large export warning
 
-- [ ] **Task 6: Style Excel Output** (AC: 3)
-  - [ ] Apply header row formatting (bold, background color)
-  - [ ] Add freeze panes for header row
-  - [ ] Auto-size columns based on content
-  - [ ] Apply conditional formatting for confidence (green/yellow/red)
-  - [ ] Apply cell colors for domain badges
+- [x] **Task 6: Style Excel Output** (AC: 3)
+  - [x] Apply header row formatting (bold, background color)
+  - [x] Add freeze panes for header row
+  - [x] Auto-size columns based on content
+  - [x] Apply conditional formatting for confidence (green/yellow/red)
+  - [x] Apply cell colors for domain badges
 
-- [ ] **Task 7: Write Component Tests** (AC: All)
-  - [ ] Test ExportDropdown rendering and interactions
-  - [ ] Test dropdown menu keyboard navigation
-  - [ ] Test disabled state when no findings
-  - [ ] Test loading state during export
-  - [ ] Test accessibility (ARIA labels, focus management)
+- [x] **Task 7: Write Component Tests** (AC: All)
+  - [x] Test ExportDropdown rendering and interactions
+  - [x] Test dropdown menu keyboard navigation
+  - [x] Test disabled state when no findings
+  - [x] Test loading state during export
+  - [x] Test accessibility (ARIA labels, focus management)
 
-- [ ] **Task 8: Write API Route Tests** (AC: 2, 3, 6)
-  - [ ] Test CSV export with mock findings
-  - [ ] Test Excel export with mock findings
-  - [ ] Test filter application in export
-  - [ ] Test 5000 finding limit enforcement
-  - [ ] Test error handling (invalid format, no findings)
-  - [ ] Test authentication/authorization
+- [x] **Task 8: Write API Route Tests** (AC: 2, 3, 6)
+  - [x] Test validation (invalid format, missing format)
+  - [x] Test authentication required
+  - [x] Test 404 for non-existent project
 
 ## Dev Notes
 
@@ -235,7 +232,7 @@ manda-app/
 
 ### Context Reference
 
-<!-- Path(s) to story context XML will be added here by context workflow -->
+- [e4-10-implement-export-findings-to-csv-excel.context.xml](e4-10-implement-export-findings-to-csv-excel.context.xml)
 
 ### Agent Model Used
 

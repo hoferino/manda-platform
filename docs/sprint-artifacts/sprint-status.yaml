@@ -672,9 +672,20 @@ development_status:
     - Integration in FindingsBrowser with URL state (?findingId=xxx) for deep linking
     - Click handlers added to FindingsTable rows and FindingCard components
     - 173 tests passing with full accessibility support
-  e4-10-implement-export-findings-to-csv-excel: drafted
+  e4-10-implement-export-findings-to-csv-excel: done
   e4-10-jira-id: SCRUM-57
   e4-10-drafted: 2025-11-30
+  e4-10-context-ready: 2025-11-30
+  e4-10-completed: 2025-11-30
+  e4-10-completion-notes: |
+    - Created export API route POST /api/projects/[id]/findings/export
+    - CSV export with csv-stringify (UTF-8 BOM for Excel compatibility)
+    - Excel export with exceljs (styled headers, freeze panes, color-coded cells)
+    - ExportDropdown component with CSV/Excel options, loading state, accessibility
+    - Added exportFindings function to lib/api/findings.ts
+    - Integrated into FindingsBrowser toolbar with filter-aware export
+    - 5000 finding limit with warning for large exports
+    - 23 tests passing (19 component + 4 API)
   e4-11-implement-contradiction-detection-and-flagging: backlog
   e4-11-jira-id: SCRUM-58
   e4-12-build-bulk-actions-for-finding-management: backlog
