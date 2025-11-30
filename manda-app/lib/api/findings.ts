@@ -16,6 +16,7 @@ import type {
   SearchResponse,
   SearchFilters,
   FindingWithSimilarity,
+  FindingWithContext,
 } from '@/lib/types/findings'
 
 export type {
@@ -29,6 +30,7 @@ export type {
   SearchResponse,
   SearchFilters,
   FindingWithSimilarity,
+  FindingWithContext,
 }
 
 /**
@@ -238,4 +240,27 @@ export async function searchFindings(
   }
 
   return response.json()
+}
+
+/**
+ * Get a single finding with full context
+ * Story: E4.9 - Implement Finding Detail View with Full Context (AC: #2, #3, #4, #5, #6)
+ *
+ * @param projectId - The project/deal ID
+ * @param findingId - The finding ID
+ * @returns FindingWithContext with document, chunk, related findings, and validation history
+ */
+export async function getFindingById(
+  projectId: string,
+  findingId: string
+): Promise<FindingWithContext> {
+  const response = await fetch(`/api/projects/${projectId}/findings/${findingId}`)
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to fetch finding')
+  }
+
+  const result = await response.json()
+  return result.finding
 }

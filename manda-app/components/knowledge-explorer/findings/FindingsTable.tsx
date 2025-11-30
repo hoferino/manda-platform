@@ -70,6 +70,7 @@ interface FindingsTableProps {
   onSortChange: (sortBy: string, sortOrder: 'asc' | 'desc') => void
   onValidate?: (findingId: string, action: 'confirm' | 'reject') => void
   onEdit?: (finding: Finding) => void
+  onRowClick?: (finding: Finding) => void
   showSimilarity?: boolean
   projectId: string
 }
@@ -181,6 +182,7 @@ export function FindingsTable({
   onSortChange,
   onValidate,
   onEdit,
+  onRowClick,
   showSimilarity = false,
   projectId,
 }: FindingsTableProps) {
@@ -474,7 +476,23 @@ export function FindingsTable({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className="hover:bg-muted/50">
+              <TableRow
+                key={row.id}
+                className={cn(
+                  'hover:bg-muted/50',
+                  onRowClick && 'cursor-pointer'
+                )}
+                onClick={() => onRowClick?.(row.original)}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    onRowClick(row.original)
+                  }
+                }}
+                role={onRowClick ? 'button' : undefined}
+                aria-label={onRowClick ? `View details for finding` : undefined}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

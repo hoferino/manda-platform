@@ -2,6 +2,7 @@
  * Findings Components Index
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface
  * Story: E4.4 - Build Card View Alternative for Findings
+ * Story: E4.9 - Implement Finding Detail View with Full Context
  */
 
 export { FindingsBrowser } from './FindingsBrowser'
@@ -9,3 +10,7 @@ export { FindingsTable } from './FindingsTable'
 export { FindingFilters } from './FindingFilters'
 export { FindingCard } from './FindingCard'
 export { FindingsCardGrid } from './FindingsCardGrid'
+export { FindingDetailPanel, type FindingDetailPanelProps } from './FindingDetailPanel'
+export { ConfidenceReasoning, type ConfidenceReasoningProps } from './ConfidenceReasoning'
+export { ValidationHistory, type ValidationHistoryProps } from './ValidationHistory'
+export { RelatedFindings, type RelatedFindingsProps, type RelatedFindingWithSimilarity } from './RelatedFindings'

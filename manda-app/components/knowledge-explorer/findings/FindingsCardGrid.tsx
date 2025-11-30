@@ -43,6 +43,7 @@ export interface FindingsCardGridProps {
   onEdit: (finding: Finding) => void
   onSaveEdit: (newText: string) => Promise<void>
   onCancelEdit: () => void
+  onCardClick?: (finding: Finding) => void
   editingFindingId?: string | null
   showSimilarity?: boolean
   className?: string
@@ -168,6 +169,7 @@ function VirtualCardGrid({
   onEdit,
   onSaveEdit,
   onCancelEdit,
+  onCardClick,
   editingFindingId,
   showSimilarity,
   projectId,
@@ -177,6 +179,7 @@ function VirtualCardGrid({
   onEdit: (finding: Finding) => void
   onSaveEdit: (newText: string) => Promise<void>
   onCancelEdit: () => void
+  onCardClick?: (finding: Finding) => void
   editingFindingId?: string | null
   showSimilarity?: boolean
   projectId: string
@@ -234,6 +237,7 @@ function VirtualCardGrid({
                     onEdit={onEdit}
                     onSaveEdit={onSaveEdit}
                     onCancelEdit={onCancelEdit}
+                    onCardClick={onCardClick}
                     isEditing={editingFindingId === finding.id}
                     showSimilarity={showSimilarity}
                     projectId={projectId}
@@ -259,6 +263,7 @@ export function FindingsCardGrid({
   onEdit,
   onSaveEdit,
   onCancelEdit,
+  onCardClick,
   editingFindingId,
   showSimilarity = false,
   className,
@@ -299,6 +304,7 @@ export function FindingsCardGrid({
           onEdit={onEdit}
           onSaveEdit={onSaveEdit}
           onCancelEdit={onCancelEdit}
+          onCardClick={onCardClick}
           editingFindingId={editingFindingId}
           showSimilarity={showSimilarity}
           projectId={projectId}
@@ -329,6 +335,7 @@ export function FindingsCardGrid({
             onEdit={onEdit}
             onSaveEdit={onSaveEdit}
             onCancelEdit={onCancelEdit}
+            onCardClick={onCardClick}
             isEditing={editingFindingId === finding.id}
             showSimilarity={showSimilarity}
             projectId={projectId}

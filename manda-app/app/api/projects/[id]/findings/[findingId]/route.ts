@@ -2,15 +2,16 @@
  * Individual Finding API Route
  * Handles GET and PATCH operations for individual findings
  * Story: E4.3 - Implement Inline Finding Validation (AC: 6)
+ * Story: E4.9 - Implement Finding Detail View with Full Context (AC: 2, 3, 4, 5, 6)
  *
- * GET /api/projects/[id]/findings/[findingId] - Get finding with context
+ * GET /api/projects/[id]/findings/[findingId] - Get finding with full context
  * PATCH /api/projects/[id]/findings/[findingId] - Update finding text/status
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
-import type { Finding, FindingStatus, ValidationEvent } from '@/lib/types/findings'
+import type { Finding, FindingStatus, FindingWithContext, ValidationEvent, FindingDomain } from '@/lib/types/findings'
 import type { Json } from '@/lib/supabase/database.types'
 
 interface RouteContext {
@@ -19,7 +20,11 @@ interface RouteContext {
 
 /**
  * GET /api/projects/[id]/findings/[findingId]
- * Get a single finding with full context
+ * Get a single finding with full context including:
+ * - Document information
+ * - Chunk content with sheet/cell info
+ * - Related findings (semantic similarity)
+ * - Validation history
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
@@ -47,10 +52,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    // Fetch the finding
+    // Fetch the finding with document join
     const { data: findingData, error: findingError } = await supabase
       .from('findings')
-      .select('*')
+      .select(`
+        *,
+        documents:document_id (
+          id,
+          file_name,
+          file_path
+        )
+      `)
       .eq('id', findingId)
       .eq('deal_id', projectId)
       .single()
@@ -59,13 +71,112 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Finding not found' }, { status: 404 })
     }
 
+    // Fetch chunk data if finding has a chunk_id
+    let chunkData: {
+      id: string
+      content: string
+      sheet_name: string | null
+      cell_reference: string | null
+      page_number: number | null
+    } | null = null
+
+    if (findingData.chunk_id) {
+      const { data: chunk } = await supabase
+        .from('document_chunks')
+        .select('id, content, sheet_name, cell_reference, page_number')
+        .eq('id', findingData.chunk_id)
+        .single()
+
+      chunkData = chunk
+    }
+
+    // Fetch related findings using semantic similarity
+    // Use the finding's embedding to find similar findings
+    let relatedFindings: Finding[] = []
+
+    try {
+      // Check if the finding has an embedding
+      const { data: findingWithEmbedding } = await supabase
+        .from('findings')
+        .select('embedding')
+        .eq('id', findingId)
+        .single()
+
+      if (findingWithEmbedding?.embedding) {
+        // Call the match_findings RPC for semantic similarity
+        const { data: similarFindings } = await supabase.rpc('match_findings', {
+          query_embedding: JSON.stringify(findingWithEmbedding.embedding),
+          match_threshold: 0.5, // Only return reasonably similar findings
+          match_count: 6, // Get 6 to exclude the current finding and still have 5
+          p_deal_id: projectId,
+          p_document_id: undefined,
+          p_domains: undefined,
+          p_statuses: undefined,
+          p_confidence_min: undefined,
+          p_confidence_max: undefined,
+        })
+
+        if (similarFindings) {
+          // Filter out the current finding and limit to 5
+          relatedFindings = similarFindings
+            .filter((f: { id: string }) => f.id !== findingId)
+            .slice(0, 5)
+            .map((row: {
+              id: string
+              deal_id: string
+              document_id: string | null
+              chunk_id: string | null
+              user_id: string
+              text: string
+              source_document: string | null
+              page_number: number | null
+              confidence: number | null
+              finding_type: string | null
+              domain: string | null
+              status: string | null
+              validation_history: unknown
+              metadata: unknown
+              created_at: string
+              updated_at: string | null
+              similarity: number
+            }) => ({
+              id: row.id,
+              dealId: row.deal_id,
+              documentId: row.document_id || null,
+              chunkId: row.chunk_id || null,
+              userId: row.user_id,
+              text: row.text,
+              sourceDocument: row.source_document || null,
+              pageNumber: row.page_number || null,
+              confidence: row.confidence || null,
+              findingType: row.finding_type as Finding['findingType'],
+              domain: row.domain as FindingDomain | null,
+              status: (row.status as FindingStatus) || 'pending',
+              validationHistory: (row.validation_history as unknown as ValidationEvent[]) || [],
+              metadata: row.metadata as Record<string, unknown> | null,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at || null,
+              similarity: row.similarity,
+            }))
+        }
+      }
+    } catch (err) {
+      // If semantic search fails, continue without related findings
+      console.warn('[api/findings/[findingId]] Related findings search error:', err)
+    }
+
     // Transform to API response format
     const extendedRow = findingData as typeof findingData & {
       status?: string
       validation_history?: Json
+      documents?: {
+        id: string
+        file_name: string
+        file_path: string
+      } | null
     }
 
-    const finding: Finding = {
+    const finding: FindingWithContext = {
       id: findingData.id,
       dealId: findingData.deal_id,
       documentId: findingData.document_id,
@@ -82,6 +193,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
       metadata: findingData.metadata as Record<string, unknown> | null,
       createdAt: findingData.created_at,
       updatedAt: findingData.updated_at,
+      // Extended context fields
+      document: extendedRow.documents
+        ? {
+            id: extendedRow.documents.id,
+            name: extendedRow.documents.file_name,
+            filePath: extendedRow.documents.file_path,
+          }
+        : null,
+      chunk: chunkData
+        ? {
+            id: chunkData.id,
+            content: chunkData.content,
+            sheetName: chunkData.sheet_name,
+            cellReference: chunkData.cell_reference,
+            pageNumber: chunkData.page_number,
+          }
+        : null,
+      relatedFindings,
     }
 
     return NextResponse.json({ finding })

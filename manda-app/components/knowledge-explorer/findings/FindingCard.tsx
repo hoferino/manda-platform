@@ -36,6 +36,7 @@ export interface FindingCardProps {
   onEdit: (finding: Finding) => void
   onSaveEdit: (newText: string) => Promise<void>
   onCancelEdit: () => void
+  onCardClick?: (finding: Finding) => void
   isEditing?: boolean
   showSimilarity?: boolean
   className?: string
@@ -118,6 +119,7 @@ export function FindingCard({
   onEdit,
   onSaveEdit,
   onCancelEdit,
+  onCardClick,
   isEditing = false,
   showSimilarity = false,
   className,
@@ -154,14 +156,39 @@ export function FindingCard({
 
       if (e.key === 'Enter') {
         e.preventDefault()
-        toggleExpand()
+        // If onCardClick is provided, use it; otherwise toggle expand
+        if (onCardClick) {
+          onCardClick(finding)
+        } else {
+          toggleExpand()
+        }
       }
       if (e.key === 'Escape' && isExpanded) {
         e.preventDefault()
         setIsExpanded(false)
       }
     },
-    [toggleExpand, isExpanded]
+    [toggleExpand, isExpanded, onCardClick, finding]
+  )
+
+  // Handle card click for detail panel
+  const handleCardClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Don't trigger if clicking on a button or interactive element
+      const target = e.target as HTMLElement
+      if (
+        target.closest('button') ||
+        target.closest('[role="button"]') ||
+        target.closest('a')
+      ) {
+        return
+      }
+
+      if (onCardClick) {
+        onCardClick(finding)
+      }
+    },
+    [onCardClick, finding]
   )
 
   // Handle edit click wrapper
@@ -177,6 +204,7 @@ export function FindingCard({
         'hover:shadow-md hover:-translate-y-0.5',
         'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
         isExpanded && 'ring-2 ring-primary/20',
+        onCardClick && 'cursor-pointer',
         className
       )}
       tabIndex={0}
@@ -184,6 +212,7 @@ export function FindingCard({
       aria-label={`Finding: ${finding.text.slice(0, 50)}...`}
       aria-expanded={shouldTruncate ? isExpanded : undefined}
       onKeyDown={handleKeyDown}
+      onClick={handleCardClick}
     >
       {/* Header with badges */}
       <CardHeader className="pb-2 pt-4 px-4">

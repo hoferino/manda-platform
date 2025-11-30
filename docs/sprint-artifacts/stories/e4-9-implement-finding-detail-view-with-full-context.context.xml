@@ -1,0 +1,295 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>9</storyId>
+    <title>Implement Finding Detail View with Full Context</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-9-implement-finding-detail-view-with-full-context.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to see full context for a finding in a dedicated detail view</iWant>
+    <soThat>I can understand it deeply, see all related information, and verify its accuracy before making decisions</soThat>
+    <tasks>
+      <task id="1" title="Create FindingDetailPanel Component" acs="1,2,7,8">
+        <subtask>Create components/knowledge-explorer/findings/FindingDetailPanel.tsx</subtask>
+        <subtask>Use shadcn/ui Sheet component for slide-out panel</subtask>
+        <subtask>Implement header with finding type/domain badges and close button</subtask>
+        <subtask>Add FindingActions in header for validate/reject/edit</subtask>
+        <subtask>Implement loading skeleton state</subtask>
+        <subtask>Add ARIA attributes and keyboard handling</subtask>
+      </task>
+      <task id="2" title="Create Finding Detail API Endpoint" acs="2,3,4,5,6">
+        <subtask>Create app/api/projects/[id]/findings/[findingId]/route.ts for GET</subtask>
+        <subtask>Return FindingWithContext with full metadata</subtask>
+        <subtask>Include confidence_reasoning from metadata</subtask>
+        <subtask>Join with documents table for document info</subtask>
+        <subtask>Join with document_chunks for chunk content</subtask>
+        <subtask>Fetch validation_history from finding record</subtask>
+        <subtask>Add Zod validation schema</subtask>
+      </task>
+      <task id="3" title="Implement Related Findings Query" acs="5">
+        <subtask>Add getRelatedFindings function to findings API client</subtask>
+        <subtask>Use pgvector similarity search on the finding's text/embedding</subtask>
+        <subtask>Limit to top 5 related findings (exclude current finding)</subtask>
+        <subtask>Filter to same project</subtask>
+        <subtask>Return truncated text and basic metadata</subtask>
+      </task>
+      <task id="4" title="Build ConfidenceReasoning Component" acs="3">
+        <subtask>Create components/knowledge-explorer/findings/ConfidenceReasoning.tsx</subtask>
+        <subtask>Display confidence bar with percentage</subtask>
+        <subtask>Show reasoning text with expand/collapse for long text</subtask>
+        <subtask>Handle missing reasoning gracefully</subtask>
+      </task>
+      <task id="5" title="Build ValidationHistory Component" acs="6">
+        <subtask>Create components/knowledge-explorer/findings/ValidationHistory.tsx</subtask>
+        <subtask>Display timeline of validation events</subtask>
+        <subtask>Show diff view for edits (previous vs new value)</subtask>
+        <subtask>Format timestamps with date-fns</subtask>
+        <subtask>Empty state for no history</subtask>
+      </task>
+      <task id="6" title="Build RelatedFindings Component" acs="5">
+        <subtask>Create components/knowledge-explorer/findings/RelatedFindings.tsx</subtask>
+        <subtask>Display list of related findings with similarity score</subtask>
+        <subtask>Truncate long text with Show more option</subtask>
+        <subtask>Make findings clickable to navigate</subtask>
+        <subtask>Empty state handling</subtask>
+      </task>
+      <task id="7" title="Integrate into FindingsBrowser" acs="1">
+        <subtask>Add click handler to FindingsTable rows</subtask>
+        <subtask>Add click handler to FindingCard components</subtask>
+        <subtask>Pass selectedFindingId to FindingDetailPanel</subtask>
+        <subtask>Handle URL state with ?findingId= parameter</subtask>
+        <subtask>Ensure panel closes when navigating away</subtask>
+      </task>
+      <task id="8" title="Write Component Tests" acs="All">
+        <subtask>Test FindingDetailPanel rendering with finding data</subtask>
+        <subtask>Test loading and error states</subtask>
+        <subtask>Test click-to-open behavior in table and card views</subtask>
+        <subtask>Test RelatedFindings display</subtask>
+        <subtask>Test ValidationHistory timeline</subtask>
+        <subtask>Test ConfidenceReasoning expand/collapse</subtask>
+        <subtask>Test keyboard navigation (Escape to close)</subtask>
+        <subtask>Test accessibility (ARIA attributes, focus trap)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Detail View Trigger">
+      <requirement>Clicking on a finding row in table view opens the detail view</requirement>
+      <requirement>Clicking on a finding card in card view opens the detail view</requirement>
+      <requirement>Detail view opens as a slide-out panel (Sheet) from the right</requirement>
+      <requirement>URL updates to include finding ID for deep linking (?findingId=xxx)</requirement>
+      <requirement>Loading skeleton shown while fetching full context</requirement>
+    </criterion>
+    <criterion id="AC2" title="Finding Text and Metadata Display">
+      <requirement>Full finding text displayed prominently at the top</requirement>
+      <requirement>Finding type badge (Metric, Fact, Risk, Opportunity, Contradiction)</requirement>
+      <requirement>Domain badge (Financial, Operational, Market, Legal, Technical)</requirement>
+      <requirement>Confidence score with visual bar and percentage</requirement>
+      <requirement>Status badge (Pending, Validated, Rejected)</requirement>
+      <requirement>Created date and last updated timestamp</requirement>
+      <requirement>User who created the finding (if available from metadata)</requirement>
+    </criterion>
+    <criterion id="AC3" title="Confidence Reasoning Display">
+      <requirement>Confidence Reasoning section with explanation from LLM analysis</requirement>
+      <requirement>Pull reasoning from metadata.confidence_reasoning if available</requirement>
+      <requirement>Display as expandable section if text is long (>200 chars)</requirement>
+      <requirement>Show No reasoning available placeholder if not present</requirement>
+      <requirement>Format reasoning in readable paragraphs</requirement>
+    </criterion>
+    <criterion id="AC4" title="Source Attribution with Preview">
+      <requirement>Clickable source attribution link (using existing SourceAttributionLink)</requirement>
+      <requirement>Document preview integrated (DocumentPreviewModal)</requirement>
+      <requirement>Show: document name, sheet name (for Excel), cell reference or page number</requirement>
+      <requirement>Open in Data Room button to navigate to document in Data Room</requirement>
+      <requirement>Fallback message if document preview unavailable</requirement>
+    </criterion>
+    <criterion id="AC5" title="Related Findings Section">
+      <requirement>Related Findings section showing findings on the same topic/domain</requirement>
+      <requirement>Use semantic similarity to find related findings (top 5)</requirement>
+      <requirement>Each related finding shows: text snippet (truncated), confidence, source</requirement>
+      <requirement>Click on related finding opens its detail view (navigation)</requirement>
+      <requirement>Empty state: No related findings found</requirement>
+    </criterion>
+    <criterion id="AC6" title="Validation History">
+      <requirement>History section showing all validation events</requirement>
+      <requirement>Each event shows: action type, timestamp, user (if available)</requirement>
+      <requirement>For edits: show previous value and new value (diff view)</requirement>
+      <requirement>Sorted chronologically (newest first)</requirement>
+      <requirement>Empty state: No validation history</requirement>
+    </criterion>
+    <criterion id="AC7" title="Actions in Detail View">
+      <requirement>Validate/Reject/Edit buttons available in detail view header</requirement>
+      <requirement>Same functionality as inline actions (reuse FindingActions component)</requirement>
+      <requirement>Changes reflect immediately in the detail view</requirement>
+      <requirement>Toast notifications for success/error</requirement>
+      <requirement>Close button (X) and Escape key to dismiss</requirement>
+    </criterion>
+    <criterion id="AC8" title="Accessibility and Keyboard Navigation">
+      <requirement>Panel has proper ARIA role=dialog and aria-modal=true</requirement>
+      <requirement>Focus trapped within panel when open</requirement>
+      <requirement>Escape key closes the panel</requirement>
+      <requirement>Screen reader announces panel opening</requirement>
+      <requirement>All interactive elements keyboard accessible</requirement>
+    </criterion>
+  </acceptanceCriteria> 
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Tech Spec" section="E4.9: Implement Finding Detail View with Full Context">
+        Modal or slide-out panel approach with sections: Finding text, Confidence reasoning, Source attribution, Related findings, Validation history. Fetch from findings, document_chunks, contradictions, validation_history. Display thinking mode reasoning from Gemini if available in metadata.
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E4.md" title="Epic 4: Collaborative Knowledge Workflow" section="Story E4.9">
+        Finding Detail View story with source attribution and full context. Part of Knowledge Explorer UI enabling analysts to review and validate findings.
+      </doc>
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="Knowledge Explorer">
+        Slide-out panel preferred for detail views to maintain context of list. Source attribution should be clickable with document preview. Validation history displayed as timeline.
+      </doc>
+    </docs>
+    <code>
+      <!-- Types and API Client (EXTEND, DO NOT RECREATE) -->
+      <file path="manda-app/lib/types/findings.ts" kind="types" symbol="FindingWithContext" lines="51-65" reason="Core interface to extend - already has document, chunk, relatedFindings, validationHistory fields. API needs to populate these."/>
+      <file path="manda-app/lib/types/findings.ts" kind="types" symbol="ValidationEvent" lines="18-24" reason="Validation event interface for history display"/>
+      <file path="manda-app/lib/api/findings.ts" kind="api-client" symbol="getFindings, validateFinding, updateFinding" lines="86-178" reason="Existing API client to extend with getFindingById and getRelatedFindings functions"/>
+
+      <!-- Existing API Routes -->
+      <file path="manda-app/app/api/projects/[id]/findings/[findingId]/route.ts" kind="api-route" symbol="GET, PATCH" lines="1-265" reason="Existing endpoint - enhance GET to return full FindingWithContext with joins"/>
+      <file path="manda-app/app/api/projects/[id]/findings/[findingId]/validate/route.ts" kind="api-route" reason="Existing validation endpoint - no changes needed"/>
+      <file path="manda-app/app/api/projects/[id]/findings/search/route.ts" kind="api-route" reason="Semantic search endpoint - reference for similarity search pattern"/>
+
+      <!-- UI Components to Reuse -->
+      <file path="manda-app/components/ui/sheet.tsx" kind="ui-component" symbol="Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose" lines="1-140" reason="shadcn/ui Sheet component for slide-out panel - provides built-in focus trap and Escape handling"/>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingActions.tsx" kind="component" symbol="FindingActions" lines="38-172" reason="Reuse validate/reject/edit actions in detail view header"/>
+      <file path="manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx" kind="component" symbol="SourceAttributionLink" lines="107-197" reason="Clickable source link with DocumentPreviewModal integration - reuse for source attribution"/>
+      <file path="manda-app/components/knowledge-explorer/shared/DocumentPreviewModal.tsx" kind="component" reason="Document preview modal - reused by SourceAttributionLink"/>
+      <file path="manda-app/components/knowledge-explorer/shared/ConfidenceBadge.tsx" kind="component" reason="Confidence score visualization"/>
+      <file path="manda-app/components/knowledge-explorer/shared/DomainTag.tsx" kind="component" reason="Domain badge display"/>
+      <file path="manda-app/components/knowledge-explorer/shared/StatusBadge.tsx" kind="component" reason="Status badge display"/>
+
+      <!-- Integration Points -->
+      <file path="manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx" kind="component" symbol="FindingsBrowser" lines="54-595" reason="Main container - add selectedFindingId state and FindingDetailPanel integration"/>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingsTable.tsx" kind="component" reason="Add row click handler to open detail panel"/>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingCard.tsx" kind="component" reason="Add card click handler to open detail panel"/>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingsCardGrid.tsx" kind="component" reason="Passes events through to FindingCard"/>
+
+      <!-- Helper Components for Reference -->
+      <file path="manda-app/components/knowledge-explorer/findings/InlineEdit.tsx" kind="component" reason="Reference for text editing pattern"/>
+      <file path="manda-app/components/knowledge-explorer/gaps/GapAnalysisView.tsx" kind="component" reason="Reference for URL state management pattern with useSearchParams/useRouter"/>
+      <file path="manda-app/components/knowledge-explorer/contradictions/ContradictionsView.tsx" kind="component" reason="Reference for view component structure"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@tanstack/react-table" version="^8.21.3" purpose="DataTable (already installed)"/>
+        <package name="@tanstack/react-virtual" version="^3.13.12" purpose="Virtual scrolling (already installed)"/>
+        <package name="@radix-ui/react-dialog" version="^1.1.15" purpose="Sheet component base (already installed)"/>
+        <package name="@radix-ui/react-collapsible" version="^1.1.12" purpose="Expandable confidence reasoning (already installed)"/>
+        <package name="date-fns" version="^4.1.0" purpose="Timestamp formatting for validation history (already installed)"/>
+        <package name="lucide-react" version="^0.554.0" purpose="Icons (already installed)"/>
+        <package name="sonner" version="^2.0.7" purpose="Toast notifications (already installed)"/>
+        <package name="openai" version="^6.9.1" purpose="Embeddings for related findings search (already installed)"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Use shadcn/ui Sheet component for slide-out panel, NOT Dialog/Modal</constraint>
+    <constraint type="pattern">Extend existing FindingWithContext interface, do not create new type</constraint>
+    <constraint type="pattern">Extend existing findings API client (lib/api/findings.ts), do not recreate</constraint>
+    <constraint type="pattern">Enhance existing GET endpoint, do not create separate detail endpoint</constraint>
+    <constraint type="pattern">Use existing badge components from shared folder (ConfidenceBadge, DomainTag, StatusBadge)</constraint>
+    <constraint type="pattern">Reuse FindingActions component for validate/reject/edit in header</constraint>
+    <constraint type="pattern">Reuse SourceAttributionLink for source attribution with preview</constraint>
+    <constraint type="accessibility">Sheet provides built-in focus trap and Escape handling via Radix</constraint>
+    <constraint type="accessibility">Add aria-label, aria-describedby for screen readers</constraint>
+    <constraint type="performance">Use pgvector similarity search for related findings (already indexed)</constraint>
+    <constraint type="url-state">URL must update with ?findingId=xxx for deep linking</constraint>
+    <constraint type="testing">Maintain similar test coverage as e4-8 (96 tests across 3 files)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="GET /api/projects/[id]/findings/[findingId]" kind="REST endpoint">
+      <signature>GET /api/projects/{projectId}/findings/{findingId}</signature>
+      <description>Enhanced to return FindingWithContext with full joins</description>
+      <response>
+        {
+          finding: FindingWithContext (includes document, chunk, relatedFindings, validationHistory)
+        }
+      </response>
+      <path>manda-app/app/api/projects/[id]/findings/[findingId]/route.ts</path>
+    </interface>
+    <interface name="FindingWithContext" kind="TypeScript interface">
+      <signature>
+        interface FindingWithContext extends Finding {
+          document: { id: string; name: string; filePath: string } | null;
+          chunk: { id: string; content: string; sheetName: string | null; cellReference: string | null; pageNumber: number | null } | null;
+          relatedFindings: Finding[];
+          validationHistory: ValidationEvent[];
+        }
+      </signature>
+      <path>manda-app/lib/types/findings.ts</path>
+    </interface>
+    <interface name="getFindingById" kind="API client function">
+      <signature>getFindingById(projectId: string, findingId: string): Promise&lt;FindingWithContext&gt;</signature>
+      <description>NEW: Fetch single finding with full context</description>
+      <path>manda-app/lib/api/findings.ts</path>
+    </interface>
+    <interface name="getRelatedFindings" kind="API client function">
+      <signature>getRelatedFindings(projectId: string, findingId: string, limit?: number): Promise&lt;Finding[]&gt;</signature>
+      <description>NEW: Fetch semantically related findings using pgvector</description>
+      <path>manda-app/lib/api/findings.ts</path>
+    </interface>
+    <interface name="Sheet" kind="React component">
+      <signature>Sheet, SheetContent (side="right"), SheetHeader, SheetTitle, SheetClose</signature>
+      <description>shadcn/ui Sheet with built-in focus trap and Escape handling</description>
+      <path>manda-app/components/ui/sheet.tsx</path>
+    </interface>
+    <interface name="FindingActions" kind="React component">
+      <signature>FindingActions({ findingId, status, onValidate, onEdit, disabled?, className? })</signature>
+      <path>manda-app/components/knowledge-explorer/findings/FindingActions.tsx</path>
+    </interface>
+    <interface name="SourceAttributionLink" kind="React component">
+      <signature>SourceAttributionLink({ documentId, documentName, chunkId, pageNumber, sheetName, cellReference, projectId, className? })</signature>
+      <path>manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing follows Vitest + React Testing Library patterns. Use vi.mock() for Supabase client mocking. Mock fetch for API calls. Test components in isolation with provided props. Include accessibility testing with ARIA assertions. Test keyboard interactions (Escape to close). Use data-testid attributes for reliable selection.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/</location>
+      <location>manda-app/__tests__/api/projects/findings/</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test FindingDetailPanel opens when clicking table row</idea>
+      <idea ac="AC1">Test FindingDetailPanel opens when clicking card</idea>
+      <idea ac="AC1">Test URL updates with ?findingId= parameter</idea>
+      <idea ac="AC1">Test loading skeleton displays while fetching</idea>
+      <idea ac="AC2">Test all metadata badges render (type, domain, status, confidence)</idea>
+      <idea ac="AC2">Test timestamps format correctly with date-fns</idea>
+      <idea ac="AC3">Test ConfidenceReasoning renders reasoning text</idea>
+      <idea ac="AC3">Test expand/collapse for text >200 chars</idea>
+      <idea ac="AC3">Test empty state when no reasoning available</idea>
+      <idea ac="AC4">Test SourceAttributionLink renders and is clickable</idea>
+      <idea ac="AC4">Test Open in Data Room button navigates correctly</idea>
+      <idea ac="AC5">Test RelatedFindings displays up to 5 findings</idea>
+      <idea ac="AC5">Test clicking related finding triggers navigation</idea>
+      <idea ac="AC5">Test empty state when no related findings</idea>
+      <idea ac="AC6">Test ValidationHistory renders events chronologically</idea>
+      <idea ac="AC6">Test diff view shows for edit events</idea>
+      <idea ac="AC6">Test empty state when no validation history</idea>
+      <idea ac="AC7">Test FindingActions in header validates/rejects finding</idea>
+      <idea ac="AC7">Test changes reflect immediately after action</idea>
+      <idea ac="AC7">Test close button dismisses panel</idea>
+      <idea ac="AC8">Test Escape key closes panel</idea>
+      <idea ac="AC8">Test ARIA attributes present (role=dialog, aria-modal)</idea>
+      <idea ac="AC8">Test focus trapped within panel</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -5,6 +5,7 @@
  * Story: E4.2 - Implement Semantic Search for Findings (AC: #4, #5, #8)
  * Story: E4.3 - Implement Inline Finding Validation (AC: #1, #2, #3, #4, #8)
  * Story: E4.4 - Build Card View Alternative for Findings (AC: #2, #3, #4, #5, #6)
+ * Story: E4.9 - Implement Finding Detail View with Full Context (AC: #1, #7, #8)
  *
  * Combines:
  * - FindingSearch for semantic search
@@ -12,6 +13,7 @@
  * - ViewToggle for Table/Card view switching
  * - FindingsTable for table data display
  * - FindingsCardGrid for card data display
+ * - FindingDetailPanel for slide-out detail view
  * - Data fetching with React state management
  * - Validation with undo support
  * - Inline editing
@@ -26,6 +28,7 @@ import { FindingSearch, EmptySearchResults } from './FindingSearch'
 import { FindingFilters } from './FindingFilters'
 import { FindingsTable } from './FindingsTable'
 import { FindingsCardGrid } from './FindingsCardGrid'
+import { FindingDetailPanel } from './FindingDetailPanel'
 import { InlineEdit } from './InlineEdit'
 import { useUndoValidation, type UndoState } from './useUndoValidation'
 import { ViewToggle, useViewPreference, type ViewMode } from '../shared'
@@ -76,6 +79,12 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
   // Edit state
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null)
   const [editingFinding, setEditingFinding] = useState<Finding | null>(null)
+
+  // Detail panel state - read from URL parameter for deep linking
+  const [selectedFindingId, setSelectedFindingId] = useState<string | null>(
+    searchParams.get('findingId')
+  )
+  const isDetailPanelOpen = selectedFindingId !== null
 
   // Determine if we're in search mode
   const isSearchMode = searchQuery.trim().length > 0 && searchResults !== null
@@ -480,6 +489,66 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
     setEditingFinding(null)
   }, [])
 
+  // Handle opening detail panel with URL update for deep linking
+  const handleOpenDetailPanel = useCallback(
+    (finding: Finding) => {
+      setSelectedFindingId(finding.id)
+      // Update URL for deep linking
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('findingId', finding.id)
+      const newUrl = `${pathname}?${params.toString()}`
+      router.replace(newUrl, { scroll: false })
+    },
+    [pathname, router, searchParams]
+  )
+
+  // Handle closing detail panel
+  const handleCloseDetailPanel = useCallback(() => {
+    setSelectedFindingId(null)
+    // Remove findingId from URL
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('findingId')
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+    router.replace(newUrl, { scroll: false })
+  }, [pathname, router, searchParams])
+
+  // Handle finding updated from detail panel - update local state
+  const handleFindingUpdated = useCallback(
+    (updatedFinding: Finding) => {
+      const updateFn = (f: Finding): Finding =>
+        f.id === updatedFinding.id ? updatedFinding : f
+
+      if (isSearchMode && searchResults) {
+        setSearchResults((prev) =>
+          prev
+            ? {
+                ...prev,
+                findings: prev.findings.map((f) => updateFn(f) as FindingWithSimilarity),
+              }
+            : prev
+        )
+      } else {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                findings: prev.findings.map(updateFn),
+              }
+            : prev
+        )
+      }
+    },
+    [isSearchMode, searchResults]
+  )
+
+  // Sync URL findingId changes back to state (e.g., browser back/forward)
+  useEffect(() => {
+    const urlFindingId = searchParams.get('findingId')
+    if (urlFindingId !== selectedFindingId) {
+      setSelectedFindingId(urlFindingId)
+    }
+  }, [searchParams, selectedFindingId])
+
   // Determine which data to display
   const displayFindings: Finding[] = isSearchMode
     ? searchResults?.findings || []
@@ -568,6 +637,7 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
               onSortChange={handleSortChange}
               onValidate={handleValidate}
               onEdit={handleEdit}
+              onRowClick={handleOpenDetailPanel}
               showSimilarity={isSearchMode}
               projectId={projectId}
             />
@@ -583,6 +653,7 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
               onEdit={handleEdit}
               onSaveEdit={handleSaveEdit}
               onCancelEdit={handleCancelEdit}
+              onCardClick={handleOpenDetailPanel}
               editingFindingId={editingFindingId}
               showSimilarity={isSearchMode}
               projectId={projectId}
@@ -590,6 +661,15 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
           )}
         </>
       )}
+
+      {/* Finding Detail Panel */}
+      <FindingDetailPanel
+        findingId={selectedFindingId}
+        projectId={projectId}
+        isOpen={isDetailPanelOpen}
+        onClose={handleCloseDetailPanel}
+        onFindingUpdated={handleFindingUpdated}
+      />
     </div>
   )
 }
