@@ -3,6 +3,7 @@
  * Data table for displaying findings with sorting, pagination
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface (AC: #2, #3, #7)
  * Story: E4.5 - Implement Source Attribution Links (AC: 7)
+ * Story: E4.11 - Build Bulk Actions for Finding Management (AC: 1, 10)
  *
  * Features:
  * - Sortable columns (Confidence, Domain, Created Date)
@@ -13,6 +14,7 @@
  * - Status badge
  * - Actions column (placeholder for E4.3)
  * - Responsive design
+ * - Checkbox selection for bulk actions (E4.11)
  */
 
 'use client'
@@ -54,6 +56,7 @@ import {
   X,
   Pencil,
 } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ConfidenceBadge, DomainTag, StatusBadge, SourceAttributionLink } from '../shared'
 import type { Finding, FindingWithSimilarity } from '@/lib/types/findings'
 import { cn } from '@/lib/utils'
@@ -73,6 +76,12 @@ interface FindingsTableProps {
   onRowClick?: (finding: Finding) => void
   showSimilarity?: boolean
   projectId: string
+  // Selection props for bulk actions (E4.11)
+  selectedIds?: Set<string>
+  onSelectionChange?: (id: string, selected: boolean) => void
+  onSelectAll?: (ids: string[]) => void
+  isAllSelected?: boolean
+  isSomeSelected?: boolean
 }
 
 /**
@@ -185,7 +194,18 @@ export function FindingsTable({
   onRowClick,
   showSimilarity = false,
   projectId,
+  // Selection props for bulk actions (E4.11)
+  selectedIds,
+  onSelectionChange,
+  onSelectAll,
+  isAllSelected = false,
+  isSomeSelected = false,
 }: FindingsTableProps) {
+  // Check if selection is enabled
+  const selectionEnabled = selectedIds !== undefined && onSelectionChange !== undefined
+
+  // Get all finding IDs on current page
+  const pageIds = findings.map((f) => f.id)
   // Internal sorting state for tanstack table
   const [sorting, setSorting] = useState<SortingState>([
     { id: sortBy, desc: sortOrder === 'desc' },
@@ -211,8 +231,58 @@ export function FindingsTable({
     [sortBy, sortOrder, onSortChange]
   )
 
+  // Handle header checkbox click - select/deselect all on page
+  const handleSelectAllOnPage = useCallback(() => {
+    if (!onSelectAll) return
+    if (isAllSelected) {
+      // Deselect all on page by passing empty array
+      pageIds.forEach((id) => onSelectionChange?.(id, false))
+    } else {
+      // Select all on page
+      onSelectAll(pageIds)
+    }
+  }, [onSelectAll, onSelectionChange, pageIds, isAllSelected])
+
   // Column definitions
   const columns: ColumnDef<Finding | FindingWithSimilarity>[] = [
+    // Checkbox column for bulk selection (E4.11)
+    ...(selectionEnabled
+      ? [
+          {
+            id: 'select',
+            header: () => (
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                  onCheckedChange={handleSelectAllOnPage}
+                  aria-label={isAllSelected ? 'Deselect all findings on page' : 'Select all findings on page'}
+                  className="translate-y-[2px]"
+                />
+              </div>
+            ),
+            cell: ({ row }: { row: { original: Finding | FindingWithSimilarity } }) => {
+              const finding = row.original
+              const isChecked = selectedIds?.has(finding.id) ?? false
+              const truncatedText = finding.text.slice(0, 50) + (finding.text.length > 50 ? '...' : '')
+              return (
+                <div
+                  className="flex items-center justify-center"
+                  onClick={(e) => e.stopPropagation()} // Prevent row click
+                >
+                  <Checkbox
+                    checked={isChecked}
+                    onCheckedChange={(checked) => onSelectionChange?.(finding.id, !!checked)}
+                    aria-label={`Select finding: ${truncatedText}`}
+                    className="translate-y-[2px]"
+                  />
+                </div>
+              )
+            },
+            enableSorting: false,
+            enableHiding: false,
+          } satisfies ColumnDef<Finding | FindingWithSimilarity>,
+        ]
+      : []),
     // Similarity column (only shown in search mode)
     ...(showSimilarity
       ? [
@@ -412,15 +482,17 @@ export function FindingsTable({
 
   // Loading skeleton
   if (isLoading) {
+    // Calculate skeleton columns (include checkbox if selection enabled)
+    const skeletonColCount = (selectionEnabled ? 1 : 0) + (showSimilarity ? 1 : 0) + 7 // 7 base columns
     return (
       <div className="space-y-4">
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                {columns.map((col) => (
-                  <TableHead key={col.id}>
-                    <Skeleton className="h-4 w-24" />
+                {Array.from({ length: skeletonColCount }).map((_, i) => (
+                  <TableHead key={i}>
+                    <Skeleton className={i === 0 && selectionEnabled ? "h-4 w-4" : "h-4 w-24"} />
                   </TableHead>
                 ))}
               </TableRow>
@@ -428,9 +500,9 @@ export function FindingsTable({
             <TableBody>
               {Array.from({ length: 10 }).map((_, i) => (
                 <TableRow key={i}>
-                  {columns.map((col) => (
-                    <TableCell key={col.id}>
-                      <Skeleton className="h-4 w-full" />
+                  {Array.from({ length: skeletonColCount }).map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className={j === 0 && selectionEnabled ? "h-4 w-4" : "h-4 w-full"} />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -475,31 +547,38 @@ export function FindingsTable({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className={cn(
-                  'hover:bg-muted/50',
-                  onRowClick && 'cursor-pointer'
-                )}
-                onClick={() => onRowClick?.(row.original)}
-                tabIndex={onRowClick ? 0 : undefined}
-                onKeyDown={(e) => {
-                  if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault()
-                    onRowClick(row.original)
-                  }
-                }}
-                role={onRowClick ? 'button' : undefined}
-                aria-label={onRowClick ? `View details for finding` : undefined}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
+            {table.getRowModel().rows.map((row) => {
+              const isRowSelected = selectionEnabled && selectedIds?.has(row.original.id)
+              return (
+                <TableRow
+                  key={row.id}
+                  className={cn(
+                    'hover:bg-muted/50',
+                    onRowClick && 'cursor-pointer',
+                    // Highlight selected rows (E4.11)
+                    isRowSelected && 'bg-muted/50'
+                  )}
+                  onClick={() => onRowClick?.(row.original)}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      onRowClick(row.original)
+                    }
+                  }}
+                  role={onRowClick ? 'button' : undefined}
+                  aria-label={onRowClick ? `View details for finding` : undefined}
+                  aria-selected={isRowSelected}
+                  data-selected={isRowSelected}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>

@@ -1,0 +1,404 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>11</storyId>
+    <title>Build Bulk Actions for Finding Management</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-11-build-bulk-actions-for-finding-management.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to perform bulk actions on multiple findings</iWant>
+    <soThat>I can efficiently manage large numbers of findings without repetitive individual actions</soThat>
+    <tasks>
+      <task id="1" title="Create Selection State Management" acs="1,2,3,9">
+        <subtask>Add selectedIds: Set&lt;string&gt; state to FindingsBrowser</subtask>
+        <subtask>Create useSelectionState hook for reusable selection logic</subtask>
+        <subtask>Implement select/deselect individual finding</subtask>
+        <subtask>Implement select all on current page</subtask>
+        <subtask>Implement clear all selection</subtask>
+        <subtask>Ensure selection persists across view toggle (table ↔ card)</subtask>
+      </task>
+      <task id="2" title="Add Checkboxes to FindingsTable" acs="1,10">
+        <subtask>Add checkbox column to table definition</subtask>
+        <subtask>Add header checkbox for "select all on page"</subtask>
+        <subtask>Style selected rows with background highlight</subtask>
+        <subtask>Add ARIA labels to checkboxes</subtask>
+        <subtask>Ensure row click still opens detail panel (checkbox click separate)</subtask>
+      </task>
+      <task id="3" title="Add Checkboxes to FindingCard" acs="2,10">
+        <subtask>Add checkbox overlay to card top-left</subtask>
+        <subtask>Style selected cards with border highlight</subtask>
+        <subtask>Position checkbox to not overlap expand/collapse or action buttons</subtask>
+        <subtask>Add ARIA labels to checkboxes</subtask>
+      </task>
+      <task id="4" title="Create SelectionToolbar Component" acs="3,4">
+        <subtask>Create components/knowledge-explorer/findings/SelectionToolbar.tsx</subtask>
+        <subtask>Show selection count: "12 selected"</subtask>
+        <subtask>Add "Clear" button to deselect all</subtask>
+        <subtask>Add "Select all on page" link</subtask>
+        <subtask>Conditionally render when selection &gt; 0</subtask>
+      </task>
+      <task id="5" title="Create BulkActionsDropdown Component" acs="4,7">
+        <subtask>Create components/knowledge-explorer/findings/BulkActionsDropdown.tsx</subtask>
+        <subtask>Use shadcn/ui DropdownMenu</subtask>
+        <subtask>Add "Validate All (X)" option</subtask>
+        <subtask>Add "Reject All (X)" option</subtask>
+        <subtask>Add "Export Selected" option with format submenu</subtask>
+        <subtask>Disable when no selection</subtask>
+      </task>
+      <task id="6" title="Create Bulk Confirmation Dialog" acs="5">
+        <subtask>Create components/knowledge-explorer/findings/BulkConfirmDialog.tsx</subtask>
+        <subtask>Use shadcn/ui AlertDialog</subtask>
+        <subtask>Show action and count: "Validate 12 findings?"</subtask>
+        <subtask>Add Cancel and Confirm buttons</subtask>
+        <subtask>Show loading state during API call</subtask>
+      </task>
+      <task id="7" title="Create Batch API Endpoint" acs="8">
+        <subtask>Create app/api/projects/[id]/findings/bulk/route.ts</subtask>
+        <subtask>Implement POST handler with action and findingIds</subtask>
+        <subtask>Add Zod validation schema</subtask>
+        <subtask>Enforce 100 finding limit</subtask>
+        <subtask>Use database transaction for atomicity</subtask>
+        <subtask>Return updated findings array</subtask>
+      </task>
+      <task id="8" title="Implement Bulk Undo Logic" acs="6">
+        <subtask>Extend useUndoValidation hook for bulk operations</subtask>
+        <subtask>Store array of previous states for bulk undo</subtask>
+        <subtask>Implement 10-second undo window for bulk actions</subtask>
+        <subtask>Create bulk restore API call</subtask>
+        <subtask>Clear bulk undo state on new action</subtask>
+      </task>
+      <task id="9" title="Integrate Components into FindingsBrowser" acs="1-7">
+        <subtask>Add selection state to FindingsBrowser</subtask>
+        <subtask>Add SelectionToolbar to toolbar area</subtask>
+        <subtask>Add BulkActionsDropdown next to ExportDropdown</subtask>
+        <subtask>Wire up bulk validate/reject handlers</subtask>
+        <subtask>Wire up bulk export handler</subtask>
+        <subtask>Add optimistic updates for bulk actions</subtask>
+      </task>
+      <task id="10" title="Write Component Tests" acs="all">
+        <subtask>Test SelectionToolbar rendering and interactions</subtask>
+        <subtask>Test BulkActionsDropdown with various selection counts</subtask>
+        <subtask>Test BulkConfirmDialog flow</subtask>
+        <subtask>Test checkbox selection in FindingsTable</subtask>
+        <subtask>Test checkbox selection in FindingCard</subtask>
+        <subtask>Test selection persistence across view toggle</subtask>
+        <subtask>Test accessibility (ARIA, keyboard navigation)</subtask>
+      </task>
+      <task id="11" title="Write API Route Tests" acs="8">
+        <subtask>Test bulk validate with valid findingIds</subtask>
+        <subtask>Test bulk reject with valid findingIds</subtask>
+        <subtask>Test 400 error when exceeding 100 findings</subtask>
+        <subtask>Test 400 error with invalid action</subtask>
+        <subtask>Test authentication required</subtask>
+        <subtask>Test atomicity (partial failure rollback)</subtask>
+      </task>
+      <task id="12" title="Write Integration Tests" acs="5,6,9">
+        <subtask>Test full bulk validate flow with undo</subtask>
+        <subtask>Test bulk export selected findings</subtask>
+        <subtask>Test performance with 50+ selections</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Checkbox Selection in Table View">
+      <item>Each finding row has a checkbox in the leftmost column</item>
+      <item>Checkbox is keyboard accessible (Tab navigation, Space to toggle)</item>
+      <item>Selected rows have visual highlight (subtle background color)</item>
+      <item>Header row has a "select all on page" checkbox</item>
+      <item>Clicking row (excluding action buttons) does NOT toggle selection (preserves detail panel click)</item>
+    </criterion>
+    <criterion id="AC2" title="Checkbox Selection in Card View">
+      <item>Each card has a checkbox in the top-left corner</item>
+      <item>Checkbox position doesn't interfere with card content</item>
+      <item>Selected cards have visual border highlight</item>
+      <item>Selection persists when switching between table/card views</item>
+    </criterion>
+    <criterion id="AC3" title="Selection Counter and Controls">
+      <item>Selection counter shows "X selected" when items are selected</item>
+      <item>Counter appears in toolbar area (near export button)</item>
+      <item>"Clear selection" link/button to deselect all</item>
+      <item>"Select all on page" option in dropdown or as link</item>
+      <item>Selection state clears when navigating to different page (or optionally persists with warning)</item>
+    </criterion>
+    <criterion id="AC4" title="Bulk Actions Dropdown">
+      <item>Dropdown button labeled "Bulk Actions" appears when 1+ findings selected</item>
+      <item>Dropdown is disabled when no findings selected</item>
+      <item>Actions available: "Validate All", "Reject All", "Export Selected"</item>
+      <item>Each action shows count: "Validate All (12)"</item>
+    </criterion>
+    <criterion id="AC5" title="Bulk Validate/Reject with Confirmation">
+      <item>Clicking "Validate All" or "Reject All" shows confirmation dialog</item>
+      <item>Dialog shows: "Validate 12 findings?" with Cancel/Confirm buttons</item>
+      <item>Confirmation proceeds with batch API call</item>
+      <item>Progress indicator shown during operation</item>
+      <item>Toast on completion: "Validated 12 findings"</item>
+      <item>UI updates optimistically with rollback on error</item>
+    </criterion>
+    <criterion id="AC6" title="Bulk Undo Capability">
+      <item>After bulk action completes, toast shows "Undo" button</item>
+      <item>Undo window is 10 seconds (longer than single-item 5s due to impact)</item>
+      <item>Clicking Undo reverts ALL findings in the batch to previous state</item>
+      <item>If undo window expires, undo is no longer available</item>
+      <item>Only one bulk undo state tracked at a time (new action clears previous)</item>
+    </criterion>
+    <criterion id="AC7" title="Export Selected Integration">
+      <item>"Export Selected" option in bulk actions dropdown</item>
+      <item>Opens same format selection (CSV/Excel) as ExportDropdown</item>
+      <item>Only exports the selected findings, ignoring other filters</item>
+      <item>Filename includes "selected": findings-selected-{project}-{date}.csv</item>
+    </criterion>
+    <criterion id="AC8" title="Batch API Endpoint">
+      <item>POST /api/projects/[id]/findings/bulk endpoint</item>
+      <item>Request body: { action: 'validate' | 'reject', findingIds: string[] }</item>
+      <item>Response: { updated: number, findings: Finding[] }</item>
+      <item>Maximum 100 findings per batch (return 400 if exceeded)</item>
+      <item>Atomic operation: all succeed or all fail</item>
+    </criterion>
+    <criterion id="AC9" title="Performance Requirements">
+      <item>Bulk action on 50 findings completes in &lt;3 seconds</item>
+      <item>UI remains responsive during bulk operation</item>
+      <item>Selection state updates don't cause full re-render</item>
+    </criterion>
+    <criterion id="AC10" title="Accessibility">
+      <item>All checkboxes have proper ARIA labels: "Select finding: {finding text truncated}"</item>
+      <item>Bulk actions dropdown is keyboard navigable</item>
+      <item>Screen reader announces selection count changes</item>
+      <item>Focus management after bulk action (return to first selected row area)</item>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Epic 4 Technical Specification</title>
+        <section>Services and Modules: FindingsService</section>
+        <snippet>Defines FindingsService interface including bulk operations pattern. Contains database schema for findings table with status, validation_history columns.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Epic 4 Technical Specification</title>
+        <section>Data Models and Contracts</section>
+        <snippet>TypeScript interfaces for Finding, FindingStatus, FindingFilters. Validation_history JSONB array for audit trail of status changes.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E4.md</path>
+        <title>Epic 4: Collaborative Knowledge Workflow</title>
+        <section>Stories: E4.12 Build Bulk Actions</section>
+        <snippet>Epic overview covering Knowledge Explorer functionality. E4.12 (now E4.11) specifically covers bulk actions for finding management.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>Manda UX Design Specification</title>
+        <section>5.3 Knowledge Explorer - Findings Browser</section>
+        <snippet>Defines table/card view patterns, validation workflow with undo capability, bulk action undo pattern referenced in section 7.7.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e4-10-implement-export-findings-to-csv-excel.md</path>
+        <title>Story E4.10 - Export Findings</title>
+        <section>Dev Notes - ExportDropdown Pattern</section>
+        <snippet>Reference implementation for dropdown pattern. ExportDropdown uses shadcn/ui DropdownMenu, toast notifications, filter integration.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx</path>
+        <kind>container component</kind>
+        <symbol>FindingsBrowser</symbol>
+        <lines>1-705</lines>
+        <reason>Main container to add bulk selection state, SelectionToolbar, BulkActionsDropdown. Contains existing handleValidate, handleUndo patterns to extend.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/FindingsTable.tsx</path>
+        <kind>table component</kind>
+        <symbol>FindingsTable</symbol>
+        <lines>173-553</lines>
+        <reason>Modify to add checkbox column, header select-all checkbox, row selection highlighting. Uses @tanstack/react-table with column definitions at line 215.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/FindingCard.tsx</path>
+        <kind>card component</kind>
+        <symbol>FindingCard</symbol>
+        <lines>116-316</lines>
+        <reason>Modify to add checkbox overlay in top-left, selected border state. CardHeader at line 218 is insertion point for checkbox.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/useUndoValidation.ts</path>
+        <kind>hook</kind>
+        <symbol>useUndoValidation</symbol>
+        <lines>1-141</lines>
+        <reason>EXTEND (DO NOT RECREATE) for bulk undo. Current UndoState tracks single finding. Need BulkUndoState with array of previous states and 10s timeout.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/ExportDropdown.tsx</path>
+        <kind>dropdown component</kind>
+        <symbol>ExportDropdown</symbol>
+        <lines>1-186</lines>
+        <reason>Reference pattern for BulkActionsDropdown. Same structure: Button trigger, DropdownMenu, loading state, toast notifications.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/api/findings.ts</path>
+        <kind>API client</kind>
+        <symbol>exportFindings, validateFinding, updateFinding</symbol>
+        <lines>139-344</lines>
+        <reason>Add bulkUpdateFindings function. Follow existing pattern: POST with JSON body, error handling, response parsing.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/types/findings.ts</path>
+        <kind>types</kind>
+        <symbol>Finding, FindingStatus, ValidationEvent</symbol>
+        <lines>1-214</lines>
+        <reason>Reference types for bulk action parameters and responses. ValidationEvent structure for validation_history array.</reason>
+      </file>
+      <file>
+        <path>manda-app/app/api/projects/[id]/findings/[findingId]/validate/route.ts</path>
+        <kind>API route</kind>
+        <symbol>POST validate</symbol>
+        <reason>Reference pattern for bulk endpoint. Shows Zod validation, Supabase update, validation_history append pattern.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/knowledge-explorer/findings/index.ts</path>
+        <kind>barrel export</kind>
+        <symbol>module exports</symbol>
+        <lines>1-19</lines>
+        <reason>Add exports for new components: SelectionToolbar, BulkActionsDropdown, BulkConfirmDialog, useSelectionState.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/ui/checkbox.tsx</path>
+        <kind>UI component</kind>
+        <symbol>Checkbox</symbol>
+        <reason>shadcn/ui checkbox component for row/card selection. Already installed via @radix-ui/react-checkbox in package.json.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/ui/alert-dialog.tsx</path>
+        <kind>UI component</kind>
+        <symbol>AlertDialog</symbol>
+        <reason>shadcn/ui alert dialog for bulk confirmation. Already installed via @radix-ui/react-alert-dialog.</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <npm>
+        <package name="@tanstack/react-table" version="^8.21.3">Data table with column definitions, row model - already installed</package>
+        <package name="@radix-ui/react-checkbox" version="^1.3.3">Accessible checkbox component - already installed</package>
+        <package name="@radix-ui/react-alert-dialog" version="^1.1.15">Confirmation dialog component - already installed</package>
+        <package name="@radix-ui/react-dropdown-menu" version="^2.1.16">Dropdown menu component - already installed</package>
+        <package name="sonner" version="^2.0.7">Toast notifications with action buttons - already installed</package>
+        <package name="lucide-react" version="^0.554.0">Icons for UI elements - already installed</package>
+        <package name="csv-stringify" version="^6.6.0">CSV export - already installed (for bulk export selected)</package>
+        <package name="exceljs" version="^4.4.0">Excel export - already installed (for bulk export selected)</package>
+        <package name="@supabase/supabase-js" version="^2.84.0">Database client for bulk updates - already installed</package>
+        <package name="zustand" version="^5.0.8">State management option if selection state needs persistence - already installed</package>
+      </npm>
+      <internal>
+        <module path="lib/supabase/client">Supabase client for frontend API calls</module>
+        <module path="lib/supabase/server">Supabase server client for API route database operations</module>
+        <module path="components/ui/*">shadcn/ui components (Button, Checkbox, DropdownMenu, AlertDialog, Tooltip)</module>
+      </internal>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint category="architectural">Next.js App Router with client components for interactive UI</constraint>
+    <constraint category="architectural">Supabase RLS policies enforce user isolation - bulk update must respect deal_id ownership</constraint>
+    <constraint category="pattern">Optimistic updates for UI responsiveness with rollback on error</constraint>
+    <constraint category="pattern">Toast notifications with undo action button pattern (5s single, 10s bulk)</constraint>
+    <constraint category="pattern">Zod validation schemas for all API request bodies</constraint>
+    <constraint category="pattern">Use existing hooks pattern - extend useUndoValidation, don't create separate bulk hook</constraint>
+    <constraint category="limit">Maximum 100 findings per bulk action to prevent timeout and keep undo manageable</constraint>
+    <constraint category="limit">Selection clears on page change for simpler UX (avoid cross-page complexity)</constraint>
+    <constraint category="database">Atomic transactions for bulk updates - use Supabase transaction or sequential with rollback</constraint>
+    <constraint category="accessibility">ARIA labels for all checkboxes, keyboard navigation, screen reader announcements</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>POST /api/projects/[id]/findings/bulk</name>
+      <kind>REST endpoint</kind>
+      <signature>
+        Request: { action: 'validate' | 'reject', findingIds: string[] }
+        Response: { updated: number, findings: Finding[] }
+        Errors: 400 (invalid action, exceeds 100 limit), 401 (unauthorized), 500 (server error)
+      </signature>
+      <path>manda-app/app/api/projects/[id]/findings/bulk/route.ts (NEW)</path>
+    </interface>
+    <interface>
+      <name>bulkUpdateFindings</name>
+      <kind>API client function</kind>
+      <signature>
+        bulkUpdateFindings(projectId: string, action: 'validate' | 'reject', findingIds: string[]): Promise&lt;{ updated: number, findings: Finding[] }&gt;
+      </signature>
+      <path>manda-app/lib/api/findings.ts (ADD)</path>
+    </interface>
+    <interface>
+      <name>useSelectionState</name>
+      <kind>React hook</kind>
+      <signature>
+        useSelectionState(pageSize: number): {
+          selectedIds: Set&lt;string&gt;,
+          isSelected: (id: string) =&gt; boolean,
+          toggle: (id: string) =&gt; void,
+          selectAll: (ids: string[]) =&gt; void,
+          clearAll: () =&gt; void,
+          count: number
+        }
+      </signature>
+      <path>manda-app/components/knowledge-explorer/findings/useSelectionState.ts (NEW)</path>
+    </interface>
+    <interface>
+      <name>BulkUndoState</name>
+      <kind>TypeScript interface</kind>
+      <signature>
+        interface BulkUndoState {
+          findingIds: string[]
+          previousStates: Array&lt;{ id: string, status: FindingStatus, confidence: number | null }&gt;
+          action: 'validate' | 'reject'
+          timestamp: number
+        }
+      </signature>
+      <path>manda-app/components/knowledge-explorer/findings/useUndoValidation.ts (EXTEND)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing uses Vitest for unit/integration tests and Playwright for E2E tests.
+      Component tests use @testing-library/react with userEvent for interaction simulation.
+      Tests should mock API calls via vi.mock(), mock sonner toast for notifications.
+      Pattern: describe blocks organized by feature/AC, it blocks for specific behaviors.
+      Test accessibility with ARIA queries, keyboard navigation tests.
+      550+ tests exist with 85-93% backend coverage target.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/ - Component unit tests</location>
+      <location>manda-app/__tests__/api/findings/ - API route tests</location>
+      <location>manda-app/e2e/ - Playwright E2E tests (optional for this story)</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test checkbox renders in leftmost column, Tab focuses checkbox, Space toggles selection</idea>
+      <idea ac="1">Test selected row has bg-muted/50 highlight class, header checkbox toggles all visible</idea>
+      <idea ac="2">Test FindingCard checkbox position in top-left, doesn't overlap content/actions</idea>
+      <idea ac="2">Test selection persists when toggling viewMode between 'table' and 'card'</idea>
+      <idea ac="3">Test SelectionToolbar shows "12 selected" text, Clear button calls clearAll</idea>
+      <idea ac="4">Test BulkActionsDropdown disabled when selectedIds.size === 0</idea>
+      <idea ac="4">Test dropdown shows "Validate All (12)" with correct count</idea>
+      <idea ac="5">Test BulkConfirmDialog opens on dropdown item click, shows count in message</idea>
+      <idea ac="5">Test optimistic UI update happens before API response</idea>
+      <idea ac="6">Test undo toast appears after bulk action, 10 second timeout</idea>
+      <idea ac="6">Test clicking Undo reverts all findings to previous states</idea>
+      <idea ac="7">Test "Export Selected" passes selectedIds to export function, ignores filters</idea>
+      <idea ac="8">Test API returns 400 when findingIds.length &gt; 100</idea>
+      <idea ac="8">Test atomic rollback on partial failure (mock db error mid-batch)</idea>
+      <idea ac="9">Test bulk action on 50 items completes, no intermediate re-renders</idea>
+      <idea ac="10">Test checkbox ARIA labels include truncated finding text</idea>
+      <idea ac="10">Test keyboard navigation through checkboxes and bulk dropdown</idea>
+    </ideas>
+  </tests>
+</story-context>

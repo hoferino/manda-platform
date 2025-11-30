@@ -7,6 +7,7 @@
  * Story: E4.4 - Build Card View Alternative for Findings (AC: #2, #3, #4, #5, #6)
  * Story: E4.9 - Implement Finding Detail View with Full Context (AC: #1, #7, #8)
  * Story: E4.10 - Implement Export Findings to CSV/Excel (AC: #1, #4, #5)
+ * Story: E4.11 - Build Bulk Actions for Finding Management (AC: #1-11)
  *
  * Combines:
  * - FindingSearch for semantic search
@@ -19,6 +20,7 @@
  * - Data fetching with React state management
  * - Validation with undo support
  * - Inline editing
+ * - Bulk selection and actions (E4.11)
  */
 
 'use client'
@@ -35,8 +37,14 @@ import { ExportDropdown } from './ExportDropdown'
 import { InlineEdit } from './InlineEdit'
 import { useUndoValidation, type UndoState } from './useUndoValidation'
 import { ViewToggle, useViewPreference, type ViewMode } from '../shared'
-import { getFindings, validateFinding, updateFinding, searchFindings } from '@/lib/api/findings'
-import type { ExportFilters } from '@/lib/api/findings'
+// E4.11: Bulk action imports
+import { useSelectionState } from './useSelectionState'
+import { SelectionToolbar } from './SelectionToolbar'
+import { BulkConfirmDialog, type BulkAction } from './BulkConfirmDialog'
+import { useBulkUndo } from './useBulkUndo'
+import { UndoToast } from './UndoToast'
+import { getFindings, validateFinding, updateFinding, searchFindings, batchValidateFindings } from '@/lib/api/findings'
+import type { ExportFilters, BatchActionResponse } from '@/lib/api/findings'
 import type {
   Finding,
   FindingFilters as FilterType,
@@ -92,6 +100,24 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
 
   // Determine if we're in search mode
   const isSearchMode = searchQuery.trim().length > 0 && searchResults !== null
+
+  // E4.11: Bulk selection state
+  const {
+    selectedIds,
+    selectedIdsArray,
+    isSelected,
+    toggle: toggleSelection,
+    selectAll,
+    clearAll: clearSelection,
+    count: selectionCount,
+    areAllSelected,
+    areSomeSelected,
+  } = useSelectionState()
+
+  // E4.11: Bulk action confirmation dialog state
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
+  const [bulkAction, setBulkAction] = useState<BulkAction>('validate')
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false)
 
   // Memoize export filters to avoid recreating object on each render
   const exportFilters: ExportFilters = useMemo(() => ({
@@ -166,6 +192,27 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
   const { saveUndoState, performUndo, clearUndo } = useUndoValidation({
     timeout: 5000, // 5 seconds
     onUndo: handleUndo,
+  })
+
+  // E4.11: Bulk undo hook
+  const {
+    undoState: bulkUndoState,
+    canUndo: canBulkUndo,
+    remainingTime: bulkUndoRemainingTime,
+    isUndoing: isBulkUndoing,
+    saveUndoState: saveBulkUndoState,
+    performUndo: performBulkUndo,
+    clearUndo: clearBulkUndo,
+  } = useBulkUndo({
+    projectId,
+    onUndoComplete: (result) => {
+      toast.success(`Undo complete: ${result.summary.succeeded} findings reverted`)
+      // Refresh data after undo
+      fetchFindings()
+    },
+    onUndoError: (error) => {
+      toast.error(`Undo failed: ${error.message}`)
+    },
   })
 
   // Update URL when search query changes
@@ -510,6 +557,95 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
     setEditingFinding(null)
   }, [])
 
+  // E4.11: Handle selection change for individual finding
+  const handleSelectionChange = useCallback(
+    (id: string, selected: boolean) => {
+      if (selected) {
+        selectAll([id])
+      } else {
+        toggleSelection(id)
+      }
+    },
+    [selectAll, toggleSelection]
+  )
+
+  // E4.11: Handle select all on current page
+  const handleSelectAllOnPage = useCallback(
+    (ids: string[]) => {
+      selectAll(ids)
+    },
+    [selectAll]
+  )
+
+  // E4.11: Open bulk action dialog
+  const handleOpenBulkDialog = useCallback((action: BulkAction) => {
+    setBulkAction(action)
+    setBulkDialogOpen(true)
+  }, [])
+
+  // E4.11: Close bulk action dialog
+  const handleCloseBulkDialog = useCallback(() => {
+    setBulkDialogOpen(false)
+  }, [])
+
+  // E4.11: Execute bulk action
+  const handleBulkAction = useCallback(async () => {
+    if (selectedIdsArray.length === 0) return
+
+    setIsBulkProcessing(true)
+    const action = bulkAction === 'validate' ? 'confirm' : 'reject'
+
+    // Get the findings from current data (use data/searchResults directly to avoid dependency)
+    const currentFindings: Finding[] = isSearchMode
+      ? searchResults?.findings || []
+      : data?.findings || []
+    const affectedFindings = currentFindings.filter((f) => selectedIds.has(f.id))
+
+    try {
+      const result = await batchValidateFindings(projectId, action, selectedIdsArray)
+
+      // Save undo state for bulk action
+      saveBulkUndoState(affectedFindings, bulkAction)
+
+      // Close dialog and clear selection
+      setBulkDialogOpen(false)
+      clearSelection()
+
+      // Show success toast
+      const successCount = result.summary.succeeded
+      const failedCount = result.summary.failed
+      const successMsg = `${successCount} finding${successCount === 1 ? '' : 's'} ${bulkAction}d`
+      const failedMsg = failedCount > 0 ? ` (${failedCount} failed)` : ''
+
+      toast.success(successMsg + failedMsg)
+
+      // Refresh data to show updated findings
+      if (isSearchMode && searchQuery) {
+        performSearch(searchQuery)
+      } else {
+        fetchFindings()
+      }
+    } catch (error) {
+      console.error('Bulk action failed:', error)
+      toast.error(error instanceof Error ? error.message : 'Bulk action failed')
+    } finally {
+      setIsBulkProcessing(false)
+    }
+  }, [
+    selectedIdsArray,
+    selectedIds,
+    bulkAction,
+    data,
+    searchResults,
+    isSearchMode,
+    projectId,
+    saveBulkUndoState,
+    clearSelection,
+    searchQuery,
+    performSearch,
+    fetchFindings,
+  ])
+
   // Handle opening detail panel with URL update for deep linking
   const handleOpenDetailPanel = useCallback(
     (finding: Finding) => {
@@ -576,6 +712,11 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
     : data?.findings || []
 
   const displayTotal = isSearchMode ? searchResults?.total || 0 : data?.total || 0
+
+  // E4.11: Calculate if all/some on page are selected
+  const pageIds = displayFindings.map((f) => f.id)
+  const isAllOnPageSelected = areAllSelected(pageIds)
+  const isSomeOnPageSelected = areSomeSelected(pageIds)
 
   // Calculate pagination (only for non-search mode)
   const totalPages = isSearchMode ? 1 : data ? Math.ceil(data.total / (filters.limit || 50)) : 1
@@ -669,6 +810,12 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
               onRowClick={handleOpenDetailPanel}
               showSimilarity={isSearchMode}
               projectId={projectId}
+              // E4.11: Selection props
+              selectedIds={selectedIds}
+              onSelectionChange={handleSelectionChange}
+              onSelectAll={handleSelectAllOnPage}
+              isAllSelected={isAllOnPageSelected}
+              isSomeSelected={isSomeOnPageSelected}
             />
           ) : (
             <FindingsCardGrid
@@ -686,6 +833,9 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
               editingFindingId={editingFindingId}
               showSimilarity={isSearchMode}
               projectId={projectId}
+              // E4.11: Selection props
+              selectedIds={selectedIds}
+              onSelectionChange={handleSelectionChange}
             />
           )}
         </>
@@ -699,6 +849,37 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
         onClose={handleCloseDetailPanel}
         onFindingUpdated={handleFindingUpdated}
       />
+
+      {/* E4.11: Selection Toolbar (floating) */}
+      <SelectionToolbar
+        selectedCount={selectionCount}
+        onClearSelection={clearSelection}
+        onBulkValidate={() => handleOpenBulkDialog('validate')}
+        onBulkReject={() => handleOpenBulkDialog('reject')}
+        isProcessing={isBulkProcessing}
+      />
+
+      {/* E4.11: Bulk Confirmation Dialog */}
+      <BulkConfirmDialog
+        isOpen={bulkDialogOpen}
+        action={bulkAction}
+        count={selectionCount}
+        isProcessing={isBulkProcessing}
+        onConfirm={handleBulkAction}
+        onCancel={handleCloseBulkDialog}
+      />
+
+      {/* E4.11: Undo Toast (appears after bulk action) */}
+      {canBulkUndo && bulkUndoState && (
+        <UndoToast
+          action={bulkUndoState.action}
+          count={bulkUndoState.findingIds.length}
+          remainingTime={bulkUndoRemainingTime}
+          isUndoing={isBulkUndoing}
+          onUndo={performBulkUndo}
+          onDismiss={clearBulkUndo}
+        />
+      )}
     </div>
   )
 }

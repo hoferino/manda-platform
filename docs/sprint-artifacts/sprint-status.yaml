@@ -513,7 +513,7 @@ development_status:
     - Supabase Realtime subscription hook
     - Stage-aware processing pipeline
 
-  # Epic 4: Collaborative Knowledge Workflow (14 stories)
+  # Epic 4: Collaborative Knowledge Workflow (13 stories - was 14, E4.11 duplicate removed)
   # CONTEXTED: 2025-11-28
   # Tech Spec: docs/sprint-artifacts/tech-spec-epic-E4.md
   # Key Decisions:
@@ -686,14 +686,32 @@ development_status:
     - Integrated into FindingsBrowser toolbar with filter-aware export
     - 5000 finding limit with warning for large exports
     - 23 tests passing (19 component + 4 API)
-  e4-11-implement-contradiction-detection-and-flagging: backlog
-  e4-11-jira-id: SCRUM-58
-  e4-12-build-bulk-actions-for-finding-management: backlog
-  e4-12-jira-id: SCRUM-59
-  e4-13-implement-export-findings-feature-advanced: backlog
-  e4-13-jira-id: SCRUM-60
-  e4-14-build-real-time-knowledge-graph-updates: backlog
-  e4-14-jira-id: SCRUM-61
+  # E4.11 was duplicate of E4.7 - removed from epics.md on 2025-11-30
+  # Stories renumbered: E4.12→E4.11, E4.13→E4.12, E4.14→E4.13
+  e4-11-build-bulk-actions-for-finding-management: done
+  e4-11-jira-id: SCRUM-59
+  e4-11-drafted: 2025-11-30
+  e4-11-context-ready: 2025-11-30
+  e4-11-completed: 2025-11-30
+  e4-11-note: "Renumbered from E4.12 after duplicate E4.11 removal"
+  e4-11-completion-notes: |
+    - Created useSelectionState hook for checkbox selection state management
+    - Created useBulkUndo hook for bulk undo with 5-second timeout
+    - Created SelectionToolbar floating component with selection count
+    - Created BulkActionsDropdown with validate/reject/export options
+    - Created BulkConfirmDialog for bulk action confirmation
+    - Created UndoToast notification component
+    - Created batch API endpoint POST /api/projects/[id]/findings/batch
+    - Added checkboxes to FindingsTable and FindingCard components
+    - Integration with FindingsBrowser for full bulk action workflow
+    - 110+ new tests (hooks, components, API) - 829 total tests passing
+    - Build passing with all TypeScript checks
+  e4-12-implement-export-findings-feature-advanced: backlog
+  e4-12-jira-id: SCRUM-60
+  e4-12-note: "Renumbered from E4.13 after duplicate E4.11 removal"
+  e4-13-build-real-time-knowledge-graph-updates: backlog
+  e4-13-jira-id: SCRUM-61
+  e4-13-note: "Renumbered from E4.14 after duplicate E4.11 removal"
   epic-4-retrospective: optional
 
   # Epic 5: Conversational Assistant (9 stories)

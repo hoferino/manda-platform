@@ -2757,73 +2757,9 @@ And the export completes within 10 seconds
 
 ---
 
-#### Story E4.11: Implement Contradiction Detection and Flagging
+<!-- E4.11 REMOVED: Was duplicate of E4.7 (Detect Contradictions Using Neo4j) - Removed 2025-11-30 -->
 
-**As a** developer
-**I want** to detect contradictions between findings
-**So that** analysts can resolve conflicting information
-
-**Description:**
-Implement contradiction detection logic that compares findings using LLM analysis and stores `CONTRADICTS` relationships in Neo4j when conflicting information is found.
-
-**Technical Details:**
-- Job type: `detect_contradictions`
-- Run after document analysis completes
-- Group findings by topic/domain
-- Use Gemini 2.5 Pro to compare findings: "Do these findings contradict each other?"
-- If contradiction detected, create `CONTRADICTS` relationship in Neo4j
-- Store contradiction in `contradictions` table
-- Confidence threshold: >70% contradiction likelihood
-
-**Acceptance Criteria:**
-
-```gherkin
-Given two findings state different Q3 revenues
-When contradiction detection runs
-Then the LLM identifies the contradiction
-And a `CONTRADICTS` relationship is created in Neo4j
-And a record is added to the contradictions table
-
-Given findings are from different domains
-When contradiction detection runs
-Then only relevant comparisons are made
-And unrelated findings are not compared
-
-Given a contradiction is detected
-When I query the contradictions table
-Then I see: finding_a_id, finding_b_id, confidence, status
-And the status is "unresolved"
-
-Given no contradictions exist
-When detection runs
-Then no false positives are created
-And the contradictions table remains empty
-
-Given the LLM confidence is below 70%
-When a potential contradiction is found
-Then it is not flagged as a contradiction
-And analysts are not alerted
-```
-
-**Related FR:**
-- NFR-ACC-003: Contradiction Detection
-- FR-KB-004: Cross-Document Analysis
-
-**Architecture Reference:** Cross-Domain Intelligence (Phase 3 foundation)
-
-**Definition of Done:**
-- [ ] `detect_contradictions` job handler created
-- [ ] LLM comparison logic implemented
-- [ ] Neo4j `CONTRADICTS` relationships created
-- [ ] Contradictions table populated
-- [ ] Confidence threshold applied (>70%)
-- [ ] False positive rate minimized
-- [ ] Job runs after document analysis
-- [ ] Performance acceptable for large datasets
-
----
-
-#### Story E4.12: Build Bulk Actions for Finding Management
+#### Story E4.11: Build Bulk Actions for Finding Management
 
 **As an** M&A analyst
 **I want** to perform bulk actions on multiple findings
@@ -2887,7 +2823,7 @@ And unselected findings remain unchanged
 
 ---
 
-#### Story E4.13: Implement Export Findings Feature
+#### Story E4.12: Implement Export Findings Feature (Advanced)
 
 **As an** M&A analyst
 **I want** to export findings to various formats
@@ -2950,7 +2886,7 @@ And the file is properly formatted
 
 ---
 
-#### Story E4.14: Build Real-Time Knowledge Graph Updates
+#### Story E4.13: Build Real-Time Knowledge Graph Updates
 
 **As an** M&A analyst
 **I want** to see the knowledge graph update in real-time

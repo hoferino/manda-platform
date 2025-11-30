@@ -2,6 +2,7 @@
  * FindingsCardGrid Component
  * Container for displaying findings as cards in a responsive grid
  * Story: E4.4 - Build Card View Alternative for Findings (AC: 3, 4, 6, 7)
+ * Story: E4.11 - Build Bulk Actions for Finding Management (AC: 2)
  *
  * Features:
  * - Responsive CSS Grid layout (1 col mobile, 2 col tablet, 3 col desktop)
@@ -9,6 +10,7 @@
  * - Empty state component
  * - Pagination matching table behavior
  * - Virtual scrolling for large datasets (>100 findings)
+ * - Selection state for bulk actions (E4.11)
  */
 
 'use client'
@@ -48,6 +50,9 @@ export interface FindingsCardGridProps {
   showSimilarity?: boolean
   className?: string
   projectId: string
+  // Selection props for bulk actions (E4.11)
+  selectedIds?: Set<string>
+  onSelectionChange?: (id: string, selected: boolean) => void
 }
 
 /**
@@ -173,6 +178,8 @@ function VirtualCardGrid({
   editingFindingId,
   showSimilarity,
   projectId,
+  selectedIds,
+  onSelectionChange,
 }: {
   findings: Finding[] | FindingWithSimilarity[]
   onValidate: (findingId: string, action: 'confirm' | 'reject') => Promise<void>
@@ -183,6 +190,8 @@ function VirtualCardGrid({
   editingFindingId?: string | null
   showSimilarity?: boolean
   projectId: string
+  selectedIds?: Set<string>
+  onSelectionChange?: (id: string, selected: boolean) => void
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
 
@@ -241,6 +250,8 @@ function VirtualCardGrid({
                     isEditing={editingFindingId === finding.id}
                     showSimilarity={showSimilarity}
                     projectId={projectId}
+                    isSelected={selectedIds?.has(finding.id)}
+                    onSelectionChange={onSelectionChange}
                   />
                 ))}
               </div>
@@ -268,6 +279,9 @@ export function FindingsCardGrid({
   showSimilarity = false,
   className,
   projectId,
+  // Selection props for bulk actions (E4.11)
+  selectedIds,
+  onSelectionChange,
 }: FindingsCardGridProps) {
   // Determine if we should use virtual scrolling
   const useVirtualScroll = findings.length > VIRTUAL_SCROLL_THRESHOLD
@@ -308,6 +322,8 @@ export function FindingsCardGrid({
           editingFindingId={editingFindingId}
           showSimilarity={showSimilarity}
           projectId={projectId}
+          selectedIds={selectedIds}
+          onSelectionChange={onSelectionChange}
         />
         <Pagination
           page={page}
@@ -339,6 +355,8 @@ export function FindingsCardGrid({
             isEditing={editingFindingId === finding.id}
             showSimilarity={showSimilarity}
             projectId={projectId}
+            isSelected={selectedIds?.has(finding.id)}
+            onSelectionChange={onSelectionChange}
           />
         ))}
       </div>

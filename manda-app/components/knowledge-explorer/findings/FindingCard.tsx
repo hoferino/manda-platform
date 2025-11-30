@@ -3,6 +3,7 @@
  * Card view alternative for displaying findings
  * Story: E4.4 - Build Card View Alternative for Findings (AC: 1, 4, 5)
  * Story: E4.5 - Implement Source Attribution Links (AC: 7)
+ * Story: E4.11 - Build Bulk Actions for Finding Management (AC: 2, 10)
  *
  * Features:
  * - Card layout with finding text, domain, confidence, status, source
@@ -13,6 +14,7 @@
  * - Keyboard navigation (Enter expand, Escape collapse)
  * - ARIA labels and screen reader support
  * - Clickable source attribution links with preview modal
+ * - Checkbox selection for bulk actions (E4.11)
  */
 
 'use client'
@@ -21,6 +23,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ConfidenceBadge, DomainTag, StatusBadge, SourceAttributionLink } from '../shared'
 import { FindingActions } from './FindingActions'
 import { InlineEdit } from './InlineEdit'
@@ -41,6 +44,9 @@ export interface FindingCardProps {
   showSimilarity?: boolean
   className?: string
   projectId: string
+  // Selection props for bulk actions (E4.11)
+  isSelected?: boolean
+  onSelectionChange?: (id: string, selected: boolean) => void
 }
 
 /**
@@ -124,7 +130,12 @@ export function FindingCard({
   showSimilarity = false,
   className,
   projectId,
+  // Selection props for bulk actions (E4.11)
+  isSelected = false,
+  onSelectionChange,
 }: FindingCardProps) {
+  // Check if selection is enabled
+  const selectionEnabled = onSelectionChange !== undefined
   const [isExpanded, setIsExpanded] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -174,12 +185,14 @@ export function FindingCard({
   // Handle card click for detail panel
   const handleCardClick = useCallback(
     (e: React.MouseEvent) => {
-      // Don't trigger if clicking on a button or interactive element
+      // Don't trigger if clicking on a button, checkbox, or interactive element
       const target = e.target as HTMLElement
       if (
         target.closest('button') ||
         target.closest('[role="button"]') ||
-        target.closest('a')
+        target.closest('[role="checkbox"]') ||
+        target.closest('a') ||
+        target.closest('[data-selection-checkbox]')
       ) {
         return
       }
@@ -196,6 +209,9 @@ export function FindingCard({
     onEdit(finding)
   }, [finding, onEdit])
 
+  // Truncated text for ARIA label
+  const truncatedText = finding.text.slice(0, 50) + (finding.text.length > 50 ? '...' : '')
+
   return (
     <Card
       ref={cardRef}
@@ -205,17 +221,37 @@ export function FindingCard({
         'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
         isExpanded && 'ring-2 ring-primary/20',
         onCardClick && 'cursor-pointer',
+        // Selected state border highlight (E4.11)
+        isSelected && 'ring-2 ring-primary',
         className
       )}
       tabIndex={0}
       role="article"
-      aria-label={`Finding: ${finding.text.slice(0, 50)}...`}
+      aria-label={`Finding: ${truncatedText}`}
       aria-expanded={shouldTruncate ? isExpanded : undefined}
+      aria-selected={isSelected}
+      data-selected={isSelected}
       onKeyDown={handleKeyDown}
       onClick={handleCardClick}
     >
+      {/* Selection checkbox overlay (E4.11) */}
+      {selectionEnabled && (
+        <div
+          className="absolute top-3 left-3 z-10"
+          data-selection-checkbox
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={(checked) => onSelectionChange?.(finding.id, !!checked)}
+            aria-label={`Select finding: ${truncatedText}`}
+            className="bg-background"
+          />
+        </div>
+      )}
+
       {/* Header with badges */}
-      <CardHeader className="pb-2 pt-4 px-4">
+      <CardHeader className={cn('pb-2 pt-4 px-4', selectionEnabled && 'pl-10')}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <DomainTag domain={finding.domain} size="sm" />

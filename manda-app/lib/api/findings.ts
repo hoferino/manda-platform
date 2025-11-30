@@ -3,6 +3,7 @@
  *
  * Client-side functions for interacting with the findings API.
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface (AC: #5)
+ * Story: E4.11 - Build Bulk Actions for Finding Management (AC: #7)
  */
 
 import type {
@@ -341,4 +342,54 @@ export async function exportFindings(
   URL.revokeObjectURL(url)
 
   return { filename, count }
+}
+
+/**
+ * Batch result for individual finding
+ */
+export interface BatchFindingResult {
+  id: string
+  success: boolean
+  finding?: Finding
+  error?: string
+}
+
+/**
+ * Batch action response
+ */
+export interface BatchActionResponse {
+  results: BatchFindingResult[]
+  summary: {
+    total: number
+    succeeded: number
+    failed: number
+  }
+}
+
+/**
+ * Batch validate or reject multiple findings
+ * Story: E4.11 - Build Bulk Actions for Finding Management (AC: #7, #8)
+ *
+ * @param projectId - The project/deal ID
+ * @param action - Action to perform ('confirm' | 'reject')
+ * @param findingIds - Array of finding IDs to process
+ * @returns BatchActionResponse with results and summary
+ */
+export async function batchValidateFindings(
+  projectId: string,
+  action: 'confirm' | 'reject',
+  findingIds: string[]
+): Promise<BatchActionResponse> {
+  const response = await fetch(`/api/projects/${projectId}/findings/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, findingIds }),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Batch action failed')
+  }
+
+  return response.json()
 }
