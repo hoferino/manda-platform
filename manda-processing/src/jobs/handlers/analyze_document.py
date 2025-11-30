@@ -280,6 +280,7 @@ class AnalyzeDocumentHandler:
             # Enqueue next job based on file type
             # E3.9: Excel files always get financial extraction
             # E3.9: PDFs with tables also get financial extraction
+            next_job_id = None
             if file_type in EXCEL_MIME_TYPES:
                 next_job_id = await self._enqueue_next_job(
                     "extract-financials", document_id, deal_id, user_id
@@ -297,7 +298,27 @@ class AnalyzeDocumentHandler:
             else:
                 # Non-Excel files without tables are complete after analysis
                 await self.db.update_document_status(document_id, "complete")
-                next_job_id = None
+
+            # E4.7: Enqueue contradiction detection for all documents (after any extraction)
+            # This runs deal-level analysis to find contradictions between findings
+            if deal_id:
+                try:
+                    await self._enqueue_next_job(
+                        "detect-contradictions", document_id, deal_id, user_id
+                    )
+                    logger.info(
+                        "Enqueued detect-contradictions job",
+                        document_id=str(document_id),
+                        deal_id=deal_id,
+                    )
+                except Exception as e:
+                    # Don't fail the document if contradiction detection fails to enqueue
+                    logger.warning(
+                        "Failed to enqueue detect-contradictions job",
+                        document_id=str(document_id),
+                        deal_id=deal_id,
+                        error=str(e),
+                    )
 
             # Calculate metrics
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)

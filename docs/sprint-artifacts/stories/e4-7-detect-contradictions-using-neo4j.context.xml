@@ -1,0 +1,300 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>7</storyId>
+    <title>Detect Contradictions Using Neo4j</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-7-detect-contradictions-using-neo4j.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to detect contradictions between findings</iWant>
+    <soThat>analysts can resolve conflicting information and maintain data accuracy in the knowledge base</soThat>
+    <tasks>
+      <task id="1" title="Create detect_contradictions Job Handler" ac="1, 7">
+        <subtask>Create manda-processing/src/jobs/handlers/detect_contradictions.py</subtask>
+        <subtask>Define DetectContradictionsHandler class following E3 pattern</subtask>
+        <subtask>Implement handle(job: Job) method with stage tracking</subtask>
+        <subtask>Add error classification using existing ErrorClassifier</subtask>
+        <subtask>Register handler in __init__.py and job queue worker</subtask>
+        <subtask>Add unit tests for handler</subtask>
+      </task>
+      <task id="2" title="Implement Findings Fetching and Grouping" ac="2">
+        <subtask>Add get_findings_by_deal(deal_id) method to SupabaseClient</subtask>
+        <subtask>Filter out rejected findings (status != 'rejected')</subtask>
+        <subtask>Group findings by domain field</subtask>
+        <subtask>Return: Dict[domain, List[Finding]]</subtask>
+        <subtask>Add tests for grouping logic</subtask>
+      </task>
+      <task id="3" title="Create LLM Contradiction Comparison Service" ac="3, 4">
+        <subtask>Create manda-processing/src/llm/contradiction_detector.py</subtask>
+        <subtask>Define contradiction comparison prompt template</subtask>
+        <subtask>Implement compare_findings(finding_a, finding_b) method</subtask>
+        <subtask>Implement compare_batch(pairs: List[Tuple]) for efficiency</subtask>
+        <subtask>Parse structured output: { contradicts, confidence, reason }</subtask>
+        <subtask>Apply 70% confidence threshold</subtask>
+        <subtask>Use Gemini 2.5 Pro model tier</subtask>
+        <subtask>Add comprehensive tests with mocked LLM responses</subtask>
+      </task>
+      <task id="4" title="Implement Neo4j Contradiction Storage" ac="5">
+        <subtask>Verify createContradiction() function works correctly</subtask>
+        <subtask>Add get_existing_contradiction(finding1_id, finding2_id) to avoid duplicates</subtask>
+        <subtask>Create bidirectional check (A->B or B->A)</subtask>
+        <subtask>Add retry logic for Neo4j writes</subtask>
+        <subtask>Add tests for Neo4j operations</subtask>
+      </task>
+      <task id="5" title="Implement Supabase Contradictions Storage" ac="6">
+        <subtask>Add store_contradiction() method to SupabaseClient</subtask>
+        <subtask>Check for existing contradiction before insert (dedupe)</subtask>
+        <subtask>Insert with: deal_id, finding_a_id, finding_b_id, confidence, status, detected_at</subtask>
+        <subtask>Ensure atomic writes with Neo4j (or handle partial failures gracefully)</subtask>
+        <subtask>Add tests for storage operations</subtask>
+      </task>
+      <task id="6" title="Integrate into Job Pipeline" ac="7">
+        <subtask>Modify analyze_document.py to enqueue detect-contradictions after completion</subtask>
+        <subtask>Add configuration flag: enable_contradiction_detection (default: true)</subtask>
+        <subtask>Implement stage tracking: 'contradiction_detection'</subtask>
+        <subtask>Handle job failure with appropriate retry behavior</subtask>
+        <subtask>Add integration tests for pipeline flow</subtask>
+      </task>
+      <task id="7" title="Implement Performance Optimizations" ac="8, 9">
+        <subtask>Add max findings limit per domain (configurable, default: 100)</subtask>
+        <subtask>Implement semantic similarity pre-filter using embeddings</subtask>
+        <subtask>Skip same-chunk comparisons</subtask>
+        <subtask>Skip findings with different date_referenced</subtask>
+        <subtask>Add batch processing for LLM calls (5 pairs per batch)</subtask>
+        <subtask>Add performance logging and metrics</subtask>
+      </task>
+      <task id="8" title="Create Manual Trigger API Endpoint" ac="10">
+        <subtask>Create app/api/projects/[id]/contradictions/detect/route.ts</subtask>
+        <subtask>POST endpoint to enqueue detect-contradictions job</subtask>
+        <subtask>Add authentication and project ownership validation</subtask>
+        <subtask>Return job_id for tracking</subtask>
+        <subtask>Add tests for API endpoint</subtask>
+      </task>
+      <task id="9" title="Write Comprehensive Tests" ac="All">
+        <subtask>Unit tests for DetectContradictionsHandler</subtask>
+        <subtask>Unit tests for ContradictionDetector LLM service</subtask>
+        <subtask>Integration tests for full detection flow</subtask>
+        <subtask>Test confidence threshold edge cases (69% vs 71%)</subtask>
+        <subtask>Test false positive prevention (same chunk, different dates)</subtask>
+        <subtask>Test duplicate detection</subtask>
+        <subtask>Add E2E test for detection pipeline (optional)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Job Handler Creation">
+      <requirement>Create detect_contradictions job handler in manda-processing service</requirement>
+      <requirement>Handler triggered after document analysis completes (chained from analyze-document job)</requirement>
+      <requirement>Job receives: document_id, deal_id, user_id</requirement>
+      <requirement>Handler follows established pattern from E3 (AnalyzeDocumentHandler)</requirement>
+    </criterion>
+    <criterion id="AC2" title="Findings Grouping by Domain">
+      <requirement>Fetch all findings for the deal from Supabase findings table</requirement>
+      <requirement>Group findings by domain (financial, operational, market, legal, technical)</requirement>
+      <requirement>Only compare findings within the same domain</requirement>
+      <requirement>Skip findings with status = 'rejected'</requirement>
+    </criterion>
+    <criterion id="AC3" title="LLM-Based Contradiction Comparison">
+      <requirement>Use Gemini 2.5 Pro model for comparison (higher accuracy for nuanced analysis)</requirement>
+      <requirement>Compare findings pairwise within domain groups</requirement>
+      <requirement>LLM prompt asks: "Do these two findings contradict each other? If so, explain why."</requirement>
+      <requirement>Return structured output: { contradicts: boolean, confidence: number, reason: string }</requirement>
+      <requirement>Batch comparisons to minimize API calls (e.g., compare 5 pairs per request)</requirement>
+    </criterion>
+    <criterion id="AC4" title="Confidence Threshold Application">
+      <requirement>Only flag contradictions with confidence >= 70%</requirement>
+      <requirement>Below threshold findings are logged but not stored</requirement>
+      <requirement>Log all comparison results for debugging/tuning</requirement>
+    </criterion>
+    <criterion id="AC5" title="Neo4j CONTRADICTS Relationship Creation">
+      <requirement>For detected contradictions, create CONTRADICTS relationship in Neo4j</requirement>
+      <requirement>Use existing createContradiction() function from lib/neo4j/operations.ts</requirement>
+      <requirement>Store: detected_at, reason, confidence, resolved: false</requirement>
+      <requirement>Bidirectional awareness: finding1 CONTRADICTS finding2</requirement>
+    </criterion>
+    <criterion id="AC6" title="Contradictions Table Population">
+      <requirement>Insert record into contradictions table in Supabase</requirement>
+      <requirement>Fields: deal_id, finding_a_id, finding_b_id, confidence, status='unresolved', detected_at</requirement>
+      <requirement>Duplicate detection: don't create if contradiction already exists for finding pair</requirement>
+      <requirement>Use atomic transaction for Neo4j + Supabase writes</requirement>
+    </criterion>
+    <criterion id="AC7" title="Job Pipeline Integration">
+      <requirement>After analyze-document completes, enqueue detect-contradictions job</requirement>
+      <requirement>Job should be optional (configurable per project settings)</requirement>
+      <requirement>Stage tracking: last_completed_stage = 'contradiction_detection'</requirement>
+      <requirement>Error classification with retry logic (reuse E3.8 patterns)</requirement>
+    </criterion>
+    <criterion id="AC8" title="Performance Optimization">
+      <requirement>Limit comparisons for large datasets (max 100 findings per domain)</requirement>
+      <requirement>Use batch processing for LLM calls</requirement>
+      <requirement>Skip identical findings (same text = same finding)</requirement>
+      <requirement>Cache embeddings if using similarity pre-filtering</requirement>
+    </criterion>
+    <criterion id="AC9" title="False Positive Minimization">
+      <requirement>Only compare findings with overlapping date_referenced (temporal alignment)</requirement>
+      <requirement>Exclude findings from the same chunk (same source = not contradiction)</requirement>
+      <requirement>Use semantic similarity pre-filter (only compare if similarity > 0.6)</requirement>
+      <requirement>Log comparison metrics for false positive rate monitoring</requirement>
+    </criterion>
+    <criterion id="AC10" title="API Endpoint for Manual Trigger">
+      <requirement>POST /api/projects/[id]/contradictions/detect - Manually trigger detection</requirement>
+      <requirement>Returns: { job_id, status: 'enqueued' }</requirement>
+      <requirement>Allows re-running detection after new documents added</requirement>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification">
+        <section>E4.7: Detect Contradictions Using Neo4j</section>
+        <snippet>Job-based contradiction detection triggered after document analysis. Groups findings by domain, uses Gemini LLM for pairwise comparison, stores in Neo4j CONTRADICTS relationship and contradictions table. Confidence threshold >70%.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Contradiction Detection Flow">
+        <section>Workflows and Sequencing</section>
+        <snippet>Document Analysis Complete → pg-boss: detect_contradictions → Group Findings by Domain → LLM Comparison (Gemini) → If confidence >70%: Create Neo4j CONTRADICTS + Insert contradictions row</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="ContradictionsService Interface">
+        <section>Services and Modules</section>
+        <snippet>detectContradictions(dealId: string): Promise&lt;DetectionResult&gt; - Detection called by job handler. Stores in Neo4j CONTRADICTS relationship and contradictions table.</snippet>
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Graph Database Configuration">
+        <section>Technology Choices</section>
+        <snippet>Neo4j 2025.01 for cross-domain pattern relationships and contradiction tracking. CONTRADICTS relationship type for temporal awareness.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e4-6-build-contradictions-view.md" title="Contradictions View (E4.6)">
+        <section>Learnings</section>
+        <snippet>Migration 00023 exists with full schema, RLS policies, and indexes. TypeScript types in lib/types/contradictions.ts. API routes exist for listing and resolving contradictions - this story populates the data.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file path="manda-processing/src/jobs/handlers/analyze_document.py" kind="handler" symbol="AnalyzeDocumentHandler" lines="66-405">
+        <reason>Pattern to follow for detect_contradictions handler. Shows job handling, stage tracking, error classification, retry management, and next job enqueuing.</reason>
+      </file>
+      <file path="manda-processing/src/llm/client.py" kind="service" symbol="GeminiClient" lines="105-471">
+        <reason>Gemini LLM client with tiered model support. Reuse for contradiction comparison. Use ModelTier.PRO for higher accuracy.</reason>
+      </file>
+      <file path="manda-processing/src/storage/supabase_client.py" kind="client" symbol="SupabaseClient" lines="35-200">
+        <reason>Database client pattern. Add store_contradiction() and get_findings_by_deal() methods here.</reason>
+      </file>
+      <file path="manda-processing/src/jobs/retry_manager.py" kind="manager" symbol="RetryManager" lines="42-100">
+        <reason>Retry logic with stage awareness. Reuse for contradiction detection stage tracking.</reason>
+      </file>
+      <file path="manda-processing/src/jobs/handlers/__init__.py" kind="module" symbol="__all__" lines="1-73">
+        <reason>Handler registration. Add handle_detect_contradictions to this file.</reason>
+      </file>
+      <file path="manda-app/lib/neo4j/types.ts" kind="types" symbol="ContradictsRel" lines="85-93">
+        <reason>TypeScript interface for CONTRADICTS relationship: detected_at, reason, confidence, resolved.</reason>
+      </file>
+      <file path="manda-app/lib/neo4j/operations.ts" kind="operations" symbol="createContradiction" lines="253-272">
+        <reason>Existing function to create CONTRADICTS relationship between two findings. Use this directly.</reason>
+      </file>
+      <file path="manda-app/lib/neo4j/operations.ts" kind="operations" symbol="getContradictions" lines="314-334">
+        <reason>Existing function to get contradictions for a deal. Use for duplicate detection.</reason>
+      </file>
+      <file path="manda-app/supabase/migrations/00023_create_contradictions_table.sql" kind="migration" symbol="contradictions">
+        <reason>Already exists. Schema: id, deal_id, finding_a_id, finding_b_id, confidence, status, resolution, resolution_note, detected_at, resolved_at, resolved_by, metadata. RLS enabled.</reason>
+      </file>
+      <file path="manda-app/lib/types/contradictions.ts" kind="types" symbol="Contradiction" lines="23-36">
+        <reason>TypeScript interface for Contradiction. Already exists - DO NOT recreate.</reason>
+      </file>
+      <file path="manda-app/lib/types/findings.ts" kind="types" symbol="Finding" lines="29-46">
+        <reason>Finding interface with domain, status, confidence fields needed for grouping and comparison.</reason>
+      </file>
+      <file path="manda-app/app/api/projects/[id]/contradictions/route.ts" kind="route">
+        <reason>Already exists for GET/POST contradictions. This story adds /detect endpoint.</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <python>
+        <package name="langchain-google-genai" version=">=2.1.0">Gemini LLM client for contradiction comparison</package>
+        <package name="structlog" version=">=24.4.0">Structured logging</package>
+        <package name="asyncpg" version=">=0.30.0">PostgreSQL async driver</package>
+        <package name="tenacity" version=">=9.0.0">Retry logic with exponential backoff</package>
+        <package name="pydantic" version=">=2.10.0">Data validation for LLM responses</package>
+      </python>
+      <node>
+        <package name="neo4j-driver" version="^6.0.1">Neo4j graph database driver</package>
+        <package name="@supabase/supabase-js" version="^2.84.0">Supabase database client</package>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec">Job type: detect_contradictions - triggered after analyze-document completes</constraint>
+    <constraint source="tech-spec">Use Gemini 2.5 Pro model for higher accuracy in nuanced comparison</constraint>
+    <constraint source="tech-spec">Confidence threshold: >= 70% to flag as contradiction</constraint>
+    <constraint source="architecture">Store in Neo4j CONTRADICTS relationship AND contradictions table (dual-write)</constraint>
+    <constraint source="architecture">Stage tracking: last_completed_stage = 'contradiction_detection'</constraint>
+    <constraint source="performance">Max 100 findings per domain to limit pairwise comparisons</constraint>
+    <constraint source="performance">Batch 5 comparison pairs per LLM request to reduce API calls</constraint>
+    <constraint source="false-positive">Only compare findings within same domain</constraint>
+    <constraint source="false-positive">Skip findings from same chunk (same source)</constraint>
+    <constraint source="false-positive">Use semantic similarity pre-filter > 0.6</constraint>
+    <constraint source="false-positive">Only compare findings with overlapping date_referenced</constraint>
+    <constraint source="existing-code">DO NOT recreate migration 00023 or lib/types/contradictions.ts - they exist</constraint>
+    <constraint source="existing-code">Use createContradiction() from lib/neo4j/operations.ts for Neo4j writes</constraint>
+    <constraint source="pattern">Follow AnalyzeDocumentHandler pattern for job handler structure</constraint>
+    <constraint source="pattern">Reuse ErrorClassifier and RetryManager for error handling</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="createContradiction" kind="function" path="manda-app/lib/neo4j/operations.ts">
+      <signature>createContradiction(findingId1: string, findingId2: string, reason?: string, confidence: number = 0.8): Promise&lt;boolean&gt;</signature>
+    </interface>
+    <interface name="getContradictions" kind="function" path="manda-app/lib/neo4j/operations.ts">
+      <signature>getContradictions(dealId: string): Promise&lt;Array&lt;{ finding1: FindingNode; finding2: FindingNode; reason?: string }&gt;&gt;</signature>
+    </interface>
+    <interface name="ContradictsRel" kind="interface" path="manda-app/lib/neo4j/types.ts">
+      <signature>{ detected_at: string, reason?: string, confidence: number, resolved: boolean }</signature>
+    </interface>
+    <interface name="POST /api/projects/[id]/contradictions/detect" kind="REST" path="manda-app/app/api/projects/[id]/contradictions/detect/route.ts">
+      <signature>Request: {} | Response: { job_id: string, status: 'enqueued' }</signature>
+    </interface>
+    <interface name="detect_contradictions job" kind="pg-boss-job">
+      <signature>Data: { document_id: string, deal_id: string, user_id: string }</signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <paragraph>Tests use pytest with pytest-asyncio for async handlers. Mock dependencies using unittest.mock or pytest fixtures. Target 85%+ coverage. Follow existing test patterns in manda-processing/tests/jobs/handlers/ for handler tests. Frontend API route tests use Vitest with mocked Supabase client.</paragraph>
+    </standards>
+    <locations>
+      <location>manda-processing/tests/jobs/handlers/test_detect_contradictions.py</location>
+      <location>manda-processing/tests/llm/test_contradiction_detector.py</location>
+      <location>manda-processing/tests/storage/test_supabase_client_contradictions.py</location>
+      <location>manda-app/__tests__/api/projects/contradictions/detect.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1, AC7">Test handler initialization with mocked dependencies</idea>
+      <idea ac="AC1, AC7">Test job receives document_id, deal_id, user_id and processes correctly</idea>
+      <idea ac="AC2">Test findings grouped correctly by domain (financial, operational, etc.)</idea>
+      <idea ac="AC2">Test rejected findings are excluded from comparison</idea>
+      <idea ac="AC3">Test LLM comparison returns structured { contradicts, confidence, reason }</idea>
+      <idea ac="AC3">Test batch comparison with 5 pairs per request</idea>
+      <idea ac="AC4">Test 69% confidence NOT stored, 71% confidence IS stored</idea>
+      <idea ac="AC4">Test below-threshold results are logged but not stored</idea>
+      <idea ac="AC5">Test Neo4j CONTRADICTS relationship created with correct properties</idea>
+      <idea ac="AC5">Test bidirectional awareness (A->B stored, not B->A duplicate)</idea>
+      <idea ac="AC6">Test contradictions table insert with all required fields</idea>
+      <idea ac="AC6">Test duplicate detection prevents re-inserting same finding pair</idea>
+      <idea ac="AC7">Test detect-contradictions enqueued after analyze-document completes</idea>
+      <idea ac="AC7">Test configurable enable_contradiction_detection flag</idea>
+      <idea ac="AC8">Test max 100 findings per domain limit</idea>
+      <idea ac="AC8">Test identical findings (same text) are skipped</idea>
+      <idea ac="AC9">Test same-chunk comparisons are excluded</idea>
+      <idea ac="AC9">Test different date_referenced findings are excluded</idea>
+      <idea ac="AC9">Test semantic similarity < 0.6 pairs are skipped</idea>
+      <idea ac="AC10">Test POST /api/projects/[id]/contradictions/detect returns job_id</idea>
+      <idea ac="AC10">Test endpoint requires authentication and project ownership</idea>
+    </ideas>
+  </tests>
+</story-context>

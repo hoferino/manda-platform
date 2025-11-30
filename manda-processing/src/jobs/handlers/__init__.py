@@ -4,6 +4,7 @@ Story: E3.3 - Implement Document Parsing Job Handler (AC: #1)
 Story: E3.4 - Generate Embeddings for Semantic Search (AC: #1)
 Story: E3.5 - Implement LLM Analysis with Gemini 2.5 (AC: #1)
 Story: E3.9 - Financial Model Integration (AC: #1)
+Story: E4.7 - Detect Contradictions Using Neo4j (AC: #1)
 
 This module contains handlers for various job types processed by the worker.
 Each handler is registered with the Worker class for automatic invocation.
@@ -34,6 +35,12 @@ def get_handle_extract_financials():
     return handle_extract_financials
 
 
+def get_handle_detect_contradictions():
+    """Get the detect_contradictions handler (lazy import)."""
+    from src.jobs.handlers.detect_contradictions import handle_detect_contradictions
+    return handle_detect_contradictions
+
+
 # For backwards compatibility, expose the function directly
 # This will import parse_document module, but not docling
 def handle_parse_document(job):
@@ -60,6 +67,12 @@ def handle_extract_financials(job):
     return _handler(job)
 
 
+def handle_detect_contradictions(job):
+    """Handle a detect-contradictions job (lazy wrapper)."""
+    from src.jobs.handlers.detect_contradictions import handle_detect_contradictions as _handler
+    return _handler(job)
+
+
 __all__ = [
     "handle_parse_document",
     "get_handle_parse_document",
@@ -69,4 +82,6 @@ __all__ = [
     "get_handle_analyze_document",
     "handle_extract_financials",
     "get_handle_extract_financials",
+    "handle_detect_contradictions",
+    "get_handle_detect_contradictions",
 ]

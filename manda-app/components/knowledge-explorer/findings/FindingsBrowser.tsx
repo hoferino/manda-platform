@@ -569,6 +569,7 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
               onValidate={handleValidate}
               onEdit={handleEdit}
               showSimilarity={isSearchMode}
+              projectId={projectId}
             />
           ) : (
             <FindingsCardGrid
@@ -584,6 +585,7 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
               onCancelEdit={handleCancelEdit}
               editingFindingId={editingFindingId}
               showSimilarity={isSearchMode}
+              projectId={projectId}
             />
           )}
         </>

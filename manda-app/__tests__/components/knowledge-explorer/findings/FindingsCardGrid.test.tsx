@@ -64,6 +64,7 @@ describe('FindingsCardGrid', () => {
     onCancelEdit: vi.fn(),
     editingFindingId: null,
     showSimilarity: false,
+    projectId: 'test-project-id',
   }
 
   beforeEach(() => {

@@ -2,10 +2,12 @@
  * KnowledgeExplorerClient Component
  * Main client component for Knowledge Explorer with tab navigation
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface (AC: #1)
+ * Story: E4.6 - Build Contradictions View (AC: #1)
  *
  * Features:
  * - Tab navigation: Findings, Contradictions, Gap Analysis
  * - Findings Browser as default view
+ * - Contradictions View for resolving conflicts
  * - Placeholder tabs for future stories
  */
 
@@ -16,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FindingsBrowser } from './findings'
+import { ContradictionsView } from './contradictions'
 import { FileText, AlertTriangle, HelpCircle } from 'lucide-react'
 
 interface KnowledgeExplorerClientProps {
@@ -84,13 +87,7 @@ export function KnowledgeExplorerClient({
           </TabsContent>
 
           <TabsContent value="contradictions" className="h-full m-0 p-6">
-            <PlaceholderTab
-              title="Contradictions"
-              description="View and resolve conflicting information found across documents."
-              icon={AlertTriangle}
-              epic={4}
-              story="E4.6"
-            />
+            <ContradictionsView projectId={projectId} />
           </TabsContent>
 
           <TabsContent value="gaps" className="h-full m-0 p-6">

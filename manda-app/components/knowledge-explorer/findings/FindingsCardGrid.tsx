@@ -46,6 +46,7 @@ export interface FindingsCardGridProps {
   editingFindingId?: string | null
   showSimilarity?: boolean
   className?: string
+  projectId: string
 }
 
 /**
@@ -169,6 +170,7 @@ function VirtualCardGrid({
   onCancelEdit,
   editingFindingId,
   showSimilarity,
+  projectId,
 }: {
   findings: Finding[] | FindingWithSimilarity[]
   onValidate: (findingId: string, action: 'confirm' | 'reject') => Promise<void>
@@ -177,6 +179,7 @@ function VirtualCardGrid({
   onCancelEdit: () => void
   editingFindingId?: string | null
   showSimilarity?: boolean
+  projectId: string
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
 
@@ -233,6 +236,7 @@ function VirtualCardGrid({
                     onCancelEdit={onCancelEdit}
                     isEditing={editingFindingId === finding.id}
                     showSimilarity={showSimilarity}
+                    projectId={projectId}
                   />
                 ))}
               </div>
@@ -258,6 +262,7 @@ export function FindingsCardGrid({
   editingFindingId,
   showSimilarity = false,
   className,
+  projectId,
 }: FindingsCardGridProps) {
   // Determine if we should use virtual scrolling
   const useVirtualScroll = findings.length > VIRTUAL_SCROLL_THRESHOLD
@@ -296,6 +301,7 @@ export function FindingsCardGrid({
           onCancelEdit={onCancelEdit}
           editingFindingId={editingFindingId}
           showSimilarity={showSimilarity}
+          projectId={projectId}
         />
         <Pagination
           page={page}
@@ -325,6 +331,7 @@ export function FindingsCardGrid({
             onCancelEdit={onCancelEdit}
             isEditing={editingFindingId === finding.id}
             showSimilarity={showSimilarity}
+            projectId={projectId}
           />
         ))}
       </div>

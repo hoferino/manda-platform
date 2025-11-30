@@ -593,14 +593,51 @@ development_status:
     - Search mode shows similarity badges on cards
     - @tanstack/react-virtual added for performance optimization
     - 69 tests passing (FindingCard, ViewToggle, FindingsCardGrid)
-  e4-5-implement-source-attribution-links: ready-for-dev
+  e4-5-implement-source-attribution-links: done
   e4-5-jira-id: SCRUM-52
   e4-5-drafted: 2025-11-30
   e4-5-context-ready: 2025-11-30
-  e4-6-build-contradictions-view: backlog
+  e4-5-completed: 2025-11-30
+  e4-5-notes: |
+    Source attribution links completed. Key deliverables:
+    - SourceAttributionLink component with monospace formatted text (doc.xlsx, Sheet 'P&L', Cell B15)
+    - DocumentPreviewModal with loading/error states and keyboard dismiss (Escape)
+    - ExcelPreview component with cell grid and referenced cell highlighting
+    - PdfPreview component with page content and context navigation
+    - FallbackPreview with download link for unavailable documents
+    - Chunk API endpoint at /api/projects/[id]/chunks/[chunkId] with surrounding context
+    - Integration in FindingsTable and FindingCard components
+    - Full accessibility support - ARIA labels, keyboard navigation, screen reader support
+    - 176 knowledge-explorer tests passing
+  e4-6-build-contradictions-view: done
+  e4-6-drafted: 2025-11-30
+  e4-6-context-ready: 2025-11-30
+  e4-6-completed: 2025-11-30
   e4-6-jira-id: SCRUM-53
-  e4-7-detect-contradictions-using-neo4j: backlog
+  e4-6-notes: |
+    Contradictions view completed. Key deliverables:
+    - Database migration 00023: contradictions table with RLS policies
+    - API routes for listing and resolving contradictions
+    - ContradictionsView with status filter (All/Unresolved/Resolved/Investigating/Noted)
+    - ContradictionCard with side-by-side Finding A vs Finding B comparison
+    - ContradictionActions with Accept A/B, Investigate, Add Note buttons with dialogs
+    - URL state management for filter persistence
+    - 79 component tests passing
+    - Integrated into KnowledgeExplorerClient replacing placeholder
+  e4-7-detect-contradictions-using-neo4j: done
   e4-7-jira-id: SCRUM-54
+  e4-7-drafted: 2025-11-30
+  e4-7-context-ready: 2025-11-30
+  e4-7-completed: 2025-11-30
+  e4-7-completion-notes: |
+    - Created ContradictionDetector LLM service (Gemini 2.5 Pro, 70% threshold)
+    - Created DetectContradictionsHandler job handler with domain grouping
+    - Pre-filtering: same chunk, identical text, date_referenced alignment
+    - Batch processing (5 pairs per request) for efficiency
+    - Supabase contradiction storage with deduplication
+    - Pipeline integration: auto-triggered after analyze-document
+    - Manual trigger API: POST /api/projects/[id]/contradictions/detect
+    - 33 unit tests passing
   e4-8-build-gap-analysis-view: backlog
   e4-8-jira-id: SCRUM-55
   e4-9-implement-finding-detail-view-with-full-context: backlog

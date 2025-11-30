@@ -8,31 +8,40 @@ import { render, screen, fireEvent, within } from '@testing-library/react'
 import { FindingsTable } from '@/components/knowledge-explorer/findings/FindingsTable'
 import type { Finding } from '@/lib/types/findings'
 
-// Mock lucide-react icons
-vi.mock('lucide-react', () => ({
-  ChevronLeft: () => <span data-testid="icon-chevron-left" />,
-  ChevronRight: () => <span data-testid="icon-chevron-right" />,
-  ChevronsLeft: () => <span data-testid="icon-chevrons-left" />,
-  ChevronsRight: () => <span data-testid="icon-chevrons-right" />,
-  ArrowUpDown: () => <span data-testid="icon-arrow-updown" />,
-  ArrowUp: () => <span data-testid="icon-arrow-up" />,
-  ArrowDown: () => <span data-testid="icon-arrow-down" />,
-  FileText: () => <span data-testid="icon-file-text" />,
-  Check: () => <span data-testid="icon-check" />,
-  X: () => <span data-testid="icon-x" />,
-  Pencil: () => <span data-testid="icon-pencil" />,
-  CheckCircle2: () => <span data-testid="icon-check-circle" />,
-  AlertCircle: () => <span data-testid="icon-alert-circle" />,
-  HelpCircle: () => <span data-testid="icon-help-circle" />,
-  DollarSign: () => <span data-testid="icon-dollar" />,
-  Settings: () => <span data-testid="icon-settings" />,
-  TrendingUp: () => <span data-testid="icon-trending-up" />,
-  Scale: () => <span data-testid="icon-scale" />,
-  Cpu: () => <span data-testid="icon-cpu" />,
-  Clock: () => <span data-testid="icon-clock" />,
-  CheckCircle: () => <span data-testid="icon-check-circle-status" />,
-  XCircle: () => <span data-testid="icon-x-circle" />,
-}))
+// Mock lucide-react icons - use importOriginal to get all exports
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>()
+  return {
+    ...actual,
+    ChevronLeft: () => <span data-testid="icon-chevron-left" />,
+    ChevronRight: () => <span data-testid="icon-chevron-right" />,
+    ChevronsLeft: () => <span data-testid="icon-chevrons-left" />,
+    ChevronsRight: () => <span data-testid="icon-chevrons-right" />,
+    ArrowUpDown: () => <span data-testid="icon-arrow-updown" />,
+    ArrowUp: () => <span data-testid="icon-arrow-up" />,
+    ArrowDown: () => <span data-testid="icon-arrow-down" />,
+    FileText: () => <span data-testid="icon-file-text" />,
+    Check: () => <span data-testid="icon-check" />,
+    Pencil: () => <span data-testid="icon-pencil" />,
+    CheckCircle2: () => <span data-testid="icon-check-circle" />,
+    AlertCircle: () => <span data-testid="icon-alert-circle" />,
+    HelpCircle: () => <span data-testid="icon-help-circle" />,
+    DollarSign: () => <span data-testid="icon-dollar" />,
+    Settings: () => <span data-testid="icon-settings" />,
+    TrendingUp: () => <span data-testid="icon-trending-up" />,
+    Scale: () => <span data-testid="icon-scale" />,
+    Cpu: () => <span data-testid="icon-cpu" />,
+    Clock: () => <span data-testid="icon-clock" />,
+    CheckCircle: () => <span data-testid="icon-check-circle-status" />,
+    XCircle: () => <span data-testid="icon-x-circle" />,
+    FileSpreadsheet: () => <span data-testid="icon-file-spreadsheet" />,
+    FileIcon: () => <span data-testid="icon-file-icon" />,
+    RefreshCw: () => <span data-testid="icon-refresh" />,
+    Download: () => <span data-testid="icon-download" />,
+    Loader2: () => <span data-testid="icon-loader" />,
+    FileQuestion: () => <span data-testid="icon-file-question" />,
+  }
+})
 
 // Sample test data
 const mockFindings: Finding[] = [
@@ -104,6 +113,7 @@ const defaultProps = {
   onSortChange: vi.fn(),
   onValidate: vi.fn(),
   onEdit: vi.fn(),
+  projectId: 'test-project-id',
 }
 
 describe('FindingsTable', () => {
@@ -141,8 +151,9 @@ describe('FindingsTable', () => {
     it('displays source document with page number', () => {
       render(<FindingsTable {...defaultProps} />)
 
-      expect(screen.getByText('annual_report.pdf')).toBeInTheDocument()
-      expect(screen.getByText('p.42')).toBeInTheDocument()
+      // SourceAttributionLink now combines document name and page reference
+      // Format: "annual_report.pdf, p.42"
+      expect(screen.getByText(/annual_report\.pdf, p\.42/)).toBeInTheDocument()
     })
 
     it('shows dash for findings without source', () => {

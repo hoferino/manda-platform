@@ -97,6 +97,73 @@ export type Database = {
           },
         ]
       }
+      contradictions: {
+        Row: {
+          confidence: number | null
+          deal_id: string
+          detected_at: string
+          finding_a_id: string
+          finding_b_id: string
+          id: string
+          metadata: Json | null
+          resolution: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          deal_id: string
+          detected_at?: string
+          finding_a_id: string
+          finding_b_id: string
+          id?: string
+          metadata?: Json | null
+          resolution?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          deal_id?: string
+          detected_at?: string
+          finding_a_id?: string
+          finding_b_id?: string
+          id?: string
+          metadata?: Json | null
+          resolution?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contradictions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contradictions_finding_a_id_fkey"
+            columns: ["finding_a_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contradictions_finding_b_id_fkey"
+            columns: ["finding_b_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string

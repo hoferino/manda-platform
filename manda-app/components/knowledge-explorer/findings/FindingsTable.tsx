@@ -2,11 +2,12 @@
  * FindingsTable Component
  * Data table for displaying findings with sorting, pagination
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface (AC: #2, #3, #7)
+ * Story: E4.5 - Implement Source Attribution Links (AC: 7)
  *
  * Features:
  * - Sortable columns (Confidence, Domain, Created Date)
  * - Truncated finding text with hover to expand
- * - Source document with page/cell reference
+ * - Clickable source document links with preview modal
  * - Domain badge
  * - Confidence indicator
  * - Status badge
@@ -53,7 +54,7 @@ import {
   X,
   Pencil,
 } from 'lucide-react'
-import { ConfidenceBadge, DomainTag, StatusBadge } from '../shared'
+import { ConfidenceBadge, DomainTag, StatusBadge, SourceAttributionLink } from '../shared'
 import type { Finding, FindingWithSimilarity } from '@/lib/types/findings'
 import { cn } from '@/lib/utils'
 
@@ -70,6 +71,7 @@ interface FindingsTableProps {
   onValidate?: (findingId: string, action: 'confirm' | 'reject') => void
   onEdit?: (finding: Finding) => void
   showSimilarity?: boolean
+  projectId: string
 }
 
 /**
@@ -126,26 +128,42 @@ function TruncatedText({ text, maxLength = 100 }: { text: string; maxLength?: nu
   )
 }
 
-// Source attribution component
-function SourceAttribution({
-  sourceDocument,
-  pageNumber,
+// Source attribution component - now uses SourceAttributionLink for clickable links
+function SourceAttributionCell({
+  finding,
+  projectId,
 }: {
-  sourceDocument: string | null
-  pageNumber: number | null
+  finding: Finding | FindingWithSimilarity
+  projectId: string
 }) {
-  if (!sourceDocument) {
+  if (!finding.sourceDocument && !finding.documentId) {
     return <span className="text-muted-foreground">—</span>
   }
 
+  // If we have a documentId, use the clickable SourceAttributionLink
+  if (finding.documentId) {
+    return (
+      <SourceAttributionLink
+        documentId={finding.documentId}
+        documentName={finding.sourceDocument || 'Unknown document'}
+        chunkId={finding.chunkId}
+        pageNumber={finding.pageNumber}
+        sheetName={null} // Will be fetched from chunk API if needed
+        cellReference={null} // Will be fetched from chunk API if needed
+        projectId={projectId}
+      />
+    )
+  }
+
+  // Fallback: show plain text if no documentId (e.g., manually created findings)
   return (
     <div className="flex items-center gap-1.5 text-sm">
       <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-      <span className="truncate max-w-[150px]" title={sourceDocument}>
-        {sourceDocument}
+      <span className="truncate max-w-[150px]" title={finding.sourceDocument || undefined}>
+        {finding.sourceDocument}
       </span>
-      {pageNumber && (
-        <span className="text-muted-foreground text-xs">p.{pageNumber}</span>
+      {finding.pageNumber && (
+        <span className="text-muted-foreground text-xs">p.{finding.pageNumber}</span>
       )}
     </div>
   )
@@ -164,6 +182,7 @@ export function FindingsTable({
   onValidate,
   onEdit,
   showSimilarity = false,
+  projectId,
 }: FindingsTableProps) {
   // Internal sorting state for tanstack table
   const [sorting, setSorting] = useState<SortingState>([
@@ -221,9 +240,9 @@ export function FindingsTable({
       id: 'source',
       header: 'Source',
       cell: ({ row }) => (
-        <SourceAttribution
-          sourceDocument={row.original.sourceDocument}
-          pageNumber={row.original.pageNumber}
+        <SourceAttributionCell
+          finding={row.original}
+          projectId={projectId}
         />
       ),
     },

@@ -1,6 +1,6 @@
 # Story 4.5: Implement Source Attribution Links
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -297,9 +297,63 @@ Per sprint-status.yaml (lines 581-595):
 
 ### Debug Log References
 
+**Task 1 Plan:** Create SourceAttributionLink component with:
+1. Format link text: "document_name.xlsx, Sheet 'P&L', Cell B15" or "document.pdf, p.15"
+2. Monospace font with hover styling
+3. Tooltip with full source path
+4. Click handler to open DocumentPreviewModal
+5. ARIA labels for accessibility
+
 ### Completion Notes List
 
+**Implementation Complete - 2025-11-30**
+
+All acceptance criteria implemented:
+- AC1: SourceAttributionLink component with monospace formatted text (doc.xlsx, Sheet 'P&L', Cell B15)
+- AC2: DocumentPreviewModal with loading/error states and keyboard dismiss (Escape)
+- AC3: ExcelPreview component with cell grid and referenced cell highlighting
+- AC4: PdfPreview component with page content and context navigation
+- AC5: FallbackPreview with download link for unavailable documents
+- AC6: Full accessibility support - ARIA labels, keyboard navigation, screen reader support
+- AC7: Integration in FindingsTable and FindingCard components
+- AC8: Chunk API endpoint at /api/projects/[id]/chunks/[chunkId] with surrounding context
+
+Components created:
+- SourceAttributionLink - Clickable source links with tooltip and modal trigger
+- DocumentPreviewModal - Modal container with document header and state management
+- ExcelPreview - Spreadsheet content with cell highlighting
+- PdfPreview - PDF text content with page navigation
+- FallbackPreview - Download fallback for unavailable documents
+
+API created:
+- GET /api/projects/[id]/chunks/[chunkId] - Returns chunk content with previous/next context
+
+Tests: All 176 knowledge-explorer tests passing
+
 ### File List
+
+**New Components:**
+- manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx
+- manda-app/components/knowledge-explorer/shared/DocumentPreviewModal.tsx
+- manda-app/components/knowledge-explorer/shared/ExcelPreview.tsx
+- manda-app/components/knowledge-explorer/shared/PdfPreview.tsx
+- manda-app/components/knowledge-explorer/shared/FallbackPreview.tsx
+
+**New API:**
+- manda-app/app/api/projects/[id]/chunks/[chunkId]/route.ts
+
+**Modified Components:**
+- manda-app/components/knowledge-explorer/findings/FindingsTable.tsx - Added SourceAttributionLink integration
+- manda-app/components/knowledge-explorer/findings/FindingCard.tsx - Added SourceAttributionLink integration
+- manda-app/components/knowledge-explorer/findings/FindingsCardGrid.tsx - Added projectId prop
+- manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx - Added projectId to table/card grid
+- manda-app/components/knowledge-explorer/shared/index.ts - Exported new components
+
+**Tests:**
+- manda-app/__tests__/components/knowledge-explorer/shared/SourceAttributionLink.test.tsx (new)
+- manda-app/__tests__/components/knowledge-explorer/findings-table.test.tsx (updated)
+- manda-app/__tests__/components/knowledge-explorer/findings/FindingCard.test.tsx (updated)
+- manda-app/__tests__/components/knowledge-explorer/findings/FindingsCardGrid.test.tsx (updated)
 
 ---
 

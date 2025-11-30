@@ -1,0 +1,301 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>6</storyId>
+    <title>Build Contradictions View</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-6-build-contradictions-view.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to see conflicting findings side-by-side</iWant>
+    <soThat>I can resolve contradictions and maintain data accuracy across deal documents</soThat>
+    <tasks>
+      <task id="1" ac="9">Create Database Migration for Contradictions Table
+        <subtask>Create migration 00023_create_contradictions_table.sql</subtask>
+        <subtask>Define schema: id, deal_id, finding_a_id, finding_b_id, confidence, status, resolution, resolution_note, detected_at, resolved_at, resolved_by, metadata</subtask>
+        <subtask>Add RLS policies for user data isolation</subtask>
+        <subtask>Add indexes on deal_id and status columns</subtask>
+        <subtask>Regenerate Supabase types</subtask>
+      </task>
+      <task id="2" ac="2,3,9">Create Contradiction Types
+        <subtask>Create lib/types/contradictions.ts</subtask>
+        <subtask>Define ContradictionStatus type</subtask>
+        <subtask>Define Contradiction and ContradictionWithFindings interfaces</subtask>
+        <subtask>Define ContradictionResolution interface</subtask>
+        <subtask>Export status display configuration</subtask>
+      </task>
+      <task id="3" ac="9">Create Contradictions API Service
+        <subtask>Create lib/api/contradictions.ts</subtask>
+        <subtask>Implement getContradictions function</subtask>
+        <subtask>Implement resolveContradiction function</subtask>
+        <subtask>Implement addNote function</subtask>
+      </task>
+      <task id="4" ac="9,10">Create API Routes
+        <subtask>Create app/api/projects/[id]/contradictions/route.ts for listing</subtask>
+        <subtask>Create app/api/projects/[id]/contradictions/[contradictionId]/resolve/route.ts</subtask>
+        <subtask>Add Zod validation schemas</subtask>
+        <subtask>Add authentication and RLS validation</subtask>
+      </task>
+      <task id="5" ac="3,4,5,6,7">Create ContradictionCard Component
+        <subtask>Create components/knowledge-explorer/contradictions/ContradictionCard.tsx</subtask>
+        <subtask>Implement side-by-side layout</subtask>
+        <subtask>Integrate SourceAttributionLink, ConfidenceBadge, DomainTag</subtask>
+        <subtask>Add expand/collapse for long text</subtask>
+      </task>
+      <task id="6" ac="4,5,6,7">Create ContradictionActions Component
+        <subtask>Create ContradictionActions.tsx</subtask>
+        <subtask>Add Accept A, Accept B, Investigate, Add Note buttons</subtask>
+        <subtask>Implement loading states and confirmation dialogs</subtask>
+      </task>
+      <task id="7" ac="1,2,8,10">Create ContradictionsView Component
+        <subtask>Create ContradictionsView.tsx with filter bar</subtask>
+        <subtask>Render ContradictionCard list</subtask>
+        <subtask>Add loading, error, empty states</subtask>
+      </task>
+      <task id="8" ac="1">Integrate into KnowledgeExplorerClient
+        <subtask>Replace PlaceholderTab with ContradictionsView</subtask>
+        <subtask>Update contradictionsCount from API</subtask>
+      </task>
+      <task id="9" ac="8">Add URL State Management
+        <subtask>Sync filter state with URL query params</subtask>
+        <subtask>Restore filter from URL on load</subtask>
+      </task>
+      <task id="10" ac="all">Write Tests
+        <subtask>Unit tests for ContradictionCard</subtask>
+        <subtask>Unit tests for ContradictionActions</subtask>
+        <subtask>Unit tests for ContradictionsView</subtask>
+        <subtask>API route tests</subtask>
+        <subtask>Integration test for resolution flow</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Contradictions Tab Navigation">
+      <criterion>Contradictions tab is visible in Knowledge Explorer tab bar</criterion>
+      <criterion>Tab shows badge with unresolved contradiction count</criterion>
+      <criterion>Clicking tab displays the ContradictionsView component</criterion>
+      <criterion>Empty state shown when no contradictions exist</criterion>
+    </ac>
+    <ac id="2" title="Contradictions List Display">
+      <criterion>Contradictions fetched from contradictions table joined with findings</criterion>
+      <criterion>Each contradiction shows Finding A vs Finding B in side-by-side card layout</criterion>
+      <criterion>Both findings display: text, source document, confidence score, domain</criterion>
+      <criterion>Contradiction confidence score shown</criterion>
+      <criterion>List supports scrolling for multiple contradictions</criterion>
+    </ac>
+    <ac id="3" title="Side-by-Side Comparison Cards">
+      <criterion>ContradictionCard displays two findings horizontally</criterion>
+      <criterion>Each side shows full finding text (expandable if long)</criterion>
+      <criterion>Source attribution links clickable (reuse SourceAttributionLink)</criterion>
+      <criterion>Visual differentiation between Finding A and Finding B</criterion>
+      <criterion>Confidence badges on each finding</criterion>
+    </ac>
+    <ac id="4" title="Resolution Actions - Accept A">
+      <criterion>Accept A button marks Finding A as validated</criterion>
+      <criterion>Finding B status updates to rejected</criterion>
+      <criterion>Contradiction status changes to resolved</criterion>
+      <criterion>Resolution stored with timestamp and user ID</criterion>
+      <criterion>Optimistic UI update with rollback on error</criterion>
+    </ac>
+    <ac id="5" title="Resolution Actions - Accept B">
+      <criterion>Accept B button marks Finding B as validated</criterion>
+      <criterion>Finding A status updates to rejected</criterion>
+      <criterion>Contradiction status changes to resolved</criterion>
+      <criterion>Same persistence and optimistic update patterns as Accept A</criterion>
+    </ac>
+    <ac id="6" title="Resolution Actions - Investigate">
+      <criterion>Investigate Further button opens note input dialog</criterion>
+      <criterion>User can add explanation for why investigation needed</criterion>
+      <criterion>Contradiction status changes to investigating</criterion>
+      <criterion>Investigation flag visible on the contradiction card</criterion>
+      <criterion>Note is persisted in resolution_note field</criterion>
+    </ac>
+    <ac id="7" title="Resolution Actions - Add Note">
+      <criterion>Add Note action available for any contradiction</criterion>
+      <criterion>Note saved to contradiction record</criterion>
+      <criterion>Status changes to noted</criterion>
+      <criterion>Notes displayed on contradiction card</criterion>
+    </ac>
+    <ac id="8" title="Filter by Resolution Status">
+      <criterion>Filter dropdown: All, Unresolved, Resolved, Investigating, Noted</criterion>
+      <criterion>Default filter is Unresolved</criterion>
+      <criterion>Count updates when filter applied</criterion>
+      <criterion>Filter state preserved in URL query params</criterion>
+    </ac>
+    <ac id="9" title="API Endpoints">
+      <criterion>GET /api/projects/[id]/contradictions - List contradictions with filters</criterion>
+      <criterion>POST /api/projects/[id]/contradictions/[contradictionId]/resolve - Resolve contradiction</criterion>
+      <criterion>Database migration to create contradictions table</criterion>
+      <criterion>RLS policies for data isolation</criterion>
+    </ac>
+    <ac id="10" title="Error and Loading States">
+      <criterion>Loading skeleton while fetching contradictions</criterion>
+      <criterion>Error state with retry button</criterion>
+      <criterion>Toast notifications for resolution actions</criterion>
+      <criterion>Handle concurrent resolution conflicts gracefully</criterion>
+    </ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="E4.6 Contradictions View">
+        Defines ContradictionsService interface with getContradictions, getContradictionById, resolveContradiction, addNote methods. ContradictionResolution interface with action: 'accept_a' | 'accept_b' | 'investigate' | 'noted'. Database schema for contradictions table with RLS policies.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="Data Models - Contradictions Table">
+        SQL schema: id uuid PK, deal_id FK deals, finding_a_id/finding_b_id FK findings, confidence float, status varchar(20) DEFAULT 'unresolved', resolution varchar(20), resolution_note text, detected_at/resolved_at timestamptz, resolved_by FK auth.users, metadata jsonb. Indexes on deal_id and status.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="TypeScript Interfaces">
+        ContradictionStatus type: 'unresolved' | 'resolved' | 'noted' | 'investigating'. Contradiction interface with id, dealId, findingAId, findingBId, confidence, status, resolution, resolutionNote, detectedAt, resolvedAt. ContradictionWithFindings extends with findingA/findingB Finding objects.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Technical Specification" section="REST API Routes">
+        GET /api/projects/[id]/contradictions with status filter. POST /api/projects/[id]/contradictions/[contradictionId]/resolve with body { action, note? }. Response: ContradictionWithFindings array with total count.
+      </doc>
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="5.3 Knowledge Explorer - Contradictions View">
+        Side-by-side comparison layout. Contradiction card shows Finding A vs Finding B with sources, confidence scores. Resolution actions: Accept A, Accept B, Investigate Further, Add Note. Status values: Unresolved, Resolved, Noted.
+      </doc>
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="10.2 Custom Components - Contradiction Card">
+        Anatomy: Finding A (left), vs separator (center), Finding B (right), confidence scores, source attribution, resolution actions. States: Unresolved, resolved, noted.
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Architecture" section="Graph Database">
+        Neo4j 2025.01 for cross-domain pattern relationships, contradiction tracking. ContradictsRel interface already defined with detected_at, reason, confidence, resolved fields.
+      </doc>
+    </docs>
+    <code>
+      <file path="manda-app/components/knowledge-explorer/KnowledgeExplorerClient.tsx" kind="component" symbol="KnowledgeExplorerClient" reason="MODIFY: Replace PlaceholderTab with ContradictionsView in Contradictions tab (line 87-94)">
+        Main client component with tab navigation. Contains PlaceholderTab for Contradictions that needs to be replaced with ContradictionsView. Receives contradictionsCount prop.
+      </file>
+      <file path="manda-app/lib/types/findings.ts" kind="types" symbol="Finding, FindingStatus, FindingDomain, ValidationEvent" reason="REUSE: Finding interface needed for ContradictionWithFindings">
+        Defines Finding interface, FindingStatus type, domain/type enums, getConfidenceLevel helper. ContradictionWithFindings will reference this.
+      </file>
+      <file path="manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx" kind="component" symbol="SourceAttributionLink" reason="REUSE: Source attribution for contradiction findings">
+        Props: documentId, documentName, chunkId, pageNumber, sheetName, cellReference, projectId. Opens DocumentPreviewModal on click.
+      </file>
+      <file path="manda-app/components/knowledge-explorer/shared/ConfidenceBadge.tsx" kind="component" symbol="ConfidenceBadge" reason="REUSE: Confidence display on contradiction cards">
+        Props: confidence, showIcon, showPercentage, size. Color-coded visual with tooltip.
+      </file>
+      <file path="manda-app/components/knowledge-explorer/shared/DomainTag.tsx" kind="component" symbol="DomainTag" reason="REUSE: Domain badges for findings in contradiction cards">
+        Props: domain, showIcon, size. Color-coded badge for domain display.
+      </file>
+      <file path="manda-app/components/knowledge-explorer/shared/index.ts" kind="barrel" symbol="exports" reason="MODIFY: Add ContradictionCard, ContradictionActions exports">
+        Barrel export for shared components. Export new contradiction components here.
+      </file>
+      <file path="manda-app/app/api/projects/[id]/findings/[findingId]/validate/route.ts" kind="api" symbol="POST validate" lines="30-161" reason="REFERENCE: Pattern for updating finding status with validation_history">
+        Pattern for Zod validation, auth check, atomic update of finding status. Contradiction resolve endpoint should follow same pattern.
+      </file>
+      <file path="manda-app/supabase/migrations/00004_create_findings_table.sql" kind="migration" symbol="findings table" reason="REFERENCE: Findings schema for FK references">
+        Findings table structure with deal_id, document_id, chunk_id, text, confidence, domain. Contradictions will FK to this.
+      </file>
+      <file path="manda-app/supabase/migrations/00021_add_findings_status_column.sql" kind="migration" symbol="status column" reason="REFERENCE: Status and validation_history pattern">
+        Shows pattern for status column with index and validation_history jsonb.
+      </file>
+    </code>
+    <dependencies>
+      <node>
+        <pkg name="next" version="16.0.4">App Router, Server Components, API Routes</pkg>
+        <pkg name="react" version="19.2.0">UI components with hooks</pkg>
+        <pkg name="@supabase/supabase-js" version="^2.84.0">Database client for PostgreSQL queries</pkg>
+        <pkg name="@supabase/ssr" version="^0.7.0">Server-side Supabase client</pkg>
+        <pkg name="@tanstack/react-table" version="^8.21.3">DataTable (not used directly, but pattern reference)</pkg>
+        <pkg name="lucide-react" version="^0.554.0">Icons: AlertTriangle, Check, X, MessageSquare, Search, MoreHorizontal</pkg>
+        <pkg name="sonner" version="^2.0.7">Toast notifications for resolution actions</pkg>
+        <pkg name="date-fns" version="^4.1.0">Date formatting for detected_at, resolved_at</pkg>
+        <pkg name="zustand" version="^5.0.8">State management (if optimistic updates need store)</pkg>
+        <pkg name="zod" version="built-in">Request validation schemas for API routes</pkg>
+      </node>
+      <shadcn>
+        <component>Card, CardHeader, CardContent, CardFooter</component>
+        <component>Badge</component>
+        <component>Button</component>
+        <component>Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle</component>
+        <component>Select, SelectTrigger, SelectContent, SelectItem</component>
+        <component>Textarea</component>
+        <component>Tooltip, TooltipProvider, TooltipTrigger, TooltipContent</component>
+        <component>Skeleton</component>
+        <component>Alert, AlertDescription</component>
+        <component>Tabs, TabsList, TabsTrigger, TabsContent (existing)</component>
+      </shadcn>
+      <testing>
+        <pkg name="vitest" version="^4.0.14">Unit test framework</pkg>
+        <pkg name="@testing-library/react" version="^16.3.0">Component testing</pkg>
+        <pkg name="@testing-library/user-event" version="^14.6.1">User interaction simulation</pkg>
+        <pkg name="@testing-library/jest-dom" version="^6.9.1">DOM matchers</pkg>
+        <pkg name="@playwright/test" version="^1.57.0">E2E testing (optional)</pkg>
+      </testing>
+      <supabase>
+        <tool name="supabase CLI" version="^2.58.5">Migration and type generation</tool>
+        <command>npm run db:types</command>
+      </supabase>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Architecture">RLS policies must isolate data by user - contradictions.deal_id must reference a deal owned by auth.uid()</constraint>
+    <constraint source="Dev Notes">Resolution flow must atomically update: contradiction.status, finding_a.status, finding_b.status in single transaction</constraint>
+    <constraint source="Tech Spec">Optimistic UI updates with rollback on error - same pattern as FindingActions validation</constraint>
+    <constraint source="Dev Notes">SourceAttributionLink requires projectId prop - pass through ContradictionCard</constraint>
+    <constraint source="Architecture">Toast notifications via sonner for all resolution actions</constraint>
+    <constraint source="UX Spec">Default filter should be 'unresolved' to prioritize actionable items</constraint>
+    <constraint source="Tech Spec">Next migration file should be 00023_create_contradictions_table.sql (follows 00022)</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="ContradictionsService" kind="service" path="lib/services/contradictions.ts">
+      getContradictions(dealId: string, status?: ContradictionStatus): Promise&lt;Contradiction[]&gt;
+      getContradictionById(id: string): Promise&lt;ContradictionWithFindings&gt;
+      resolveContradiction(id: string, resolution: ContradictionResolution): Promise&lt;Contradiction&gt;
+      addNote(id: string, note: string): Promise&lt;Contradiction&gt;
+    </interface>
+    <interface name="GET /api/projects/[id]/contradictions" kind="REST" path="app/api/projects/[id]/contradictions/route.ts">
+      Query: status (optional filter: 'all' | 'unresolved' | 'resolved' | 'investigating' | 'noted')
+      Response: { contradictions: ContradictionWithFindings[], total: number }
+    </interface>
+    <interface name="POST /api/projects/[id]/contradictions/[contradictionId]/resolve" kind="REST" path="app/api/projects/[id]/contradictions/[contradictionId]/resolve/route.ts">
+      Body: { action: 'accept_a' | 'accept_b' | 'investigate' | 'noted', note?: string }
+      Response: { contradiction: Contradiction }
+      Side effects: Updates finding_a and finding_b status, stores resolved_at and resolved_by
+    </interface>
+    <interface name="ContradictionWithFindings" kind="type" path="lib/types/contradictions.ts">
+      Extends Contradiction with findingA: Finding, findingB: Finding for joined queries
+    </interface>
+    <interface name="SourceAttributionLinkProps" kind="component-props" path="components/knowledge-explorer/shared/SourceAttributionLink.tsx">
+      documentId, documentName, chunkId, pageNumber, sheetName, cellReference, projectId (required for API calls)
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      <standard>Use vitest with @testing-library/react for component tests</standard>
+      <standard>Reference Acceptance Criteria IDs in test docstrings: "Story: E4.6 - Build Contradictions View (AC: #X)"</standard>
+      <standard>Use describe blocks: Rendering, Actions, State transitions, Accessibility</standard>
+      <standard>Use userEvent.setup() for user interactions (not fireEvent for clicks)</standard>
+      <standard>Use vi.fn().mockResolvedValue() for async handlers</standard>
+      <standard>Use vi.clearAllMocks() in beforeEach</standard>
+      <standard>Test ARIA labels, keyboard navigation, role attributes</standard>
+      <standard>Mock date-fns for consistent date output</standard>
+      <standard>Use waitFor() for async state changes</standard>
+      <standard>Test loading states with slow mock promises</standard>
+    </standards>
+    <locations>
+      <location path="manda-app/__tests__/components/knowledge-explorer/contradictions/ContradictionCard.test.tsx" />
+      <location path="manda-app/__tests__/components/knowledge-explorer/contradictions/ContradictionActions.test.tsx" />
+      <location path="manda-app/__tests__/components/knowledge-explorer/contradictions/ContradictionsView.test.tsx" />
+      <location path="manda-app/__tests__/api/contradictions.test.ts" note="API route tests" />
+    </locations>
+    <ideas>
+      <idea ac="1,2">ContradictionCard.test.tsx: Renders Finding A and Finding B side-by-side with text, domain, confidence, source</idea>
+      <idea ac="3">ContradictionCard.test.tsx: Text truncation with expand/collapse, Source attribution links clickable</idea>
+      <idea ac="4,5">ContradictionActions.test.tsx: Accept A/B calls onResolve with correct action, updates finding statuses</idea>
+      <idea ac="6">ContradictionActions.test.tsx: Investigate opens dialog, submits note, changes status</idea>
+      <idea ac="7">ContradictionActions.test.tsx: Add Note saves to contradiction, displays on card</idea>
+      <idea ac="8">ContradictionsView.test.tsx: Filter dropdown changes, default is Unresolved, count updates</idea>
+      <idea ac="8">ContradictionsView.test.tsx: URL state sync - filter persists on navigation</idea>
+      <idea ac="10">ContradictionsView.test.tsx: Loading skeleton visible during fetch, error state with retry</idea>
+      <idea ac="4,5">ContradictionActions.test.tsx: Optimistic update then rollback on error (mock failed API)</idea>
+      <idea ac="9">API test: GET /contradictions returns filtered list, POST /resolve updates atomically</idea>
+      <idea>Accessibility: All action buttons have aria-labels, keyboard navigation works</idea>
+    </ideas>
+  </tests>
+</story-context>

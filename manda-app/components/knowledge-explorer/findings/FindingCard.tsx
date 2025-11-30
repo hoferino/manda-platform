@@ -2,6 +2,7 @@
  * FindingCard Component
  * Card view alternative for displaying findings
  * Story: E4.4 - Build Card View Alternative for Findings (AC: 1, 4, 5)
+ * Story: E4.5 - Implement Source Attribution Links (AC: 7)
  *
  * Features:
  * - Card layout with finding text, domain, confidence, status, source
@@ -11,6 +12,7 @@
  * - Integration with FindingActions for validate/reject/edit
  * - Keyboard navigation (Enter expand, Escape collapse)
  * - ARIA labels and screen reader support
+ * - Clickable source attribution links with preview modal
  */
 
 'use client'
@@ -19,7 +21,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ConfidenceBadge, DomainTag, StatusBadge } from '../shared'
+import { ConfidenceBadge, DomainTag, StatusBadge, SourceAttributionLink } from '../shared'
 import { FindingActions } from './FindingActions'
 import { InlineEdit } from './InlineEdit'
 import { ChevronDown, ChevronUp, FileText, Calendar } from 'lucide-react'
@@ -37,6 +39,7 @@ export interface FindingCardProps {
   isEditing?: boolean
   showSimilarity?: boolean
   className?: string
+  projectId: string
 }
 
 /**
@@ -63,29 +66,47 @@ function SimilarityBadge({ similarity }: { similarity: number }) {
 }
 
 /**
- * Source attribution component for card view
+ * Source attribution component for card view - uses SourceAttributionLink for clickable links
  */
-function SourceAttribution({
-  sourceDocument,
-  pageNumber,
+function SourceAttributionCell({
+  finding,
+  projectId,
   className,
 }: {
-  sourceDocument: string | null
-  pageNumber: number | null
+  finding: Finding | FindingWithSimilarity
+  projectId: string
   className?: string
 }) {
-  if (!sourceDocument) {
+  if (!finding.sourceDocument && !finding.documentId) {
     return null
   }
 
+  // If we have a documentId, use the clickable SourceAttributionLink
+  if (finding.documentId) {
+    return (
+      <div className={className}>
+        <SourceAttributionLink
+          documentId={finding.documentId}
+          documentName={finding.sourceDocument || 'Unknown document'}
+          chunkId={finding.chunkId}
+          pageNumber={finding.pageNumber}
+          sheetName={null} // Will be fetched from chunk API if needed
+          cellReference={null} // Will be fetched from chunk API if needed
+          projectId={projectId}
+        />
+      </div>
+    )
+  }
+
+  // Fallback: show plain text if no documentId (e.g., manually created findings)
   return (
     <div className={cn('flex items-center gap-1.5 text-sm text-muted-foreground', className)}>
       <FileText className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-      <span className="truncate" title={sourceDocument}>
-        {sourceDocument}
+      <span className="truncate" title={finding.sourceDocument || undefined}>
+        {finding.sourceDocument}
       </span>
-      {pageNumber && (
-        <span className="text-xs whitespace-nowrap">p.{pageNumber}</span>
+      {finding.pageNumber && (
+        <span className="text-xs whitespace-nowrap">p.{finding.pageNumber}</span>
       )}
     </div>
   )
@@ -100,6 +121,7 @@ export function FindingCard({
   isEditing = false,
   showSimilarity = false,
   className,
+  projectId,
 }: FindingCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -225,9 +247,9 @@ export function FindingCard({
             {/* Source attribution (shown when expanded) */}
             {isExpanded && (
               <div className="mt-3 pt-3 border-t">
-                <SourceAttribution
-                  sourceDocument={finding.sourceDocument}
-                  pageNumber={finding.pageNumber}
+                <SourceAttributionCell
+                  finding={finding}
+                  projectId={projectId}
                 />
               </div>
             )}

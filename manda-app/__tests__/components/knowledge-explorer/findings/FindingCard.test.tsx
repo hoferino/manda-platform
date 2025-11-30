@@ -50,6 +50,7 @@ describe('FindingCard', () => {
     onCancelEdit: vi.fn(),
     isEditing: false,
     showSimilarity: false,
+    projectId: 'test-project-id',
   }
 
   beforeEach(() => {
@@ -145,7 +146,9 @@ describe('FindingCard', () => {
 
       await user.click(screen.getByRole('button', { name: /show more/i }))
 
-      expect(screen.getByText('Financial Report Q1 2024.pdf')).toBeInTheDocument()
+      // SourceAttributionLink renders a button with the document name and page reference
+      // Format: "Financial Report Q1 2024.pdf, p.42"
+      expect(screen.getByText(/Financial Report Q1 2024\.pdf, p\.42/)).toBeInTheDocument()
     })
 
     it('expands on Enter key press', async () => {

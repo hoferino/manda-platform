@@ -1932,6 +1932,211 @@ class SupabaseClient:
                 retryable=self._is_retryable_error(e),
             )
 
+    # ==========================================================================
+    # Contradiction Detection Methods (Story E4.7)
+    # ==========================================================================
+
+    async def get_findings_by_deal(
+        self,
+        deal_id: UUID,
+    ) -> list[dict[str, Any]]:
+        """
+        Get all findings for a deal.
+
+        Story: E4.7 - Detect Contradictions Using Neo4j (AC: #2)
+
+        Args:
+            deal_id: UUID of the deal/project
+
+        Returns:
+            List of finding records as dicts
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Fetching findings for deal",
+            deal_id=str(deal_id),
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT f.id, f.deal_id, f.document_id, f.user_id,
+                           f.text, f.source_document, f.page_number,
+                           f.confidence, f.chunk_id, f.finding_type,
+                           f.domain, f.status, f.metadata,
+                           f.created_at, f.updated_at,
+                           d.name as document_name
+                    FROM findings f
+                    LEFT JOIN documents d ON f.document_id = d.id
+                    WHERE f.deal_id = $1
+                    ORDER BY f.created_at DESC
+                    """,
+                    deal_id,
+                )
+
+                findings = [dict(row) for row in rows]
+
+                logger.info(
+                    "Findings fetched for deal",
+                    deal_id=str(deal_id),
+                    findings_count=len(findings),
+                )
+
+                return findings
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error fetching findings for deal",
+                deal_id=str(deal_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to fetch findings for deal: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def get_existing_contradiction(
+        self,
+        finding_a_id: UUID,
+        finding_b_id: UUID,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Check if a contradiction already exists between two findings.
+
+        Story: E4.7 - Detect Contradictions Using Neo4j (AC: #6)
+
+        Checks both directions (A->B and B->A) for existing contradictions.
+
+        Args:
+            finding_a_id: UUID of first finding
+            finding_b_id: UUID of second finding
+
+        Returns:
+            Existing contradiction record if found, None otherwise
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        pool = await self._get_pool()
+
+        try:
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """
+                    SELECT id, deal_id, finding_a_id, finding_b_id,
+                           confidence, status, resolution, resolution_note,
+                           detected_at, resolved_at, resolved_by, metadata
+                    FROM contradictions
+                    WHERE (finding_a_id = $1 AND finding_b_id = $2)
+                       OR (finding_a_id = $2 AND finding_b_id = $1)
+                    LIMIT 1
+                    """,
+                    finding_a_id,
+                    finding_b_id,
+                )
+
+                if row:
+                    return dict(row)
+                return None
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error checking existing contradiction",
+                finding_a_id=str(finding_a_id),
+                finding_b_id=str(finding_b_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to check existing contradiction: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def store_contradiction(
+        self,
+        deal_id: UUID,
+        finding_a_id: UUID,
+        finding_b_id: UUID,
+        confidence: float,
+        reason: Optional[str] = None,
+    ) -> UUID:
+        """
+        Store a detected contradiction in the contradictions table.
+
+        Story: E4.7 - Detect Contradictions Using Neo4j (AC: #6)
+
+        Args:
+            deal_id: UUID of the deal/project
+            finding_a_id: UUID of first finding
+            finding_b_id: UUID of second finding
+            confidence: Confidence score (0.0-1.0)
+            reason: Explanation of the contradiction
+
+        Returns:
+            UUID of the created contradiction record
+
+        Raises:
+            DatabaseError: If insert fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Storing contradiction",
+            deal_id=str(deal_id),
+            finding_a_id=str(finding_a_id),
+            finding_b_id=str(finding_b_id),
+            confidence=confidence,
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """
+                    INSERT INTO contradictions (
+                        deal_id, finding_a_id, finding_b_id,
+                        confidence, status, detected_at, metadata
+                    ) VALUES (
+                        $1, $2, $3, $4, 'unresolved', NOW(),
+                        $5::jsonb
+                    )
+                    RETURNING id
+                    """,
+                    deal_id,
+                    finding_a_id,
+                    finding_b_id,
+                    confidence,
+                    json.dumps({"reason": reason} if reason else {}),
+                )
+
+                contradiction_id = row["id"]
+
+                logger.info(
+                    "Contradiction stored",
+                    contradiction_id=str(contradiction_id),
+                    deal_id=str(deal_id),
+                    finding_a_id=str(finding_a_id),
+                    finding_b_id=str(finding_b_id),
+                )
+
+                return contradiction_id
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error storing contradiction",
+                deal_id=str(deal_id),
+                finding_a_id=str(finding_a_id),
+                finding_b_id=str(finding_b_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to store contradiction: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
 
 # Global client instance
 _supabase_client: Optional[SupabaseClient] = None
