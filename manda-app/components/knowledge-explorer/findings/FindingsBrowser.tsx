@@ -4,11 +4,14 @@
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface (AC: #2, #4, #5)
  * Story: E4.2 - Implement Semantic Search for Findings (AC: #4, #5, #8)
  * Story: E4.3 - Implement Inline Finding Validation (AC: #1, #2, #3, #4, #8)
+ * Story: E4.4 - Build Card View Alternative for Findings (AC: #2, #3, #4, #5, #6)
  *
  * Combines:
  * - FindingSearch for semantic search
  * - FindingFilters for filtering controls
- * - FindingsTable for data display
+ * - ViewToggle for Table/Card view switching
+ * - FindingsTable for table data display
+ * - FindingsCardGrid for card data display
  * - Data fetching with React state management
  * - Validation with undo support
  * - Inline editing
@@ -22,8 +25,10 @@ import { toast } from 'sonner'
 import { FindingSearch, EmptySearchResults } from './FindingSearch'
 import { FindingFilters } from './FindingFilters'
 import { FindingsTable } from './FindingsTable'
+import { FindingsCardGrid } from './FindingsCardGrid'
 import { InlineEdit } from './InlineEdit'
 import { useUndoValidation, type UndoState } from './useUndoValidation'
+import { ViewToggle, useViewPreference, type ViewMode } from '../shared'
 import { getFindings, validateFinding, updateFinding, searchFindings } from '@/lib/api/findings'
 import type {
   Finding,
@@ -53,6 +58,9 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
 
   // Initialize search query from URL
   const initialSearchQuery = searchParams.get('q') || ''
+
+  // View mode state with localStorage persistence
+  const [viewMode, setViewMode] = useViewPreference('table')
 
   // State
   const [filters, setFilters] = useState<FilterType>(DEFAULT_FILTERS)
@@ -498,17 +506,26 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
         searchTime={isSearchMode ? searchResults?.searchTime : undefined}
       />
 
-      {/* Filters */}
-      <FindingFilters
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        documents={documents}
-        isLoading={isLoading || isSearching}
-        totalCount={isSearchMode ? searchResults?.total || 0 : data?.total || 0}
-        filteredCount={displayFindings.length}
-        isSearchMode={isSearchMode}
-        onClearAll={isSearchMode ? handleClearSearch : undefined}
-      />
+      {/* Filters and View Toggle Row */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <FindingFilters
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          documents={documents}
+          isLoading={isLoading || isSearching}
+          totalCount={isSearchMode ? searchResults?.total || 0 : data?.total || 0}
+          filteredCount={displayFindings.length}
+          isSearchMode={isSearchMode}
+          onClearAll={isSearchMode ? handleClearSearch : undefined}
+        />
+
+        {/* View Toggle */}
+        <ViewToggle
+          value={viewMode}
+          onChange={setViewMode}
+          className="flex-shrink-0"
+        />
+      </div>
 
       {/* Error state */}
       {error && (
@@ -517,8 +534,8 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
         </div>
       )}
 
-      {/* Inline Edit Panel */}
-      {editingFinding && (
+      {/* Inline Edit Panel - only shown in table view */}
+      {viewMode === 'table' && editingFinding && (
         <div className="rounded-lg border bg-muted/50 p-4">
           <div className="mb-2 text-sm font-medium">Editing Finding</div>
           <InlineEdit
@@ -535,22 +552,41 @@ export function FindingsBrowser({ projectId, documents }: FindingsBrowserProps) 
         <EmptySearchResults query={searchQuery} onClear={handleClearSearch} />
       )}
 
-      {/* Table */}
+      {/* Content View - Table or Cards */}
       {!showEmptySearchResults && (
-        <FindingsTable
-          findings={displayFindings}
-          isLoading={isLoading || isSearching}
-          page={isSearchMode ? 1 : filters.page || 1}
-          totalPages={totalPages}
-          total={displayTotal}
-          sortBy={filters.sortBy}
-          sortOrder={filters.sortOrder}
-          onPageChange={handlePageChange}
-          onSortChange={handleSortChange}
-          onValidate={handleValidate}
-          onEdit={handleEdit}
-          showSimilarity={isSearchMode}
-        />
+        <>
+          {viewMode === 'table' ? (
+            <FindingsTable
+              findings={displayFindings}
+              isLoading={isLoading || isSearching}
+              page={isSearchMode ? 1 : filters.page || 1}
+              totalPages={totalPages}
+              total={displayTotal}
+              sortBy={filters.sortBy}
+              sortOrder={filters.sortOrder}
+              onPageChange={handlePageChange}
+              onSortChange={handleSortChange}
+              onValidate={handleValidate}
+              onEdit={handleEdit}
+              showSimilarity={isSearchMode}
+            />
+          ) : (
+            <FindingsCardGrid
+              findings={displayFindings}
+              isLoading={isLoading || isSearching}
+              page={isSearchMode ? 1 : filters.page || 1}
+              totalPages={totalPages}
+              total={displayTotal}
+              onPageChange={handlePageChange}
+              onValidate={handleValidate}
+              onEdit={handleEdit}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={handleCancelEdit}
+              editingFindingId={editingFindingId}
+              showSimilarity={isSearchMode}
+            />
+          )}
+        </>
       )}
     </div>
   )

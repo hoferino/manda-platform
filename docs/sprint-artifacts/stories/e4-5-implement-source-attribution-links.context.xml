@@ -1,0 +1,291 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E4</epicId>
+    <storyId>5</storyId>
+    <title>Implement Source Attribution Links</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-5-implement-source-attribution-links.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to click on a source citation to view the original document location</iWant>
+    <soThat>I can verify findings against their original context and trace information back to primary sources</soThat>
+    <tasks>
+      <task id="1" title="Create SourceAttributionLink Component" acs="1,6">
+        <subtask>Create components/knowledge-explorer/shared/SourceAttributionLink.tsx</subtask>
+        <subtask>Implement link formatting with document name and location reference</subtask>
+        <subtask>Add hover state with tooltip showing full path</subtask>
+        <subtask>Add click handler to open preview modal</subtask>
+        <subtask>Export from shared/index.ts</subtask>
+        <subtask>Add ARIA labels for accessibility</subtask>
+      </task>
+      <task id="2" title="Create DocumentPreviewModal Component" acs="2,8">
+        <subtask>Create components/knowledge-explorer/shared/DocumentPreviewModal.tsx</subtask>
+        <subtask>Implement modal using shadcn Dialog component</subtask>
+        <subtask>Add document header with title, page/sheet, and reference info</subtask>
+        <subtask>Add loading state with skeleton</subtask>
+        <subtask>Add error state with retry button</subtask>
+        <subtask>Implement keyboard dismiss (Escape)</subtask>
+      </task>
+      <task id="3" title="Create Chunk API Endpoint" acs="2,3,4">
+        <subtask>Create app/api/projects/[id]/chunks/[chunkId]/route.ts</subtask>
+        <subtask>Implement GET endpoint to fetch chunk with context</subtask>
+        <subtask>Include surrounding content for context (previous/next chunks)</subtask>
+        <subtask>Return sheet_name, cell_reference, page_number from document_chunks</subtask>
+        <subtask>Add authentication and RLS validation</subtask>
+      </task>
+      <task id="4" title="Implement Excel Preview" acs="3">
+        <subtask>Create components/knowledge-explorer/shared/ExcelPreview.tsx</subtask>
+        <subtask>Display sheet content with cell grid visualization</subtask>
+        <subtask>Highlight referenced cell with visual indicator (border, background)</subtask>
+        <subtask>Show sheet tabs if document has multiple sheets</subtask>
+        <subtask>Display surrounding cells for context (5x5 grid around reference)</subtask>
+      </task>
+      <task id="5" title="Implement PDF Preview" acs="4">
+        <subtask>Create components/knowledge-explorer/shared/PdfPreview.tsx</subtask>
+        <subtask>Display page content at referenced page number</subtask>
+        <subtask>Add page navigation controls (prev/next, page number input)</subtask>
+        <subtask>Scroll to relevant section based on chunk position</subtask>
+        <subtask>Consider using react-pdf or similar library for rendering</subtask>
+      </task>
+      <task id="6" title="Implement Fallback for Unavailable Documents" acs="5">
+        <subtask>Create fallback UI showing "Preview not available"</subtask>
+        <subtask>Add download link using existing GCS signed URL generation</subtask>
+        <subtask>Display document metadata from documents table</subtask>
+        <subtask>Handle documents with processing_status != 'completed'</subtask>
+      </task>
+      <task id="7" title="Integrate into FindingsTable" acs="7">
+        <subtask>Replace static source text with SourceAttributionLink component</subtask>
+        <subtask>Pass chunk_id, document_id, and source metadata to component</subtask>
+        <subtask>Test click functionality opens preview modal</subtask>
+        <subtask>Verify table layout accommodates link component</subtask>
+      </task>
+      <task id="8" title="Integrate into FindingCard" acs="7">
+        <subtask>Add SourceAttributionLink to expanded card view</subtask>
+        <subtask>Position source link appropriately in card layout</subtask>
+        <subtask>Test click functionality in card context</subtask>
+        <subtask>Ensure undo validation doesn't interfere with link clicks</subtask>
+      </task>
+      <task id="9" title="Write Tests" acs="all">
+        <subtask>Unit tests for SourceAttributionLink (renders, click, accessibility)</subtask>
+        <subtask>Unit tests for DocumentPreviewModal (loading, error, close)</subtask>
+        <subtask>Unit tests for ExcelPreview (cell highlighting, sheet navigation)</subtask>
+        <subtask>Unit tests for PdfPreview (page navigation, scroll behavior)</subtask>
+        <subtask>Integration test for end-to-end source link flow</subtask>
+        <subtask>API endpoint tests for chunks route</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Clickable Source Links in Findings">
+      <requirement>Source attributions displayed as clickable links throughout the application</requirement>
+      <requirement>Link format: document name, page/section/cell reference (e.g., "financial_model.xlsx, Sheet 'P&amp;L', Cell B15")</requirement>
+      <requirement>Links use monospace font with subtle highlighting to indicate clickability</requirement>
+      <requirement>Hover state shows tooltip with full source path</requirement>
+    </ac>
+    <ac id="2" title="Document Preview Modal">
+      <requirement>Clicking source link opens document preview modal</requirement>
+      <requirement>Modal displays document content at referenced location</requirement>
+      <requirement>Modal has close button (X), keyboard dismiss (Escape), click-outside-to-close</requirement>
+      <requirement>Modal shows document title, page/sheet info, and source reference in header</requirement>
+      <requirement>Loading state shown while document content is being fetched</requirement>
+    </ac>
+    <ac id="3" title="Excel Source Navigation">
+      <requirement>For Excel sources, preview opens to correct sheet</requirement>
+      <requirement>Referenced cell (e.g., B15) highlighted with visual indicator</requirement>
+      <requirement>Sheet tabs visible for navigation between sheets</requirement>
+      <requirement>Cell context visible (surrounding cells for context)</requirement>
+    </ac>
+    <ac id="4" title="PDF Source Navigation">
+      <requirement>For PDF sources, preview opens to referenced page</requirement>
+      <requirement>Page number displayed and navigation controls available</requirement>
+      <requirement>Relevant section scrolled into view</requirement>
+      <requirement>Text highlighting for extracted content (if text-based)</requirement>
+    </ac>
+    <ac id="5" title="Unavailable Document Fallback">
+      <requirement>If preview not available (not yet processed), show "Document preview not available"</requirement>
+      <requirement>Provide link to download original file from GCS</requirement>
+      <requirement>Show document metadata (name, size, upload date) as fallback</requirement>
+    </ac>
+    <ac id="6" title="SourceAttributionLink Component">
+      <requirement>Create reusable SourceAttributionLink component in shared/</requirement>
+      <requirement>Component accepts: documentId, documentName, chunkId, pageNumber, sheetName, cellReference</requirement>
+      <requirement>Component handles click events and opens preview modal</requirement>
+      <requirement>Component accessible with proper ARIA labels</requirement>
+    </ac>
+    <ac id="7" title="Integration with Existing Components">
+      <requirement>Integrate SourceAttributionLink into FindingsTable source column</requirement>
+      <requirement>Integrate SourceAttributionLink into FindingCard expanded view</requirement>
+      <requirement>Ensure source links work in both table and card views</requirement>
+      <requirement>Source links work on finding detail views when implemented</requirement>
+    </ac>
+    <ac id="8" title="Performance and Error Handling">
+      <requirement>Document content fetched on-demand (not preloaded)</requirement>
+      <requirement>Error states shown for failed document fetches</requirement>
+      <requirement>Retry button for failed loads</requirement>
+      <requirement>Loading indicator during fetch</requirement>
+    </ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Tech Spec" section="E4.5: Source Attribution">
+        Source citation format: "document_name.xlsx, Sheet 'P&amp;L', Cell B15". Document viewer supports Excel, PDF, Word (MVP: basic preview). Navigate to exact location (highlight cell, jump to page). Fallback for unavailable previews with download option.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E4.md" title="Epic 4 Tech Spec" section="Component Hierarchy">
+        SourceAttributionLink.tsx (Clickable source) defined in shared/ folder. Integration with FindingsTable source column and FindingCard expanded view.
+      </doc>
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="Section 2.2 Visual Foundation">
+        Typography and color specifications for source links. Interaction patterns for modals and tooltips.
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Architecture" section="Document Storage">
+        GCS integration for document storage. Signed URLs for secure document access.
+      </doc>
+    </docs>
+    <code>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingCard.tsx" kind="component" symbol="FindingCard" reason="Must integrate SourceAttributionLink into expanded card view. Currently shows sourceDocument as plain text. Lines 68-92 define SourceAttribution helper component to replace.">
+        <currentImpl>SourceAttribution component at lines 68-92 renders plain text with FileText icon. When expanded, shows source in border-t div at line 227-233.</currentImpl>
+      </file>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingsTable.tsx" kind="component" symbol="FindingsTable" reason="Must replace static source column with SourceAttributionLink. Lines 129-152 define SourceAttribution helper component to replace.">
+        <currentImpl>SourceAttribution component at lines 129-152 renders plain text with FileText icon in column definition at lines 221-229.</currentImpl>
+      </file>
+      <file path="manda-app/components/knowledge-explorer/shared/index.ts" kind="export" reason="Must export new SourceAttributionLink and related components">
+        <currentExports>ConfidenceBadge, DomainTag, StatusBadge, ViewToggle, useViewPreference, ViewMode</currentExports>
+      </file>
+      <file path="manda-app/components/knowledge-explorer/findings/index.ts" kind="export" reason="Reference for export pattern">
+        <currentExports>FindingsBrowser, FindingsTable, FindingFilters, FindingCard, FindingsCardGrid</currentExports>
+      </file>
+      <file path="manda-app/lib/types/findings.ts" kind="types" symbol="FindingWithContext" reason="Defines chunk interface with sheetName, cellReference, pageNumber used for source links">
+        <interface>chunk: { id, content, sheetName, cellReference, pageNumber } | null</interface>
+      </file>
+      <file path="manda-app/lib/gcs/client.ts" kind="service" symbol="getSignedDownloadUrl" lines="199-222" reason="Existing GCS signed URL function to reuse for fallback download links">
+        <signature>getSignedDownloadUrl(objectPath: string, options?: { bucketName?, expiresInMinutes?, responseDisposition? }): Promise&lt;string&gt;</signature>
+      </file>
+      <file path="manda-app/supabase/migrations/00015_create_document_chunks_table.sql" kind="schema" reason="Defines document_chunks table schema with chunk metadata fields">
+        <columns>id, document_id, chunk_index, content, chunk_type, page_number, sheet_name, cell_reference, token_count, metadata, embedding, created_at</columns>
+      </file>
+      <file path="manda-app/app/api/projects/[id]/findings/[findingId]/route.ts" kind="api" reason="Reference for API route pattern in findings API">
+        <pattern>GET/PATCH endpoints with Supabase auth and RLS validation</pattern>
+      </file>
+      <file path="manda-app/__tests__/components/knowledge-explorer/findings/FindingCard.test.tsx" kind="test" reason="Test patterns to follow for new component tests">
+        <patterns>userEvent for interactions, waitFor for async, vi.mock for dependencies, describe/it structure with AC references</patterns>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem name="node" manifest="manda-app/package.json">
+        <package name="@radix-ui/react-dialog" version="^1.1.15" purpose="Modal component base for DocumentPreviewModal" />
+        <package name="@radix-ui/react-tooltip" version="^1.2.8" purpose="Tooltip for source link hover state" />
+        <package name="lucide-react" version="^0.554.0" purpose="Icons (FileText, FileSpreadsheet, Download, X, ChevronLeft, ChevronRight)" />
+        <package name="@supabase/supabase-js" version="^2.84.0" purpose="Database queries for chunks and documents" />
+        <package name="@google-cloud/storage" version="^7.17.3" purpose="GCS signed URLs for document download" />
+        <potential-new name="react-pdf" purpose="PDF rendering in browser - evaluate need vs using chunk content directly" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Tech Spec" category="format">Source citation format must be: "document_name.xlsx, Sheet 'P&amp;L', Cell B15"</constraint>
+    <constraint source="Architecture" category="pattern">Use existing GCS signed URL generation for document downloads</constraint>
+    <constraint source="Architecture" category="pattern">Follow existing API route patterns with Supabase auth middleware</constraint>
+    <constraint source="Architecture" category="pattern">Use shadcn Dialog component for modals</constraint>
+    <constraint source="Dev Notes" category="approach">MVP approach: use chunk.content directly rather than re-parsing files</constraint>
+    <constraint source="Dev Notes" category="performance">Document content fetched on-demand, not preloaded</constraint>
+    <constraint source="Previous Story" category="integration">FindingCard shows sourceDocument in expanded state - replace with clickable link</constraint>
+    <constraint source="Previous Story" category="integration">FindingsTable has Source column with plain text - replace with clickable link</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="SourceAttributionLink Props" kind="component-props" path="manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx">
+      <signature>
+interface SourceAttributionLinkProps {
+  documentId: string
+  documentName: string
+  chunkId: string | null
+  pageNumber: number | null
+  sheetName: string | null
+  cellReference: string | null
+  className?: string
+}
+      </signature>
+    </interface>
+    <interface name="Chunk API Response" kind="rest-endpoint" path="manda-app/app/api/projects/[id]/chunks/[chunkId]/route.ts">
+      <signature>
+GET /api/projects/[id]/chunks/[chunkId]
+Response: {
+  chunk: {
+    id: string
+    content: string
+    chunkType: string
+    pageNumber: number | null
+    sheetName: string | null
+    cellReference: string | null
+    metadata: Record&lt;string, unknown&gt;
+  }
+  document: {
+    id: string
+    name: string
+    filePath: string
+    mimeType: string
+    processingStatus: string
+  }
+  context: {
+    previousChunk: { id, content } | null
+    nextChunk: { id, content } | null
+  }
+}
+      </signature>
+    </interface>
+    <interface name="getSignedDownloadUrl" kind="function" path="manda-app/lib/gcs/client.ts">
+      <signature>
+function getSignedDownloadUrl(
+  objectPath: string,
+  options?: {
+    bucketName?: string
+    expiresInMinutes?: number
+    responseDisposition?: string
+  }
+): Promise&lt;string&gt;
+      </signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing uses Vitest with React Testing Library. Tests are located in manda-app/__tests__/ mirroring src structure.
+      Component tests use userEvent for interactions, waitFor for async operations.
+      API tests mock Supabase client with createMockSupabaseClient from __tests__/utils/supabase-mock.ts.
+      Tests reference acceptance criteria in describe blocks (e.g., "AC1", "AC2").
+      Coverage target: 85%+ for new code.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/shared/SourceAttributionLink.test.tsx</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/shared/DocumentPreviewModal.test.tsx</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/shared/ExcelPreview.test.tsx</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/shared/PdfPreview.test.tsx</location>
+      <location>manda-app/__tests__/api/projects/chunks.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test SourceAttributionLink renders formatted link text with document name and location</idea>
+      <idea ac="1">Test hover state shows tooltip with full source path</idea>
+      <idea ac="1">Test link uses monospace font styling</idea>
+      <idea ac="2">Test clicking link opens DocumentPreviewModal</idea>
+      <idea ac="2">Test modal shows loading state during fetch</idea>
+      <idea ac="2">Test modal closes on X click, Escape key, and click outside</idea>
+      <idea ac="3">Test ExcelPreview highlights correct cell with visual indicator</idea>
+      <idea ac="3">Test sheet tabs navigate between sheets</idea>
+      <idea ac="4">Test PdfPreview opens to correct page number</idea>
+      <idea ac="4">Test page navigation controls work</idea>
+      <idea ac="5">Test fallback UI shows when preview unavailable</idea>
+      <idea ac="5">Test download link generates valid GCS signed URL</idea>
+      <idea ac="6">Test component has proper ARIA labels</idea>
+      <idea ac="7">Test integration with FindingsTable source column</idea>
+      <idea ac="7">Test integration with FindingCard expanded view</idea>
+      <idea ac="8">Test error state with retry button on failed fetch</idea>
+      <idea ac="8">Test loading indicator during fetch</idea>
+    </ideas>
+  </tests>
+</story-context>

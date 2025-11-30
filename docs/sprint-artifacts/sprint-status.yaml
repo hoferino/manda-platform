@@ -578,10 +578,25 @@ development_status:
     - Integration with FindingsBrowser and optimistic UI updates
     - Toast notifications with undo action
     - 56 tests passing (FindingActions, InlineEdit, useUndoValidation, validate API)
-  e4-4-build-card-view-alternative-for-findings: backlog
+  e4-4-build-card-view-alternative-for-findings: done
   e4-4-jira-id: SCRUM-51
-  e4-5-implement-source-attribution-links: backlog
+  e4-4-drafted: 2025-11-29
+  e4-4-context-ready: 2025-11-29
+  e4-4-completed: 2025-11-30
+  e4-4-notes: |
+    Card view alternative for findings completed. Key deliverables:
+    - FindingCard component with domain/confidence/status badges, text truncation, expand/collapse
+    - ViewToggle component with localStorage persistence and keyboard shortcut (Ctrl/Cmd+Shift+V)
+    - FindingsCardGrid with responsive grid (1/2/3 cols), virtual scrolling for >100 items
+    - Integration with FindingsBrowser - conditional table/card rendering
+    - All validation/edit actions work in both views
+    - Search mode shows similarity badges on cards
+    - @tanstack/react-virtual added for performance optimization
+    - 69 tests passing (FindingCard, ViewToggle, FindingsCardGrid)
+  e4-5-implement-source-attribution-links: ready-for-dev
   e4-5-jira-id: SCRUM-52
+  e4-5-drafted: 2025-11-30
+  e4-5-context-ready: 2025-11-30
   e4-6-build-contradictions-view: backlog
   e4-6-jira-id: SCRUM-53
   e4-7-detect-contradictions-using-neo4j: backlog

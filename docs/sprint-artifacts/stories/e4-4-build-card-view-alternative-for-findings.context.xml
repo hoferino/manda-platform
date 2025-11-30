@@ -1,0 +1,504 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>4</epicId>
+    <storyId>4</storyId>
+    <title>Build Card View Alternative for Findings</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-29</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e4-4-build-card-view-alternative-for-findings.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to view findings in a card layout alternative to the table view</iWant>
+    <soThat>I can quickly scan and compare findings visually, with more context visible at a glance for detailed review sessions</soThat>
+    <tasks>
+      <task id="1" status="pending">
+        <title>Create FindingCard Component</title>
+        <ac>AC1</ac>
+        <subtasks>
+          <subtask>Create components/knowledge-explorer/findings/FindingCard.tsx</subtask>
+          <subtask>Implement card layout with header (domain, confidence, status)</subtask>
+          <subtask>Add truncated text display with "show more" capability</subtask>
+          <subtask>Integrate ConfidenceBadge, DomainTag, StatusBadge from shared/</subtask>
+          <subtask>Add relative date formatting using date-fns</subtask>
+          <subtask>Style with shadcn/ui Card component and Tailwind</subtask>
+          <subtask>Add hover elevation effect with smooth transition</subtask>
+        </subtasks>
+      </task>
+      <task id="2" status="pending">
+        <title>Create ViewToggle Component</title>
+        <ac>AC2</ac>
+        <subtasks>
+          <subtask>Create components/knowledge-explorer/shared/ViewToggle.tsx</subtask>
+          <subtask>Implement toggle with Table icon and LayoutGrid icon</subtask>
+          <subtask>Add localStorage persistence for view preference</subtask>
+          <subtask>Implement keyboard shortcut (Ctrl/Cmd+Shift+V)</subtask>
+          <subtask>Export from shared/index.ts</subtask>
+        </subtasks>
+      </task>
+      <task id="3" status="pending">
+        <title>Build Card Grid Container</title>
+        <ac>AC3</ac>
+        <subtasks>
+          <subtask>Create components/knowledge-explorer/findings/FindingsCardGrid.tsx</subtask>
+          <subtask>Implement responsive CSS Grid layout</subtask>
+          <subtask>Add loading skeleton for cards (SkeletonCard component)</subtask>
+          <subtask>Add empty state component</subtask>
+          <subtask>Match pagination behavior from FindingsTable</subtask>
+        </subtasks>
+      </task>
+      <task id="4" status="pending">
+        <title>Integrate FindingActions into Card</title>
+        <ac>AC4</ac>
+        <subtasks>
+          <subtask>Position actions in card footer or overlay</subtask>
+          <subtask>Show actions on hover (desktop) / always (mobile)</subtask>
+          <subtask>Connect optimistic update handlers from FindingsBrowser</subtask>
+          <subtask>Test undo functionality in card context</subtask>
+        </subtasks>
+      </task>
+      <task id="5" status="pending">
+        <title>Implement Card Expansion</title>
+        <ac>AC5</ac>
+        <subtasks>
+          <subtask>Add expanded/collapsed state to FindingCard</subtask>
+          <subtask>Show full text and source attribution when expanded</subtask>
+          <subtask>Handle keyboard interactions (Enter expand, Escape collapse)</subtask>
+          <subtask>Animate expansion smoothly</subtask>
+        </subtasks>
+      </task>
+      <task id="6" status="pending">
+        <title>Integrate Card View into FindingsBrowser</title>
+        <ac>AC2, AC6</ac>
+        <subtasks>
+          <subtask>Add viewMode state to FindingsBrowser</subtask>
+          <subtask>Conditionally render FindingsTable or FindingsCardGrid</subtask>
+          <subtask>Pass all filter props to card grid</subtask>
+          <subtask>Ensure search results work with card view</subtask>
+          <subtask>Add SimilarityBadge to cards when in search mode</subtask>
+        </subtasks>
+      </task>
+      <task id="7" status="pending">
+        <title>Add Virtual Scrolling (Performance)</title>
+        <ac>AC7</ac>
+        <subtasks>
+          <subtask>Evaluate @tanstack/react-virtual for virtualization</subtask>
+          <subtask>Implement virtualized card grid for large datasets</subtask>
+          <subtask>Test with 100+ findings for performance</subtask>
+          <subtask>Optimize re-renders with React.memo</subtask>
+        </subtasks>
+      </task>
+      <task id="8" status="pending">
+        <title>Accessibility Implementation</title>
+        <ac>AC8</ac>
+        <subtasks>
+          <subtask>Add ARIA roles and labels to cards</subtask>
+          <subtask>Implement keyboard navigation between cards</subtask>
+          <subtask>Test with screen reader (VoiceOver/NVDA)</subtask>
+          <subtask>Ensure focus management on view toggle</subtask>
+        </subtasks>
+      </task>
+      <task id="9" status="pending">
+        <title>Write Tests</title>
+        <ac>All ACs</ac>
+        <subtasks>
+          <subtask>Unit tests for FindingCard component</subtask>
+          <subtask>Unit tests for ViewToggle component</subtask>
+          <subtask>Unit tests for FindingsCardGrid</subtask>
+          <subtask>Integration test for card view with filters</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Card View Component">
+      <description>Create FindingCard.tsx component displaying finding text, domain, confidence, status, and source</description>
+      <checks>
+        <check>Card shows more content than table row (up to 200 characters before truncation)</check>
+        <check>Cards include visual confidence indicator (color-coded bar or badge)</check>
+        <check>Cards display domain tag with icon</check>
+        <check>Cards show creation date in relative format (e.g., "2 days ago")</check>
+        <check>Cards have hover state with subtle elevation change</check>
+      </checks>
+    </criterion>
+    <criterion id="AC2" title="View Toggle in FindingsBrowser">
+      <description>Add view toggle component with Table/Card icons</description>
+      <checks>
+        <check>Toggle persists view preference to localStorage</check>
+        <check>Toggle available above the findings display area</check>
+        <check>Default view: Table (current behavior)</check>
+        <check>Keyboard shortcut: Ctrl/Cmd + Shift + V toggles view</check>
+      </checks>
+    </criterion>
+    <criterion id="AC3" title="Card Grid Layout">
+      <description>Cards display in responsive grid</description>
+      <checks>
+        <check>1 column mobile, 2 columns tablet, 3 columns desktop</check>
+        <check>Grid supports infinite scroll or pagination matching table behavior</check>
+        <check>Loading state shows skeleton cards</check>
+        <check>Empty state matches table empty state</check>
+      </checks>
+    </criterion>
+    <criterion id="AC4" title="Card Actions">
+      <description>Cards include validate/reject/edit actions from FindingActions component</description>
+      <checks>
+        <check>Actions appear on card hover or focus (desktop) or always visible (mobile)</check>
+        <check>Optimistic updates and undo work identically to table view</check>
+        <check>Edit mode opens inline editor within card</check>
+      </checks>
+    </criterion>
+    <criterion id="AC5" title="Card Interaction">
+      <description>Clicking card body (not actions) expands to show full text</description>
+      <checks>
+        <check>Expanded card shows source attribution link</check>
+        <check>Keyboard navigation: Tab between cards, Enter to expand, Escape to collapse</check>
+      </checks>
+    </criterion>
+    <criterion id="AC6" title="Search and Filter Integration">
+      <description>Card view works with all existing filters and search</description>
+      <checks>
+        <check>Card view works with all existing filters (domain, status, confidence, document)</check>
+        <check>Card view works with semantic search results</check>
+        <check>Similarity badge displayed on cards when in search mode</check>
+        <check>Filter changes apply to card view immediately</check>
+      </checks>
+    </criterion>
+    <criterion id="AC7" title="Performance">
+      <description>Card view renders efficiently</description>
+      <checks>
+        <check>Card view renders 50+ cards without jank</check>
+        <check>Virtual scrolling for large datasets (greater than 100 findings)</check>
+        <check>Images/icons lazy loaded</check>
+        <check>Transitions are smooth (60fps target)</check>
+      </checks>
+    </criterion>
+    <criterion id="AC8" title="Accessibility">
+      <description>Cards are fully accessible</description>
+      <checks>
+        <check>Cards are keyboard navigable (Tab to navigate, Enter to select)</check>
+        <check>ARIA labels for all interactive elements</check>
+        <check>Screen reader announces card content and actions</check>
+        <check>Focus indicator clearly visible on cards</check>
+        <check>View toggle is accessible and labeled</check>
+      </checks>
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Epic 4 Technical Specification</title>
+        <section>E4.4: Build Card View Alternative for Findings</section>
+        <snippet>Card view is P1 priority. Must work with all existing filters and search. Must integrate with validation/edit actions from E4.3. Performance target: smooth rendering of 50+ cards.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Component Hierarchy</title>
+        <section>Component Hierarchy</section>
+        <snippet>FindingsBrowser contains FindingsTable and FindingCard as alternative views. ViewToggle in shared/ handles Table/Card switch. FindingCard displays domain tag, confidence badge, status badge.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E4.md</path>
+        <title>Non-Functional Requirements</title>
+        <section>Performance</section>
+        <snippet>Findings table load under 500ms. Inline validation under 200ms (optimistic). Pagination navigation under 300ms. Use React Query for client-side caching, optimistic updates for mutations.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e4-3-implement-inline-finding-validation.md</path>
+        <title>Story E4.3: Inline Finding Validation</title>
+        <section>Dev Notes</section>
+        <snippet>FindingActions component created at components/knowledge-explorer/findings/FindingActions.tsx. InlineEdit component for editing. useUndoValidation hook with 5-second undo window. Toast notifications using sonner.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E4.md</path>
+        <title>Epic 4: Collaborative Knowledge Workflow</title>
+        <section>Stories</section>
+        <snippet>14 stories total. E4.4 builds card view alternative for findings. Depends on E4.1 (UI), E4.2 (Search), E4.3 (Validation) being complete.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx</path>
+        <kind>component</kind>
+        <symbol>FindingsBrowser</symbol>
+        <lines>1-557</lines>
+        <reason>Main container that will be MODIFIED to add view toggle and conditional rendering of table/card views. Contains validation handlers, edit handlers, search state, and filter state that card view must integrate with.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/FindingsTable.tsx</path>
+        <kind>component</kind>
+        <symbol>FindingsTable</symbol>
+        <reason>Existing table view component. Card view must match its props interface (findings, isLoading, pagination, sorting, onValidate, onEdit, showSimilarity). Reference for pagination and loading states.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/FindingActions.tsx</path>
+        <kind>component</kind>
+        <symbol>FindingActions</symbol>
+        <lines>1-173</lines>
+        <reason>REUSE in FindingCard. Provides validate/reject/edit buttons with loading states, disabled states, and accessibility. Interface: findingId, status, onValidate, onEdit, disabled, className.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/InlineEdit.tsx</path>
+        <kind>component</kind>
+        <symbol>InlineEdit</symbol>
+        <reason>REUSE for inline editing in card view. Provides text editing with Enter save, Escape cancel. Interface: value, onSave, onCancel, isEditing.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/useUndoValidation.ts</path>
+        <kind>hook</kind>
+        <symbol>useUndoValidation</symbol>
+        <reason>REUSE for undo functionality. Hook manages 5-second undo window. Already used by FindingsBrowser, card view inherits this.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/ConfidenceBadge.tsx</path>
+        <kind>component</kind>
+        <symbol>ConfidenceBadge</symbol>
+        <lines>1-100</lines>
+        <reason>REUSE in FindingCard. Displays confidence with color-coded visual, icons, and tooltips. Props: confidence, showIcon, showPercentage, size, className.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/DomainTag.tsx</path>
+        <kind>component</kind>
+        <symbol>DomainTag</symbol>
+        <lines>1-90</lines>
+        <reason>REUSE in FindingCard. Displays domain badge with icons (DollarSign, Settings, TrendingUp, Scale, Cpu). Props: domain, showIcon, size, className.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/StatusBadge.tsx</path>
+        <kind>component</kind>
+        <symbol>StatusBadge</symbol>
+        <lines>1-72</lines>
+        <reason>REUSE in FindingCard. Displays validation status (pending/validated/rejected) with icons. Props: status, showIcon, size, className.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/findings.ts</path>
+        <kind>types</kind>
+        <symbol>Finding, FindingWithSimilarity, FindingStatus, FindingDomain</symbol>
+        <lines>1-214</lines>
+        <reason>Type definitions for findings. Finding interface has: id, dealId, documentId, text, confidence, domain, status, createdAt. FindingWithSimilarity extends with similarity score for search results.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/api/findings.ts</path>
+        <kind>service</kind>
+        <symbol>getFindings, validateFinding, updateFinding, searchFindings</symbol>
+        <reason>API client functions already used by FindingsBrowser. Card view will use same data fetching layer.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/index.ts</path>
+        <kind>barrel</kind>
+        <symbol>exports</symbol>
+        <reason>MODIFY to export new FindingCard and FindingsCardGrid components.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/index.ts</path>
+        <kind>barrel</kind>
+        <symbol>exports</symbol>
+        <reason>MODIFY to export new ViewToggle component.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/ui/card.tsx</path>
+        <kind>component</kind>
+        <symbol>Card, CardHeader, CardContent, CardFooter</symbol>
+        <reason>shadcn/ui Card component to use as base for FindingCard styling.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package>@tanstack/react-table</package>
+        <version>^8.21.3</version>
+        <purpose>Used by FindingsTable, card view is alternative</purpose>
+      </node>
+      <node>
+        <package>date-fns</package>
+        <version>^4.1.0</version>
+        <purpose>formatDistanceToNow for relative date display ("2 days ago")</purpose>
+      </node>
+      <node>
+        <package>lucide-react</package>
+        <version>^0.554.0</version>
+        <purpose>Icons - LayoutGrid, Table2, Check, X, Pencil, ChevronDown, ChevronUp</purpose>
+      </node>
+      <node>
+        <package>sonner</package>
+        <version>^2.0.7</version>
+        <purpose>Toast notifications with undo action button</purpose>
+      </node>
+      <node>
+        <package>zustand</package>
+        <version>^5.0.8</version>
+        <purpose>Potential for view preference state (currently using localStorage directly)</purpose>
+      </node>
+      <node>
+        <package>@tanstack/react-virtual</package>
+        <version>not installed</version>
+        <purpose>EVALUATE for virtual scrolling if needed for 100+ cards. May need to add as dependency.</purpose>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Tech Spec">
+      <rule>Use shadcn/ui Card component as base for FindingCard</rule>
+    </constraint>
+    <constraint source="Tech Spec">
+      <rule>Follow existing responsive breakpoints (sm/md/lg/xl from Tailwind)</rule>
+    </constraint>
+    <constraint source="Tech Spec">
+      <rule>Persist view preferences to localStorage per user</rule>
+    </constraint>
+    <constraint source="Tech Spec">
+      <rule>Use CSS Grid for card layout (not Flexbox)</rule>
+    </constraint>
+    <constraint source="Architecture">
+      <rule>Card view must integrate with existing validation handlers in FindingsBrowser</rule>
+    </constraint>
+    <constraint source="Architecture">
+      <rule>Card view must work with existing search/filter state management</rule>
+    </constraint>
+    <constraint source="Story E4.3">
+      <rule>Reuse FindingActions component for validate/reject/edit buttons</rule>
+    </constraint>
+    <constraint source="Story E4.3">
+      <rule>Optimistic updates and undo must work identically to table view</rule>
+    </constraint>
+    <constraint source="Performance">
+      <rule>Card view must render 50+ cards without jank</rule>
+    </constraint>
+    <constraint source="Performance">
+      <rule>Consider virtual scrolling for datasets over 100 findings</rule>
+    </constraint>
+    <constraint source="Accessibility">
+      <rule>Cards must be keyboard navigable (Tab, Enter, Escape)</rule>
+    </constraint>
+    <constraint source="Accessibility">
+      <rule>All interactive elements need ARIA labels</rule>
+    </constraint>
+    <constraint source="Test Requirements">
+      <rule>Follow existing test patterns from FindingActions.test.tsx</rule>
+    </constraint>
+    <constraint source="Test Requirements">
+      <rule>Use Vitest + React Testing Library + userEvent</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>FindingsBrowserProps</name>
+      <kind>component props</kind>
+      <signature>{ projectId: string; documents: { id: string; name: string }[] }</signature>
+      <path>manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx</path>
+    </interface>
+    <interface>
+      <name>FindingActionsProps</name>
+      <kind>component props</kind>
+      <signature>{ findingId: string; status: FindingStatus; onValidate: (findingId: string, action: 'confirm' | 'reject') => Promise&lt;void&gt;; onEdit: (findingId: string) => void; disabled?: boolean; className?: string }</signature>
+      <path>manda-app/components/knowledge-explorer/findings/FindingActions.tsx</path>
+    </interface>
+    <interface>
+      <name>Finding</name>
+      <kind>data model</kind>
+      <signature>{ id: string; dealId: string; documentId: string | null; chunkId: string | null; userId: string; text: string; sourceDocument: string | null; pageNumber: number | null; confidence: number | null; findingType: FindingType | null; domain: FindingDomain | null; status: FindingStatus; validationHistory: ValidationEvent[]; metadata: Record&lt;string, unknown&gt; | null; createdAt: string; updatedAt: string | null }</signature>
+      <path>manda-app/lib/types/findings.ts</path>
+    </interface>
+    <interface>
+      <name>FindingWithSimilarity</name>
+      <kind>data model</kind>
+      <signature>Finding &amp; { similarity: number }</signature>
+      <path>manda-app/lib/types/findings.ts</path>
+    </interface>
+    <interface>
+      <name>ConfidenceBadgeProps</name>
+      <kind>component props</kind>
+      <signature>{ confidence: number | null; showIcon?: boolean; showPercentage?: boolean; size?: 'sm' | 'md' | 'lg'; className?: string }</signature>
+      <path>manda-app/components/knowledge-explorer/shared/ConfidenceBadge.tsx</path>
+    </interface>
+    <interface>
+      <name>DomainTagProps</name>
+      <kind>component props</kind>
+      <signature>{ domain: FindingDomain | null; showIcon?: boolean; size?: 'sm' | 'md' | 'lg'; className?: string }</signature>
+      <path>manda-app/components/knowledge-explorer/shared/DomainTag.tsx</path>
+    </interface>
+    <interface>
+      <name>StatusBadgeProps</name>
+      <kind>component props</kind>
+      <signature>{ status: FindingStatus; showIcon?: boolean; size?: 'sm' | 'md' | 'lg'; className?: string }</signature>
+      <path>manda-app/components/knowledge-explorer/shared/StatusBadge.tsx</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing uses Vitest with React Testing Library. Component tests follow the pattern from FindingActions.test.tsx: describe blocks for Rendering, specific AC coverage, Disabled State, and Accessibility. Use userEvent for interactions, waitFor for async assertions. Mock handlers with vi.fn().mockResolvedValue(). Test files located in __tests__/components/knowledge-explorer/findings/. Coverage targets: component rendering, user interactions, loading states, error states, accessibility attributes.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/</location>
+      <location>manda-app/__tests__/components/knowledge-explorer/</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">
+        <description>FindingCard renders all finding data correctly (text, domain, confidence, status, date)</description>
+      </idea>
+      <idea ac="AC1">
+        <description>FindingCard truncates text at 200 characters with "show more"</description>
+      </idea>
+      <idea ac="AC1">
+        <description>FindingCard shows relative date (formatDistanceToNow)</description>
+      </idea>
+      <idea ac="AC1">
+        <description>FindingCard hover state changes elevation</description>
+      </idea>
+      <idea ac="AC2">
+        <description>ViewToggle switches between table and card views</description>
+      </idea>
+      <idea ac="AC2">
+        <description>ViewToggle persists preference to localStorage</description>
+      </idea>
+      <idea ac="AC2">
+        <description>ViewToggle keyboard shortcut (Ctrl/Cmd+Shift+V) toggles view</description>
+      </idea>
+      <idea ac="AC3">
+        <description>FindingsCardGrid renders correct number of cards</description>
+      </idea>
+      <idea ac="AC3">
+        <description>FindingsCardGrid shows skeleton cards during loading</description>
+      </idea>
+      <idea ac="AC3">
+        <description>FindingsCardGrid shows empty state when no findings</description>
+      </idea>
+      <idea ac="AC4">
+        <description>Card actions trigger onValidate handlers correctly</description>
+      </idea>
+      <idea ac="AC4">
+        <description>Card edit mode opens InlineEdit component</description>
+      </idea>
+      <idea ac="AC5">
+        <description>Card expand/collapse works with click and keyboard</description>
+      </idea>
+      <idea ac="AC5">
+        <description>Expanded card shows full text and source attribution</description>
+      </idea>
+      <idea ac="AC6">
+        <description>Card view respects filter changes</description>
+      </idea>
+      <idea ac="AC6">
+        <description>Card view displays similarity badge in search mode</description>
+      </idea>
+      <idea ac="AC7">
+        <description>Card view renders 50+ cards without performance degradation</description>
+      </idea>
+      <idea ac="AC8">
+        <description>Cards have correct ARIA labels and roles</description>
+      </idea>
+      <idea ac="AC8">
+        <description>Cards are keyboard navigable (Tab, Enter, Escape)</description>
+      </idea>
+      <idea ac="AC8">
+        <description>Focus indicator visible on cards</description>
+      </idea>
+    </ideas>
+  </tests>
+</story-context>
