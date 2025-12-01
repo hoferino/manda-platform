@@ -758,18 +758,205 @@ development_status:
     - 100ms debouncing, exponential backoff reconnection, subscription cleanup
     - Comprehensive tests: hook unit tests, component tests, integration tests
     - Build passing with all TypeScript checks
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
+  epic-4-retrospective-notes: |
+    Completed: 2025-11-30
+    Document: docs/sprint-artifacts/retrospectives/epic-E4-retrospective.md
+    Key outcomes:
+    - 7 blocking prerequisites identified for Epic 5
+    - Agent behavior framework needed before E5.2
+    - Hybrid search architecture (pgvector + Neo4j) required
+    - LLM integration test strategy to be created
+    - Supabase types to be regenerated
+
+  # ===================
+  # EPIC 5 BLOCKING PREREQUISITES
+  # ===================
+  # These must be completed BEFORE starting any Epic 5 stories
+  # Identified in Epic 4 retrospective (2025-11-30)
+  epic-5-prerequisites:
+    status: done
+    completed: 2025-11-30
+    created: 2025-11-30
+    source: docs/sprint-artifacts/retrospectives/epic-E4-retrospective.md
+    deliverable: docs/agent-behavior-spec.md
+    items:
+      - id: P1
+        title: Hybrid/Agentic Search Architecture
+        status: done
+        completed: 2025-11-30
+        priority: critical
+        owner: Architect
+        deliverable: "docs/agent-behavior-spec.md (Section P1)"
+        description: |
+          Design search strategy combining pgvector semantic search with Neo4j graph traversal.
+          Required for query_knowledge_base tool in E5.2.
+          Flow: Semantic search → Graph expansion → Rerank & synthesize
+        completion_notes: |
+          - Defined two query modes: Fact Retrieval vs Research/Exploration
+          - Established conflict vs temporal difference rules
+          - Response formatting: never show confidence scores, explain discrepancies naturally
+          - Documented SUPERSEDES relationship usage for correction chains
+          - Created P8 for correction chain detection (filename patterns MVP)
+      - id: P2
+        title: Agent Behavior Framework
+        status: done
+        completed: 2025-11-30
+        priority: critical
+        owner: PM + Architect
+        deliverable: "docs/agent-behavior-spec.md (Section P2)"
+        description: |
+          Define how agent responds - compact summaries vs detailed reports.
+          Adaptive output with max caps (e.g., 500 words summary).
+          Structured output via Pydantic models.
+        completion_notes: |
+          - Core principles: structured, relevant, sourced
+          - Adaptive formatting: bullets for lists, prose for narratives
+          - Uncertainty handling: explain WHY + offer next step (Q&A, IRL gap)
+          - Proactive suggestions: gaps to IRL, Q&A items
+          - Source attribution: every claim needs a source with location
+      - id: P3
+        title: Expected Behavior per Use Case
+        status: done
+        completed: 2025-11-30
+        priority: critical
+        owner: PM
+        deliverable: "docs/agent-behavior-spec.md (Section P3)"
+        description: |
+          Document expected agent behavior for different goals.
+          Financial analysis mode: Focus on metrics, comparisons, trends.
+          Company analysis mode: Focus on operations, team, market position.
+          Research mode: Broader exploration, follow-up questions.
+        completion_notes: |
+          - Intent is INFERRED from query, not explicit mode selection
+          - 7 use cases defined: fact lookup, financial deep dive, due diligence check, comparison, synthesis, gap identification, general exploration
+          - Meta-commentary rule: one short line max, then deliver content
+          - Detailed examples for each use case with expected output format
+      - id: P4
+        title: Conversation Goal/Mode Framework
+        status: done
+        completed: 2025-11-30
+        priority: critical
+        owner: PM + Architect
+        deliverable: "docs/agent-behavior-spec.md (Section P4)"
+        description: |
+          How agent detects intent from query.
+          How mode-specific constraints are applied.
+          Guide user toward productive outcomes.
+        completion_notes: |
+          - Multi-turn context: assume context + state assumption, ask if ambiguous
+          - Intent detection: summarized from P3, inferred from query patterns
+          - Guiding users: DEFERRED to post-Epic 5 testing and iteration
+          - Conversation state: stored in conversations/messages tables, 10 message context window
+      - id: P5
+        title: Regenerate Supabase Types
+        status: done
+        completed: 2025-11-30
+        priority: high
+        owner: Dev
+        deliverable: "Clean types, remove all as any casts"
+        description: |
+          Run npm run db:types after migrations applied.
+          Remove (supabase as any) and as unknown as casts.
+          Fix any type errors that surface.
+        completion_notes: |
+          - Regenerated Supabase types with npm run db:types
+          - folders table now in generated types
+          - Removed 9 `as any` casts from folders/route.ts and folders/[folderId]/route.ts
+          - Remaining casts are legitimate type narrowing (Json → ValidationEvent[])
+      - id: P6
+        title: Install Missing shadcn/ui Components
+        status: done
+        completed: 2025-11-30
+        priority: medium
+        owner: Dev
+        deliverable: "npx shadcn@latest add avatar"
+        description: |
+          Avatar component needed for chat interface.
+          Audit for other missing components.
+        completion_notes: |
+          - Installed avatar component for chat interface
+          - Installed popover and command components for chat suggestions/autocomplete
+          - Total UI components: 27 (avatar, popover, command added)
+      - id: P7
+        title: LLM Integration Test Strategy
+        status: done
+        completed: 2025-11-30
+        priority: high
+        owner: QA
+        deliverable: "docs/agent-behavior-spec.md (Section P7)"
+        description: |
+          Unit tests use mocked responses (current approach).
+          Integration test suite runs manually, hits real APIs.
+          Cost controls with token limits.
+          Evaluation dataset for search quality.
+        completion_notes: |
+          - Test pyramid: unit (mocked, CI), integration (live, pre-release), evaluation (periodic)
+          - Cost control: 50K tokens budget per integration test run
+          - E2E testing scope: tool invocation, prompt behavior, workflow E2E (CIM, Q&A, IRL)
+          - 10 curated evaluation queries with expected behaviors
+          - Scoring: pass/fail per check, 90% threshold for release
+          - Test fixtures: sample project with known docs, findings, contradictions
+      - id: P8
+        title: Correction Chain Detection
+        status: done
+        completed: 2025-11-30
+        priority: high
+        owner: Dev
+        deliverable: "docs/agent-behavior-spec.md (Section P8)"
+        description: |
+          Detect when documents/findings supersede earlier versions.
+          MVP: Filename patterns (_CORRECTED, _v2, _FINAL, _updated).
+          Future: Content-based detection ("This corrects our earlier...").
+          Create SUPERSEDES relationships in Neo4j at upload time.
+          Required for accurate query_knowledge_base responses.
+        completion_notes: |
+          - MVP: Filename pattern detection (_CORRECTED, _v2, _v3, _FINAL, _updated, (1), (2))
+          - Implementation: document upload webhook handler
+          - Graph updates: SUPERSEDES relationship + mark old findings as superseded
+          - Query-time: prefer superseding finding, optionally note update
+          - Future: content-based detection, metadata matching (deferred)
 
   # Epic 5: Conversational Assistant (9 stories)
   # Key Components:
-  # - Claude Sonnet 4.5 via LangChain ChatAnthropic adapter
+  # - LLM integration via LangChain (model-agnostic: Claude, GPT, Gemini configurable)
   # - LangGraph for conversation workflow orchestration
   # - 11 chat tools for knowledge querying
   # - WebSocket for real-time streaming responses
+  # Prerequisites completed: 2025-11-30 (see docs/agent-behavior-spec.md)
   epic-5: backlog
-  e5-1-integrate-claude-sonnet-via-langchain: backlog
-  e5-2-implement-langchain-agent-with-11-chat-tools: backlog
-  e5-3-build-chat-interface-with-conversation-history: backlog
+  e5-1-integrate-llm-via-langchain-model-agnostic: ready-for-review
+  e5-1-drafted: 2025-12-01
+  e5-1-context-ready: 2025-12-01
+  e5-1-completed: 2025-12-01
+  e5-1-notes: |
+    LLM integration layer completed. Key deliverables:
+    - LangChain factory supporting Anthropic, OpenAI, Google providers
+    - Environment-based configuration with Zod validation
+    - Token counting and cost estimation callbacks
+    - Structured output support with Zod schemas
+    - 92 unit tests passing, 9 integration tests (skipped by default)
+    - Environment variables documented in .env.example
+  e5-2-implement-langchain-agent-with-11-chat-tools: done
+  e5-2-drafted: 2025-12-01
+  e5-2-context-ready: 2025-12-01
+  e5-2-completed: 2025-12-01
+  e5-2-reviewed: 2025-12-01
+  e5-2-notes: |
+    LangChain agent with 11 chat tools completed. Key deliverables:
+    - All 11 tools implemented: query_knowledge_base, update_knowledge_base, validate_finding,
+      update_knowledge_graph, detect_contradictions, find_gaps, get_document_info,
+      trigger_analysis, suggest_questions, add_to_qa, create_irl
+    - LangGraph integration with createReactAgent from @langchain/langgraph/prebuilt
+    - P1 hybrid search architecture in query_knowledge_base
+    - P2/P3 compliant system prompt with all 7 inferred intent behaviors
+    - SSE streaming support with token-by-token display
+    - P7 evaluation harness with 10 test queries and 50K token budget
+    - 33 unit tests passing
+    Code review APPROVED - all 12 ACs verified, quality score 4/5
+  e5-3-build-chat-interface-with-conversation-history: ready-for-dev
+  e5-3-drafted: 2025-12-01
+  e5-3-context-ready: 2025-12-01
   e5-4-implement-source-citation-display-in-messages: backlog
   e5-5-implement-quick-actions-and-suggested-followups: backlog
   e5-6-add-conversation-context-and-multi-turn-support: backlog

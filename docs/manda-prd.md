@@ -225,12 +225,16 @@ Unlike generic AI assistants that start fresh each conversation, or traditional 
 
 **Agent Layer (Intelligence & Conversation):**
 
+> **Reference:** See [agent-behavior-spec.md](agent-behavior-spec.md) for detailed agent behavior specifications including search architecture, response formatting, use case behaviors, and testing strategy.
+
 1. **Main Conversational Agent**
    - LLM-powered natural language interface
    - Tool calling capabilities (can invoke platform services)
    - Multi-turn conversation management
    - Context preservation across sessions
    - Prompt engineering for M&A domain
+   - Intent inference (fact lookup, deep dive, due diligence, comparison, synthesis, gap identification, exploration)
+   - Adaptive response formatting (per agent-behavior-spec P2-P3)
 
 2. **Agent Tools (Platform Integration)**
    - `query_knowledge_base(query, filters)` → search findings

@@ -1,0 +1,215 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E5</epicId>
+    <storyId>1</storyId>
+    <title>Integrate LLM via LangChain (Model-Agnostic)</title>
+    <status>in-progress</status>
+    <generatedAt>2025-12-01</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/e5-1-integrate-llm-via-langchain-model-agnostic.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>a model-agnostic LLM integration via LangChain</iWant>
+    <soThat>we can switch between Claude, GPT, or Gemini for testing and production</soThat>
+    <tasks>
+      <task id="1">Install LangChain dependencies (langchain, @langchain/core, @langchain/anthropic, @langchain/openai, @langchain/google-genai, zod)</task>
+      <task id="2">Create lib/llm/config.ts for environment-based provider configuration (LLMProvider type, LLMConfig interface, env var reading)</task>
+      <task id="3">Implement lib/llm/client.ts with createLLMClient() factory function supporting all 3 providers</task>
+      <task id="4">Configure LangChain built-in retry with exponential backoff (default: 3 retries, 30s timeout)</task>
+      <task id="5">Implement cost tracking (lib/llm/callbacks.ts) with callback handler for token counting and cost estimation</task>
+      <task id="6">Implement structured output support (lib/llm/types.ts) with Zod schemas and with_structured_output() wrapper pattern</task>
+      <task id="7">Add observability and logging (request/response times, model used, provider, token counts)</task>
+      <task id="8">Write unit tests (provider config, LLM factory, retry logic, structured output validation, type safety, token counting)</task>
+      <task id="9">Write integration tests (basic chat completion, retry with API timeout, structured output) - marked for manual run with 50K token budget</task>
+      <task id="10">Add environment variable documentation (LLM_PROVIDER, LLM_MODEL, API keys, optional LangSmith)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Provider Configuration - LangChain LLM provider is configurable via LLM_PROVIDER environment variable supporting anthropic, openai, and google providers</criterion>
+    <criterion id="AC2">Chat Completion - Chat completion requests to the configured LLM return generated text with response time logged</criterion>
+    <criterion id="AC3">Retry Logic - When API calls fail, LangChain automatically retries with exponential backoff and succeeds on subsequent attempts</criterion>
+    <criterion id="AC4">Cost Tracking - Token usage is tracked per request with total tokens used and estimated cost visible in logs/metrics</criterion>
+    <criterion id="AC5">Structured Output - Pydantic v2 structured outputs work via with_structured_output() - responses are validated and parsed into Pydantic models, with invalid outputs raising validation errors</criterion>
+    <criterion id="AC6">Type Safety - LLM client wrapper provides type-safe interfaces with Pydantic validation catching invalid parameters and returning clear error messages</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic Technical Specification: Conversational Assistant</title>
+        <section>Module 1: LLM Integration Layer</section>
+        <snippet>Model-agnostic LLM client wrapper with structured outputs. createLLMClient() factory function. Providers: Anthropic (Claude), OpenAI (GPT), Google (Gemini). Default: Claude Sonnet 4.5.</snippet>
+      </doc>
+      <doc>
+        <path>docs/agent-behavior-spec.md</path>
+        <title>Agent Behavior Specification</title>
+        <section>P7: LLM Integration Test Strategy</section>
+        <snippet>Test pyramid: Unit tests (mocked, every commit), Integration tests (live, pre-release), Evaluation dataset (periodic). 50K token budget for integration tests.</snippet>
+      </doc>
+      <doc>
+        <path>docs/agent-behavior-spec.md</path>
+        <title>Agent Behavior Specification</title>
+        <section>P2: Agent Behavior Framework</section>
+        <snippet>Core principles: structured responses, no hard length limits, exclude irrelevant info, every claim needs source. Adaptive formatting.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic Technical Specification: Conversational Assistant</title>
+        <section>Environment Variables</section>
+        <snippet>LLM_PROVIDER=anthropic (or openai, google), LLM_MODEL=claude-sonnet-4-5-20250929, LLM_MAX_TOKENS_PER_REQUEST=4096, LLM_RATE_LIMIT_PER_MINUTE=60.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic Technical Specification: Conversational Assistant</title>
+        <section>New NPM Dependencies</section>
+        <snippet>langchain ^0.3.0, @langchain/core ^0.3.0, @langchain/anthropic ^0.3.0, @langchain/openai ^0.3.0, @langchain/google-genai ^0.1.0, zod ^3.23.0.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic Technical Specification: Conversational Assistant</title>
+        <section>Non-Functional Requirements - Performance</section>
+        <snippet>Time to First Token &lt; 500ms. Fact Lookup Response &lt; 3 seconds. Tool Execution &lt; 2 seconds per tool. LLM Retry: LangChain built-in exponential backoff (3 retries).</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/llm/config.ts</path>
+        <kind>configuration</kind>
+        <symbol>getLLMConfig, getLLMProvider, getAPIKey, LLMConfigSchema</symbol>
+        <lines>1-205</lines>
+        <reason>ALREADY IMPLEMENTED: Environment-based LLM configuration with Zod validation. Supports anthropic/openai/google providers, default models, token costs, LangSmith config.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/llm/client.ts</path>
+        <kind>factory</kind>
+        <symbol>createLLMClient, createLLMClientForProvider</symbol>
+        <lines>1-148</lines>
+        <reason>ALREADY IMPLEMENTED: LLM client factory supporting ChatAnthropic, ChatOpenAI, ChatGoogleGenerativeAI with unified BaseChatModel interface.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/llm/types.ts</path>
+        <kind>types</kind>
+        <symbol>withStructuredOutput, validateResponse, Schemas</symbol>
+        <lines>1-246</lines>
+        <reason>ALREADY IMPLEMENTED: Zod schemas for structured outputs (Finding, ChatResponse, Contradiction, Gap, etc.) and withStructuredOutput wrapper.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/llm/callbacks.ts</path>
+        <kind>observability</kind>
+        <symbol>TokenCountingHandler, LoggingHandler, calculateCost</symbol>
+        <lines>1-310</lines>
+        <reason>ALREADY IMPLEMENTED: Token counting, cost tracking, and logging callbacks. Tracks input/output tokens, estimates cost per provider.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/llm/index.ts</path>
+        <kind>module</kind>
+        <symbol>exports</symbol>
+        <lines>1-82</lines>
+        <reason>ALREADY IMPLEMENTED: Module index exporting all LLM functionality.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/__tests__/llm/config.test.ts</path>
+        <kind>test</kind>
+        <symbol>LLM Configuration tests</symbol>
+        <lines>1-261</lines>
+        <reason>ALREADY IMPLEMENTED: Unit tests for config.ts covering provider selection, model defaults, API keys, LangSmith config.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/services/embeddings.ts</path>
+        <kind>service</kind>
+        <symbol>generateEmbedding</symbol>
+        <lines>1-187</lines>
+        <reason>Related service: Embedding generation using OpenAI text-embedding-3-large. Shows retry pattern and caching approach used in project.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="langchain" version="^1.1.1" status="installed" />
+        <package name="@langchain/core" version="^1.1.0" status="installed" />
+        <package name="@langchain/anthropic" version="^1.1.3" status="installed" />
+        <package name="@langchain/openai" version="^1.1.3" status="installed" />
+        <package name="@langchain/google-genai" version="^2.0.0" status="installed" />
+        <package name="zod" version="^4.1.13" status="installed" />
+        <package name="openai" version="^6.9.1" status="installed" note="for embeddings service" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Use LangChain's unified BaseChatModel interface for provider abstraction</constraint>
+    <constraint type="pattern">Zod schemas (TypeScript equivalent of Pydantic v2) for all structured outputs</constraint>
+    <constraint type="pattern">Environment-based configuration with sensible defaults (LLM_PROVIDER, LLM_MODEL, etc.)</constraint>
+    <constraint type="architecture">Default provider: Anthropic Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)</constraint>
+    <constraint type="architecture">Default temperature: 0.7, maxTokens: 4096, retryAttempts: 3, timeout: 30000ms</constraint>
+    <constraint type="testing">Unit tests with mocked LLM responses run on every commit (free, fast)</constraint>
+    <constraint type="testing">Integration tests with live API run manually before release (50K token budget)</constraint>
+    <constraint type="observability">Log token usage with request metadata: requestId, provider, model, durationMs, tokenUsage</constraint>
+    <constraint type="security">Never expose API keys in logs or responses</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>createLLMClient</name>
+      <kind>factory function</kind>
+      <signature>createLLMClient(config?: Partial&lt;LLMConfig&gt;): BaseChatModel</signature>
+      <path>manda-app/lib/llm/client.ts</path>
+    </interface>
+    <interface>
+      <name>LLMConfig</name>
+      <kind>type interface</kind>
+      <signature>{ provider: LLMProvider, model: string, temperature: number, maxTokens: number, retryAttempts: number, timeout: number }</signature>
+      <path>manda-app/lib/llm/config.ts</path>
+    </interface>
+    <interface>
+      <name>withStructuredOutput</name>
+      <kind>wrapper function</kind>
+      <signature>withStructuredOutput&lt;T extends z.ZodType&gt;(llm: BaseChatModel, schema: T, options?): Runnable&lt;unknown, z.infer&lt;T&gt;&gt;</signature>
+      <path>manda-app/lib/llm/types.ts</path>
+    </interface>
+    <interface>
+      <name>TokenCountingHandler</name>
+      <kind>callback handler</kind>
+      <signature>class extends BaseCallbackHandler { getTotalUsage(): TokenUsage, getLastRequest(): RequestMetadata }</signature>
+      <path>manda-app/lib/llm/callbacks.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests use Vitest with mocked LLM responses. Tests run in parallel using thread pool across multiple cores.
+      Test isolation is enforced (each test file runs in clean environment). Coverage via v8 provider.
+      Integration tests with live API are manual-only with 50K token budget per P7 spec.
+      Follow existing test patterns: describe blocks, beforeEach/afterEach for env cleanup, expect assertions.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/llm/*.test.ts</location>
+      <location>manda-app/__tests__/llm/config.test.ts (ALREADY EXISTS)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test provider switching: create client with each provider, verify correct model instantiated</idea>
+      <idea ac="AC1">Test invalid provider throws clear error message</idea>
+      <idea ac="AC2">Test basic invoke() returns response content (mocked)</idea>
+      <idea ac="AC3">Test retry logic with simulated transient failures (mock first N calls to fail)</idea>
+      <idea ac="AC4">Test TokenCountingHandler accumulates tokens correctly across multiple requests</idea>
+      <idea ac="AC4">Test cost calculation for each provider using TOKEN_COSTS</idea>
+      <idea ac="AC5">Test withStructuredOutput validates response against schema</idea>
+      <idea ac="AC5">Test invalid structured output throws validation error with details</idea>
+      <idea ac="AC6">Test type safety: invalid config parameters rejected by Zod schema</idea>
+      <idea ac="integration">Manual: Test chat completion with live Anthropic API</idea>
+      <idea ac="integration">Manual: Test retry with actual API timeout (use very short timeout)</idea>
+    </ideas>
+  </tests>
+
+  <implementationNotes>
+    <note type="status">IMPLEMENTATION ALREADY COMPLETE - All core LLM files exist and are implemented</note>
+    <note type="action">Verify all 6 ACs are met by existing implementation</note>
+    <note type="action">Add any missing tests (client.test.ts, callbacks.test.ts, types.test.ts)</note>
+    <note type="action">Add environment variable documentation to README or .env.example</note>
+    <note type="action">Run existing tests to confirm they pass: npm run test:run</note>
+    <note type="action">Consider adding integration test file (marked as manual-only)</note>
+  </implementationNotes>
+</story-context>

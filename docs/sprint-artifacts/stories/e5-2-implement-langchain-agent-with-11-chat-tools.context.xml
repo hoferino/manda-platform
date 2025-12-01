@@ -1,0 +1,356 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E5</epicId>
+    <storyId>E5.2</storyId>
+    <title>Implement LangChain Agent with 11 Chat Tools</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-01</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e5-2-implement-langchain-agent-with-11-chat-tools.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>implement a LangChain tool-calling agent with 11 chat-specific agent tools</iWant>
+    <soThat>the conversational agent can dynamically select and invoke tools during conversation based on user queries</soThat>
+    <tasks>
+      <task id="1" status="pending">Set up agent tools infrastructure (AC: 8, 9)
+        <subtask>Create lib/agent/tools/index.ts barrel export</subtask>
+        <subtask>Create base tool helper functions (formatToolResponse, handleToolError)</subtask>
+        <subtask>Set up Zod schemas in lib/agent/schemas.ts per tech-spec</subtask>
+        <subtask>Configure LangChain tool integration with @tool decorator pattern</subtask>
+      </task>
+      <task id="2" status="pending">Implement Knowledge Tools - query_knowledge_base (AC: 1)
+        <subtask>Create lib/agent/tools/knowledge-tools.ts</subtask>
+        <subtask>Implement query_knowledge_base with P1 hybrid search flow (intent detection, pgvector, temporal filtering, conflict detection)</subtask>
+        <subtask>Format results with source attribution per P2 rules</subtask>
+        <subtask>Write unit tests with mocked Supabase/Neo4j responses</subtask>
+      </task>
+      <task id="3" status="pending">Implement Knowledge Tools - update_knowledge_base (AC: 6)
+        <subtask>Implement update_knowledge_base tool with temporal metadata</subtask>
+        <subtask>Store finding with date_referenced for temporal context</subtask>
+        <subtask>Generate embedding via OpenAI text-embedding-3-large</subtask>
+        <subtask>Return finding_id confirmation</subtask>
+        <subtask>Write unit tests for storage and validation</subtask>
+      </task>
+      <task id="4" status="pending">Implement Knowledge Tools - validate_finding (AC: 5)
+        <subtask>Implement validate_finding with temporal awareness</subtask>
+        <subtask>Check for contradictions only within same time period</subtask>
+        <subtask>Query Neo4j for SUPERSEDES chains</subtask>
+        <subtask>Return validation result with conflict details if any</subtask>
+        <subtask>Write unit tests covering temporal edge cases</subtask>
+      </task>
+      <task id="5" status="pending">Implement Knowledge Tools - update_knowledge_graph (AC: 8)
+        <subtask>Implement update_knowledge_graph(finding_id, relationships)</subtask>
+        <subtask>Create Neo4j relationships (SUPPORTS, CONTRADICTS, etc.)</subtask>
+        <subtask>Return graph update status</subtask>
+        <subtask>Write unit tests with mocked Neo4j</subtask>
+      </task>
+      <task id="6" status="pending">Implement Intelligence Tools (AC: 2, 4)
+        <subtask>Create lib/agent/tools/intelligence-tools.ts</subtask>
+        <subtask>Implement detect_contradictions with Neo4j query</subtask>
+        <subtask>Implement find_gaps with IRL coverage analysis</subtask>
+        <subtask>Format results with both sources shown for contradictions</subtask>
+        <subtask>Write unit tests for contradiction/gap detection</subtask>
+      </task>
+      <task id="7" status="pending">Implement Document Tools (AC: 3, 8)
+        <subtask>Create lib/agent/tools/document-tools.ts</subtask>
+        <subtask>Implement get_document_info from Supabase documents table</subtask>
+        <subtask>Implement trigger_analysis to enqueue pg-boss job</subtask>
+        <subtask>Return proper status and metadata</subtask>
+        <subtask>Write unit tests</subtask>
+      </task>
+      <task id="8" status="pending">Implement Workflow Tools (AC: 7, 8)
+        <subtask>Create lib/agent/tools/workflow-tools.ts</subtask>
+        <subtask>Implement suggest_questions with max_count cap (10)</subtask>
+        <subtask>Implement add_to_qa for Q&A list storage</subtask>
+        <subtask>Implement create_irl (stub until Epic 6) returning IRL structure</subtask>
+        <subtask>Write unit tests</subtask>
+      </task>
+      <task id="9" status="pending">Create Agent Executor (AC: 9, 10)
+        <subtask>Create lib/agent/executor.ts</subtask>
+        <subtask>Implement createChatAgent() using create_tool_calling_agent()</subtask>
+        <subtask>Configure AgentExecutor with streaming support</subtask>
+        <subtask>Import all 11 tools from tool modules</subtask>
+        <subtask>Set up verbose logging for development</subtask>
+      </task>
+      <task id="10" status="pending">Create System Prompt (AC: 9, 10)
+        <subtask>Create lib/agent/prompts.ts with system prompt</subtask>
+        <subtask>Implement all 7 inferred intent behaviors from P3</subtask>
+        <subtask>Include source attribution rules from P2</subtask>
+        <subtask>Include uncertainty handling from P2</subtask>
+        <subtask>Never expose prompt to frontend responses</subtask>
+        <subtask>Write tests verifying prompt structure</subtask>
+      </task>
+      <task id="11" status="pending">Implement Streaming Support (AC: 10)
+        <subtask>Create lib/agent/streaming.ts</subtask>
+        <subtask>Implement astream_events() wrapper</subtask>
+        <subtask>Create event types: token, tool_start, tool_end, sources, done, error</subtask>
+        <subtask>Format SSE events for frontend consumption</subtask>
+        <subtask>Write tests for streaming event generation</subtask>
+      </task>
+      <task id="12" status="pending">Implement Error Handling (AC: 11)
+        <subtask>Create error handling middleware for tools</subtask>
+        <subtask>Format user-friendly error messages</subtask>
+        <subtask>Log detailed errors for debugging</subtask>
+        <subtask>Ensure agent continues after tool failures</subtask>
+        <subtask>Write tests for error scenarios</subtask>
+      </task>
+      <task id="13" status="pending">Create Evaluation Harness (AC: 12)
+        <subtask>Create __tests__/agent/evaluation.test.ts</subtask>
+        <subtask>Implement 10 test queries from P7 spec</subtask>
+        <subtask>Track token budget (50K limit)</subtask>
+        <subtask>Validate tool selection accuracy</subtask>
+        <subtask>Validate response formatting compliance</subtask>
+        <subtask>Validate source attribution presence</subtask>
+        <subtask>Mark tests as skipped for CI (manual run only)</subtask>
+      </task>
+      <task id="14" status="pending">Integration Tests (All ACs)
+        <subtask>Test agent with sample conversations</subtask>
+        <subtask>Test multi-tool queries</subtask>
+        <subtask>Test error recovery</subtask>
+        <subtask>Test streaming end-to-end</subtask>
+        <subtask>Document manual test procedures</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">query_knowledge_base - Agent correctly calls query_knowledge_base(query, filters, limit) when user asks about findings; performs semantic search via pgvector match_findings RPC; returns findings with source attribution implementing P1 hybrid search architecture</criterion>
+    <criterion id="AC2">detect_contradictions - When asked about contradictions, agent calls detect_contradictions(topic) which queries Neo4j for CONTRADICTS relationships; returns conflicting findings side-by-side with temporal context</criterion>
+    <criterion id="AC3">get_document_info - Agent retrieves document metadata (name, type, upload date, processing status) by calling get_document_info(doc_id) when document details are needed</criterion>
+    <criterion id="AC4">find_gaps - Agent identifies missing information by calling find_gaps(category) which analyzes coverage against IRL requirements; returns gap analysis grouped by domain</criterion>
+    <criterion id="AC5">validate_finding - Agent validates new findings via validate_finding(finding, context, date_referenced) checking for contradictions with temporal awareness; prevents false contradiction detection for different time periods</criterion>
+    <criterion id="AC6">update_knowledge_base - Agent stores analyst-provided findings with temporal metadata via update_knowledge_base(finding, source, confidence, date_referenced); confirmation returned with finding_id</criterion>
+    <criterion id="AC7">suggest_questions - Agent generates Q&amp;A suggestions via suggest_questions(topic, max_count) with hard cap of 10 questions; returns M&amp;A-relevant questions based on conversation context</criterion>
+    <criterion id="AC8">Additional Tools - Agent correctly invokes add_to_qa, create_irl, trigger_analysis, and update_knowledge_graph tools with proper Pydantic validation</criterion>
+    <criterion id="AC9">Tool Selection - Agent dynamically selects appropriate tools based on user intent using LLM native function calling (Claude/Gemini); system prompt implements all 7 inferred intent behaviors from agent-behavior-spec.md P3</criterion>
+    <criterion id="AC10">Security and Streaming - System prompt and tool metadata never exposed to frontend; responses stream via astream_events() for token-by-token display with tool call indicators</criterion>
+    <criterion id="AC11">Error Handling - Tool failures handled gracefully with user-friendly error messages; agent continues conversation and suggests alternatives</criterion>
+    <criterion id="AC12">P7 Compliance - Evaluation harness exists with 10 test queries from agent-behavior-spec.md P7; tests validate tool selection, response formatting, and source attribution; 50K token budget for integration tests</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic 5 Technical Specification</title>
+        <section>Module 2: Agent Tools, Module 3: Agent Executor</section>
+        <snippet>Defines 11 chat tools (query_knowledge_base, update_knowledge_base, update_knowledge_graph, validate_finding, get_document_info, trigger_analysis, create_irl, suggest_questions, add_to_qa, detect_contradictions, find_gaps) with Zod schemas and service integrations.</snippet>
+      </doc>
+      <doc>
+        <path>docs/agent-behavior-spec.md</path>
+        <title>Agent Behavior Specification</title>
+        <section>P1-P4, P7-P8</section>
+        <snippet>Defines hybrid search architecture (P1), response formatting rules (P2), 7 inferred intent behaviors (P3), multi-turn context handling (P4), LLM test strategy with 10 evaluation queries (P7), and correction chain detection (P8).</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e5-1-integrate-llm-via-langchain-model-agnostic.md</path>
+        <title>E5.1 Story - LLM Integration</title>
+        <section>Dev Agent Record, File List</section>
+        <snippet>Completed E5.1 with lib/llm/ module: client.ts (LLM factory), config.ts (env config), callbacks.ts (token counting), types.ts (Zod schemas for Finding, ChatResponse, QAPair, etc.). 92 unit tests passing.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E5.md</path>
+        <title>Epic 5: Conversational Assistant</title>
+        <section>Stories</section>
+        <snippet>Epic overview with 9 stories. E5.2 implements LangGraph Agent Orchestration with 12 specialized agent tools for knowledge querying.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture</title>
+        <section>Conversational Agent Implementation</section>
+        <snippet>Architecture pattern: LangChain Agent for real-time chat with tool calling. LangGraph Workflows for multi-step processes (Epic 9). Data flows through pgvector and Neo4j for hybrid search.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/llm/client.ts</path>
+        <kind>service</kind>
+        <symbol>createLLMClient</symbol>
+        <lines>98-120</lines>
+        <reason>LLM factory function to create agent's LLM instance. Supports Anthropic/OpenAI/Google providers. Use this for creating the agent executor's LLM.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/llm/types.ts</path>
+        <kind>types</kind>
+        <symbol>FindingSchema, ChatResponseSchema, QAPairSchema, ContradictionSchema, GapSchema, withStructuredOutput</symbol>
+        <lines>40-176</lines>
+        <reason>Existing Zod schemas for structured outputs. Extend or reuse for tool input/output validation. withStructuredOutput() wrapper for agent tool responses.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/llm/callbacks.ts</path>
+        <kind>service</kind>
+        <symbol>TokenCountingHandler</symbol>
+        <lines>all</lines>
+        <reason>Token counting callback handler for cost tracking. Integrate with AgentExecutor for P7 compliance (50K token budget tracking).</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/services/embeddings.ts</path>
+        <kind>service</kind>
+        <symbol>generateEmbedding</symbol>
+        <lines>95-159</lines>
+        <reason>OpenAI text-embedding-3-large (3072 dims) embedding generation with LRU cache. Use for query_knowledge_base query embedding and update_knowledge_base finding embedding.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/findings/search/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>POST /api/projects/[id]/findings/search</symbol>
+        <lines>57-180</lines>
+        <reason>Existing semantic search API using match_findings RPC. Reference for query_knowledge_base tool implementation. Shows pgvector integration pattern.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/findings.ts</path>
+        <kind>types</kind>
+        <symbol>Finding, FindingFilters, FindingWithSimilarity</symbol>
+        <lines>29-103</lines>
+        <reason>TypeScript types for findings used throughout the app. Reference for tool response types.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/contradictions.ts</path>
+        <kind>types</kind>
+        <symbol>Contradiction, ContradictionWithFindings, ContradictionStatus</symbol>
+        <lines>23-72</lines>
+        <reason>TypeScript types for contradictions. Reference for detect_contradictions tool response.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/gaps.ts</path>
+        <kind>types</kind>
+        <symbol>Gap, GapFilters, GapsResponse</symbol>
+        <lines>31-86</lines>
+        <reason>TypeScript types for gap analysis. Reference for find_gaps tool response.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/contradictions/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>GET /api/projects/[id]/contradictions</symbol>
+        <lines>all</lines>
+        <reason>Existing contradictions API. Reference for detect_contradictions tool data access pattern.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/gaps/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>GET /api/projects/[id]/gaps</symbol>
+        <lines>all</lines>
+        <reason>Existing gaps API. Reference for find_gaps tool implementation.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="Node.js">
+        <package name="langchain" version="^1.1.1">LangChain core - agent framework</package>
+        <package name="@langchain/core" version="^1.1.0">LangChain core types and utilities</package>
+        <package name="@langchain/anthropic" version="^1.1.3">Claude integration for agent LLM</package>
+        <package name="@langchain/openai" version="^1.1.3">OpenAI for embeddings and fallback</package>
+        <package name="@langchain/google-genai" version="^2.0.0">Gemini fallback provider</package>
+        <package name="zod" version="^4.1.13">Schema validation for tool inputs/outputs</package>
+        <package name="neo4j-driver" version="^6.0.1">Neo4j graph database client</package>
+        <package name="@supabase/supabase-js" version="^2.84.0">Supabase client for pgvector queries</package>
+        <package name="openai" version="^6.9.1">OpenAI SDK for embeddings</package>
+        <package name="pg-boss" version="^12.3.1">Job queue for trigger_analysis tool</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec">Tool Framework: Use LangChain @tool decorator with Zod schemas for input validation</constraint>
+    <constraint source="tech-spec">Agent Pattern: Use create_tool_calling_agent() with AgentExecutor for tool-calling agent</constraint>
+    <constraint source="tech-spec">Streaming: Implement astream_events() for token-by-token responses with tool indicators</constraint>
+    <constraint source="tech-spec">Security: System prompt and tool metadata NEVER exposed to frontend</constraint>
+    <constraint source="P1">query_knowledge_base must implement full hybrid search flow: intent detection, pgvector search, temporal filtering, Neo4j conflict detection</constraint>
+    <constraint source="P2">Never show confidence scores to users - translate to natural explanations</constraint>
+    <constraint source="P2">Every factual claim needs a source with document name and location</constraint>
+    <constraint source="P3">System prompt must handle 7 inferred intent patterns: fact lookup, financial deep dive, due diligence check, comparison, synthesis, gap identification, general exploration</constraint>
+    <constraint source="P7">Unit tests use mocked responses; integration tests manual with 50K token budget</constraint>
+    <constraint source="arch">Default LLM: Claude Sonnet 4.5 (claude-sonnet-4-5-20250929) via @langchain/anthropic</constraint>
+    <constraint source="arch">Embeddings: OpenAI text-embedding-3-large (3072 dimensions)</constraint>
+    <constraint source="arch">Graph: Neo4j for CONTRADICTS, SUPERSEDES, SUPPORTS relationships</constraint>
+    <constraint source="arch">Vector search: pgvector match_findings RPC function</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="query_knowledge_base" kind="tool">
+      <signature>query_knowledge_base(query: string, filters?: {deal_id?: string, document_id?: string, domains?: string[], statuses?: string[], confidence_min?: number}, limit?: number): FindingsWithSources</signature>
+      <path>lib/agent/tools/knowledge-tools.ts</path>
+    </interface>
+    <interface name="update_knowledge_base" kind="tool">
+      <signature>update_knowledge_base(finding: string, source: {document_id: string, location: string}, confidence?: number, date_referenced?: string, domains?: string[]): {finding_id: string}</signature>
+      <path>lib/agent/tools/knowledge-tools.ts</path>
+    </interface>
+    <interface name="validate_finding" kind="tool">
+      <signature>validate_finding(finding: string, context?: string, date_referenced?: string): {valid: boolean, conflicts?: Contradiction[]}</signature>
+      <path>lib/agent/tools/knowledge-tools.ts</path>
+    </interface>
+    <interface name="update_knowledge_graph" kind="tool">
+      <signature>update_knowledge_graph(finding_id: string, relationships: {type: 'SUPPORTS'|'CONTRADICTS'|'SUPERSEDES', target_id: string}[]): {success: boolean}</signature>
+      <path>lib/agent/tools/knowledge-tools.ts</path>
+    </interface>
+    <interface name="detect_contradictions" kind="tool">
+      <signature>detect_contradictions(topic: string, include_resolved?: boolean): ContradictionWithFindings[]</signature>
+      <path>lib/agent/tools/intelligence-tools.ts</path>
+    </interface>
+    <interface name="find_gaps" kind="tool">
+      <signature>find_gaps(category?: 'irl_missing'|'information_gap'|'all'): GapsResponse</signature>
+      <path>lib/agent/tools/intelligence-tools.ts</path>
+    </interface>
+    <interface name="get_document_info" kind="tool">
+      <signature>get_document_info(doc_id: string): DocumentMetadata</signature>
+      <path>lib/agent/tools/document-tools.ts</path>
+    </interface>
+    <interface name="trigger_analysis" kind="tool">
+      <signature>trigger_analysis(doc_id: string, analysis_type?: 'full'|'financial'|'embedding'): {job_id: string, status: string}</signature>
+      <path>lib/agent/tools/document-tools.ts</path>
+    </interface>
+    <interface name="suggest_questions" kind="tool">
+      <signature>suggest_questions(topic: string, max_count?: number): QAPair[] (max 10)</signature>
+      <path>lib/agent/tools/workflow-tools.ts</path>
+    </interface>
+    <interface name="add_to_qa" kind="tool">
+      <signature>add_to_qa(question: string, answer: string, sources?: SourceCitation[], priority?: 'high'|'medium'|'low'): {qa_id: string}</signature>
+      <path>lib/agent/tools/workflow-tools.ts</path>
+    </interface>
+    <interface name="create_irl" kind="tool">
+      <signature>create_irl(deal_type?: string): IRLStructure (stub until Epic 6)</signature>
+      <path>lib/agent/tools/workflow-tools.ts</path>
+    </interface>
+    <interface name="createChatAgent" kind="function">
+      <signature>createChatAgent(dealId: string, userId: string): Promise&lt;AgentExecutor&gt;</signature>
+      <path>lib/agent/executor.ts</path>
+    </interface>
+    <interface name="match_findings" kind="rpc">
+      <signature>match_findings(query_embedding: vector, match_threshold: float, match_count: int, p_deal_id: uuid, p_document_id?: uuid, p_domains?: text[], p_statuses?: text[], p_confidence_min?: float, p_confidence_max?: float): findings_with_similarity[]</signature>
+      <path>Supabase RPC function</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests use Vitest with mocked LLM responses and service dependencies.
+      Integration tests are skipped by default (RUN_INTEGRATION_TESTS=true to enable) with 50K token budget per P7 spec.
+      React components use @testing-library/react with jest-dom matchers.
+      E2E tests use Playwright.
+      Test files mirror source structure in __tests__/ directory.
+      Use shared Supabase test utilities from __tests__/utils/supabase-mock.ts for Supabase mocking.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/agent/*.test.ts - Agent executor and tool tests</location>
+      <location>manda-app/__tests__/agent/tools/*.test.ts - Individual tool unit tests</location>
+      <location>manda-app/__tests__/agent/evaluation.test.ts - P7 evaluation harness (10 queries)</location>
+      <location>manda-app/__tests__/agent/integration.test.ts - Integration tests with live LLM</location>
+      <location>manda-app/__tests__/llm/*.test.ts - Existing LLM module tests (92 tests) for reference</location>
+    </locations>
+    <ideas>
+      <idea criterion="AC1">Test query_knowledge_base with mock match_findings response; verify source attribution format matches P2 rules</idea>
+      <idea criterion="AC2">Test detect_contradictions with mock Neo4j CONTRADICTS query; verify temporal context is included</idea>
+      <idea criterion="AC3">Test get_document_info returns correct metadata from mock Supabase documents table</idea>
+      <idea criterion="AC4">Test find_gaps returns IRL coverage analysis with domain grouping</idea>
+      <idea criterion="AC5">Test validate_finding correctly filters contradictions by date_referenced; test temporal edge cases</idea>
+      <idea criterion="AC6">Test update_knowledge_base stores finding with embedding and returns finding_id</idea>
+      <idea criterion="AC7">Test suggest_questions respects max_count cap of 10; verify M&amp;A relevance</idea>
+      <idea criterion="AC8">Test all 4 additional tools with Zod validation; verify error on invalid input</idea>
+      <idea criterion="AC9">Test tool selection for each of 7 intent patterns; mock LLM to return specific tool calls</idea>
+      <idea criterion="AC10">Test streaming events (token, tool_start, tool_end, sources, done); verify system prompt not in response</idea>
+      <idea criterion="AC11">Test error handling: tool throws, agent returns friendly message and continues</idea>
+      <idea criterion="AC12">Implement 10 EVAL queries; track token usage; verify 90%+ pass rate threshold</idea>
+    </ideas>
+  </tests>
+</story-context>

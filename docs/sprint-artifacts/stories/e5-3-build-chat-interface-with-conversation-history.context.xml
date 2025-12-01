@@ -1,0 +1,799 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context Document
+  Generated: 2025-12-01
+  Story: e5-3-build-chat-interface-with-conversation-history
+  Epic: E5 - AI-Powered Conversational Agent for Intelligent Knowledge Interaction
+-->
+<story-context>
+  <metadata>
+    <story-key>e5-3-build-chat-interface-with-conversation-history</story-key>
+    <epic>E5</epic>
+    <generated>2025-12-01</generated>
+    <status>ready-for-dev</status>
+  </metadata>
+
+  <!-- =================================================================== -->
+  <!-- SECTION 1: STORY REQUIREMENTS -->
+  <!-- =================================================================== -->
+  <story-requirements>
+    <title>Build Chat Interface with Conversation History</title>
+    <user-story>
+      As an M&amp;A analyst,
+      I want a polished chat interface with conversation persistence,
+      so that I can interact naturally with the AI assistant and reference previous conversations.
+    </user-story>
+
+    <acceptance-criteria>
+      <criterion id="AC1" title="Chat Page UI">
+        Full-page chat interface at /projects/[id]/chat with two-pane layout: conversation history sidebar (collapsible) and main chat area with message list and input
+      </criterion>
+      <criterion id="AC2" title="Message Bubbles with Streaming">
+        User messages displayed right-aligned; agent responses left-aligned with typing indicator during generation; markdown rendering in agent responses; source citations clickable
+      </criterion>
+      <criterion id="AC3" title="Conversation History Sidebar">
+        List of past conversations with title, date, preview; click to load conversation; new conversation button resets chat; conversations sorted by most recent
+      </criterion>
+      <criterion id="AC4" title="Real-time Streaming Display">
+        SSE-powered streaming shows token-by-token response generation; tool execution indicators (e.g., "Searching knowledge base..."); error states handled gracefully with retry option
+      </criterion>
+      <criterion id="AC5" title="Input Handling">
+        Textarea with submit on Enter (Shift+Enter for newline); character limit display; disabled during response generation; keyboard shortcut Cmd/Ctrl+Enter to submit
+      </criterion>
+      <criterion id="AC6" title="Conversation Persistence">
+        Messages saved to Supabase conversations + messages tables; conversation auto-creates on first message; messages load on conversation select; optimistic UI updates
+      </criterion>
+      <criterion id="AC7" title="Context Window Management">
+        Last N messages (configurable, default 10) passed to agent; older messages available in UI but not sent to LLM; "Context includes X messages" indicator
+      </criterion>
+      <criterion id="AC8" title="API Routes">
+        POST /api/projects/[id]/chat endpoint accepts message, returns streaming SSE response; conversation CRUD at /api/projects/[id]/conversations; proper auth and error handling
+      </criterion>
+      <criterion id="AC9" title="Chat Hook">
+        useChat hook manages conversation state, message submission, streaming, and error handling; provides sendMessage, messages, isLoading, error state
+      </criterion>
+      <criterion id="AC10" title="Responsive Design">
+        Mobile-responsive layout collapses sidebar to drawer; touch-friendly message input; proper scrolling behavior
+      </criterion>
+      <criterion id="AC11" title="Testing">
+        Unit tests for useChat hook; API route tests with mocked agent; E2E test for full conversation flow
+      </criterion>
+    </acceptance-criteria>
+
+    <tasks>
+      <task id="T1" status="pending" title="Database Schema for Conversations">
+        <subtask>Create messages table migration (id, conversation_id, role, content, metadata, created_at)</subtask>
+        <subtask>Add RLS policies for conversations and messages tables</subtask>
+        <subtask>Generate updated Supabase types</subtask>
+      </task>
+      <task id="T2" status="pending" title="Chat API Routes">
+        <subtask>Create POST /api/projects/[id]/chat with SSE streaming</subtask>
+        <subtask>Create GET/POST /api/projects/[id]/conversations for CRUD</subtask>
+        <subtask>Create GET/POST /api/projects/[id]/conversations/[conversationId]/messages</subtask>
+        <subtask>Integrate with agent executor from E5.2</subtask>
+      </task>
+      <task id="T3" status="pending" title="useChat Hook">
+        <subtask>Create lib/hooks/useChat.ts with conversation state management</subtask>
+        <subtask>Implement SSE streaming consumer with EventSource</subtask>
+        <subtask>Handle message submission with optimistic updates</subtask>
+        <subtask>Implement context window management (last N messages)</subtask>
+      </task>
+      <task id="T4" status="pending" title="Chat Page Layout">
+        <subtask>Create app/(dashboard)/projects/[id]/chat/page.tsx</subtask>
+        <subtask>Build two-pane layout with collapsible sidebar</subtask>
+        <subtask>Implement conversation list component</subtask>
+        <subtask>Add mobile-responsive drawer for sidebar</subtask>
+      </task>
+      <task id="T5" status="pending" title="Message Components">
+        <subtask>Create ChatMessage component with user/assistant variants</subtask>
+        <subtask>Implement markdown rendering for responses</subtask>
+        <subtask>Create SourceCitation component with document links</subtask>
+        <subtask>Add typing indicator and tool execution indicators</subtask>
+      </task>
+      <task id="T6" status="pending" title="Chat Input Component">
+        <subtask>Create ChatInput with textarea and send button</subtask>
+        <subtask>Implement Enter/Shift+Enter behavior</subtask>
+        <subtask>Add character limit and disabled state during streaming</subtask>
+        <subtask>Add Cmd/Ctrl+Enter shortcut</subtask>
+      </task>
+      <task id="T7" status="pending" title="Streaming and Tool Indicators">
+        <subtask>Consume SSE events from streaming.ts types</subtask>
+        <subtask>Display tool_start/tool_end events as status indicators</subtask>
+        <subtask>Accumulate tokens for streaming display</subtask>
+        <subtask>Handle error events with retry option</subtask>
+      </task>
+      <task id="T8" status="pending" title="Testing">
+        <subtask>Unit tests for useChat hook with mocked fetch</subtask>
+        <subtask>API route tests with mocked agent executor</subtask>
+        <subtask>E2E test for sending message and receiving response</subtask>
+      </task>
+    </tasks>
+  </story-requirements>
+
+  <!-- =================================================================== -->
+  <!-- SECTION 2: DOCUMENTATION CONTEXT -->
+  <!-- =================================================================== -->
+  <documentation-context>
+    <document type="tech-spec" path="docs/sprint-artifacts/tech-spec-epic-E5.md">
+      <excerpt title="Module 4: Chat API and Frontend">
+        <![CDATA[
+## Module 4: Chat API and Frontend (Story E5.3)
+
+### Streaming Chat Endpoint
+
+POST /api/projects/[id]/chat
+```typescript
+interface ChatRequest {
+  message: string
+  conversationId?: string  // Auto-create if not provided
+}
+
+// Returns SSE stream with events:
+// - token: { text: string }
+// - tool_start: { tool: string, args: object }
+// - tool_end: { tool: string, result: any }
+// - sources: { citations: SourceCitation[] }
+// - done: { message: Message, suggestedFollowups?: string[] }
+// - error: { message: string, code?: string }
+```
+
+### Conversation Storage Schema
+
+```sql
+-- conversations table already exists
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  tool_calls JSONB,  -- Store tool invocations
+  sources JSONB,     -- Store source citations
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX idx_messages_created ON messages(conversation_id, created_at);
+```
+
+### useChat Hook Interface
+
+```typescript
+interface UseChatReturn {
+  messages: Message[]
+  isLoading: boolean
+  isStreaming: boolean
+  error: Error | null
+  sendMessage: (content: string) => Promise<void>
+  retryLastMessage: () => Promise<void>
+  clearError: () => void
+  conversationId: string | null
+  contextMessageCount: number
+}
+```
+
+### Frontend Component Architecture
+
+```
+components/chat/
+├── ChatPage.tsx              # Main page layout
+├── ChatSidebar.tsx           # Conversation history
+├── ChatMessageList.tsx       # Scrollable message list
+├── ChatMessage.tsx           # Individual message bubble
+├── ChatInput.tsx             # Input area
+├── TypingIndicator.tsx       # Streaming indicator
+├── ToolStatusIndicator.tsx   # Tool execution display
+└── SourceCitationLink.tsx    # Clickable source links
+```
+        ]]>
+      </excerpt>
+    </document>
+
+    <document type="behavior-spec" path="docs/agent-behavior-spec.md">
+      <excerpt title="P2: Agent Behavior Framework - Response Formatting">
+        <![CDATA[
+### Core Principles
+
+1. **Always structured** — no walls of text
+2. **No hard length limits** — focus on relevance instead
+3. **Exclude irrelevant information** — concise beats comprehensive
+4. **Every factual claim needs a source**
+
+### Response Format
+
+**Adaptive formatting** — let the content dictate the structure:
+
+| Content Type | Format |
+|--------------|--------|
+| Single data point | Short prose with inline source |
+| List of items / comparisons | Bullet points |
+| Trend or narrative | Prose with inline sources |
+| Multiple topics | Headers + bullets/prose per section |
+
+### Source Attribution
+
+- Every factual claim must have a source
+- Format: `(source: filename.ext, location)`
+- Location specificity: page number, cell reference, section name
+- Sources are clickable links to exact document location
+- Multiple sources allowed: `(sources: doc1.pdf p.5, doc2.xlsx B15)`
+
+### Uncertainty Handling
+
+| Situation | Agent Response |
+|-----------|----------------|
+| No findings at all | "I couldn't find information about X in the uploaded documents. Would you like me to add this to the Q&A list for the target company?" |
+| Only dated findings | Show results + explain: "I found references to X, but they're from documents dated [date]." |
+| Low confidence findings | Show results + explain WHY confidence is low |
+| Outside knowledge base scope | "This question is about [topic] which isn't covered in the uploaded documents." |
+        ]]>
+      </excerpt>
+
+      <excerpt title="P4: Conversation Goal/Mode Framework - Multi-Turn Context">
+        <![CDATA[
+### Multi-Turn Context
+
+The agent maintains conversation context across turns. Follow-up questions inherit context from previous exchanges.
+
+**Context Handling Rules:**
+
+| Situation | Agent Behavior |
+|-----------|----------------|
+| Clear follow-up | Assume same context, state assumption briefly |
+| Ambiguous follow-up | Ask for clarification |
+| Topic shift | Treat as new query, reset context |
+
+### Conversation State
+
+Stored in `conversations` and `messages` tables:
+- Conversation ID
+- Message history (user + agent messages)
+- Tool calls and results
+- Timestamps
+
+Context window: Last N messages passed to LLM (configurable, start with 10).
+        ]]>
+      </excerpt>
+    </document>
+
+    <document type="ux-design" path="docs/ux-design-specification.md">
+      <excerpt title="Chat Interface Design">
+        <![CDATA[
+### Chat Interface Layout
+
+**Two-Pane Layout:**
+- Left pane (collapsible): Conversation history sidebar (250px width)
+- Right pane (main): Chat area with message list and input
+
+**Conversation Sidebar:**
+- New conversation button at top
+- List of past conversations with:
+  - Title (auto-generated from first message or user-set)
+  - Date/time
+  - Preview snippet (first ~50 chars of last message)
+- Current conversation highlighted
+- Click to load conversation
+- Mobile: Slides in as drawer
+
+**Message Display:**
+- User messages: Right-aligned, darker background, rounded corners
+- Agent messages: Left-aligned, lighter background, avatar icon
+- Timestamps on hover
+- Copy button on messages
+- Source citations as clickable inline links
+
+**Streaming Indicators:**
+- Typing dots animation during generation
+- Tool execution: Pill badge "🔍 Searching knowledge base..."
+- Progress feels responsive even during tool calls
+
+**Input Area:**
+- Multi-line textarea (auto-grows up to 4 lines)
+- Send button (right side, enabled when text present)
+- Character count display
+- Disabled state during streaming with spinner
+- Keyboard hints subtle below input
+        ]]>
+      </excerpt>
+    </document>
+  </documentation-context>
+
+  <!-- =================================================================== -->
+  <!-- SECTION 3: EXISTING CODE PATTERNS -->
+  <!-- =================================================================== -->
+  <existing-code-patterns>
+    <pattern name="Agent Executor" path="lib/agent/executor.ts">
+      <description>
+        LangGraph-based agent executor with streaming support. Key exports:
+        - createChatAgent(config): Creates ReactAgent with all 11 tools
+        - executeChat(agent, input, history): Non-streaming execution
+        - streamChat(agent, input, history, callbacks): Streaming with callbacks
+        - ConversationContext: In-memory context manager
+      </description>
+      <code-excerpt>
+        <![CDATA[
+export interface ChatAgentConfig {
+  dealId: string
+  userId: string
+  dealName?: string
+  llmConfig?: Partial<LLMConfig>
+  verbose?: boolean
+}
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp?: string
+}
+
+export async function streamChat(
+  agent: ReactAgentType,
+  input: string,
+  chatHistory: ConversationMessage[] = [],
+  callbacks: {
+    onToken?: (token: string) => void
+    onToolStart?: (tool: string, input: unknown) => void
+    onToolEnd?: (tool: string, output: string) => void
+    onError?: (error: Error) => void
+  } = {}
+): Promise<string>
+        ]]>
+      </code-excerpt>
+    </pattern>
+
+    <pattern name="SSE Streaming Types" path="lib/agent/streaming.ts">
+      <description>
+        Server-Sent Events types and utilities for streaming agent responses.
+        Defines event types: token, tool_start, tool_end, sources, done, error.
+        Provides AgentStreamHandler class for managing stream state.
+      </description>
+      <code-excerpt>
+        <![CDATA[
+export type SSEEventType = 'token' | 'tool_start' | 'tool_end' | 'sources' | 'done' | 'error'
+
+export interface SSEDoneEvent {
+  type: 'done'
+  message: {
+    id: string
+    content: string
+    role: 'assistant'
+  }
+  suggestedFollowups?: string[]
+}
+
+export function createSSEStream(): {
+  stream: ReadableStream<Uint8Array>
+  writer: {
+    write: (event: SSEEvent) => void
+    close: () => void
+    error: (err: Error) => void
+  }
+}
+
+export function getSSEHeaders(): HeadersInit
+        ]]>
+      </code-excerpt>
+    </pattern>
+
+    <pattern name="React Hooks Pattern" path="lib/hooks/useDocumentUpdates.ts">
+      <description>
+        Example hook showing Supabase Realtime subscription pattern.
+        Key patterns: useRef for subscriptions, useCallback for handlers,
+        cleanup on unmount, connection status tracking.
+      </description>
+      <code-excerpt>
+        <![CDATA[
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
+
+export function useDocumentUpdates(
+  projectId: string | null | undefined,
+  options: UseDocumentUpdatesOptions = {}
+): {
+  status: ConnectionStatus
+  reconnect: () => void
+}
+        ]]>
+      </code-excerpt>
+    </pattern>
+
+    <pattern name="API Route Pattern" path="app/api/projects/[id]/findings/route.ts">
+      <description>
+        Standard Next.js API route with Zod validation, Supabase auth,
+        project access verification, and error handling.
+      </description>
+      <code-excerpt>
+        <![CDATA[
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    const { id: projectId } = await context.params
+    const searchParams = Object.fromEntries(request.nextUrl.searchParams.entries())
+
+    // Validate query parameters
+    const parseResult = QuerySchema.safeParse(searchParams)
+    if (!parseResult.success) {
+      return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 })
+    }
+
+    const supabase = await createClient()
+
+    // Authenticate user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Verify project access
+    const { data: project } = await supabase
+      .from('deals')
+      .select('id')
+      .eq('id', projectId)
+      .single()
+
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    // Execute query...
+  } catch (err) {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+        ]]>
+      </code-excerpt>
+    </pattern>
+
+    <pattern name="Component Organization" path="components/knowledge-explorer/">
+      <description>
+        Complex feature organized into subdirectories by concern:
+        - findings/ - Finding-related components
+        - contradictions/ - Contradiction views
+        - gaps/ - Gap analysis views
+        - shared/ - Reusable components (badges, links, modals)
+        Each component is a single-concern file with clear props interface.
+      </description>
+    </pattern>
+  </existing-code-patterns>
+
+  <!-- =================================================================== -->
+  <!-- SECTION 4: DEPENDENCIES AND INTERFACES -->
+  <!-- =================================================================== -->
+  <dependencies-interfaces>
+    <dependency name="E5.2 Agent Infrastructure">
+      <status>done</status>
+      <provides>
+        <item>createChatAgent() - Creates tool-calling agent</item>
+        <item>streamChat() - Streaming execution with callbacks</item>
+        <item>ConversationContext class - In-memory context management</item>
+        <item>AgentStreamHandler - SSE stream management</item>
+        <item>All 11 chat tools implemented</item>
+      </provides>
+      <location>lib/agent/</location>
+    </dependency>
+
+    <dependency name="E5.1 LLM Client">
+      <status>done</status>
+      <provides>
+        <item>createLLMClient() - Model-agnostic LLM factory</item>
+        <item>TokenCountingHandler - Token usage tracking</item>
+        <item>Provider support: Anthropic, OpenAI, Google</item>
+      </provides>
+      <location>lib/llm/</location>
+    </dependency>
+
+    <dependency name="Supabase Client">
+      <status>available</status>
+      <provides>
+        <item>createClient() - Server-side Supabase client</item>
+        <item>conversations table - Already exists in schema</item>
+        <item>RLS policies pattern established</item>
+      </provides>
+      <location>lib/supabase/</location>
+    </dependency>
+
+    <database-schema>
+      <table name="conversations" status="exists">
+        <columns>
+          <column>id: UUID (PK)</column>
+          <column>deal_id: UUID (FK -> deals)</column>
+          <column>user_id: UUID</column>
+          <column>title: TEXT (nullable)</column>
+          <column>created_at: TIMESTAMPTZ</column>
+          <column>updated_at: TIMESTAMPTZ</column>
+        </columns>
+      </table>
+      <table name="messages" status="needs-creation">
+        <columns>
+          <column>id: UUID (PK)</column>
+          <column>conversation_id: UUID (FK -> conversations)</column>
+          <column>role: TEXT ('user' | 'assistant' | 'system')</column>
+          <column>content: TEXT</column>
+          <column>metadata: JSONB</column>
+          <column>tool_calls: JSONB</column>
+          <column>sources: JSONB</column>
+          <column>created_at: TIMESTAMPTZ</column>
+        </columns>
+        <indexes>
+          <index>idx_messages_conversation ON messages(conversation_id)</index>
+          <index>idx_messages_created ON messages(conversation_id, created_at)</index>
+        </indexes>
+      </table>
+    </database-schema>
+
+    <ui-components status="available">
+      <component>Button</component>
+      <component>Input</component>
+      <component>Card</component>
+      <component>Badge</component>
+      <component>Textarea</component>
+      <component>ScrollArea</component>
+      <component>Sheet (for mobile drawer)</component>
+      <component>Avatar</component>
+      <component>Skeleton (for loading states)</component>
+      <component>Tooltip</component>
+      <component>Separator</component>
+    </ui-components>
+
+    <npm-packages>
+      <package name="@langchain/langgraph" version="installed">Agent framework</package>
+      <package name="zod" version="^4.1.13">Schema validation</package>
+      <package name="zustand" version="^5.0.8">State management (optional for chat state)</package>
+      <package name="date-fns" version="^4.1.0">Date formatting</package>
+      <package name="lucide-react" version="^0.554.0">Icons</package>
+    </npm-packages>
+  </dependencies-interfaces>
+
+  <!-- =================================================================== -->
+  <!-- SECTION 5: TESTING REQUIREMENTS -->
+  <!-- =================================================================== -->
+  <testing-requirements>
+    <test-category name="Unit Tests">
+      <framework>Vitest + React Testing Library</framework>
+      <scope>
+        <item>useChat hook state management</item>
+        <item>Message submission flow</item>
+        <item>SSE event parsing</item>
+        <item>Context window calculation</item>
+        <item>Error handling and retry logic</item>
+      </scope>
+      <mocking>
+        <item>Mock fetch/EventSource for SSE</item>
+        <item>Mock Supabase client for DB operations</item>
+        <item>Mock agent executor (don't test LLM in unit tests)</item>
+      </mocking>
+    </test-category>
+
+    <test-category name="API Route Tests">
+      <framework>Vitest</framework>
+      <scope>
+        <item>POST /api/projects/[id]/chat endpoint</item>
+        <item>Conversation CRUD endpoints</item>
+        <item>Message retrieval endpoint</item>
+        <item>Auth and access control</item>
+        <item>SSE streaming format</item>
+      </scope>
+      <mocking>
+        <item>Mock createChatAgent and streamChat</item>
+        <item>Mock Supabase for DB operations</item>
+      </mocking>
+    </test-category>
+
+    <test-category name="E2E Tests">
+      <framework>Playwright</framework>
+      <scope>
+        <item>Navigate to chat page</item>
+        <item>Send a message and see streaming response</item>
+        <item>Create new conversation</item>
+        <item>Switch between conversations</item>
+        <item>Mobile responsive behavior</item>
+      </scope>
+      <notes>
+        E2E tests may need test fixtures or mocked agent to avoid LLM costs.
+        Consider using playwright fixtures with deterministic agent responses.
+      </notes>
+    </test-category>
+
+    <test-patterns path="__tests__/llm/agent-tools.test.ts">
+      <description>
+        Reference for mocking patterns:
+        - vi.mock() for Supabase, LLM client, embeddings
+        - Schema validation tests
+        - Utility function tests
+        - Event parsing tests
+      </description>
+    </test-patterns>
+  </testing-requirements>
+
+  <!-- =================================================================== -->
+  <!-- SECTION 6: IMPLEMENTATION CONSTRAINTS -->
+  <!-- =================================================================== -->
+  <implementation-constraints>
+    <constraint priority="critical" category="security">
+      <title>System Prompt Protection</title>
+      <description>
+        Never expose system prompt or tool metadata to frontend.
+        SSE events should only contain user-facing content.
+      </description>
+    </constraint>
+
+    <constraint priority="critical" category="behavior">
+      <title>P2 Response Formatting</title>
+      <description>
+        Agent responses must be rendered as markdown with:
+        - Source citations as clickable links
+        - Structured formatting (headers, bullets)
+        - No confidence scores shown to users
+      </description>
+    </constraint>
+
+    <constraint priority="high" category="performance">
+      <title>Context Window Management</title>
+      <description>
+        Only send last N messages (default 10) to LLM.
+        Show all messages in UI but indicate context limit.
+        Display "Context includes X messages" indicator.
+      </description>
+    </constraint>
+
+    <constraint priority="high" category="ux">
+      <title>Streaming Experience</title>
+      <description>
+        Response must stream token-by-token.
+        Tool execution must show status indicators.
+        User input must be disabled during streaming.
+      </description>
+    </constraint>
+
+    <constraint priority="medium" category="persistence">
+      <title>Optimistic Updates</title>
+      <description>
+        User messages should appear immediately (optimistic).
+        Save to DB in background.
+        Handle save failures gracefully.
+      </description>
+    </constraint>
+
+    <constraint priority="medium" category="mobile">
+      <title>Responsive Design</title>
+      <description>
+        Sidebar collapses to drawer on mobile.
+        Touch-friendly input and scrolling.
+        Proper virtual keyboard handling.
+      </description>
+    </constraint>
+  </implementation-constraints>
+
+  <!-- =================================================================== -->
+  <!-- SECTION 7: FILE STRUCTURE -->
+  <!-- =================================================================== -->
+  <file-structure>
+    <new-files>
+      <file path="app/(dashboard)/projects/[id]/chat/page.tsx">
+        Chat page with layout
+      </file>
+      <file path="app/api/projects/[id]/chat/route.ts">
+        POST endpoint with SSE streaming
+      </file>
+      <file path="app/api/projects/[id]/conversations/route.ts">
+        GET (list), POST (create) conversations
+      </file>
+      <file path="app/api/projects/[id]/conversations/[conversationId]/route.ts">
+        GET, PATCH, DELETE single conversation
+      </file>
+      <file path="app/api/projects/[id]/conversations/[conversationId]/messages/route.ts">
+        GET messages for conversation
+      </file>
+      <file path="lib/hooks/useChat.ts">
+        Chat state management hook
+      </file>
+      <file path="components/chat/ChatPage.tsx">
+        Main chat layout component
+      </file>
+      <file path="components/chat/ChatSidebar.tsx">
+        Conversation history sidebar
+      </file>
+      <file path="components/chat/ChatMessageList.tsx">
+        Scrollable message list
+      </file>
+      <file path="components/chat/ChatMessage.tsx">
+        Individual message bubble
+      </file>
+      <file path="components/chat/ChatInput.tsx">
+        Input area component
+      </file>
+      <file path="components/chat/TypingIndicator.tsx">
+        Streaming animation
+      </file>
+      <file path="components/chat/ToolStatusIndicator.tsx">
+        Tool execution display
+      </file>
+      <file path="components/chat/SourceCitationLink.tsx">
+        Clickable source citation
+      </file>
+      <file path="lib/types/chat.ts">
+        TypeScript types for chat
+      </file>
+      <file path="__tests__/hooks/useChat.test.ts">
+        Hook unit tests
+      </file>
+      <file path="__tests__/api/chat.test.ts">
+        API route tests
+      </file>
+    </new-files>
+
+    <migrations>
+      <migration name="create_messages_table">
+        <![CDATA[
+-- Create messages table for conversation history
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  tool_calls JSONB,
+  sources JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Indexes for efficient queries
+CREATE INDEX IF NOT EXISTS idx_messages_conversation
+  ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created
+  ON messages(conversation_id, created_at DESC);
+
+-- RLS policies
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- Users can only access messages in conversations they own
+CREATE POLICY "Users can view messages in their conversations"
+  ON messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM conversations c
+      WHERE c.id = messages.conversation_id
+      AND c.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert messages in their conversations"
+  ON messages FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM conversations c
+      WHERE c.id = messages.conversation_id
+      AND c.user_id = auth.uid()
+    )
+  );
+        ]]>
+      </migration>
+    </migrations>
+  </file-structure>
+
+  <!-- =================================================================== -->
+  <!-- SECTION 8: REFERENCES -->
+  <!-- =================================================================== -->
+  <references>
+    <reference type="tech-spec" path="docs/sprint-artifacts/tech-spec-epic-E5.md">
+      Module 4: Chat API and Frontend
+    </reference>
+    <reference type="behavior-spec" path="docs/agent-behavior-spec.md">
+      P2: Agent Behavior Framework, P4: Conversation Goal/Mode Framework
+    </reference>
+    <reference type="ux-design" path="docs/ux-design-specification.md">
+      Chat Interface Design
+    </reference>
+    <reference type="epic" path="docs/sprint-artifacts/epics/epic-E5.md">
+      Epic E5: AI-Powered Conversational Agent
+    </reference>
+    <reference type="predecessor" path="docs/sprint-artifacts/stories/e5-2-implement-langchain-agent-with-11-chat-tools.md">
+      Story E5.2 (dependency, status: done)
+    </reference>
+    <reference type="code" path="lib/agent/">
+      Agent executor, streaming, prompts from E5.2
+    </reference>
+  </references>
+</story-context>

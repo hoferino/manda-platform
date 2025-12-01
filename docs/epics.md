@@ -2972,17 +2972,25 @@ And I can manually refresh
 - Quick Actions
 - Collaborative Analysis Mode
 
+**Prerequisites:** All completed 2025-11-30. See [agent-behavior-spec.md](agent-behavior-spec.md) for:
+- P1: Hybrid Search Architecture (pgvector + Neo4j)
+- P2: Agent Behavior Framework (response formatting, source attribution)
+- P3: Expected Behavior per Use Case (7 inferred intents)
+- P4: Conversation Goal/Mode Framework (multi-turn context)
+- P7: LLM Integration Test Strategy (50K token budget, 10 eval queries)
+- P8: Correction Chain Detection (SUPERSEDES relationships)
+
 **Technical Components:**
-- Claude Sonnet 4.5 via LangChain ChatAnthropic adapter
-- LangGraph for conversation workflow orchestration
-- Pydantic v2 for type-safe tool definitions and structured outputs
+- LLM integration via LangChain (model-agnostic: Claude, GPT, Gemini configurable via environment)
+- LangChain tool-calling agent (`create_tool_calling_agent()` + `AgentExecutor`)
+- Pydantic v2 / Zod for type-safe tool definitions and structured outputs
 - Tool calling framework (11 chat tools - CIM v3 tools are in separate workflow agent)
   - Knowledge: query_knowledge_base, update_knowledge_base, update_knowledge_graph, validate_finding
   - Documents: get_document_info, trigger_analysis
   - Workflows: create_irl, suggest_questions, add_to_qa
   - Intelligence: detect_contradictions, find_gaps
-- Conversation state management with LangGraph checkpoints
-- WebSocket for real-time responses
+- Conversation state management via PostgreSQL (`conversations`, `messages` tables)
+- SSE streaming for real-time token-by-token responses
 - Real-time finding validation during chat
 
 **Acceptance Criteria (Epic Level):**
@@ -2997,18 +3005,18 @@ And I can manually refresh
 
 ### Stories
 
-#### Story E5.1: Integrate Claude Sonnet 4.5 via LangChain
+#### Story E5.1: Integrate LLM via LangChain (Model-Agnostic)
 
 **As a** developer
-**I want** Claude Sonnet 4.5 integrated via LangChain ChatAnthropic adapter
-**So that** we have a production-ready LLM interface for conversation with type safety
+**I want** a model-agnostic LLM integration via LangChain
+**So that** we can switch between Claude, GPT, or Gemini for testing and production
 
 **Description:**
-Set up LangChain ChatAnthropic adapter for Claude Sonnet 4.5, implement basic chat completion endpoint with Pydantic v2 structured outputs, configure retry/timeout logic, and create type-safe LLM client wrapper for the application.
+Set up LangChain with a configurable LLM provider (Claude, OpenAI, Gemini) via environment variables, implement basic chat completion endpoint with Pydantic v2 structured outputs, configure retry/timeout logic, and create type-safe LLM client wrapper for the application.
 
 **Technical Details:**
-- Install LangChain core and langchain-anthropic packages
-- Configure ChatAnthropic with Claude Sonnet 4.5 model (claude-sonnet-4-5-20250929)
+- Install LangChain core and provider packages (langchain-anthropic, langchain-openai, langchain-google-genai)
+- Create LLM factory that instantiates correct provider based on LLM_PROVIDER env var
 - Set up Pydantic v2 models for structured outputs using `with_structured_output()`
 - Implement LLM client wrapper with type safety
 - Configure retry logic (built-in LangChain retry with exponential backoff)
@@ -3018,9 +3026,9 @@ Set up LangChain ChatAnthropic adapter for Claude Sonnet 4.5, implement basic ch
 **Acceptance Criteria:**
 
 ```gherkin
-Given LangChain ChatAnthropic is configured
+Given LangChain LLM provider is configured via environment variable
 When I send a chat completion request
-Then Claude Sonnet 4.5 responds with generated text
+Then the configured LLM responds with generated text
 And the response time is logged
 
 Given the API fails on first attempt
@@ -3051,9 +3059,9 @@ And I receive a clear type error message
 **Architecture Reference:** Intelligence Layer - Pydantic + LangGraph Integration Strategy
 
 **Definition of Done:**
-- [ ] LangChain and langchain-anthropic installed
-- [ ] ChatAnthropic configured with Claude Sonnet 4.5
-- [ ] Pydantic v2 structured output working
+- [ ] LangChain core and provider packages installed (anthropic, openai, google-genai)
+- [ ] LLM factory implemented with LLM_PROVIDER env var support
+- [ ] Pydantic v2 structured output working across all providers
 - [ ] LLM client wrapper with type safety
 - [ ] Retry logic implemented (LangChain built-in)
 - [ ] Cost tracking enabled (LangSmith or callbacks)
@@ -3079,7 +3087,7 @@ Create the LangChain tool-calling agent framework using `create_tool_calling_age
 - **Streaming:** `astream_events()` for token-by-token streaming with tool call indicators
 - **Security:** System prompt and tool metadata never exposed to frontend
 - **Implement 11 tools** (each with Pydantic input/output validation):
-  1. `query_knowledge_base(query, filters)` - Semantic search across findings
+  1. `query_knowledge_base(query, filters)` - Semantic search across findings (implements P1 search architecture)
   2. `update_knowledge_base(finding, source, confidence, date_referenced)` - Store analyst-provided findings with temporal metadata
   3. `update_knowledge_graph(finding_id, relationships)` - Create relationships between findings
   4. `validate_finding(finding, context, date_referenced)` - Check finding against existing knowledge with temporal validation (prevents false contradictions)
@@ -3094,6 +3102,7 @@ Create the LangChain tool-calling agent framework using `create_tool_calling_age
 - Tools access platform services via API calls
 - **Key Pattern:** Tools wrap Pydantic-validated functions and format results for LLM
 - **Uncertainty Detection:** Agent detects phrases like "I'm not sure" and suggests adding to Q&A list
+- **P8 Implementation:** Correction chain detection via filename patterns at document upload (extends webhook handler)
 
 **Acceptance Criteria:**
 
@@ -3143,6 +3152,8 @@ And tells the user what went wrong
 - [ ] Tools tested independently
 - [ ] Agent integration tested with sample conversations
 - [ ] Documentation for each tool (docstrings + architecture doc)
+- [ ] P3 compliance: System prompt implements all 7 inferred intent behaviors (see agent-behavior-spec.md P3)
+- [ ] P7 compliance: Evaluation harness with 10 test queries, 50K token budget (see agent-behavior-spec.md P7)
 
 ---
 
@@ -3272,6 +3283,7 @@ And a fallback format is used
 - [ ] Citation styling implemented
 - [ ] Fallback for invalid formats
 - [ ] Mobile-friendly citation display
+- [ ] P2 compliance: Source attribution format matches agent-behavior-spec.md P2 rules
 
 ---
 
@@ -3397,6 +3409,7 @@ And responds appropriately
 - [ ] Long conversations handled gracefully
 - [ ] Context truncation tested
 - [ ] Multi-turn conversations work naturally
+- [ ] P4 compliance: Context handling rules match agent-behavior-spec.md P4 (clear follow-up, ambiguous, topic shift)
 
 ---
 

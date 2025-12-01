@@ -1,0 +1,122 @@
+/**
+ * All Chat Tools Array
+ *
+ * Exports all 11 chat tools for the LangChain AgentExecutor.
+ * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ *
+ * Tool order matters for selection priority - more commonly used tools first.
+ */
+
+import type { StructuredToolInterface } from '@langchain/core/tools'
+
+// Knowledge Tools
+import {
+  queryKnowledgeBaseTool,
+  updateKnowledgeBaseTool,
+  validateFindingTool,
+  updateKnowledgeGraphTool,
+} from './knowledge-tools'
+
+// Intelligence Tools
+import {
+  detectContradictionsTool,
+  findGapsTool,
+} from './intelligence-tools'
+
+// Document Tools
+import {
+  getDocumentInfoTool,
+  triggerAnalysisTool,
+} from './document-tools'
+
+// Workflow Tools
+import {
+  suggestQuestionsTool,
+  addToQATool,
+  createIRLTool,
+} from './workflow-tools'
+
+/**
+ * All 11 chat tools for the LangChain agent.
+ *
+ * Order:
+ * 1. query_knowledge_base - Primary search tool (most used)
+ * 2. detect_contradictions - Due diligence checks
+ * 3. find_gaps - Gap analysis
+ * 4. get_document_info - Document lookup
+ * 5. validate_finding - Before storing findings
+ * 6. update_knowledge_base - Store new findings
+ * 7. suggest_questions - Q&A generation
+ * 8. add_to_qa - Store Q&A items
+ * 9. trigger_analysis - Document processing
+ * 10. update_knowledge_graph - Graph relationships
+ * 11. create_irl - IRL management (stub)
+ */
+export const allChatTools: StructuredToolInterface[] = [
+  // Primary query tool - should be selected for most knowledge questions
+  queryKnowledgeBaseTool,
+
+  // Intelligence tools - for due diligence and analysis
+  detectContradictionsTool,
+  findGapsTool,
+
+  // Document tools - for document-specific queries
+  getDocumentInfoTool,
+
+  // Validation before storage
+  validateFindingTool,
+
+  // Storage tools
+  updateKnowledgeBaseTool,
+
+  // Workflow tools - Q&A and suggestions
+  suggestQuestionsTool,
+  addToQATool,
+
+  // Processing tools
+  triggerAnalysisTool,
+
+  // Graph tools
+  updateKnowledgeGraphTool,
+
+  // IRL tools (stub)
+  createIRLTool,
+]
+
+/**
+ * Tool names for reference and logging
+ */
+export const TOOL_NAMES = allChatTools.map((tool) => tool.name)
+
+/**
+ * Tool count for validation
+ */
+export const TOOL_COUNT = allChatTools.length // Should be 11
+
+/**
+ * Get tool by name
+ */
+export function getToolByName(name: string): StructuredToolInterface | undefined {
+  return allChatTools.find((tool) => tool.name === name)
+}
+
+/**
+ * Tool categories for organization
+ */
+export const TOOL_CATEGORIES = {
+  knowledge: ['query_knowledge_base', 'update_knowledge_base', 'validate_finding', 'update_knowledge_graph'],
+  intelligence: ['detect_contradictions', 'find_gaps'],
+  document: ['get_document_info', 'trigger_analysis'],
+  workflow: ['suggest_questions', 'add_to_qa', 'create_irl'],
+} as const
+
+/**
+ * Validate that all 11 tools are present
+ */
+export function validateToolCount(): boolean {
+  if (TOOL_COUNT !== 11) {
+    console.error(`Expected 11 tools, found ${TOOL_COUNT}`)
+    return false
+  }
+  return true
+}

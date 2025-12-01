@@ -7,17 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Folder type (until migration is applied and types regenerated)
-interface FolderRow {
-  id: string
-  deal_id: string
-  name: string
-  path: string
-  parent_path: string | null
-  created_at: string
-  updated_at: string
-}
-
 interface RouteContext {
   params: Promise<{ id: string }>
 }
@@ -51,13 +40,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // Get all folders for this project
-    // Note: Using type assertion until migration is applied and types regenerated
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: folders, error: foldersError } = await (supabase as any)
+    const { data: folders, error: foldersError } = await supabase
       .from('folders')
       .select('*')
       .eq('deal_id', projectId)
-      .order('path', { ascending: true }) as { data: FolderRow[] | null; error: Error | null }
+      .order('path', { ascending: true })
 
     if (foldersError) {
       console.error('Error fetching folders:', foldersError)
@@ -136,8 +123,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const path = parentPath ? `${parentPath}/${trimmedName}` : trimmedName
 
     // Check if folder already exists
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existingFolder } = await (supabase as any)
+    const { data: existingFolder } = await supabase
       .from('folders')
       .select('id')
       .eq('deal_id', projectId)
@@ -152,8 +138,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Create the folder
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: folder, error: createError } = await (supabase as any)
+    const { data: folder, error: createError } = await supabase
       .from('folders')
       .insert({
         deal_id: projectId,
@@ -162,7 +147,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         parent_path: parentPath || null,
       })
       .select()
-      .single() as { data: FolderRow | null; error: Error | null }
+      .single()
 
     if (createError) {
       console.error('Error creating folder:', createError)

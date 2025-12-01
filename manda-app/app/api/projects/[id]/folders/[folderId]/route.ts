@@ -7,17 +7,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Folder type (until migration is applied and types regenerated)
-interface FolderRow {
-  id: string
-  deal_id: string
-  name: string
-  path: string
-  parent_path: string | null
-  created_at: string
-  updated_at: string
-}
-
 interface RouteContext {
   params: Promise<{ id: string; folderId: string }>
 }
@@ -51,13 +40,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     // Get the existing folder
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existingFolder, error: folderError } = await (supabase as any)
+    const { data: existingFolder, error: folderError } = await supabase
       .from('folders')
       .select('*')
       .eq('id', folderId)
       .eq('deal_id', projectId)
-      .single() as { data: FolderRow | null; error: Error | null }
+      .single()
 
     if (folderError || !existingFolder) {
       return NextResponse.json({ error: 'Folder not found' }, { status: 404 })
@@ -98,8 +86,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     // Check if new path already exists
     if (newPath !== oldPath) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: conflictFolder } = await (supabase as any)
+      const { data: conflictFolder } = await supabase
         .from('folders')
         .select('id')
         .eq('deal_id', projectId)
@@ -115,8 +102,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     // Update the folder
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: folder, error: updateError } = await (supabase as any)
+    const { data: folder, error: updateError } = await supabase
       .from('folders')
       .update({
         name: trimmedName,
@@ -124,7 +110,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       })
       .eq('id', folderId)
       .select()
-      .single() as { data: FolderRow | null; error: Error | null }
+      .single()
 
     if (updateError) {
       console.error('Error updating folder:', updateError)
@@ -136,19 +122,17 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     // Update child folders if path changed
     if (newPath !== oldPath) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: childFolders } = await (supabase as any)
+      const { data: childFolders } = await supabase
         .from('folders')
         .select('id, path, parent_path')
         .eq('deal_id', projectId)
-        .like('path', `${oldPath}/%`) as { data: Array<{ id: string; path: string; parent_path: string | null }> | null }
+        .like('path', `${oldPath}/%`)
 
       if (childFolders && childFolders.length > 0) {
         for (const child of childFolders) {
           const updatedChildPath = child.path.replace(oldPath, newPath)
           const updatedParentPath = child.parent_path?.replace(oldPath, newPath) || null
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as any)
+          await supabase
             .from('folders')
             .update({
               path: updatedChildPath,
@@ -222,29 +206,26 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     // Get the folder to delete
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: folder, error: folderError } = await (supabase as any)
+    const { data: folder, error: folderError } = await supabase
       .from('folders')
       .select('*')
       .eq('id', folderId)
       .eq('deal_id', projectId)
-      .single() as { data: FolderRow | null; error: Error | null }
+      .single()
 
     if (folderError || !folder) {
       return NextResponse.json({ error: 'Folder not found' }, { status: 404 })
     }
 
     // Delete child folders first (CASCADE should handle this, but being explicit)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    await supabase
       .from('folders')
       .delete()
       .eq('deal_id', projectId)
       .like('path', `${folder.path}/%`)
 
     // Delete the folder
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: deleteError } = await (supabase as any)
+    const { error: deleteError } = await supabase
       .from('folders')
       .delete()
       .eq('id', folderId)
