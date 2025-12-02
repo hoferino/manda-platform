@@ -1089,7 +1089,8 @@ development_status:
   epic-6: contexted
   epic-6-contexted: 2025-12-02
   epic-6-tech-spec: docs/sprint-artifacts/tech-spec-epic-E6.md
-  e6-1-build-irl-builder-ui-with-template-selection: backlog
+  e6-1-build-irl-builder-ui-with-template-selection: drafted
+  e6-1-drafted: 2025-12-02
   e6-2-implement-irl-creation-and-editing: backlog
   e6-3-implement-ai-assisted-irl-auto-generation-from-documents: backlog
   e6-4-implement-data-room-folder-structure-auto-generation-from-irl: backlog
