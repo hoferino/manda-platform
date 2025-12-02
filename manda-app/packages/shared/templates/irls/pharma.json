@@ -1,0 +1,71 @@
+{
+  "id": "pharma",
+  "name": "Pharma",
+  "description": "IRL template for pharmaceutical and life sciences acquisitions covering regulatory, R&D pipeline, and manufacturing compliance.",
+  "dealType": "pharma",
+  "categories": [
+    {
+      "name": "Financial",
+      "items": [
+        { "name": "Audited Financial Statements (3 years)", "description": "Annual audited financial statements including all notes", "priority": "high" },
+        { "name": "Monthly Financial Statements (24 months)", "description": "Monthly P&L and balance sheet with variance analysis", "priority": "high" },
+        { "name": "Revenue by Product", "description": "Revenue breakdown by drug/product with geographic splits", "priority": "high" },
+        { "name": "R&D Spending Analysis", "description": "R&D costs by program and development stage", "priority": "high" },
+        { "name": "Gross-to-Net Analysis", "description": "Rebates, chargebacks, and pricing adjustments by channel", "priority": "high" },
+        { "name": "Royalty Obligations", "description": "In-licensing and out-licensing royalty schedules", "priority": "medium" },
+        { "name": "Grant and Tax Credit History", "description": "R&D tax credits and government grants received", "priority": "medium" },
+        { "name": "Clinical Trial Budgets", "description": "Budgets and actuals for ongoing clinical trials", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Legal",
+      "items": [
+        { "name": "Corporate Documents", "description": "Certificate of incorporation, bylaws, and good standing", "priority": "high" },
+        { "name": "Patent Portfolio", "description": "Complete patent schedule with expiration dates and territories", "priority": "high" },
+        { "name": "Trademark Registrations", "description": "Product trademarks and brand registrations", "priority": "medium" },
+        { "name": "License Agreements", "description": "In-licensing and out-licensing agreements for IP", "priority": "high" },
+        { "name": "Collaboration Agreements", "description": "Research collaboration and co-development agreements", "priority": "high" },
+        { "name": "Distribution Agreements", "description": "Wholesale, specialty pharmacy, and distribution contracts", "priority": "medium" },
+        { "name": "Litigation Summary", "description": "Patent litigation, product liability, and regulatory proceedings", "priority": "high" },
+        { "name": "Government Contracts", "description": "Government pricing agreements and compliance history", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Regulatory",
+      "items": [
+        { "name": "FDA Correspondence", "description": "FDA meeting minutes, correspondence, and guidance requests", "priority": "high" },
+        { "name": "NDA/BLA/ANDA Filings", "description": "All regulatory filings and approval status", "priority": "high" },
+        { "name": "Drug Master Files", "description": "DMF filings and status", "priority": "medium" },
+        { "name": "Clinical Trial History", "description": "IND filings, trial results, and regulatory submissions", "priority": "high" },
+        { "name": "FDA Warning Letters", "description": "Warning letters, 483 observations, and consent decrees", "priority": "high" },
+        { "name": "International Registrations", "description": "EMA, Health Canada, and other international approvals", "priority": "medium" },
+        { "name": "Label and Promotional Review", "description": "DDMAC/OPDP correspondence and advertising review history", "priority": "low" },
+        { "name": "Pharmacovigilance Reports", "description": "Adverse event reporting and safety signal assessments", "priority": "high" }
+      ]
+    },
+    {
+      "name": "R&D",
+      "items": [
+        { "name": "Pipeline Summary", "description": "Development pipeline with stage, indication, and timeline", "priority": "high" },
+        { "name": "Clinical Trial Data", "description": "Phase I/II/III trial results and statistical analysis plans", "priority": "high" },
+        { "name": "Preclinical Data", "description": "Toxicology, pharmacology, and CMC data packages", "priority": "medium" },
+        { "name": "Research Agreements", "description": "Academic collaborations and CRO agreements", "priority": "medium" },
+        { "name": "Inventor Records", "description": "Lab notebooks, invention disclosures, and inventor assignments", "priority": "medium" },
+        { "name": "Competitive Pipeline Analysis", "description": "Competitive landscape for key development programs", "priority": "medium" },
+        { "name": "Publication Strategy", "description": "Publication history and planned disclosures", "priority": "low" }
+      ]
+    },
+    {
+      "name": "Manufacturing",
+      "items": [
+        { "name": "Manufacturing Site List", "description": "All manufacturing facilities with product allocations", "priority": "high" },
+        { "name": "GMP Certifications", "description": "cGMP compliance documentation and inspection history", "priority": "high" },
+        { "name": "CMO Agreements", "description": "Contract manufacturing agreements and quality agreements", "priority": "high" },
+        { "name": "Supply Agreements", "description": "API and excipient supply contracts", "priority": "high" },
+        { "name": "Batch Records", "description": "Sample batch records for key products", "priority": "medium" },
+        { "name": "Validation Documentation", "description": "Process validation and equipment qualification records", "priority": "medium" },
+        { "name": "Quality Audit Reports", "description": "Internal and external quality audit findings", "priority": "medium" }
+      ]
+    }
+  ]
+}

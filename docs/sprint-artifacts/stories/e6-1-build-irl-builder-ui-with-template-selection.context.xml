@@ -1,0 +1,348 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E6</epicId>
+    <storyId>E6.1</storyId>
+    <title>Build IRL Builder UI with Template Selection</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e6-1-build-irl-builder-ui-with-template-selection.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to create an Information Request List (IRL) by selecting from pre-built templates or starting with a blank slate</iWant>
+    <soThat>I can quickly set up a structured document request list tailored to my deal type without manual data entry</soThat>
+    <tasks>
+      <task id="1">
+        <title>Create IRL type definitions</title>
+        <ac>3</ac>
+        <subtasks>
+          <subtask>Create lib/types/irl.ts with interfaces: IRLTemplate, IRLTemplateCategory, IRLTemplateItem, IRL, IRLItem, IRLProgress</subtask>
+          <subtask>Add Zod validation schemas for API input/output</subtask>
+          <subtask>Export types from barrel file</subtask>
+        </subtasks>
+      </task>
+      <task id="2">
+        <title>Create IRL template JSON files</title>
+        <ac>1, 2, 3</ac>
+        <subtasks>
+          <subtask>Create packages/shared/templates/irls/ directory</subtask>
+          <subtask>Create tech-ma.json - Tech M&A IRL template (categories: Financial, Legal, Technical, Operational, Commercial)</subtask>
+          <subtask>Create industrial.json - Industrial IRL template (categories: Financial, Legal, Operations, Environmental, Safety)</subtask>
+          <subtask>Create pharma.json - Pharma IRL template (categories: Financial, Legal, Regulatory, R&amp;D, Manufacturing)</subtask>
+          <subtask>Create financial-services.json - Financial Services IRL template (categories: Financial, Legal, Compliance, Risk, Operations)</subtask>
+          <subtask>Ensure each template has 5-10 items per category with name, description, priority</subtask>
+        </subtasks>
+      </task>
+      <task id="3">
+        <title>Implement IRL template service</title>
+        <ac>4, 5</ac>
+        <subtasks>
+          <subtask>Create lib/services/irl-templates.ts</subtask>
+          <subtask>Implement listTemplates() - reads all JSON files from templates directory</subtask>
+          <subtask>Implement getTemplate(templateId) - loads specific template by ID</subtask>
+          <subtask>Add file system scanning for dynamic template discovery</subtask>
+          <subtask>Write unit tests for template loading</subtask>
+        </subtasks>
+      </task>
+      <task id="4">
+        <title>Create templates API endpoint</title>
+        <ac>4, 5</ac>
+        <subtasks>
+          <subtask>Create app/api/projects/[id]/irls/templates/route.ts</subtask>
+          <subtask>Implement GET handler returning all templates</subtask>
+          <subtask>Implement GET /[templateId] for single template preview</subtask>
+          <subtask>Add error handling for missing templates</subtask>
+          <subtask>Write API route tests</subtask>
+        </subtasks>
+      </task>
+      <task id="5">
+        <title>Create IRLTemplateCard component</title>
+        <ac>6</ac>
+        <subtasks>
+          <subtask>Create components/irl/IRLTemplateCard.tsx</subtask>
+          <subtask>Display template name, description, item count</subtask>
+          <subtask>Add deal type badge (Tech M&amp;A, Industrial, etc.)</subtask>
+          <subtask>Implement hover state and click handler</subtask>
+          <subtask>Write component tests</subtask>
+        </subtasks>
+      </task>
+      <task id="6">
+        <title>Create IRLTemplateModal component</title>
+        <ac>7</ac>
+        <subtasks>
+          <subtask>Create components/irl/IRLTemplateModal.tsx</subtask>
+          <subtask>Display full template structure with collapsible categories</subtask>
+          <subtask>Show item details (name, description, priority indicator)</subtask>
+          <subtask>Add "Use This Template" and "Cancel" buttons</subtask>
+          <subtask>Implement keyboard dismiss (Escape)</subtask>
+          <subtask>Write component tests</subtask>
+        </subtasks>
+      </task>
+      <task id="7">
+        <title>Create IRL creation API endpoint</title>
+        <ac>8, 9</ac>
+        <subtasks>
+          <subtask>Create app/api/projects/[id]/irls/route.ts</subtask>
+          <subtask>Implement POST handler with body { templateId?, title }</subtask>
+          <subtask>If templateId provided: load template and copy items to irl_items table</subtask>
+          <subtask>If no templateId: create empty IRL</subtask>
+          <subtask>Return created IRL with items</subtask>
+          <subtask>Write API route tests</subtask>
+        </subtasks>
+      </task>
+      <task id="8">
+        <title>Create template selection page/section</title>
+        <ac>6, 8, 9, 10</ac>
+        <subtasks>
+          <subtask>Create IRL tab in Deliverables section (app/projects/[id]/deliverables/page.tsx or new route)</subtask>
+          <subtask>Implement template grid with IRLTemplateCard components</subtask>
+          <subtask>Add "Custom (Blank)" card option</subtask>
+          <subtask>Handle template selection → modal → creation flow</subtask>
+          <subtask>Add loading states and error handling</subtask>
+          <subtask>Implement responsive grid (1 col mobile, 2 tablet, 3 desktop)</subtask>
+        </subtasks>
+      </task>
+      <task id="9">
+        <title>Write integration tests</title>
+        <ac>1-10</ac>
+        <subtasks>
+          <subtask>Test template file discovery</subtask>
+          <subtask>Test API endpoints end-to-end</subtask>
+          <subtask>Test template selection → IRL creation flow</subtask>
+          <subtask>Test responsive layout breakpoints</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Templates for Tech M&amp;A, Industrial, Pharma, Financial Services exist as JSON files in /packages/shared/templates/irls/</criterion>
+    <criterion id="AC2">Each template has categories with 5-10 items per category, including name, description, and priority</criterion>
+    <criterion id="AC3">Template structure follows schema: { id, name, description, dealType, categories[].items[] }</criterion>
+    <criterion id="AC4">API endpoint GET /api/projects/[id]/irls/templates returns all available templates</criterion>
+    <criterion id="AC5">Adding a new JSON file to templates folder automatically makes it available via API (no code changes required)</criterion>
+    <criterion id="AC6">Template cards display name, description, and total item count</criterion>
+    <criterion id="AC7">Preview modal shows full template structure (categories, items, priorities)</criterion>
+    <criterion id="AC8">"Use This Template" action creates a new IRL with all template items pre-populated</criterion>
+    <criterion id="AC9">"Custom (Blank)" option creates an empty IRL for manual entry</criterion>
+    <criterion id="AC10">UI is responsive and works on tablet and desktop viewports</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E6.md</path>
+        <title>Epic 6 Technical Specification</title>
+        <section>E6.1: Create IRL Template Library, Data Models and Contracts, APIs and Interfaces</section>
+        <snippet>Authoritative spec defining TypeScript types (IRLTemplate, IRLTemplateCategory, IRLTemplateItem, IRL, IRLItem), PostgreSQL schemas for irls and irl_items tables, and API endpoints for template listing and IRL creation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Architecture Document</title>
+        <section>Data Room Folder Architecture, IRL Items Schema</section>
+        <snippet>Defines manual-only IRL tracking (no auto-linking), real GCS folders, and irl_items table schema with status enum ('not_started', 'pending', 'received', 'complete').</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/retrospectives/epic-E5-retrospective.md</path>
+        <title>Epic 5 Retrospective</title>
+        <section>Epic 6 Implications, Blocking Prerequisites</section>
+        <snippet>Lists P1-P4 prerequisites including folders/irl_items table migrations. Establishes component reuse patterns from Epic 5 (Dialog/Modal, Badge, loading states).</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR-IRL-001 through FR-IRL-005</section>
+        <snippet>Functional requirements for IRL creation, AI generation, folder structure generation, and document linking that this epic implements.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E6.md</path>
+        <title>Epic 6: IRL Management &amp; Auto-Generation</title>
+        <section>Stories Overview</section>
+        <snippet>Epic containing 8 stories for IRL management. E6.1 is the first story establishing the template library and selection UI foundation.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>lib/types/findings.ts</path>
+        <kind>types</kind>
+        <symbol>Finding, FindingFilters, FINDING_DOMAINS, getConfidenceLevel</symbol>
+        <lines>1-214</lines>
+        <reason>Example type definition pattern with Zod schemas, display configs, and helper functions - follow for lib/types/irl.ts</reason>
+      </artifact>
+      <artifact>
+        <path>components/knowledge-explorer/shared/DocumentPreviewModal.tsx</path>
+        <kind>component</kind>
+        <symbol>DocumentPreviewModal</symbol>
+        <lines>1-327</lines>
+        <reason>Modal pattern with Dialog, loading states, error handling, keyboard dismiss - reuse for IRLTemplateModal</reason>
+      </artifact>
+      <artifact>
+        <path>app/api/projects/[id]/findings/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>GET, POST</symbol>
+        <lines>1-270</lines>
+        <reason>API route pattern with Zod validation, Supabase auth, RLS enforcement - follow for irls/templates/route.ts</reason>
+      </artifact>
+      <artifact>
+        <path>components/ui/card.tsx</path>
+        <kind>component</kind>
+        <symbol>Card, CardHeader, CardContent, CardTitle, CardDescription</symbol>
+        <reason>shadcn/ui Card component for IRLTemplateCard</reason>
+      </artifact>
+      <artifact>
+        <path>components/ui/dialog.tsx</path>
+        <kind>component</kind>
+        <symbol>Dialog, DialogContent, DialogHeader, DialogTitle</symbol>
+        <reason>shadcn/ui Dialog component for IRLTemplateModal</reason>
+      </artifact>
+      <artifact>
+        <path>components/ui/badge.tsx</path>
+        <kind>component</kind>
+        <symbol>Badge</symbol>
+        <reason>shadcn/ui Badge component for deal type and priority indicators</reason>
+      </artifact>
+      <artifact>
+        <path>components/ui/skeleton.tsx</path>
+        <kind>component</kind>
+        <symbol>Skeleton</symbol>
+        <reason>shadcn/ui Skeleton component for loading states</reason>
+      </artifact>
+      <artifact>
+        <path>components/ui/collapsible.tsx</path>
+        <kind>component</kind>
+        <symbol>Collapsible, CollapsibleTrigger, CollapsibleContent</symbol>
+        <reason>shadcn/ui Collapsible for category sections in template preview modal</reason>
+      </artifact>
+      <artifact>
+        <path>__tests__/utils/supabase-mock.ts</path>
+        <kind>test-utility</kind>
+        <symbol>createMockSupabaseClient, mockSupabaseModule, MockQueryBuilder</symbol>
+        <lines>1-100</lines>
+        <reason>Shared Supabase mock utilities for test files</reason>
+      </artifact>
+      <artifact>
+        <path>lib/services/embeddings.ts</path>
+        <kind>service</kind>
+        <symbol>EmbeddingService</symbol>
+        <reason>Example service pattern in lib/services/ - follow for irl-templates.ts</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="next" version="16.0.4">App Router, API routes, dynamic imports</package>
+        <package name="react" version="19.2.0">Component library</package>
+        <package name="zod" version="^4.1.13">Runtime validation for API and types</package>
+        <package name="@tanstack/react-table" version="^8.21.3">Not directly used but pattern reference</package>
+        <package name="lucide-react" version="^0.554.0">Icons for UI</package>
+        <package name="class-variance-authority" version="^0.7.1">Styling utilities</package>
+        <package name="clsx" version="^2.1.1">Classname utilities</package>
+        <package name="tailwind-merge" version="^3.4.0">Tailwind class merging</package>
+      </ecosystem>
+      <ecosystem name="shadcn-ui">
+        <package name="card">Card, CardHeader, CardContent for template cards</package>
+        <package name="dialog">Dialog, DialogContent for preview modal</package>
+        <package name="badge">Badge for deal type and priority</package>
+        <package name="button">Button for actions</package>
+        <package name="skeleton">Skeleton for loading states</package>
+        <package name="collapsible">Collapsible for category sections</package>
+        <package name="scroll-area">ScrollArea for modal content</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Templates are stored as static JSON files in packages/shared/templates/irls/ - not database records (version-controlled, no migration needed)</constraint>
+    <constraint type="architecture">Database migrations for irls and irl_items tables are NOT applied in this story - E6.2 handles migrations. This story can stub or mock database operations.</constraint>
+    <constraint type="architecture">Follow existing lib/types/ pattern with Zod schemas for runtime validation</constraint>
+    <constraint type="architecture">API routes follow Next.js 15 App Router conventions at /api/projects/[id]/irls/</constraint>
+    <constraint type="architecture">Components go in components/irl/ following established directory structure</constraint>
+    <constraint type="security">All API routes must authenticate user via Supabase auth.getUser()</constraint>
+    <constraint type="security">RLS policies on deals table ensure project access control</constraint>
+    <constraint type="pattern">Use shadcn/ui components (Card, Dialog, Badge, Button, Skeleton)</constraint>
+    <constraint type="pattern">Responsive grid: grid-cols-1 md:grid-cols-2 lg:grid-cols-3</constraint>
+    <constraint type="pattern">Error states with retry buttons following DocumentPreviewModal pattern</constraint>
+    <constraint type="pattern">Keyboard accessibility - Escape to dismiss modals</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>GET /api/projects/[id]/irls/templates</name>
+      <kind>REST endpoint</kind>
+      <signature>GET → { templates: IRLTemplate[] }</signature>
+      <path>app/api/projects/[id]/irls/templates/route.ts</path>
+    </interface>
+    <interface>
+      <name>GET /api/projects/[id]/irls/templates/[templateId]</name>
+      <kind>REST endpoint</kind>
+      <signature>GET → { template: IRLTemplate }</signature>
+      <path>app/api/projects/[id]/irls/templates/[templateId]/route.ts</path>
+    </interface>
+    <interface>
+      <name>POST /api/projects/[id]/irls</name>
+      <kind>REST endpoint</kind>
+      <signature>POST { templateId?: string, title: string } → { irl: IRL, items?: IRLItem[] }</signature>
+      <path>app/api/projects/[id]/irls/route.ts</path>
+    </interface>
+    <interface>
+      <name>IRLTemplate</name>
+      <kind>TypeScript interface</kind>
+      <signature>{ id: string, name: string, description: string, dealType: 'tech_ma' | 'industrial' | 'pharma' | 'financial' | 'custom', categories: IRLTemplateCategory[] }</signature>
+      <path>lib/types/irl.ts</path>
+    </interface>
+    <interface>
+      <name>IRLTemplateCategory</name>
+      <kind>TypeScript interface</kind>
+      <signature>{ name: string, items: IRLTemplateItem[] }</signature>
+      <path>lib/types/irl.ts</path>
+    </interface>
+    <interface>
+      <name>IRLTemplateItem</name>
+      <kind>TypeScript interface</kind>
+      <signature>{ name: string, description?: string, priority: 'high' | 'medium' | 'low' }</signature>
+      <path>lib/types/irl.ts</path>
+    </interface>
+    <interface>
+      <name>IRL</name>
+      <kind>TypeScript interface</kind>
+      <signature>{ id: string, dealId: string, title: string, templateType?: string, sourceFileName?: string, createdAt: string, updatedAt: string }</signature>
+      <path>lib/types/irl.ts</path>
+    </interface>
+    <interface>
+      <name>IRLItem</name>
+      <kind>TypeScript interface</kind>
+      <signature>{ id: string, irlId: string, category: string, subcategory?: string, itemName: string, description?: string, priority: 'high' | 'medium' | 'low', status: 'not_started' | 'pending' | 'received' | 'complete', notes?: string, sortOrder: number, createdAt: string, updatedAt: string }</signature>
+      <path>lib/types/irl.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Following the testing strategy from tech debt sprint and Epic 5:
+      - Unit tests for service functions using Vitest
+      - Component tests with React Testing Library
+      - API route tests with direct route handler testing
+      - Use existing Supabase mock utilities from __tests__/utils/supabase-mock.ts
+      - Vitest with thread pool parallelization, 3-way test sharding in CI
+    </standards>
+    <locations>
+      <location>__tests__/lib/services/irl-templates.test.ts</location>
+      <location>__tests__/components/irl/IRLTemplateCard.test.tsx</location>
+      <location>__tests__/components/irl/IRLTemplateModal.test.tsx</location>
+      <location>__tests__/api/irls/templates.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Verify all 4 template JSON files exist and are valid JSON</idea>
+      <idea ac="AC2">Test each template has 5-10 items per category</idea>
+      <idea ac="AC3">Validate template structure against IRLTemplate schema</idea>
+      <idea ac="AC4">Test GET /templates returns all templates with correct structure</idea>
+      <idea ac="AC5">Add new JSON file, verify it appears in API response without restart</idea>
+      <idea ac="AC6">Render IRLTemplateCard, verify name/description/count displayed</idea>
+      <idea ac="AC7">Open modal, verify categories collapsible, items show priority badges</idea>
+      <idea ac="AC8">Select template, verify IRL created with all items</idea>
+      <idea ac="AC9">Select Custom option, verify empty IRL created</idea>
+      <idea ac="AC10">Test responsive breakpoints: 1 col mobile, 2 tablet, 3 desktop</idea>
+    </ideas>
+  </tests>
+</story-context>

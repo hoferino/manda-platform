@@ -1089,9 +1089,23 @@ development_status:
   epic-6: contexted
   epic-6-contexted: 2025-12-02
   epic-6-tech-spec: docs/sprint-artifacts/tech-spec-epic-E6.md
-  e6-1-build-irl-builder-ui-with-template-selection: drafted
+  e6-1-build-irl-builder-ui-with-template-selection: done
   e6-1-drafted: 2025-12-02
-  e6-2-implement-irl-creation-and-editing: backlog
+  e6-1-context-ready: 2025-12-02
+  e6-1-completed: 2025-12-02
+  e6-1-notes: |
+    IRL Builder UI with template selection completed. Key deliverables:
+    - 4 industry IRL templates (Tech M&A, Industrial, Pharma, Financial Services)
+    - IRL type definitions with Zod validation schemas
+    - Template service with caching and dynamic file discovery
+    - API endpoints for templates and IRL creation (POST/GET)
+    - IRLTemplateCard and IRLTemplateModal UI components
+    - IRLTemplateSelector with responsive grid layout
+    - Deliverables page with IRL tab
+    - 89 tests passing across 5 test files
+    Note: Adapted to existing irls table schema (uses 'name' + 'sections' JSONB)
+  e6-2-implement-irl-creation-and-editing: drafted
+  e6-2-drafted: 2025-12-02
   e6-3-implement-ai-assisted-irl-auto-generation-from-documents: backlog
   e6-4-implement-data-room-folder-structure-auto-generation-from-irl: backlog
   e6-5-implement-irl-document-linking-and-progress-tracking: backlog

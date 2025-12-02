@@ -1,0 +1,71 @@
+{
+  "id": "tech-ma",
+  "name": "Tech M&A",
+  "description": "Comprehensive IRL template for technology company acquisitions covering SaaS, software, and digital businesses.",
+  "dealType": "tech_ma",
+  "categories": [
+    {
+      "name": "Financial",
+      "items": [
+        { "name": "Audited Financial Statements (3 years)", "description": "Annual audited financial statements including balance sheet, income statement, and cash flow", "priority": "high" },
+        { "name": "Monthly Financial Reports (24 months)", "description": "Monthly P&L, balance sheet, and key metrics", "priority": "high" },
+        { "name": "Revenue Recognition Policy", "description": "ASC 606 compliance documentation and revenue recognition methodology", "priority": "high" },
+        { "name": "ARR/MRR Analysis", "description": "Annual and monthly recurring revenue breakdown by customer cohort", "priority": "high" },
+        { "name": "Customer Cohort Analysis", "description": "Revenue retention and expansion by customer cohort over time", "priority": "medium" },
+        { "name": "Deferred Revenue Schedule", "description": "Breakdown of deferred revenue by customer and contract", "priority": "medium" },
+        { "name": "CAC/LTV Analysis", "description": "Customer acquisition cost and lifetime value calculations by segment", "priority": "medium" },
+        { "name": "Burn Rate and Runway", "description": "Monthly cash burn analysis and projected runway", "priority": "high" }
+      ]
+    },
+    {
+      "name": "Legal",
+      "items": [
+        { "name": "Certificate of Incorporation", "description": "Current certificate of incorporation and all amendments", "priority": "high" },
+        { "name": "Cap Table", "description": "Fully diluted capitalization table with all options, warrants, and convertibles", "priority": "high" },
+        { "name": "Material Contracts", "description": "All contracts with value >$100K or strategic importance", "priority": "high" },
+        { "name": "IP Assignment Agreements", "description": "Employee and contractor IP assignment agreements", "priority": "high" },
+        { "name": "Customer Contracts (Top 20)", "description": "Master agreements and order forms for top 20 customers", "priority": "high" },
+        { "name": "Vendor Contracts", "description": "Key vendor and supplier agreements", "priority": "medium" },
+        { "name": "Litigation Summary", "description": "Pending and threatened litigation matters", "priority": "medium" },
+        { "name": "Privacy Policy and Terms of Service", "description": "Current customer-facing legal documents", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Technical",
+      "items": [
+        { "name": "System Architecture Diagram", "description": "High-level architecture showing all systems and integrations", "priority": "high" },
+        { "name": "Technology Stack Documentation", "description": "Languages, frameworks, databases, and infrastructure used", "priority": "high" },
+        { "name": "Source Code Repository Access", "description": "Access to version control system (GitHub, GitLab, etc.)", "priority": "high" },
+        { "name": "Infrastructure Documentation", "description": "Cloud infrastructure, hosting, and DevOps setup", "priority": "high" },
+        { "name": "Security Certifications", "description": "SOC 2, ISO 27001, or other security certifications", "priority": "high" },
+        { "name": "Penetration Test Reports", "description": "Most recent security assessment and penetration test results", "priority": "medium" },
+        { "name": "Technical Debt Assessment", "description": "Known technical debt items and remediation plans", "priority": "medium" },
+        { "name": "API Documentation", "description": "External and internal API documentation", "priority": "low" }
+      ]
+    },
+    {
+      "name": "Operational",
+      "items": [
+        { "name": "Organizational Chart", "description": "Current org chart with reporting relationships", "priority": "high" },
+        { "name": "Employee Census", "description": "Full employee list with roles, departments, start dates, and compensation", "priority": "high" },
+        { "name": "Employee Agreements", "description": "Standard employment, confidentiality, and non-compete agreements", "priority": "high" },
+        { "name": "Benefits Summary", "description": "Employee benefits including health, 401k, and equity plans", "priority": "medium" },
+        { "name": "Key Person Dependencies", "description": "Analysis of critical knowledge holders and succession plans", "priority": "medium" },
+        { "name": "Office Leases", "description": "Real estate lease agreements and terms", "priority": "low" },
+        { "name": "Insurance Policies", "description": "D&O, E&O, cyber, and general liability policies", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Commercial",
+      "items": [
+        { "name": "Customer List", "description": "Complete customer list with contract values and renewal dates", "priority": "high" },
+        { "name": "Sales Pipeline", "description": "Current sales pipeline and forecast", "priority": "high" },
+        { "name": "Churn Analysis", "description": "Historical churn data and reasons for customer losses", "priority": "high" },
+        { "name": "Pricing Documentation", "description": "Current pricing models, rate cards, and discount policies", "priority": "medium" },
+        { "name": "Competitive Analysis", "description": "Market positioning and competitive landscape analysis", "priority": "medium" },
+        { "name": "Marketing Materials", "description": "Current marketing collateral and brand guidelines", "priority": "low" },
+        { "name": "Partner Agreements", "description": "Channel partner, reseller, and integration partner contracts", "priority": "medium" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "id": "financial-services",
+  "name": "Financial Services",
+  "description": "IRL template for financial services acquisitions including banks, insurance, asset management, and fintech companies.",
+  "dealType": "financial",
+  "categories": [
+    {
+      "name": "Financial",
+      "items": [
+        { "name": "Audited Financial Statements (3 years)", "description": "Annual audited financials with all schedules and footnotes", "priority": "high" },
+        { "name": "Quarterly Call Reports", "description": "Regulatory call reports for banks/credit unions", "priority": "high" },
+        { "name": "Monthly Financial Statements", "description": "Monthly balance sheet, income statement, and key metrics", "priority": "high" },
+        { "name": "Assets Under Management", "description": "AUM breakdown by product, strategy, and client type", "priority": "high" },
+        { "name": "Fee Schedule Analysis", "description": "Revenue by fee type with historical trends", "priority": "high" },
+        { "name": "Investment Portfolio", "description": "Investment holdings with duration and credit analysis", "priority": "high" },
+        { "name": "Loan Portfolio Analysis", "description": "Loan portfolio composition, concentrations, and performance", "priority": "high" },
+        { "name": "Reserve Analysis", "description": "Loan loss reserves, claims reserves, or other provision methodologies", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Legal",
+      "items": [
+        { "name": "Corporate Documents", "description": "Charter, bylaws, and organizational documents", "priority": "high" },
+        { "name": "Regulatory Licenses", "description": "Banking charter, broker-dealer registration, insurance licenses", "priority": "high" },
+        { "name": "Material Contracts", "description": "Significant contracts including custody, clearing, and technology", "priority": "high" },
+        { "name": "Client Agreements", "description": "Standard client agreements and account documentation", "priority": "medium" },
+        { "name": "Vendor Contracts", "description": "Critical vendor agreements especially technology and data", "priority": "medium" },
+        { "name": "Litigation Summary", "description": "Pending and threatened litigation and arbitration matters", "priority": "high" },
+        { "name": "Regulatory Actions", "description": "Consent orders, enforcement actions, and MRAs", "priority": "high" },
+        { "name": "Insurance Policies", "description": "E&O, D&O, fidelity bonds, and cyber insurance", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Compliance",
+      "items": [
+        { "name": "Regulatory Examination History", "description": "Recent examination reports from primary regulators", "priority": "high" },
+        { "name": "Compliance Program Documentation", "description": "Compliance policies, procedures, and organizational structure", "priority": "high" },
+        { "name": "AML/BSA Program", "description": "Anti-money laundering program documentation and SAR filing history", "priority": "high" },
+        { "name": "KYC/CDD Documentation", "description": "Know Your Customer and Customer Due Diligence procedures", "priority": "high" },
+        { "name": "Regulatory Capital Analysis", "description": "Capital ratios, stress testing, and CCAR documentation", "priority": "high" },
+        { "name": "Fair Lending Analysis", "description": "Fair lending monitoring and HMDA data", "priority": "medium" },
+        { "name": "Privacy Program", "description": "GLBA, CCPA, and privacy notice documentation", "priority": "medium" },
+        { "name": "Third Party Risk Management", "description": "Vendor due diligence and ongoing monitoring program", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Risk",
+      "items": [
+        { "name": "Enterprise Risk Framework", "description": "ERM framework, risk appetite statement, and governance", "priority": "high" },
+        { "name": "Credit Risk Reports", "description": "Credit risk metrics, concentrations, and watchlist", "priority": "high" },
+        { "name": "Market Risk Reports", "description": "VaR, sensitivity analysis, and stress testing results", "priority": "high" },
+        { "name": "Liquidity Risk Analysis", "description": "Liquidity coverage ratios and contingency funding plans", "priority": "high" },
+        { "name": "Operational Risk Events", "description": "Loss event history and operational risk assessments", "priority": "medium" },
+        { "name": "Cybersecurity Assessments", "description": "Penetration tests, vulnerability assessments, and incident history", "priority": "high" },
+        { "name": "Business Continuity Plans", "description": "BCP/DR documentation and testing records", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Operations",
+      "items": [
+        { "name": "Organizational Structure", "description": "Org chart and reporting lines for all entities", "priority": "high" },
+        { "name": "Employee Census", "description": "Employee list with roles, compensation, and licensing", "priority": "high" },
+        { "name": "Technology Infrastructure", "description": "Core systems, integrations, and technology roadmap", "priority": "high" },
+        { "name": "Client Onboarding Process", "description": "Account opening procedures and documentation", "priority": "medium" },
+        { "name": "Trading Operations", "description": "Trade processing, settlement, and reconciliation procedures", "priority": "medium" },
+        { "name": "Product Profitability", "description": "Profitability analysis by product line and client segment", "priority": "medium" },
+        { "name": "Outsourcing Arrangements", "description": "Outsourced functions with oversight documentation", "priority": "medium" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "id": "industrial",
+  "name": "Industrial",
+  "description": "IRL template for industrial and manufacturing company acquisitions covering production, supply chain, and environmental compliance.",
+  "dealType": "industrial",
+  "categories": [
+    {
+      "name": "Financial",
+      "items": [
+        { "name": "Audited Financial Statements (3 years)", "description": "Annual audited financial statements with all schedules", "priority": "high" },
+        { "name": "Monthly Financial Statements (24 months)", "description": "Monthly P&L, balance sheet, and cash flow statements", "priority": "high" },
+        { "name": "Revenue by Product Line", "description": "Revenue breakdown by product category and customer segment", "priority": "high" },
+        { "name": "Gross Margin Analysis", "description": "Gross margin by product line with cost breakdown", "priority": "high" },
+        { "name": "Inventory Valuation", "description": "Inventory aging, reserves, and valuation methodology", "priority": "high" },
+        { "name": "Capital Expenditure History", "description": "CapEx spending by category for past 5 years", "priority": "medium" },
+        { "name": "Working Capital Analysis", "description": "Historical working capital trends and seasonality", "priority": "medium" },
+        { "name": "Accounts Receivable Aging", "description": "AR aging schedule with bad debt history", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Legal",
+      "items": [
+        { "name": "Corporate Documents", "description": "Articles of incorporation, bylaws, and amendments", "priority": "high" },
+        { "name": "Material Contracts", "description": "All contracts exceeding $500K or with strategic importance", "priority": "high" },
+        { "name": "Real Property Deeds and Leases", "description": "Ownership documents and lease agreements for all facilities", "priority": "high" },
+        { "name": "Equipment Leases", "description": "All equipment lease and financing agreements", "priority": "medium" },
+        { "name": "Supplier Agreements", "description": "Key supplier contracts and terms", "priority": "high" },
+        { "name": "Customer Contracts", "description": "Long-term customer agreements and purchase orders", "priority": "high" },
+        { "name": "Litigation and Claims", "description": "Pending litigation, claims, and dispute history", "priority": "medium" },
+        { "name": "Permits and Licenses", "description": "Operating permits, licenses, and regulatory approvals", "priority": "high" }
+      ]
+    },
+    {
+      "name": "Operations",
+      "items": [
+        { "name": "Plant and Facility List", "description": "List of all manufacturing facilities with capacity utilization", "priority": "high" },
+        { "name": "Production Reports", "description": "Production volumes, efficiency metrics, and downtime analysis", "priority": "high" },
+        { "name": "Equipment List", "description": "Major equipment inventory with age and condition assessment", "priority": "high" },
+        { "name": "Maintenance Records", "description": "Preventive and corrective maintenance history", "priority": "medium" },
+        { "name": "Quality Certifications", "description": "ISO 9001, AS9100, IATF 16949, or other quality certifications", "priority": "high" },
+        { "name": "Supply Chain Map", "description": "Key suppliers, lead times, and single-source dependencies", "priority": "high" },
+        { "name": "Logistics and Distribution", "description": "Warehouse locations, transportation contracts, and costs", "priority": "medium" },
+        { "name": "Capacity Analysis", "description": "Current vs. theoretical capacity by facility", "priority": "medium" }
+      ]
+    },
+    {
+      "name": "Environmental",
+      "items": [
+        { "name": "Environmental Permits", "description": "Air, water, and waste permits for all facilities", "priority": "high" },
+        { "name": "Phase I ESA Reports", "description": "Environmental site assessments for owned properties", "priority": "high" },
+        { "name": "Compliance History", "description": "EPA, state, and local environmental compliance records", "priority": "high" },
+        { "name": "Hazardous Materials Inventory", "description": "List of hazardous materials used, stored, or generated", "priority": "medium" },
+        { "name": "Remediation History", "description": "Past and ongoing environmental remediation projects", "priority": "medium" },
+        { "name": "Environmental Insurance", "description": "Environmental liability insurance policies", "priority": "low" },
+        { "name": "Sustainability Reports", "description": "ESG and sustainability initiatives and metrics", "priority": "low" }
+      ]
+    },
+    {
+      "name": "Safety",
+      "items": [
+        { "name": "OSHA Logs (5 years)", "description": "OSHA 300 and 300A logs for all facilities", "priority": "high" },
+        { "name": "Safety Incident Reports", "description": "Lost time injury records and incident investigations", "priority": "high" },
+        { "name": "Workers Compensation History", "description": "Workers comp claims, EMR, and insurance costs", "priority": "high" },
+        { "name": "Safety Training Records", "description": "Employee safety training documentation", "priority": "medium" },
+        { "name": "Safety Audits", "description": "Internal and external safety audit reports", "priority": "medium" },
+        { "name": "Personal Protective Equipment", "description": "PPE requirements and compliance documentation", "priority": "low" }
+      ]
+    }
+  ]
+}
