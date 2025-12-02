@@ -93,15 +93,18 @@ All 4 reviewed stories passed on first submission. The dev notes gave reviewers 
 
 ## What Could Be Improved
 
-### 1. Neo4j Integration Remains Stubbed
+### 1. Neo4j Integration Was Stubbed (FIXED IN RETRO)
 
-**Issue:** `update_knowledge_graph` tool stores relationships in Supabase metadata as fallback. Neo4j graph updates not implemented.
+**Issue:** `update_knowledge_graph` tool was storing relationships in Supabase metadata as fallback. Neo4j graph updates not implemented.
 
-**Impact:** Graph traversal in queries works (read), but agent-triggered graph updates don't persist to Neo4j.
+**Resolution During Retro:** Fixed! Added proper Neo4j relationship creation:
+- Creates Finding nodes in Neo4j if missing
+- Creates SUPPORTS/CONTRADICTS/SUPERSEDES relationships
+- Falls back to Supabase metadata for redundancy
 
-**Affected Stories:** E5.2 (tools), E5.5 (quick actions using detect_contradictions)
+**Files Modified:** `manda-app/lib/agent/tools/knowledge-tools.ts`
 
-**Action:** Implement Neo4j write integration in Epic 6 or as tech debt story
+**Status:** ✅ Resolved during retrospective session
 
 ### 2. Live LLM Integration Tests Still Manual
 
@@ -130,6 +133,22 @@ All 4 reviewed stories passed on first submission. The dev notes gave reviewers 
 **Impact:** Lower test coverage on chat components compared to other epics.
 
 **Action:** Create TD story or include in E6 testing scope
+
+### 5. IRL/Folder Architecture Needed Clarification (FIXED IN RETRO)
+
+**Issue:** The existing IRL design assumed virtual folders and automatic status updates, which would confuse users when they restructure folders.
+
+**Resolution During Retro:** Major clarification applied:
+- Real GCS folders created from IRL upload (not virtual)
+- Manual-only IRL checklist tracking (no auto-updates)
+- Users have freedom to restructure folders
+
+**Documentation Updated:**
+- `docs/manda-prd.md` - FR-IRL sections updated with manual tracking
+- `docs/manda-architecture.md` - Data Room Folder Architecture section added
+- `docs/epics.md` - Epic 6 stories rewritten (E6.4, E6.5, E6.7, E6.8)
+
+**Status:** ✅ Resolved during retrospective session
 
 ---
 
@@ -245,25 +264,54 @@ export function extractConfidence(toolResults: ToolResult[]): MessageConfidence 
 
 ### Blocking Prerequisites for Epic 6
 
-| # | Action Item | Priority | Owner |
-|---|-------------|----------|-------|
-| P1 | Neo4j write integration for update_knowledge_graph | Medium | Dev |
-| P2 | Audit E5.3 deferred tests - create coverage plan | Low | QA |
+| # | Action Item | Priority | Owner | Deliverable |
+|---|-------------|----------|-------|-------------|
+| P1 | Create folders table migration | High | Dev | `supabase/migrations/00026_create_folders_table.sql` |
+| P2 | Create irl_items table migration | High | Dev | `supabase/migrations/00027_create_irl_items_table.sql` |
+| P3 | GCS folder creation utility | High | Dev | `lib/storage/gcs-folders.ts` |
+| P4 | Regenerate Supabase types | High | Dev | `npm run db:types` after migrations |
+| P5 | Audit E5.3 deferred tests | Low | QA | Coverage plan for chat components |
 
-### No Blocking Items
+### Database Schema (Designed in Retro)
 
-Epic 6 (IRL Management) can proceed without blocking prerequisites. The main work is IRL-specific UI and AI-assisted generation, which builds on existing infrastructure.
+```sql
+-- folders table
+CREATE TABLE folders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id UUID REFERENCES deals(id) ON DELETE CASCADE NOT NULL,
+  parent_id UUID REFERENCES folders(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  gcs_path TEXT NOT NULL,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(deal_id, gcs_path)
+);
+
+-- irl_items table
+CREATE TABLE irl_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  irl_id UUID REFERENCES irls(id) ON DELETE CASCADE NOT NULL,
+  category TEXT NOT NULL,
+  item_name TEXT NOT NULL,
+  status TEXT DEFAULT 'not_started', -- 'not_started', 'pending', 'received', 'complete'
+  notes TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 ---
 
 ## Technical Debt Backlog
 
-| # | Item | Priority | Target |
-|---|------|----------|--------|
-| TD1 | Neo4j update_knowledge_graph implementation | Medium | E6 or TD sprint |
-| TD2 | E5.3 chat component unit tests | Low | E6 or TD sprint |
-| TD3 | Automated weekly LLM integration tests | Low | Post-MVP |
-| TD4 | Tiktoken WASM workaround | Low | As needed |
+| # | Item | Priority | Status | Target |
+|---|------|----------|--------|--------|
+| TD1 | Neo4j update_knowledge_graph implementation | Medium | ✅ Resolved | Fixed during retro |
+| TD2 | E5.3 chat component unit tests | Low | Open | E6 or TD sprint |
+| TD3 | Automated weekly LLM integration tests | Low | Open | Post-MVP |
+| TD4 | Tiktoken WASM workaround | Low | Open | As needed |
 
 ---
 
@@ -298,6 +346,8 @@ Epic 6 (IRL Management) can proceed without blocking prerequisites. The main wor
 1. **Agent behavior rules matter**: P2/P3/P4 specs drove consistent agent responses
 2. **Confidence is nuanced**: P2-compliant "never show raw scores" rule works well
 3. **Upload in chat is natural**: E5.9 drag-drop upload feels intuitive
+4. **Manual over automatic**: Users prefer explicit control over IRL status tracking
+5. **Real folders, not virtual**: Data room folders should map to actual GCS paths
 
 ---
 

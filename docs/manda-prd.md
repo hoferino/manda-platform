@@ -630,18 +630,22 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 - Support multiple IRL templates (Tech M&A, Industrial, etc.)
 - Custom IRL creation and editing
 - Add/remove/modify requested items
+- IRL upload during project creation triggers folder generation
 
 **FR-IRL-002: IRL Tracking**
-- Status for each requested item (pending, received, partial, complete)
+- Status for each requested item (not_started, pending, received, complete)
+- **Manual status updates only** - user checks items via expandable checklist in Data Room
+- No automatic status changes when documents are uploaded (user may restructure folders)
 - Expected vs actual receive dates
 - Follow-up reminders
-- Progress visualization
+- Progress visualization (items complete / total items)
 
 **FR-IRL-003: IRL-Document Linking**
-- Map received documents to IRL items
-- Trigger processing when IRL items fulfilled
+- Map received documents to IRL items manually via checklist
+- Trigger document processing when uploaded to Data Room folders
 - Track coverage (which requests have responses)
 - Identify missing information gaps
+- **Note:** Documents uploaded to folders are NOT auto-linked to IRL items
 
 **FR-IRL-004: Template Library**
 - Pre-built IRL templates for common deal types
@@ -651,10 +655,12 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 
 **FR-IRL-005: Auto-Generate Folder Structure from IRL**
 - Parse uploaded IRL (Excel format) to extract categories and structure
-- Automatically create hierarchical folder structure in Data Room matching IRL organization
-- Map IRL items to corresponding folders for document placement
-- Update folder structure if IRL is modified
-- Maintain relationship between IRL items and Data Room folders
+- **Create real GCS folders** in Data Room matching IRL hierarchy
+- Folder structure stored in `folders` table with `gcs_path` for each folder
+- Documents uploaded to folders stored in GCS at `{deal_id}/data-room/{folder_path}/`
+- User can modify folder structure after generation (add/rename/delete folders)
+- IRL checklist remains separate from folder structure (manual tracking)
+- Maintain relationship between IRL categories and initial folder structure
 
 ### 5.5 Collaborative Workflow (Platform Service + Agent)
 

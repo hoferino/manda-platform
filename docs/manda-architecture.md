@@ -396,19 +396,105 @@ Complete schema with all tables, indexes, and RLS policies documented in full ar
 
 **Key Tables:**
 - `deals` - Deal metadata
-- `documents` - Document tracking
+- `documents` - Document tracking with folder_id reference
+- `folders` - Hierarchical folder structure for Data Room (see below)
 - `findings` - Extracted facts with embeddings (pgvector)
 - `insights` - Analyzed patterns
 - `conversations` - Chat history with LangGraph state
 - `messages` - Chat messages
 - `irls` - Information Request Lists
+- `irl_items` - IRL line items with manual status tracking
 - `qa_lists` - Q&A lists
 - `cims` - CIM versions
+
+### Data Room Folder Architecture
+
+**Overview:** IRL upload at project creation generates a hierarchical folder structure in both PostgreSQL (for metadata) and GCS (for file storage). Users manually track IRL item completion via a checklist - no automatic linking between folders and IRL items.
+
+**PostgreSQL Schema - Folders:**
+```sql
+CREATE TABLE folders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id UUID REFERENCES deals(id) ON DELETE CASCADE NOT NULL,
+  parent_id UUID REFERENCES folders(id) ON DELETE CASCADE,  -- NULL for root folders
+  name TEXT NOT NULL,
+  gcs_path TEXT NOT NULL,  -- e.g., "data-room/1-financial/audited-statements"
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT unique_folder_path UNIQUE (deal_id, gcs_path)
+);
+
+CREATE INDEX idx_folders_deal ON folders(deal_id);
+CREATE INDEX idx_folders_parent ON folders(parent_id);
+
+-- Documents table update
+ALTER TABLE documents ADD COLUMN folder_id UUID REFERENCES folders(id);
+CREATE INDEX idx_documents_folder ON documents(folder_id);
+```
+
+**PostgreSQL Schema - IRL Items:**
+```sql
+CREATE TABLE irls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id UUID REFERENCES deals(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  template_type TEXT,  -- 'tech_ma', 'industrial', 'pharma', 'financial', 'custom'
+  source_file_name TEXT,  -- Original uploaded Excel filename
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE irl_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  irl_id UUID REFERENCES irls(id) ON DELETE CASCADE NOT NULL,
+  category TEXT NOT NULL,
+  subcategory TEXT,
+  item_name TEXT NOT NULL,
+  description TEXT,
+  priority TEXT DEFAULT 'medium',  -- 'high', 'medium', 'low'
+  status TEXT DEFAULT 'not_started',  -- 'not_started', 'pending', 'received', 'complete'
+  notes TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_irl_items_irl ON irl_items(irl_id);
+CREATE INDEX idx_irl_items_status ON irl_items(status);
+```
+
+**GCS Folder Structure:**
+```
+gs://manda-documents-{env}/
+  └── {deal_id}/
+      └── data-room/
+          ├── 1-financial/
+          │   ├── audited-statements/
+          │   ├── projections/
+          │   └── tax-returns/
+          ├── 2-legal/
+          │   ├── corporate-documents/
+          │   ├── contracts/
+          │   └── ip-assets/
+          ├── 3-operational/
+          │   └── ...
+          └── ...
+```
+
+**Key Design Decisions:**
+1. **Real GCS folders** - Documents stored at `{deal_id}/data-room/{folder.gcs_path}/{filename}`
+2. **Manual IRL tracking** - IRL checklist is independent of folder structure; users check items manually
+3. **No auto-linking** - Documents uploaded to folders don't auto-update IRL status (user may restructure)
+4. **Expandable checklist** - IRL items displayed as expandable checklist in Data Room sidebar
+5. **User-modifiable structure** - Folders can be added/renamed/deleted after IRL generation
 
 **Security:**
 - Row-Level Security (RLS) on all tables
 - Users can only access their own deals
 - Database enforces isolation
+- GCS signed URLs for document access
 
 ### Neo4j Graph Schema
 

@@ -3584,44 +3584,45 @@ And suggested actions to resolve
 
 ## Epic 6: IRL Management & Auto-Generation
 
-**User Value:** Users can upload Excel IRLs to extract structure and auto-generate Data Room folders, track document fulfillment, and identify gaps
+**User Value:** Users can upload Excel IRLs to extract structure and auto-generate real Data Room folders in GCS, then manually track document fulfillment via an expandable checklist
 
-**Description:** Implements the IRL (Information Request List) workflow focused on: (1) **Upload and Extract IRL**: Upload IRL Excel file and system extracts structure, categories, and requested items, (2) **Auto-Generate Data Room**: Automatically create hierarchical folder structure based on extracted IRL, (3) **Track Fulfillment**: IRL checklist auto-updates as documents are placed in folders, showing coverage and gaps, (4) **Gap Identification**: System identifies missing items and suggests follow-up requests. Users can also select from templates for different deal types and customize IRL items as needed.
+**Description:** Implements the IRL (Information Request List) workflow focused on: (1) **Upload and Extract IRL**: Upload IRL Excel file at project creation and system extracts structure, categories, and requested items, (2) **Auto-Generate Real Folders**: Create hierarchical folder structure in both PostgreSQL (`folders` table) and GCS bucket matching IRL organization, (3) **Manual Fulfillment Tracking**: Users manually check off IRL items via an expandable checklist in the Data Room sidebar - no automatic status updates when documents are uploaded (allows users to restructure folders freely), (4) **Gap Identification**: System identifies unchecked items and suggests follow-up requests. Users can also select from templates for different deal types and customize IRL items as needed.
 
 **Functional Requirements Covered:**
 - FR-IRL-001: IRL Creation
-- FR-IRL-002: IRL Tracking
-- FR-IRL-003: IRL-Document Linking
+- FR-IRL-002: IRL Tracking (manual only)
+- FR-IRL-003: IRL-Document Linking (manual checklist)
 - FR-IRL-004: Template Library
-- FR-IRL-005: Auto-Generate Folder Structure from IRL (NEW - PRD v1.1)
+- FR-IRL-005: Auto-Generate Folder Structure from IRL (real GCS folders)
 
 **UX Screens:**
 - Deliverables > IRL Tab
 - IRL Template Selection
 - IRL Builder
 - IRL Upload Interface (Excel)
-- Data Room - Auto-Generated Folder Structure
-- IRL Status Tracking with Auto-Update
+- Data Room - Auto-Generated Folder Structure (real folders)
+- Data Room Sidebar - IRL Expandable Checklist (manual tracking)
 
 **Technical Components:**
 - IRL templates (JSON/YAML)
-- Excel parser for IRL structure extraction
-- PostgreSQL `irls` and `irl_items` tables
-- Automatic folder structure generation in Data Room
-- Document linking logic with auto-status updates
-- Progress calculation
-- Folder-to-IRL-item mapping
+- Excel parser for IRL structure extraction (`xlsx` package)
+- PostgreSQL `irls`, `irl_items`, and `folders` tables
+- GCS folder creation (create paths in bucket)
+- Expandable checklist UI component
+- Progress calculation (manual status only)
+- Folder management (add/rename/delete after generation)
 
 **Acceptance Criteria (Epic Level):**
 - ✅ User can create IRL from templates
 - ✅ User can upload IRL Excel file
-- ✅ System auto-generates Data Room folder structure from uploaded IRL
-- ✅ Folder structure matches IRL categories and hierarchy
+- ✅ System auto-generates **real GCS folders** in Data Room from uploaded IRL
+- ✅ Folders stored in `folders` table with `gcs_path`
+- ✅ Documents uploaded to folders are stored in GCS at correct path
 - ✅ User can customize IRL items
-- ✅ User can track which items are fulfilled
-- ✅ When documents placed in IRL-linked folders, IRL checklist auto-updates
-- ✅ Documents can be manually linked to IRL items
-- ✅ Progress indicators show completion percentage
+- ✅ User can **manually** track which items are fulfilled via expandable checklist
+- ✅ **No automatic status updates** - user checks items manually
+- ✅ User can add/rename/delete folders after initial generation
+- ✅ Progress indicators show completion percentage (based on manual checks)
 - ✅ IRL can be exported to PDF/Word
 
 ### Stories
@@ -3814,42 +3815,44 @@ And I can see it in the IRL tab
 
 ---
 
-#### Story E6.4: Implement IRL Status Tracking
+#### Story E6.4: Implement IRL Status Tracking (Manual Checklist)
 
 **As an** M&A analyst
-**I want** to track which IRL items are fulfilled
-**So that** I know what I'm still waiting for
+**I want** to manually track which IRL items are fulfilled via an expandable checklist
+**So that** I know what I'm still waiting for and can freely restructure my folders
 
 **Description:**
-Add status tracking to IRL items (not started, pending, received, complete) with visual indicators, progress calculation, and the ability to update status manually or automatically when documents are linked.
+Add manual status tracking to IRL items via an expandable checklist in the Data Room sidebar. Users check items off manually - no automatic status updates when documents are uploaded (this allows users to restructure folders without confusing the system).
 
 **Technical Details:**
 - Status enum: `not_started`, `pending`, `received`, `complete`
 - Status indicators: ○ Not started, ⏱ Pending, ✓ Received, ✅ Complete
 - Progress calculation: items complete / total items
-- Manual status update (dropdown or buttons)
-- Automatic status update when document linked
+- **Manual status update only** (checkbox click or dropdown)
+- **No automatic status updates** - user may restructure folders
+- Expandable/collapsible category sections in checklist
 
 **Acceptance Criteria:**
 
 ```gherkin
 Given I have an IRL with 10 items
-When I view the IRL
-Then each item shows a status indicator
+When I view the Data Room sidebar
+Then I see an expandable IRL checklist
+And each item shows a status indicator
 And the overall progress shows 0/10 (0%)
 
-Given I mark an item as "Pending"
-When I update the status
-Then the indicator changes to ⏱
-And the item is highlighted as pending
+Given I expand a category in the checklist
+When I click an item checkbox
+Then the item status changes (cycles through: not_started → pending → received → complete)
+And the progress bar updates
 
-Given a document is uploaded and linked to an IRL item
-When the link is created
-Then the item status automatically updates to "Received"
-And the progress increments to 1/10 (10%)
+Given I upload a document to a folder
+When the upload completes
+Then the IRL checklist does NOT auto-update
+And I must manually check off the relevant IRL item
 
 Given I mark an item as "Complete"
-When I update the status
+When I click the checkbox
 Then the indicator changes to ✅
 And the item is styled as complete
 
@@ -3862,79 +3865,83 @@ And a progress bar reflects this visually
 **Related FR:**
 - FR-IRL-002: IRL Tracking
 
-**UX Reference:** Deliverables - IRL Status Tracking (Section 5.5)
+**UX Reference:** Data Room Sidebar - IRL Expandable Checklist
 
 **Definition of Done:**
 - [ ] Status field added to irl_items table
+- [ ] Expandable checklist UI in Data Room sidebar
 - [ ] Status indicators implemented
 - [ ] Progress calculation correct
-- [ ] Manual status update works
-- [ ] Automatic status update on document link
+- [ ] Manual status update works (checkbox/click)
+- [ ] **No automatic status updates** on document upload
 - [ ] Progress bar visual
 - [ ] Status filters (show only pending, etc.)
-- [ ] Real-time updates
+- [ ] Category expand/collapse
 
 ---
 
-#### Story E6.5: Link Documents to IRL Items
+#### Story E6.5: Implement Folder Management (Add/Rename/Delete)
 
 **As an** M&A analyst
-**I want** to link uploaded documents to IRL items
-**So that** I can track fulfillment automatically
+**I want** to modify the Data Room folder structure after it's generated from the IRL
+**So that** I can adapt the organization to my specific needs
 
 **Description:**
-Implement document-to-IRL-item linking that allows users to manually link documents or have the system suggest mappings based on document category and filename matching.
+Enable users to add new folders, rename existing folders, and delete empty folders after the initial IRL-based folder generation. This gives flexibility since the IRL structure may not perfectly match the user's desired organization.
 
 **Technical Details:**
-- Junction table: `irl_item_documents`
-- Manual linking: Select document from dropdown per IRL item
-- Suggested mappings: LLM analyzes filename and suggests IRL item
-- Show linked documents per IRL item
-- Unlink action
-- Automatic status update on link
+- Add folder button in Data Room tree view
+- Rename folder via inline edit or context menu
+- Delete folder (only if empty - prompt to move documents first if not empty)
+- Update `folders` table and GCS paths accordingly
+- Parent-child relationships maintained in `folders.parent_id`
+- GCS operations: create new prefix, rename (copy + delete), delete prefix
 
 **Acceptance Criteria:**
 
 ```gherkin
-Given I have an IRL item "Annual Financial Statements"
-When I upload "financials_2023.xlsx"
-Then the system suggests linking it to that IRL item
+Given I'm viewing the Data Room folder tree
+When I click "Add Folder"
+Then I can create a new folder at the selected level
+And specify a folder name
+And the folder is created in both the database and GCS
 
-Given I view an IRL item
-When I click "Link Document"
-Then I see a dropdown of available documents
-And I can select one to link
+Given I have a folder named "Financial Statements"
+When I right-click and select "Rename"
+Then I can edit the folder name inline
+And the change is saved to the database
+And documents in that folder remain accessible
 
-Given a document is linked to an IRL item
-When I view the IRL item
-Then I see the linked document name
-And can click to view or download it
+Given I have an empty folder
+When I right-click and select "Delete"
+Then the folder is removed from the database and GCS
+And child folders (if any) are also deleted
 
-Given I want to unlink a document
-When I click "Unlink" and confirm
-Then the document is removed from the IRL item
-And the status may revert to "Not Started" if no other docs linked
+Given I have a folder with documents
+When I try to delete it
+Then I see a warning that the folder is not empty
+And I must move or delete documents first
 
-Given I link a document to an IRL item
-When the link is created
-Then the item status automatically updates to "Received"
-And the progress bar updates
+Given I create a nested folder structure
+When I view the Data Room
+Then the folder hierarchy displays correctly
+And I can expand/collapse folders
 ```
 
 **Related FR:**
-- FR-IRL-003: IRL-Document Linking
+- FR-IRL-005: Auto-Generate Folder Structure from IRL (user-modifiable)
 
-**UX Reference:** Data Room - IRL Integration (Section 5.2)
+**UX Reference:** Data Room - Folder Tree Actions
 
 **Definition of Done:**
-- [ ] irl_item_documents junction table created
-- [ ] Manual linking UI implemented
-- [ ] Suggested mappings using LLM
-- [ ] Linked documents displayed on IRL item
-- [ ] Unlink action works
-- [ ] Status updates automatically on link
-- [ ] Multiple documents can be linked to one item
-- [ ] Progress updates correctly
+- [ ] Add folder UI implemented
+- [ ] Rename folder works (inline edit)
+- [ ] Delete folder works (empty folders only)
+- [ ] Non-empty folder deletion blocked with warning
+- [ ] Database updates correctly (folders table)
+- [ ] GCS paths updated on rename
+- [ ] Folder tree UI reflects changes immediately
+- [ ] Nested folder support
 
 ---
 
@@ -4000,6 +4007,129 @@ And the export date
 - [ ] Notes included in export
 - [ ] Letterhead/header with project info
 - [ ] File downloads correctly
+
+---
+
+#### Story E6.7: Auto-Generate Folder Structure from IRL Upload
+
+**As an** M&A analyst
+**I want** the system to automatically create Data Room folders when I upload an IRL Excel file
+**So that** I don't have to manually create the folder structure
+
+**Description:**
+Parse uploaded IRL Excel file to extract categories and subcategories, then automatically create corresponding folders in both PostgreSQL (`folders` table) and GCS. This is the core folder generation feature triggered at project creation.
+
+**Technical Details:**
+- Parse Excel with `xlsx` package
+- Extract category hierarchy from IRL structure
+- Create `folders` records with parent-child relationships
+- Create GCS paths: `{deal_id}/data-room/{category}/{subcategory}/`
+- Handle naming conflicts (sanitize folder names)
+- Store `gcs_path` for each folder
+- Transaction: all-or-nothing folder creation
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I'm creating a new project
+When I upload an IRL Excel file
+Then the system parses the IRL structure
+And creates folders matching the IRL categories
+And each folder has a corresponding GCS path
+
+Given the IRL has categories: Financial, Legal, Operational
+When the folders are generated
+Then I see three top-level folders in Data Room
+And each has the expected subfolders
+
+Given I navigate to the Data Room after IRL upload
+When I expand the Financial folder
+Then I see subfolders like "Audited Statements", "Projections", etc.
+And I can upload documents to any folder
+
+Given I upload a document to "Financial > Audited Statements"
+When the upload completes
+Then the document is stored in GCS at "{deal_id}/data-room/financial/audited-statements/{filename}"
+And appears in the folder view
+
+Given the IRL has special characters in category names
+When folders are generated
+Then folder names are sanitized (spaces → hyphens, lowercase)
+And the original IRL names are preserved for display
+```
+
+**Related FR:**
+- FR-IRL-005: Auto-Generate Folder Structure from IRL
+
+**UX Reference:** Project Creation Wizard - IRL Upload Step
+
+**Definition of Done:**
+- [ ] Excel parsing with `xlsx` package
+- [ ] Category/subcategory extraction
+- [ ] `folders` table records created
+- [ ] GCS paths created for each folder
+- [ ] Parent-child relationships correct
+- [ ] Folder name sanitization
+- [ ] Error handling for malformed IRL files
+- [ ] Transaction rollback on failure
+- [ ] Integration with project creation flow
+
+---
+
+#### Story E6.8: AI-Assisted IRL Generation
+
+**As an** M&A analyst
+**I want** the AI to suggest IRL items based on the deal type and uploaded documents
+**So that** I don't miss important items to request
+
+**Description:**
+Use the chat agent to suggest additional IRL items based on deal context, uploaded documents, and identified gaps. Agent analyzes what's been provided and recommends what might be missing.
+
+**Technical Details:**
+- Agent tool: `generate_irl_suggestions`
+- Input: deal metadata, current IRL items, uploaded document list
+- Output: suggested IRL items with categories and priorities
+- User can accept/reject suggestions
+- Suggestions based on deal type templates + gap analysis
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I have an IRL with some items
+When I ask the chat "What else should I request?"
+Then the agent analyzes my current IRL
+And suggests additional items based on deal type
+And explains why each item is recommended
+
+Given I've uploaded several financial documents
+When I ask "What financial documents am I missing?"
+Then the agent compares uploaded docs to standard IRL items
+And identifies gaps
+And suggests specific items to add
+
+Given the agent suggests an IRL item
+When I say "Add that to my IRL"
+Then the item is added to the IRL with suggested category and priority
+And the IRL checklist updates
+
+Given I'm working on a Tech M&A deal
+When I ask for IRL suggestions
+Then the agent prioritizes tech-specific items (IP, source code, tech debt, etc.)
+And deprioritizes items not relevant to tech deals
+```
+
+**Related FR:**
+- FR-IRL-001: IRL Creation (AI-assisted)
+
+**UX Reference:** Chat Interface - IRL Assistance Mode
+
+**Definition of Done:**
+- [ ] Agent tool `generate_irl_suggestions` implemented
+- [ ] Suggestions based on deal type templates
+- [ ] Gap analysis against uploaded documents
+- [ ] User can accept/reject suggestions via chat
+- [ ] Suggestions include category, priority, and rationale
+- [ ] Integration with IRL builder
 
 ---
 

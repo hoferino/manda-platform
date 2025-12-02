@@ -1065,12 +1065,30 @@ development_status:
     - 8/9 stories completed (E5.8 Chat Export deferred for MVP lean)
     - 2-day epic duration (fastest yet)
     - Prerequisites P1-P7 investment paid off
-    - Neo4j write integration identified as tech debt
+    - Neo4j write integration FIXED during retro (knowledge-tools.ts updated)
     - E5.3 unit test coverage noted for future attention
-    - No blocking prerequisites for Epic 6
+    - IRL/folder architecture clarified and documented:
+      * Real GCS folders created from IRL (not virtual)
+      * Manual-only IRL checklist tracking
+      * PRD, architecture.md, epics.md updated
+    Epic 6 blocking prerequisites identified:
+    - P1: folders table migration
+    - P2: irl_items table migration
+    - P3: GCS folder creation utility
+    - P4: Regenerate Supabase types
 
   # Epic 6: IRL Management & Auto-Generation (8 stories)
-  epic-6: backlog
+  # CONTEXTED: 2025-12-02
+  # Tech Spec: docs/sprint-artifacts/tech-spec-epic-E6.md
+  # Key Decisions:
+  # - Real GCS folders (not virtual) created from IRL upload
+  # - Manual-only IRL checklist tracking (no auto-status updates)
+  # - 4 migrations: folders, irls, irl_items, documents.folder_id
+  # - New packages: xlsx, pdfmake, docx
+  # Prerequisites from E5 retrospective addressed in tech spec
+  epic-6: contexted
+  epic-6-contexted: 2025-12-02
+  epic-6-tech-spec: docs/sprint-artifacts/tech-spec-epic-E6.md
   e6-1-build-irl-builder-ui-with-template-selection: backlog
   e6-2-implement-irl-creation-and-editing: backlog
   e6-3-implement-ai-assisted-irl-auto-generation-from-documents: backlog
