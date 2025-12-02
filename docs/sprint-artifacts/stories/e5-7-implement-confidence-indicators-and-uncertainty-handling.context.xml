@@ -1,0 +1,192 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E5</epicId>
+    <storyId>E5.7</storyId>
+    <title>Implement Confidence Indicators and Uncertainty Handling</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e5-7-implement-confidence-indicators-and-uncertainty-handling.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to see confidence indicators on agent responses</iWant>
+    <soThat>I know how certain the information is and can make informed decisions</soThat>
+    <tasks>
+      <task id="1" name="Create confidence extraction utilities" acs="1, 6">
+        <subtask>Create lib/utils/confidence.ts with confidence extraction functions</subtask>
+        <subtask>Implement extractConfidenceFromToolResults(toolResults) to parse confidence from tool outputs</subtask>
+        <subtask>Implement aggregateConfidence(confidences[]) that returns lowest and calculates range</subtask>
+        <subtask>Add confidence score normalization (ensure 0-1 scale)</subtask>
+        <subtask>Handle missing confidence data gracefully (default to medium)</subtask>
+      </task>
+      <task id="2" name="Create ConfidenceBadge component" acs="2, 3">
+        <subtask>Create components/chat/ConfidenceBadge.tsx with High/Medium/Low variants</subtask>
+        <subtask>Implement color coding: green (>80%), yellow (60-80%), red (&lt;60%)</subtask>
+        <subtask>Add tooltip using shadcn/ui Tooltip component</subtask>
+        <subtask>Include reasoning text in tooltip (contributing factors)</subtask>
+        <subtask>Add accessible labels for screen readers</subtask>
+      </task>
+      <task id="3" name="Create ConfidenceTooltipContent component" acs="3, 7">
+        <subtask>Create components/chat/ConfidenceTooltipContent.tsx for rich tooltip display</subtask>
+        <subtask>Show contributing factors: source quality, data recency, number of sources</subtask>
+        <subtask>Translate raw factors to natural language (per P2 spec)</subtask>
+        <subtask>Format as readable list with context</subtask>
+      </task>
+      <task id="4" name="Update agent prompts for uncertainty handling" acs="4, 5, 7">
+        <subtask>Modify lib/agent/prompts.ts to include P2-compliant uncertainty handling instructions</subtask>
+        <subtask>Add instruction: "When confidence is low, include caveats like 'Based on available data...'"</subtask>
+        <subtask>Add instruction: "When information is missing, explain WHY and offer next steps"</subtask>
+        <subtask>Add instruction: "Never show raw confidence scores; translate to natural explanations"</subtask>
+        <subtask>Include examples from agent-behavior-spec.md P2 uncertainty section</subtask>
+      </task>
+      <task id="5" name="Update MessageItem to display confidence badges" acs="8">
+        <subtask>Modify components/chat/MessageItem.tsx to include ConfidenceBadge</subtask>
+        <subtask>Extract confidence from message metadata/sources</subtask>
+        <subtask>Position badge appropriately (after message content or inline)</subtask>
+        <subtask>Handle streaming state (show badge after response complete)</subtask>
+      </task>
+      <task id="6" name="Update chat API to include confidence in responses" acs="1">
+        <subtask>Modify app/api/projects/[id]/chat/route.ts to extract and include confidence</subtask>
+        <subtask>Parse confidence from tool execution results</subtask>
+        <subtask>Include confidence in SSE done event payload</subtask>
+        <subtask>Store confidence in messages table (use existing confidence column)</subtask>
+      </task>
+      <task id="7" name="Create confidence reasoning utilities" acs="3, 6, 7">
+        <subtask>Create lib/utils/confidence-reasoning.ts for generating explanations</subtask>
+        <subtask>Implement generateConfidenceReasoning(score, factors) function</subtask>
+        <subtask>Map factors to natural language: "from audited financials", "from a presentation dating 2 months back"</subtask>
+        <subtask>Handle multiple sources with range explanation</subtask>
+      </task>
+      <task id="8" name="Testing and verification" acs="all">
+        <subtask>Write unit tests for confidence extraction utilities</subtask>
+        <subtask>Write unit tests for confidence reasoning utilities</subtask>
+        <subtask>Write component tests for ConfidenceBadge</subtask>
+        <subtask>Write component tests for ConfidenceTooltipContent</subtask>
+        <subtask>Test high confidence scenario (95%+ from audited docs)</subtask>
+        <subtask>Test medium confidence scenario (65% from drafts)</subtask>
+        <subtask>Test low confidence scenario (&lt;60% from partial data)</subtask>
+        <subtask>Test missing information scenario</subtask>
+        <subtask>Test multiple findings with varying confidence</subtask>
+        <subtask>Verify P2 compliance (no raw scores exposed)</subtask>
+        <subtask>Verify build passes with all changes</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" name="Confidence Score Extraction">The agent extracts confidence scores from tool responses (particularly query_knowledge_base results) and associates them with relevant parts of the response</criterion>
+    <criterion id="AC2" name="Visual Confidence Badges">Confidence is displayed using color-coded badges: High (>80%, green), Medium (60-80%, yellow), Low (&lt;60%, red)</criterion>
+    <criterion id="AC3" name="Badge Tooltip with Reasoning">Hovering over a confidence badge reveals a tooltip explaining the confidence score and contributing factors</criterion>
+    <criterion id="AC4" name="Uncertainty Phrases in Responses">When confidence is low or medium, the agent includes appropriate caveats in the response text (e.g., "Based on available data...", "I'm not certain, but...")</criterion>
+    <criterion id="AC5" name="Missing Information Handling">When the agent doesn't have enough information to answer, it explains WHY and suggests next steps (e.g., "Would you like me to add this to the Q&A list?")</criterion>
+    <criterion id="AC6" name="Multiple Finding Aggregation">When multiple findings contribute to an answer with varying confidence levels, the agent shows the lowest confidence and explains the range</criterion>
+    <criterion id="AC7" name="P2 Compliance - No Raw Scores">Confidence scores are never shown directly to users as numbers; instead, they are translated to natural explanations per agent-behavior-spec.md P2</criterion>
+    <criterion id="AC8" name="Badge Display in Message Items">Confidence badges display correctly within MessageItem components in both regular messages and streaming responses</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/agent-behavior-spec.md" title="Agent Behavior Specification" section="P2: Agent Behavior Framework">
+        Defines confidence handling rules: never show raw scores, translate to natural language. Provides confidence factor mapping table.
+      </doc>
+      <doc path="docs/agent-behavior-spec.md" title="Agent Behavior Specification" section="P1: Hybrid/Agentic Search Architecture">
+        Defines how query_knowledge_base returns findings with confidence scores. Response formatting rules for discrepancies.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E5.md" title="Epic 5 Technical Specification" section="E5.7: Confidence Indicators">
+        AC requirements: High/Medium/Low badges with color coding, tooltip shows confidence reasoning, low confidence triggers caveats.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E5.md" title="Epic 5 Technical Specification" section="Module 5: Chat UI Components">
+        Lists ConfidenceBadge.tsx as chat component for confidence indicator display.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E5.md" title="Epic 5 Technical Specification" section="Data Models and Contracts">
+        Message type includes confidence?: number field. Finding type has confidence: number for internal scoring.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="manda-app/lib/agent/prompts.ts" kind="module" symbol="AGENT_SYSTEM_PROMPT" lines="23-175" reason="Main system prompt - needs P2 uncertainty handling additions. Already has uncertainty section but needs explicit confidence caveat instructions."/>
+      <artifact path="manda-app/lib/agent/prompts.ts" kind="function" symbol="getSystemPrompt" lines="203-205" reason="Function that returns complete prompt - verify modifications integrate correctly."/>
+      <artifact path="manda-app/components/chat/MessageItem.tsx" kind="component" symbol="MessageItem" lines="190-362" reason="Must be modified to display ConfidenceBadge. Currently handles content, sources, streaming - add confidence display."/>
+      <artifact path="manda-app/components/chat/MessageItem.tsx" kind="function" symbol="SourceCitationsSection" lines="152-188" reason="Pattern for displaying metadata section - similar pattern for confidence display."/>
+      <artifact path="manda-app/components/knowledge-explorer/shared/ConfidenceBadge.tsx" kind="component" symbol="ConfidenceBadge" lines="29-99" reason="Existing E4 confidence badge - can be reused or adapted for chat. Has High/Medium/Low with icons and tooltips."/>
+      <artifact path="manda-app/lib/types/findings.ts" kind="function" symbol="getConfidenceLevel" reason="Helper for classifying confidence into high/medium/low - reuse for chat badge."/>
+      <artifact path="manda-app/app/api/projects/[id]/chat/route.ts" kind="route" symbol="POST" lines="46-238" reason="Chat API endpoint - needs to extract and store confidence from tool results. Currently saves sources but not confidence."/>
+      <artifact path="manda-app/lib/agent/streaming.ts" kind="class" symbol="AgentStreamHandler" reason="Handles streaming events - may need to track confidence in tool_end events."/>
+      <artifact path="manda-app/lib/agent/context.ts" kind="class" symbol="ConversationContextManager" lines="213-349" reason="Pattern reference for utility class design. Clean class-based approach for chat operations."/>
+      <artifact path="manda-app/lib/types/chat.ts" kind="interface" symbol="Message" reason="Message type with confidence?: number field - verify field exists for storage."/>
+      <artifact path="manda-app/components/ui/tooltip.tsx" kind="component" symbol="Tooltip" reason="shadcn/ui tooltip component - use for confidence badge tooltip."/>
+      <artifact path="manda-app/__tests__/lib/agent/context.test.ts" kind="test" lines="1-471" reason="Test pattern reference - comprehensive unit tests for utility classes with describe/it structure."/>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="@radix-ui/react-tooltip" version="^1.2.8">Tooltip primitive - already installed</package>
+        <package name="lucide-react" version="^0.554.0">Icons for confidence badges (CheckCircle2, AlertCircle, HelpCircle)</package>
+        <package name="vitest" version="^4.0.14">Test framework</package>
+        <package name="@testing-library/react" version="^16.3.0">Component testing</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture" source="agent-behavior-spec.md P2">
+      NEVER show confidence scores as raw numbers to users. Always translate to natural language explanations.
+    </constraint>
+    <constraint type="architecture" source="agent-behavior-spec.md P2">
+      Source attribution required for all factual claims. Format: (source: filename.ext, location).
+    </constraint>
+    <constraint type="architecture" source="tech-spec-epic-E5.md">
+      Confidence badges should only display after streaming is complete (not during streaming).
+    </constraint>
+    <constraint type="database" source="migration 00025">
+      Messages table already has confidence column. Store extracted confidence for retrieval.
+    </constraint>
+    <constraint type="pattern" source="E5.6">
+      Follow ConversationContextManager pattern for utility classes - clean class-based design with comprehensive tests.
+    </constraint>
+    <constraint type="testing" source="E4 patterns">
+      Existing ConfidenceBadge in knowledge-explorer has tests - follow same patterns for chat version.
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Message.confidence" kind="property" signature="confidence?: number">
+      Optional confidence score (0-1) stored in messages table. Internal only - never exposed directly to UI.
+    </interface>
+    <interface name="ToolResult" kind="interface" signature="{ tool_call_id: string; result: unknown; error?: string }">
+      Tool execution results that may contain confidence scores to extract.
+    </interface>
+    <interface name="ConfidenceLevel" kind="type" signature="'high' | 'medium' | 'low' | 'unknown'">
+      Confidence classification used for badge styling. Already defined in lib/types/findings.ts.
+    </interface>
+    <interface name="getConfidenceLevel" kind="function" path="manda-app/lib/types/findings.ts" signature="(confidence: number | null) => { level: ConfidenceLevel; label: string; color: string }">
+      Existing function for classifying confidence scores - reuse for consistency.
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Follow E5.6 test patterns: Vitest with describe/it structure, comprehensive coverage of edge cases. Mock external dependencies (Supabase, LLM APIs). Component tests use React Testing Library with user-event. Test both happy path and error scenarios. Tests organized by function/method in separate describe blocks.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/utils/confidence.test.ts</location>
+      <location>manda-app/__tests__/lib/utils/confidence-reasoning.test.ts</location>
+      <location>manda-app/__tests__/components/chat/ConfidenceBadge.test.tsx</location>
+      <location>manda-app/__tests__/components/chat/ConfidenceTooltipContent.test.tsx</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test extractConfidenceFromToolResults with query_knowledge_base results containing findings with various confidence values</idea>
+      <idea ac="1">Test extraction handles missing confidence gracefully (returns medium default)</idea>
+      <idea ac="2">Test ConfidenceBadge renders correct color for high (>0.8), medium (0.6-0.8), low (&lt;0.6)</idea>
+      <idea ac="2">Test badge uses appropriate icon (CheckCircle2, AlertCircle) per level</idea>
+      <idea ac="3">Test tooltip appears on hover with correct reasoning text</idea>
+      <idea ac="3">Test tooltip content translates factors to natural language (not raw numbers)</idea>
+      <idea ac="6">Test aggregateConfidence returns lowest score when multiple findings present</idea>
+      <idea ac="6">Test range explanation generated for mixed confidence sources</idea>
+      <idea ac="7">Test P2 compliance: no raw percentage or decimal scores exposed in UI</idea>
+      <idea ac="7">Test confidence explanations use natural language phrases from P2 table</idea>
+      <idea ac="8">Test MessageItem displays badge only after streaming completes (not during isStreaming=true)</idea>
+      <idea ac="8">Test badge position correct within message layout</idea>
+    </ideas>
+  </tests>
+</story-context>

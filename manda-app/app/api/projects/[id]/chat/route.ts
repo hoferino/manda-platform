@@ -5,7 +5,9 @@
  * Send a message to the AI agent and receive a streaming SSE response.
  *
  * Story: E5.3 - Build Chat Interface with Conversation History
+ * Story: E5.6 - Add Conversation Context and Multi-turn Support
  * AC: #2 (Message Submission), #3 (Streaming Responses), #8 (API Routes)
+ * AC: E5.6 #1 (Last N Messages), #3 (Context Persists), #4 (Long Conversations), #5 (Token Management)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,7 +16,6 @@ import { ChatRequestSchema } from '@/lib/types/chat'
 import {
   createChatAgent,
   streamChat,
-  type ConversationMessage,
 } from '@/lib/agent/executor'
 import {
   createSSEStream,
@@ -22,6 +23,11 @@ import {
   AgentStreamHandler,
   generateFollowupSuggestions,
 } from '@/lib/agent/streaming'
+import {
+  ConversationContextManager,
+  type DatabaseMessage,
+  DEFAULT_CONTEXT_OPTIONS,
+} from '@/lib/agent/context'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -29,8 +35,9 @@ interface RouteContext {
 
 /**
  * Context window size - number of messages to include in LLM context
+ * Configured via DEFAULT_CONTEXT_OPTIONS in context.ts (default: 10 messages, 8000 tokens)
  */
-const CONTEXT_WINDOW_SIZE = 10
+const CONTEXT_WINDOW_SIZE = DEFAULT_CONTEXT_OPTIONS.maxMessages
 
 /**
  * POST /api/projects/[id]/chat
@@ -129,21 +136,39 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // Continue anyway - we don't want to block the response
     }
 
-    // Fetch conversation history for context
+    // Fetch conversation history for context (E5.6: AC1, AC3, AC4, AC5)
+    // Load more messages than needed to allow for token-based truncation
+    // Note: Only select columns needed for context (sources not required for history)
     const { data: historyMessages } = await supabase
       .from('messages')
-      .select('role, content, created_at')
+      .select('id, conversation_id, role, content, tool_calls, created_at')
       .eq('conversation_id', activeConversationId)
       .order('created_at', { ascending: true })
-      .limit(CONTEXT_WINDOW_SIZE * 2) // Get more to ensure we have enough after filtering
+      .limit(CONTEXT_WINDOW_SIZE * 3) // Load extra for token-aware truncation
 
-    // Convert to ConversationMessage format
-    const chatHistory: ConversationMessage[] = (historyMessages || [])
-      .slice(-CONTEXT_WINDOW_SIZE * 2) // Keep last N * 2 messages
+    // Use ConversationContextManager for intelligent context formatting
+    // This handles token counting and truncation (AC4, AC5)
+    const contextManager = new ConversationContextManager()
+    const formattedContext = contextManager.loadFromDatabase(
+      (historyMessages || []) as unknown as DatabaseMessage[]
+    )
+
+    // Log context stats for debugging
+    if (formattedContext.wasTruncated) {
+      console.log(
+        `[api/chat] Context truncated: ${formattedContext.originalMessageCount} → ${formattedContext.messages.length} messages, ${formattedContext.tokenCount} tokens`
+      )
+    }
+
+    // Convert formatted context to the format expected by streamChat
+    // The ConversationContextManager already produces LangChain BaseMessage objects
+    // but streamChat expects ConversationMessage format, so we need to convert back
+    const chatHistory = (historyMessages || [])
+      .slice(-CONTEXT_WINDOW_SIZE * 2)
       .map((msg) => ({
-        role: msg.role === 'human' || msg.role === 'user' ? 'user' :
+        role: (msg.role === 'human' || msg.role === 'user' ? 'user' :
               msg.role === 'ai' || msg.role === 'assistant' ? 'assistant' :
-              msg.role as 'system',
+              msg.role) as 'user' | 'assistant' | 'system',
         content: msg.content,
         timestamp: msg.created_at,
       }))

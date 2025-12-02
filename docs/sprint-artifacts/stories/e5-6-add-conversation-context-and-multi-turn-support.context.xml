@@ -1,0 +1,323 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E5</epicId>
+    <storyId>E5.6</storyId>
+    <title>Add Conversation Context and Multi-turn Support</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e5-6-add-conversation-context-and-multi-turn-support.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>the agent to remember previous messages</iWant>
+    <soThat>I can have natural multi-turn conversations without repeating context</soThat>
+    <tasks>
+      <task id="1" title="Create context management module">
+        <subtasks>
+          <subtask>Create lib/agent/context.ts with ConversationContextManager class</subtask>
+          <subtask>Implement loadConversationHistory(conversationId, limit) to fetch last N messages from database</subtask>
+          <subtask>Implement countTokens(messages) using tiktoken or similar tokenizer</subtask>
+          <subtask>Implement truncateToFitWindow(messages, maxTokens) that removes oldest messages when over limit</subtask>
+          <subtask>Add configurable MAX_CONTEXT_MESSAGES (default: 10) and MAX_CONTEXT_TOKENS (default: 8000)</subtask>
+          <subtask>Implement optional summarizeOlderMessages(messages) for graceful degradation</subtask>
+        </subtasks>
+        <acceptanceCriteria>AC1, AC4, AC5</acceptanceCriteria>
+      </task>
+      <task id="2" title="Update chat API route to include conversation context">
+        <subtasks>
+          <subtask>Modify app/api/projects/[id]/chat/route.ts to load conversation history before agent invocation</subtask>
+          <subtask>Pass formatted message history to the agent executor via chat_history placeholder</subtask>
+          <subtask>Format messages as HumanMessage / AIMessage for LangChain compatibility</subtask>
+          <subtask>Include tool calls and results in context for full understanding</subtask>
+        </subtasks>
+        <acceptanceCriteria>AC1, AC3</acceptanceCriteria>
+      </task>
+      <task id="3" title="Update agent system prompt for multi-turn handling">
+        <subtasks>
+          <subtask>Modify lib/agent/prompts.ts to include P4-compliant context handling instructions</subtask>
+          <subtask>Add instruction: "When responding to follow-ups, briefly state the assumed context"</subtask>
+          <subtask>Add instruction: "When follow-up is ambiguous, ask for clarification"</subtask>
+          <subtask>Add instruction: "When topic shifts, treat as new query without carrying irrelevant context"</subtask>
+          <subtask>Include examples from agent-behavior-spec.md P4</subtask>
+        </subtasks>
+        <acceptanceCriteria>AC6, AC7, AC8, AC9</acceptanceCriteria>
+      </task>
+      <task id="4" title="Implement context-aware reference resolution">
+        <subtasks>
+          <subtask>Ensure chat_history in prompt template includes recent Q&amp;A pairs</subtask>
+          <subtask>Test that agent can resolve "it", "that", "the revenue", "earlier" references</subtask>
+          <subtask>Verify multi-hop references work (referring to info from 2-3 turns ago)</subtask>
+        </subtasks>
+        <acceptanceCriteria>AC2</acceptanceCriteria>
+      </task>
+      <task id="5" title="Implement conversation context persistence">
+        <subtasks>
+          <subtask>Verify conversations table already stores messages (from E5.3)</subtask>
+          <subtask>Verify messages table includes tool_calls, tool_results, sources columns</subtask>
+          <subtask>Ensure message loading includes all relevant columns for context</subtask>
+          <subtask>Add index on messages(conversation_id, created_at) if not present for fast history loading</subtask>
+        </subtasks>
+        <acceptanceCriteria>AC3</acceptanceCriteria>
+      </task>
+      <task id="6" title="Implement token counting and truncation">
+        <subtasks>
+          <subtask>Add tiktoken or @dqbd/tiktoken dependency for accurate token counting</subtask>
+          <subtask>Create estimateTokens(text) utility function</subtask>
+          <subtask>Implement progressive truncation: remove oldest messages first</subtask>
+          <subtask>Add logging when truncation occurs for debugging</subtask>
+          <subtask>Test with various conversation lengths (5, 10, 20, 50 messages)</subtask>
+        </subtasks>
+        <acceptanceCriteria>AC4, AC5</acceptanceCriteria>
+      </task>
+      <task id="7" title="Optional - Implement context summarization" optional="true">
+        <subtasks>
+          <subtask>Create summarizeContext(messages) function using LLM</subtask>
+          <subtask>Summarize older messages into a brief context paragraph</subtask>
+          <subtask>Use summary + recent messages instead of truncation for better context preservation</subtask>
+          <subtask>Make this optional/configurable (can be deferred if truncation is sufficient)</subtask>
+        </subtasks>
+        <acceptanceCriteria>AC4</acceptanceCriteria>
+      </task>
+      <task id="8" title="Testing and verification">
+        <subtasks>
+          <subtask>Write unit tests for ConversationContextManager (load, count, truncate)</subtask>
+          <subtask>Write unit tests for token estimation utility</subtask>
+          <subtask>Write integration tests for multi-turn conversation scenarios</subtask>
+          <subtask>Test clear follow-up pattern: "What's Q3 revenue?" → "And EBITDA?"</subtask>
+          <subtask>Test ambiguous follow-up pattern: "What's the revenue?" → "What about last year?"</subtask>
+          <subtask>Test topic shift pattern: revenue question → management team question</subtask>
+          <subtask>Test long conversation handling (20+ messages)</subtask>
+          <subtask>Test session persistence (reload page, verify context works)</subtask>
+          <subtask>Verify build passes with all changes</subtask>
+        </subtasks>
+        <acceptanceCriteria>All ACs</acceptanceCriteria>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Last N Messages Passed to LLM">The chat API loads the last 10 messages from the conversation and passes them to the LLM as context, enabling multi-turn understanding</criterion>
+    <criterion id="AC2" title="Follow-up References Resolved">When the user refers to "earlier" or "the revenue you mentioned", the agent correctly references information from previous exchanges in the conversation</criterion>
+    <criterion id="AC3" title="Context Persists Across Sessions">Conversation history is persisted in the database; when the user reloads the page or returns later, their conversation history is still available and context-aware follow-ups work</criterion>
+    <criterion id="AC4" title="Long Conversations Handled Gracefully">For conversations exceeding 10 messages, older messages are truncated or summarized to fit within the context window while preserving key information</criterion>
+    <criterion id="AC5" title="Context Window Token Management">The context manager checks token count and either truncates or summarizes older messages if context exceeds ~8000 tokens (configurable threshold)</criterion>
+    <criterion id="AC6" title="Agent States Assumed Context">When responding to clear follow-ups, the agent briefly states the assumed context (e.g., "For Q3 2024, EBITDA was...") to confirm understanding</criterion>
+    <criterion id="AC7" title="Ambiguous Follow-ups Clarified">When a follow-up is ambiguous (e.g., "What about last year?"), the agent asks for clarification (e.g., "Do you mean Q3 2023 or FY2023?")</criterion>
+    <criterion id="AC8" title="Topic Shifts Detected">When the user shifts to a new topic unrelated to previous exchanges, the agent treats it as a new query without carrying irrelevant context</criterion>
+    <criterion id="AC9" title="P4 Compliance">Context handling rules match agent-behavior-spec.md P4 (clear follow-up, ambiguous follow-up, topic shift patterns)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/agent-behavior-spec.md</path>
+        <title>Agent Behavior Specification</title>
+        <section>P4: Conversation Goal/Mode Framework</section>
+        <snippet>Defines multi-turn context handling: clear follow-ups assume same context (state assumption briefly), ambiguous follow-ups ask for clarification, topic shifts treat as new query.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic Technical Specification: Conversational Assistant</title>
+        <section>Conversation Context Management</section>
+        <snippet>Context window: Last N messages passed to LLM (configurable, start with 10). Token count check: if > 8000 tokens, summarize older messages.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic Technical Specification: Conversational Assistant</title>
+        <section>Chat Message Flow</section>
+        <snippet>Step 4: Load Context (Last N msgs) - Last 10 messages for context window. Includes conversation state stored in conversations/messages tables.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E5.md</path>
+        <title>Epic 5: Conversational Assistant</title>
+        <section>Stories</section>
+        <snippet>E5.6: Implement Source Citation in Responses - now renumbered, covers Conversation Context and Multi-turn Support. FR-CONV-004: Multi-Turn Conversations.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document</title>
+        <section>Intelligence Layer / Data Layer</section>
+        <snippet>conversations table stores conversation metadata, messages table stores message history with tool_calls, metadata, sources. LangChain 1.0 + LangGraph 1.0 for agent orchestration.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/agent/executor.ts</path>
+        <kind>agent</kind>
+        <symbol>ConversationContext</symbol>
+        <lines>223-274</lines>
+        <reason>Existing basic ConversationContext class with maxMessages limit. This story needs to enhance it with token counting and truncation.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/agent/executor.ts</path>
+        <kind>agent</kind>
+        <symbol>convertToLangChainMessages</symbol>
+        <lines>50-63</lines>
+        <reason>Existing function to convert ConversationMessage to LangChain BaseMessage format. Used for passing context to agent.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/agent/executor.ts</path>
+        <kind>agent</kind>
+        <symbol>streamChat</symbol>
+        <lines>161-211</lines>
+        <reason>Main streaming function that accepts chatHistory parameter. Already uses messages array for agent invocation.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/chat/route.ts</path>
+        <kind>api</kind>
+        <symbol>POST handler</symbol>
+        <lines>39-213</lines>
+        <reason>Chat API route that fetches history (CONTEXT_WINDOW_SIZE=10) and passes to streamChat. Needs enhancement for token counting.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/chat/route.ts</path>
+        <kind>api</kind>
+        <symbol>CONTEXT_WINDOW_SIZE</symbol>
+        <lines>33</lines>
+        <reason>Constant defining context window size (10 messages). May need to be dynamic based on token count.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/agent/prompts.ts</path>
+        <kind>prompts</kind>
+        <symbol>AGENT_SYSTEM_PROMPT</symbol>
+        <lines>23-143</lines>
+        <reason>System prompt with P2/P3 behavior rules. Has basic multi-turn section at lines 103-107 but needs P4-compliant enhancements.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/chat.ts</path>
+        <kind>types</kind>
+        <symbol>Message, ConversationMessage</symbol>
+        <lines>52-76</lines>
+        <reason>TypeScript types for messages including role, content, toolCalls, sources, tokensUsed. Used throughout chat system.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/supabase/migrations/00006_create_conversations_messages_tables.sql</path>
+        <kind>migration</kind>
+        <symbol>conversations, messages tables</symbol>
+        <reason>Database schema for chat history. messages table has conversation_id, role, content, tool_calls, metadata columns with RLS.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/supabase/migrations/00025_update_messages_for_chat.sql</path>
+        <kind>migration</kind>
+        <symbol>messages columns extension</symbol>
+        <reason>Added sources jsonb and tokens_used integer columns. Index on messages(conversation_id, created_at) may already exist.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/llm/client.ts</path>
+        <kind>service</kind>
+        <symbol>createLLMClient</symbol>
+        <reason>LLM client factory used by agent executor. May need for context summarization if implemented.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package>langchain</package>
+        <version>^0.3.0</version>
+        <usage>Agent framework, tool calling, message types (HumanMessage, AIMessage, SystemMessage)</usage>
+      </node>
+      <node>
+        <package>@langchain/core</package>
+        <version>^0.3.0</version>
+        <usage>BaseMessage type, ChatPromptTemplate</usage>
+      </node>
+      <node>
+        <package>@langchain/langgraph</package>
+        <version>^0.2.0</version>
+        <usage>createReactAgent for tool-calling agent</usage>
+      </node>
+      <node>
+        <package>@langchain/anthropic</package>
+        <version>^0.3.0</version>
+        <usage>Claude LLM integration</usage>
+      </node>
+      <node>
+        <package>zod</package>
+        <version>^3.23.0</version>
+        <usage>Schema validation for API requests</usage>
+      </node>
+      <node>
+        <package>@supabase/supabase-js</package>
+        <version>^2.x</version>
+        <usage>Database client for message storage and retrieval</usage>
+      </node>
+      <node>
+        <package>tiktoken</package>
+        <version>NEW - to add</version>
+        <usage>Token counting for context window management. Use @dqbd/tiktoken for browser/Node.js compatible package.</usage>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Use LangChain BaseMessage types (HumanMessage, AIMessage) for context - already established pattern in executor.ts</constraint>
+    <constraint type="architecture">Token limit ~8000 for conversation context to leave room for tool results and responses (Claude Sonnet 4.5 has 200K context)</constraint>
+    <constraint type="behavior">P4 Compliance: clear follow-ups state assumption, ambiguous follow-ups ask for clarification, topic shifts reset context</constraint>
+    <constraint type="behavior">Never expose confidence scores - translate to natural language per P2 spec</constraint>
+    <constraint type="performance">Context loading must be fast (&lt;200ms) - use existing index on messages(conversation_id, created_at)</constraint>
+    <constraint type="testing">Unit tests use mocked responses; integration tests run manually per P7 spec</constraint>
+    <constraint type="database">messages table uses 'human'/'ai' role values in DB but 'user'/'assistant' in code - use normalizeMessageRole helper</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>ConversationContextManager</name>
+      <kind>class</kind>
+      <signature>class ConversationContextManager { constructor(options?: Partial&lt;ConversationContextOptions&gt;); async loadContext(conversationId: string): Promise&lt;FormattedContext&gt;; countTokens(messages: BaseMessage[]): number; truncateToFit(messages: BaseMessage[], maxTokens: number): BaseMessage[]; async summarize?(messages: BaseMessage[]): Promise&lt;string&gt;; }</signature>
+      <path>lib/agent/context.ts (to create)</path>
+    </interface>
+    <interface>
+      <name>ConversationContextOptions</name>
+      <kind>interface</kind>
+      <signature>interface ConversationContextOptions { maxMessages: number; maxTokens: number; enableSummarization: boolean; }</signature>
+      <path>lib/agent/context.ts (to create)</path>
+    </interface>
+    <interface>
+      <name>FormattedContext</name>
+      <kind>interface</kind>
+      <signature>interface FormattedContext { messages: BaseMessage[]; tokenCount: number; wasTruncated: boolean; summary?: string; }</signature>
+      <path>lib/agent/context.ts (to create)</path>
+    </interface>
+    <interface>
+      <name>streamChat</name>
+      <kind>function</kind>
+      <signature>async function streamChat(agent: ReactAgentType, input: string, chatHistory: ConversationMessage[], callbacks: {...}): Promise&lt;string&gt;</signature>
+      <path>manda-app/lib/agent/executor.ts:161</path>
+    </interface>
+    <interface>
+      <name>POST /api/projects/[id]/chat</name>
+      <kind>REST endpoint</kind>
+      <signature>POST with body { message: string, conversationId?: string } returns SSE stream</signature>
+      <path>manda-app/app/api/projects/[id]/chat/route.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <framework>Vitest for unit tests, React Testing Library for component tests</framework>
+      <pattern>Mock Supabase client using shared utilities from __tests__/utils/supabase-mock.ts</pattern>
+      <pattern>Unit tests use mocked LLM responses, not live API calls (per P7 spec)</pattern>
+      <coverage>Target 80%+ coverage on new context.ts module</coverage>
+    </standards>
+    <locations>
+      <location>__tests__/lib/agent/context.test.ts (new)</location>
+      <location>__tests__/lib/utils/tokens.test.ts (new)</location>
+      <location>__tests__/api/chat.test.ts (extend existing)</location>
+      <location>__tests__/integration/multi-turn.test.ts (new, optional)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test that loadConversationHistory returns exactly last 10 messages in chronological order</idea>
+      <idea ac="AC1">Test that messages are converted to LangChain format correctly (HumanMessage/AIMessage)</idea>
+      <idea ac="AC2">Integration test: send "What's Q3 revenue?" then "And EBITDA?" - verify context maintained</idea>
+      <idea ac="AC3">Test that after page reload, conversation history is fetched from DB and context works</idea>
+      <idea ac="AC4">Test with 50 messages - verify oldest are truncated, newest preserved</idea>
+      <idea ac="AC5">Test token counting: verify countTokens returns accurate estimates for various message lengths</idea>
+      <idea ac="AC5">Test truncation triggers at 8000 token threshold</idea>
+      <idea ac="AC6">Test clear follow-up: agent response includes context assumption ("For Q3 2024...")</idea>
+      <idea ac="AC7">Test ambiguous follow-up: agent asks clarification question</idea>
+      <idea ac="AC8">Test topic shift: verify previous context not carried into unrelated query</idea>
+      <idea ac="AC9">Verify system prompt includes P4 context handling instructions</idea>
+    </ideas>
+  </tests>
+</story-context>
