@@ -102,10 +102,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .insert({
         irl_id: irlId,
         category,
-        name: itemName,
+        item_name: itemName,
         description: `Added from gap analysis (Gap ID: ${gapId})`,
         required,
         sort_order: sortOrder,
+        priority: 'medium',
+        status: 'not_started',
       })
       .select('id')
       .single()

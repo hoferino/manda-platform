@@ -2,6 +2,8 @@
 
 Status: done
 
+> **Note:** This story consolidates original E6.1 (Create IRL Template Library) and E6.2 (Build IRL Template Selection UI) from the initial epic breakdown. See [docs/epics.md](../../../epics.md) for updated story numbering.
+
 ## Story
 
 As an **M&A analyst**,
@@ -246,3 +248,4 @@ None required - clean implementation
 |------|--------|--------|
 | 2025-12-02 | Story drafted from tech spec E6.1 | SM Agent |
 | 2025-12-02 | All 9 tasks implemented with 89 tests passing | Dev Agent |
+| 2025-12-02 | Added consolidation note (combines original E6.1 + E6.2) | SM Agent |

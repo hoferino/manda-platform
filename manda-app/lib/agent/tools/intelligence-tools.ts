@@ -234,29 +234,32 @@ export const findGapsTool = tool(
           .from('irl_items')
           .select(`
             id,
-            name,
+            item_name,
             category,
-            required
+            required,
+            status
           `)
           .eq('required', true)
+          .neq('status', 'complete')
           .limit(50)
 
         if (!irlError && irlItems) {
           // Type assertion for safety
           type IrlItem = {
             id: string
-            name: string
+            item_name: string
             category: string
             required: boolean | null
+            status: string | null
           }
           for (const item of irlItems as IrlItem[]) {
             gaps.push({
               id: `irl-${item.id}`,
               category: 'irl_missing',
-              description: `Missing: ${item.name} (${item.category})`,
+              description: `Missing: ${item.item_name} (${item.category})`,
               priority: 'high', // Required IRL items are high priority
               domain: mapCategoryToDomain(item.category),
-              suggestedAction: `Request ${item.name} from the target company`,
+              suggestedAction: `Request ${item.item_name} from the target company`,
             })
           }
         }

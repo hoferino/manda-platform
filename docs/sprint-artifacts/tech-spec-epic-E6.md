@@ -5,6 +5,11 @@ Author: Max
 Epic ID: E6
 Status: Draft
 
+> **Story Consolidation Note (2025-12-02):** During E6.1 implementation, stories were consolidated from 8 to 7:
+> - E6.1 now combines "Create IRL Template Library" (original E6.1) + "Build IRL Template Selection UI" (original E6.2)
+> - Sprint-status.yaml and epics.md use the new numbering
+> - This tech spec retains original E6.1-E6.8 section headers for reference
+
 ---
 
 ## Overview

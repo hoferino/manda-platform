@@ -206,6 +206,7 @@ export type Database = {
           id: string
           industry: string | null
           irl_template: string | null
+          metadata: Json | null
           name: string
           status: string | null
           updated_at: string
@@ -217,6 +218,7 @@ export type Database = {
           id?: string
           industry?: string | null
           irl_template?: string | null
+          metadata?: Json | null
           name: string
           status?: string | null
           updated_at?: string
@@ -228,6 +230,7 @@ export type Database = {
           id?: string
           industry?: string | null
           irl_template?: string | null
+          metadata?: Json | null
           name?: string
           status?: string | null
           updated_at?: string
@@ -636,9 +639,13 @@ export type Database = {
           description: string | null
           id: string
           irl_id: string
-          name: string
+          item_name: string
+          notes: string | null
+          priority: string | null
           required: boolean | null
           sort_order: number | null
+          status: string | null
+          subcategory: string | null
           updated_at: string
         }
         Insert: {
@@ -647,9 +654,13 @@ export type Database = {
           description?: string | null
           id?: string
           irl_id: string
-          name: string
+          item_name: string
+          notes?: string | null
+          priority?: string | null
           required?: boolean | null
           sort_order?: number | null
+          status?: string | null
+          subcategory?: string | null
           updated_at?: string
         }
         Update: {
@@ -658,9 +669,13 @@ export type Database = {
           description?: string | null
           id?: string
           irl_id?: string
-          name?: string
+          item_name?: string
+          notes?: string | null
+          priority?: string | null
           required?: boolean | null
           sort_order?: number | null
+          status?: string | null
+          subcategory?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -725,6 +740,8 @@ export type Database = {
           id: string
           metadata: Json | null
           role: string
+          sources: Json | null
+          tokens_used: number | null
           tool_calls: Json | null
         }
         Insert: {
@@ -734,6 +751,8 @@ export type Database = {
           id?: string
           metadata?: Json | null
           role: string
+          sources?: Json | null
+          tokens_used?: number | null
           tool_calls?: Json | null
         }
         Update: {
@@ -743,6 +762,8 @@ export type Database = {
           id?: string
           metadata?: Json | null
           role?: string
+          sources?: Json | null
+          tokens_used?: number | null
           tool_calls?: Json | null
         }
         Relationships: [

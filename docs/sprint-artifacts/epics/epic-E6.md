@@ -16,16 +16,17 @@ Implements Information Request List (IRL) creation, editing, and management with
 - FR-IRL-004: IRL-Document Linking
 
 **Stories:**
-- E6.1: Build IRL Builder UI with Template Selection
-- E6.2: Implement IRL Creation and Editing
+- E6.1: Build IRL Builder UI with Template Selection (includes template library + selection UI)
+- E6.2: Implement IRL Creation and Editing (IRL Builder add/edit/remove items)
 - E6.3: Implement AI-Assisted IRL Auto-Generation from Documents
 - E6.4: Implement Data Room Folder Structure Auto-Generation from IRL
 - E6.5: Implement IRL-Document Linking and Progress Tracking
-- E6.6: Build IRL Export Functionality (Excel, CSV)
-- E6.7: Implement IRL Templates Library
-- E6.8: Build IRL Checklist Progress Visualization
+- E6.6: Build IRL Export Functionality (PDF, Word)
+- E6.7: Build IRL Checklist Progress Visualization
 
-**Total Stories:** 8
+**Total Stories:** 7
+
+**Note:** Original E6.7 "Implement IRL Templates Library" was consolidated into E6.1 during implementation. Stories renumbered accordingly.
 
 **Priority:** P0
 

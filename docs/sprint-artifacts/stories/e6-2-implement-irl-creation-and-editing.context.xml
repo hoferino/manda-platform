@@ -1,0 +1,245 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E6</epicId>
+    <storyId>2</storyId>
+    <title>Implement IRL Creation and Editing</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e6-2-implement-irl-creation-and-editing.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to customize my IRL items by adding, editing, removing, and reordering categories and items</iWant>
+    <soThat>I can request exactly what I need for this specific deal</soThat>
+    <tasks>
+      <task id="1">Create database migrations for IRL tables (folders, irls, irl_items, documents.folder_id)</task>
+      <task id="2">Implement IRL service layer with CRUD operations</task>
+      <task id="3">Create IRL item API endpoints</task>
+      <task id="4">Create IRLBuilder component (main builder container)</task>
+      <task id="5">Create IRLCategory component (collapsible category section)</task>
+      <task id="6">Create IRLItem component (single item row)</task>
+      <task id="7">Implement drag-and-drop reordering with @dnd-kit</task>
+      <task id="8">Create useIRLBuilder hook for state management</task>
+      <task id="9">Integrate IRLBuilder into Deliverables page</task>
+      <task id="10">Write integration tests</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Can add new categories with custom names</criterion>
+    <criterion id="AC2">Can add items within categories with name, description, and priority</criterion>
+    <criterion id="AC3">Can edit item name, description, and priority inline</criterion>
+    <criterion id="AC4">Can delete items and categories with confirmation</criterion>
+    <criterion id="AC5">Can drag-and-drop to reorder items within and across categories</criterion>
+    <criterion id="AC6">Save persists all changes to database via API</criterion>
+    <criterion id="AC7">Cancel discards unsaved changes and reverts to saved state</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E6.md</path>
+        <title>Epic 6 Technical Specification</title>
+        <section>E6.3 Implement IRL Builder</section>
+        <snippet>Detailed acceptance criteria for IRL builder with CRUD, drag-drop, and save/cancel functionality. Database schema for folders, irls, irl_items tables with RLS policies.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E6.md#Data Models and Contracts</path>
+        <title>Database Schema</title>
+        <section>PostgreSQL Schema (New Tables)</section>
+        <snippet>Migration scripts for folders (gcs_path, parent_id), irls (deal_id, title, template_type), irl_items (category, priority, status, sort_order) with RLS policies.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E6.md#APIs and Interfaces</path>
+        <title>API Endpoints</title>
+        <section>IRL API Endpoints</section>
+        <snippet>RESTful endpoints: GET/PUT/DELETE /irls/[irlId], POST /irls/[irlId]/items, PUT/DELETE /items/[itemId], POST /irls/[irlId]/reorder for batch sort updates.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e6-1-build-irl-builder-ui-with-template-selection.md</path>
+        <title>E6.1 Story (completed)</title>
+        <section>Dev Agent Record - Completion Notes</section>
+        <snippet>Existing irls table uses 'name' (not 'title'), 'user_id', and 'sections' JSONB column. Type coercion with ?? undefined for null handling. 89 tests across 5 files.</snippet>
+      </doc>
+      <doc>
+        <path>docs/ux-design-specification.md</path>
+        <title>UX Design Specification</title>
+        <section>5.5 Deliverables Studio - Tab 1: IRL</section>
+        <snippet>IRL Builder layout with category sections, add/remove items, priority marking, and export. Uses shadcn/ui components.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR-IRL-001 through FR-IRL-005</section>
+        <snippet>IRL management workflow requirements including creation, editing, tracking, and folder structure generation.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/types/irl.ts</path>
+        <kind>types</kind>
+        <symbol>IRLItem, IRL, IRLTemplate, CreateIRLItemRequestSchema, UpdateIRLItemRequestSchema</symbol>
+        <lines>1-318</lines>
+        <reason>Core IRL type definitions with Zod validation schemas. Extend with new schemas for batch reorder.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/services/irl-templates.ts</path>
+        <kind>service</kind>
+        <symbol>listTemplates, getTemplate</symbol>
+        <reason>Template service pattern to follow for irls.ts CRUD service implementation.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/irls/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>POST, GET</symbol>
+        <lines>1-228</lines>
+        <reason>Existing IRL creation API. Uses sections JSONB for items. Need to add [irlId] subroutes.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/irl/IRLTemplateCard.tsx</path>
+        <kind>component</kind>
+        <symbol>IRLTemplateCard, BlankIRLCard</symbol>
+        <lines>1-197</lines>
+        <reason>Component patterns for IRL cards. Use Card, Badge, Button from shadcn/ui.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/irl/IRLTemplateModal.tsx</path>
+        <kind>component</kind>
+        <symbol>IRLTemplateModal, CategorySection, ItemRow</symbol>
+        <lines>1-267</lines>
+        <reason>Modal and collapsible category patterns. Collapsible from @radix-ui. Reuse for IRLCategory.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/irl/useIRLTemplates.ts</path>
+        <kind>hook</kind>
+        <symbol>useIRLTemplates</symbol>
+        <reason>Hook pattern for data fetching. Follow for useIRLBuilder implementation.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/projects/[id]/deliverables/deliverables-client.tsx</path>
+        <kind>page</kind>
+        <symbol>DeliverablesClient</symbol>
+        <reason>Deliverables page with IRL tab. Integrate IRLBuilder here when editing an IRL.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/ui/collapsible.tsx</path>
+        <kind>ui-component</kind>
+        <symbol>Collapsible, CollapsibleTrigger, CollapsibleContent</symbol>
+        <reason>shadcn/ui collapsible for IRLCategory expand/collapse.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/ui/alert-dialog.tsx</path>
+        <kind>ui-component</kind>
+        <symbol>AlertDialog</symbol>
+        <reason>Use for delete confirmation dialogs.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="@radix-ui/react-collapsible" version="^1.1.12">For collapsible categories</package>
+        <package name="@radix-ui/react-alert-dialog" version="^1.1.15">For delete confirmations</package>
+        <package name="lucide-react" version="^0.554.0">Icons: ChevronDown, ChevronRight, Plus, Trash2, GripVertical</package>
+        <package name="@tanstack/react-virtual" version="^3.13.12">Virtual scrolling for large IRLs (100+ items)</package>
+        <package name="zustand" version="^5.0.8">Optional: state management for complex builder state</package>
+        <package name="zod" version="^4.1.13">Request validation schemas</package>
+      </ecosystem>
+      <ecosystem name="node-to-install">
+        <package name="@dnd-kit/core" version="^6.1.0">Drag-and-drop core library</package>
+        <package name="@dnd-kit/sortable" version="^8.0.0">Sortable preset for reordering</package>
+        <package name="@dnd-kit/utilities" version="^3.2.2">CSS utilities for drag feedback</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="database">
+      <rule>Existing irls table uses 'name' column (not 'title') and 'sections' JSONB. Story should migrate to normalized irl_items table per tech spec for better querying and status tracking.</rule>
+    </constraint>
+    <constraint type="api">
+      <rule>All IRL API routes must verify deal ownership via RLS policies on irls and irl_items tables.</rule>
+    </constraint>
+    <constraint type="architecture">
+      <rule>Use optimistic updates for immediate UI feedback. Rollback on API errors with toast notification.</rule>
+    </constraint>
+    <constraint type="architecture">
+      <rule>Keep original data in ref/state for cancel/revert. Track isDirty flag for unsaved changes.</rule>
+    </constraint>
+    <constraint type="ux">
+      <rule>Inline editing with Enter to save, Escape to cancel. Priority dropdown: high/medium/low with colored badges.</rule>
+    </constraint>
+    <constraint type="testing">
+      <rule>Follow testing patterns from E6.1: unit tests for service (15+), API tests (12+), component tests (12+ per component), hook tests (10+).</rule>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>IRL CRUD API</name>
+      <kind>REST endpoint</kind>
+      <signature>GET/PUT/DELETE /api/projects/[id]/irls/[irlId]</signature>
+      <path>manda-app/app/api/projects/[id]/irls/[irlId]/route.ts</path>
+    </interface>
+    <interface>
+      <name>IRL Items API</name>
+      <kind>REST endpoint</kind>
+      <signature>POST /api/projects/[id]/irls/[irlId]/items, PUT/DELETE /items/[itemId]</signature>
+      <path>manda-app/app/api/projects/[id]/irls/[irlId]/items/route.ts</path>
+    </interface>
+    <interface>
+      <name>IRL Reorder API</name>
+      <kind>REST endpoint</kind>
+      <signature>POST /api/projects/[id]/irls/[irlId]/reorder - body: { items: { id: string, sortOrder: number }[] }</signature>
+      <path>manda-app/app/api/projects/[id]/irls/[irlId]/reorder/route.ts</path>
+    </interface>
+    <interface>
+      <name>IRLBuilder Props</name>
+      <kind>component interface</kind>
+      <signature>{ irlId: string, onSave?: () => void, onCancel?: () => void }</signature>
+      <path>manda-app/components/irl/IRLBuilder.tsx</path>
+    </interface>
+    <interface>
+      <name>useIRLBuilder Hook</name>
+      <kind>hook interface</kind>
+      <signature>{ categories, isDirty, save: () => Promise, cancel: () => void, addCategory, addItem, updateItem, deleteItem, reorder }</signature>
+      <path>manda-app/components/irl/useIRLBuilder.ts</path>
+    </interface>
+    <interface>
+      <name>Supabase irls Table</name>
+      <kind>database table</kind>
+      <signature>id UUID, deal_id UUID, name TEXT, template_type TEXT, sections JSONB, progress_percent INT</signature>
+      <path>Supabase existing table (to be migrated)</path>
+    </interface>
+    <interface>
+      <name>irl_items Table (new)</name>
+      <kind>database table</kind>
+      <signature>id UUID, irl_id UUID, category TEXT, subcategory TEXT, item_name TEXT, description TEXT, priority TEXT, status TEXT, notes TEXT, sort_order INT</signature>
+      <path>supabase/migrations/00028_create_irl_items_table.sql</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Follow established patterns from E6.1 and Epic 5: Vitest for unit tests with React Testing Library for components. Use existing Supabase mock utilities from __tests__/utils/supabase-mock.ts. Mock @dnd-kit/core for drag-drop tests. API route tests use direct handler invocation with mock requests. Minimum 80% coverage on new code.
+    </standards>
+    <locations>
+      <location>__tests__/lib/services/irls.test.ts - IRL service CRUD tests</location>
+      <location>__tests__/api/irls/[irlId].test.ts - Single IRL API tests</location>
+      <location>__tests__/api/irls/items.test.ts - IRL items API tests</location>
+      <location>__tests__/components/irl/IRLBuilder.test.tsx - Builder component tests</location>
+      <location>__tests__/components/irl/IRLCategory.test.tsx - Category component tests</location>
+      <location>__tests__/components/irl/IRLItem.test.tsx - Item component tests</location>
+      <location>__tests__/components/irl/useIRLBuilder.test.ts - Hook tests</location>
+    </locations>
+    <ideas>
+      <idea acRef="AC1">Test addCategory adds new category with unique name, handles duplicate names</idea>
+      <idea acRef="AC2">Test addItem within category with required fields, priority defaults to medium</idea>
+      <idea acRef="AC3">Test inline edit Enter/Escape keys, priority dropdown changes, optimistic update</idea>
+      <idea acRef="AC4">Test delete shows confirmation dialog, cascade deletes category items, rollback on error</idea>
+      <idea acRef="AC5">Test drag within category reorders, drag across categories moves item, API batch update called</idea>
+      <idea acRef="AC6">Test save calls APIs, handles success/error, clears isDirty flag, shows toast</idea>
+      <idea acRef="AC7">Test cancel reverts to original state, clears isDirty, confirm if unsaved changes</idea>
+    </ideas>
+  </tests>
+</story-context>

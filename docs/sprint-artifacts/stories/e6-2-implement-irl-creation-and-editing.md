@@ -1,6 +1,8 @@
 # Story 6.2: Implement IRL Creation and Editing
 
-Status: drafted
+Status: ready-for-dev
+
+> **Note:** This corresponds to original E6.3 (IRL Builder) from the initial epic breakdown. Stories renumbered after E6.1 consolidated template library + selection UI. See [docs/epics.md](../../../epics.md) for mapping.
 
 ## Story
 
@@ -204,10 +206,10 @@ Keyboard shortcuts:
 
 ### References
 
-- [Source: docs/sprint-artifacts/tech-spec-epic-E6.md#E6.3] - Authoritative acceptance criteria
+- [Source: docs/sprint-artifacts/tech-spec-epic-E6.md#E6.3] - Authoritative acceptance criteria (tech spec uses original numbering)
 - [Source: docs/sprint-artifacts/tech-spec-epic-E6.md#Data Models and Contracts] - Database schema
 - [Source: docs/sprint-artifacts/tech-spec-epic-E6.md#APIs and Interfaces] - API endpoint specifications
-- [Source: docs/epics.md#Story E6.3] - Epic story details
+- [Source: docs/epics.md#Story E6.2] - Epic story details (updated numbering)
 - [Source: docs/sprint-artifacts/stories/e6-1-build-irl-builder-ui-with-template-selection.md] - E6.1 completion notes
 
 ### Learnings from Previous Story
@@ -239,7 +241,7 @@ Recommendation: Implement `irl_items` table per tech spec for better querying, s
 
 ### Context Reference
 
-<!-- Path(s) to story context XML will be added here by context workflow -->
+- docs/sprint-artifacts/stories/e6-2-implement-irl-creation-and-editing.context.xml
 
 ### Agent Model Used
 

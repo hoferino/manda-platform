@@ -32,8 +32,9 @@ CREATE INDEX IF NOT EXISTS idx_contradictions_finding_b ON contradictions(findin
 -- Enable Row Level Security
 ALTER TABLE contradictions ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policy for data isolation
+-- Drop and recreate RLS policy for data isolation (idempotent)
 -- User can only see contradictions for deals they own
+DROP POLICY IF EXISTS contradictions_isolation_policy ON contradictions;
 CREATE POLICY contradictions_isolation_policy ON contradictions
     FOR ALL
     USING (

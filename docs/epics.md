@@ -3627,107 +3627,62 @@ And suggested actions to resolve
 
 ### Stories
 
-#### Story E6.1: Create IRL Template Library
+> **Note (2025-12-02):** Epic 6 consolidated from 8 stories to 7 stories during E6.1 implementation.
+> - E6.1 now combines "Create IRL Template Library" + "Build IRL Template Selection UI"
+> - E6.2 is "Implement IRL Creation and Editing" (was E6.3 IRL Builder)
+> - E6.3 is "Implement AI-Assisted IRL Auto-Generation" (was E6.8)
+> - E6.4 is "Implement Data Room Folder Structure Auto-Generation from IRL" (was E6.7)
+> - E6.5 is "Implement IRL-Document Linking and Progress Tracking" (was E6.4 Status Tracking)
+> - E6.6 is "Build IRL Export Functionality (PDF/Word)" (unchanged)
+> - E6.7 is "Build IRL Checklist Progress Visualization" (was part of E6.4)
+> - Old E6.5 "Folder Management" is now included in E6.4
 
-**As a** developer
-**I want** a library of IRL templates for different deal types
-**So that** users can quickly create relevant IRLs
-
-**Description:**
-Create IRL template files for common M&A deal types (Tech M&A, Industrial, Pharma, Financial Services) with pre-defined categories and standard document requests.
-
-**Technical Details:**
-- Template format: JSON or YAML
-- Templates stored in `/packages/shared/templates/irls/`
-- Template structure:
-  - Deal type
-  - Categories (Financial, Legal, Operational, etc.)
-  - Items per category (with priority, description)
-- Load templates from file system
-- API endpoint to list available templates
-
-**Acceptance Criteria:**
-
-```gherkin
-Given the IRL template library exists
-When I query available templates
-Then I see templates for: Tech M&A, Industrial, Pharma, Financial Services, Custom
-
-Given I load the Tech M&A template
-When I inspect its contents
-Then I see categories: Financial, Legal, Operational, Technology & IP, Market & Strategy
-And each category has 5-10 standard items
-
-Given I load the Industrial template
-When I inspect its contents
-Then it has industry-specific items like Environmental Compliance, Safety Records
-
-Given I create a new template type
-When I add a JSON file to the templates folder
-Then it appears in the available templates list
-And can be used for IRL creation
-```
-
-**Related FR:**
-- FR-IRL-004: Template Library
-
-**Architecture Reference:** Workflow Service - IRL Management
-
-**Definition of Done:**
-- [ ] Template format defined (JSON/YAML)
-- [ ] 4 standard templates created (Tech, Industrial, Pharma, Financial)
-- [ ] Template structure documented
-- [ ] Templates stored in correct location
-- [ ] API endpoint to list templates
-- [ ] Templates validated and tested
-- [ ] Documentation for adding new templates
-
----
-
-#### Story E6.2: Build IRL Template Selection UI
+#### Story E6.1: Build IRL Builder UI with Template Selection (Consolidated)
 
 **As an** M&A analyst
-**I want** to select an IRL template when creating a new IRL
-**So that** I don't have to build from scratch
+**I want** to create an IRL by selecting from pre-built templates or starting blank
+**So that** I can quickly set up a structured document request list tailored to my deal type
 
 **Description:**
-Implement the IRL template selection interface in the Deliverables tab that shows available templates with previews and allows users to select one as the starting point.
+Create IRL template files for common M&A deal types AND implement the template selection UI in the Deliverables tab. This consolidated story combines template library creation with the selection UI.
 
 **Technical Details:**
+- Template format: JSON files in `/packages/shared/templates/irls/`
+- Template structure: id, name, description, dealType, categories[].items[]
 - Route: `/projects/[id]/deliverables` (IRL tab)
 - Template cards showing: name, description, number of items
 - Preview modal showing template structure
-- Select button to choose template
-- Custom template option (blank slate)
+- API endpoint to list/get templates
+- Create IRL API to instantiate from template or blank
 
 **Acceptance Criteria:**
 
 ```gherkin
+# Template Library
+Given the IRL template library exists
+When I query available templates
+Then I see templates for: Tech M&A, Industrial, Pharma, Financial Services
+
+Given I load a template
+When I inspect its contents
+Then I see categories with 5-10 items each including name, description, priority
+
+# Template Selection UI
 Given I navigate to Deliverables > IRL tab
 When no IRL exists yet
-Then I see "Create IRL" button
-And template selection UI
+Then I see template selection UI
 
-Given I click "Create IRL"
-When the template selection opens
-Then I see 4 template cards: Tech M&A, Industrial, Pharma, Financial Services
-And a "Custom (Blank)" option
+Given I click a template card
+When the preview modal opens
+Then I see the full template structure with categories and items
 
-Given I click "Preview" on a template
-When the modal opens
-Then I see the full template structure
-And all categories and items listed
-
-Given I select "Tech M&A" template
-When I click "Use This Template"
-Then the IRL builder opens
-And is pre-populated with the template items
-And I can customize it
+Given I select a template and click "Use This Template"
+When the IRL is created
+Then it contains all template items pre-populated
 
 Given I select "Custom (Blank)"
-When I click "Start from Scratch"
-Then the IRL builder opens empty
-And I can add my own categories and items
+When I create the IRL
+Then it starts empty for manual entry
 ```
 
 **Related FR:**
@@ -3737,21 +3692,24 @@ And I can add my own categories and items
 **UX Reference:** Deliverables Studio - IRL Tab (Section 5.5)
 
 **Definition of Done:**
-- [ ] IRL tab in Deliverables implemented
-- [ ] Template selection UI built
-- [ ] Template cards display correctly
-- [ ] Preview modal shows template structure
-- [ ] Select template works
-- [ ] Custom blank option available
-- [ ] Transitions to IRL builder
-- [ ] Responsive design
+- [x] 4 standard templates created (Tech, Industrial, Pharma, Financial)
+- [x] Template service with caching and file discovery
+- [x] API endpoints for templates (list, get, create IRL)
+- [x] Template cards display correctly
+- [x] Preview modal shows template structure
+- [x] Select template works
+- [x] Custom blank option available
+- [x] Responsive design
+- [x] 89 tests passing
+
+**Status:** DONE (2025-12-02)
 
 ---
 
-#### Story E6.3: Implement IRL Builder (Add/Edit/Remove Items)
+#### Story E6.2: Implement IRL Creation and Editing
 
 **As an** M&A analyst
-**I want** to customize my IRL items
+**I want** to customize my IRL items by adding, editing, removing, and reordering
 **So that** I can request exactly what I need for this deal
 
 **Description:**
@@ -3761,9 +3719,10 @@ Build the IRL builder interface that allows users to add, edit, remove, and reor
 - Category sections (collapsible)
 - Add/remove category
 - Add/remove/edit items within categories
-- Drag-and-drop reordering
-- Item properties: name, description, priority (high/medium/low), expected delivery date, notes
+- Drag-and-drop reordering (@dnd-kit)
+- Item properties: name, description, priority (high/medium/low), notes
 - Save IRL to `irls` and `irl_items` tables
+- Database migrations for irl_items table
 
 **Acceptance Criteria:**
 
@@ -3776,7 +3735,7 @@ And I can name it
 Given I have a category
 When I click "Add Item"
 Then a new item form appears
-And I can enter: item name, description, priority, expected date
+And I can enter: item name, description, priority
 
 Given I want to reorder items
 When I drag an item up or down
@@ -3796,6 +3755,10 @@ Given I've customized my IRL
 When I click "Save IRL"
 Then the IRL is saved to the database
 And I can see it in the IRL tab
+
+Given I click "Cancel"
+When I have unsaved changes
+Then changes are discarded and IRL reverts to saved state
 ```
 
 **Related FR:**
@@ -3804,18 +3767,142 @@ And I can see it in the IRL tab
 **UX Reference:** Deliverables - IRL Builder (Section 5.5)
 
 **Definition of Done:**
+- [ ] Database migrations for irl_items table
+- [ ] IRL service with CRUD operations
 - [ ] IRL builder UI implemented
 - [ ] Add/remove categories works
 - [ ] Add/edit/remove items works
 - [ ] Drag-and-drop reordering
 - [ ] Item properties editable
 - [ ] Save IRL to database
-- [ ] Validation for required fields
 - [ ] Cancel/discard changes option
+- [ ] 80+ tests passing
+
+**Status:** DRAFTED (2025-12-02)
 
 ---
 
-#### Story E6.4: Implement IRL Status Tracking (Manual Checklist)
+#### Story E6.3: Implement AI-Assisted IRL Auto-Generation from Documents
+
+**As an** M&A analyst
+**I want** the AI to suggest IRL items based on the deal type and uploaded documents
+**So that** I don't miss important items to request
+
+**Description:**
+Use the chat agent to suggest additional IRL items based on deal context, uploaded documents, and identified gaps. Agent analyzes what's been provided and recommends what might be missing.
+
+**Technical Details:**
+- Agent tool: `generate_irl_suggestions`
+- Input: deal metadata, current IRL items, uploaded document list
+- Output: suggested IRL items with categories and priorities
+- User can accept/reject suggestions
+- Suggestions based on deal type templates + gap analysis
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I have an IRL with some items
+When I ask the chat "What else should I request?"
+Then the agent analyzes my current IRL
+And suggests additional items based on deal type
+And explains why each item is recommended
+
+Given I've uploaded several financial documents
+When I ask "What financial documents am I missing?"
+Then the agent compares uploaded docs to standard IRL items
+And identifies gaps
+And suggests specific items to add
+
+Given the agent suggests an IRL item
+When I say "Add that to my IRL"
+Then the item is added to the IRL with suggested category and priority
+
+Given I'm working on a Tech M&A deal
+When I ask for IRL suggestions
+Then the agent prioritizes tech-specific items (IP, source code, tech debt, etc.)
+```
+
+**Related FR:**
+- FR-IRL-001: IRL Creation (AI-assisted)
+
+**UX Reference:** Chat Interface - IRL Assistance Mode
+
+**Definition of Done:**
+- [ ] Agent tool `generate_irl_suggestions` implemented
+- [ ] Suggestions based on deal type templates
+- [ ] Gap analysis against uploaded documents
+- [ ] User can accept/reject suggestions via chat
+- [ ] Suggestions include category, priority, and rationale
+- [ ] Integration with IRL builder
+
+---
+
+#### Story E6.4: Implement Data Room Folder Structure Auto-Generation from IRL
+
+**As an** M&A analyst
+**I want** the system to automatically create Data Room folders when I upload an IRL
+**So that** I don't have to manually create the folder structure
+
+**Description:**
+Parse uploaded IRL to extract categories and subcategories, then automatically create corresponding folders in both PostgreSQL (`folders` table) and GCS. Also includes folder management (add/rename/delete) after initial generation.
+
+**Technical Details:**
+- Parse IRL structure (from template or Excel upload)
+- Create `folders` records with parent-child relationships
+- Create GCS paths: `{deal_id}/data-room/{category}/{subcategory}/`
+- Handle naming conflicts (sanitize folder names)
+- Store `gcs_path` for each folder
+- Transaction: all-or-nothing folder creation
+- Folder management: add subfolder, rename, delete empty folders
+
+**Acceptance Criteria:**
+
+```gherkin
+Given I create an IRL from a template
+When the IRL is saved
+Then the system creates folders matching the IRL categories
+And each folder has a corresponding GCS path
+
+Given the IRL has categories: Financial, Legal, Operational
+When the folders are generated
+Then I see three top-level folders in Data Room
+And subfolders for subcategories
+
+Given I want to add a new folder
+When I click "Add Folder" in the Data Room
+Then I can create a subfolder at the selected level
+
+Given I have a folder
+When I right-click and select "Rename"
+Then I can edit the folder name inline
+
+Given I have an empty folder
+When I right-click and select "Delete"
+Then the folder is removed from both database and GCS
+
+Given I have a folder with documents
+When I try to delete it
+Then I see a warning that the folder is not empty
+```
+
+**Related FR:**
+- FR-IRL-005: Auto-Generate Folder Structure from IRL
+
+**UX Reference:** Data Room - Folder Tree Actions
+
+**Definition of Done:**
+- [ ] Folder creation from IRL structure
+- [ ] `folders` table records created with RLS
+- [ ] GCS paths created for each folder
+- [ ] Parent-child relationships correct
+- [ ] Folder name sanitization
+- [ ] Add/rename/delete folder operations
+- [ ] Non-empty folder deletion blocked
+- [ ] Error handling for failures
+
+---
+
+#### Story E6.5: Implement IRL-Document Linking and Progress Tracking
 
 **As an** M&A analyst
 **I want** to manually track which IRL items are fulfilled via an expandable checklist
@@ -3880,72 +3967,7 @@ And a progress bar reflects this visually
 
 ---
 
-#### Story E6.5: Implement Folder Management (Add/Rename/Delete)
-
-**As an** M&A analyst
-**I want** to modify the Data Room folder structure after it's generated from the IRL
-**So that** I can adapt the organization to my specific needs
-
-**Description:**
-Enable users to add new folders, rename existing folders, and delete empty folders after the initial IRL-based folder generation. This gives flexibility since the IRL structure may not perfectly match the user's desired organization.
-
-**Technical Details:**
-- Add folder button in Data Room tree view
-- Rename folder via inline edit or context menu
-- Delete folder (only if empty - prompt to move documents first if not empty)
-- Update `folders` table and GCS paths accordingly
-- Parent-child relationships maintained in `folders.parent_id`
-- GCS operations: create new prefix, rename (copy + delete), delete prefix
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I'm viewing the Data Room folder tree
-When I click "Add Folder"
-Then I can create a new folder at the selected level
-And specify a folder name
-And the folder is created in both the database and GCS
-
-Given I have a folder named "Financial Statements"
-When I right-click and select "Rename"
-Then I can edit the folder name inline
-And the change is saved to the database
-And documents in that folder remain accessible
-
-Given I have an empty folder
-When I right-click and select "Delete"
-Then the folder is removed from the database and GCS
-And child folders (if any) are also deleted
-
-Given I have a folder with documents
-When I try to delete it
-Then I see a warning that the folder is not empty
-And I must move or delete documents first
-
-Given I create a nested folder structure
-When I view the Data Room
-Then the folder hierarchy displays correctly
-And I can expand/collapse folders
-```
-
-**Related FR:**
-- FR-IRL-005: Auto-Generate Folder Structure from IRL (user-modifiable)
-
-**UX Reference:** Data Room - Folder Tree Actions
-
-**Definition of Done:**
-- [ ] Add folder UI implemented
-- [ ] Rename folder works (inline edit)
-- [ ] Delete folder works (empty folders only)
-- [ ] Non-empty folder deletion blocked with warning
-- [ ] Database updates correctly (folders table)
-- [ ] GCS paths updated on rename
-- [ ] Folder tree UI reflects changes immediately
-- [ ] Nested folder support
-
----
-
-#### Story E6.6: Export IRL to PDF/Word
+#### Story E6.6: Build IRL Export Functionality (PDF/Word)
 
 **As an** M&A analyst
 **I want** to export my IRL to PDF or Word
@@ -4010,126 +4032,54 @@ And the export date
 
 ---
 
-#### Story E6.7: Auto-Generate Folder Structure from IRL Upload
+#### Story E6.7: Build IRL Checklist Progress Visualization
 
 **As an** M&A analyst
-**I want** the system to automatically create Data Room folders when I upload an IRL Excel file
-**So that** I don't have to manually create the folder structure
+**I want** to see a visual progress indicator for my IRL checklist
+**So that** I can quickly understand how much of my document request is fulfilled
 
 **Description:**
-Parse uploaded IRL Excel file to extract categories and subcategories, then automatically create corresponding folders in both PostgreSQL (`folders` table) and GCS. This is the core folder generation feature triggered at project creation.
+Build visual progress indicators for the IRL checklist including progress bars, completion percentages, and status breakdowns by category.
 
 **Technical Details:**
-- Parse Excel with `xlsx` package
-- Extract category hierarchy from IRL structure
-- Create `folders` records with parent-child relationships
-- Create GCS paths: `{deal_id}/data-room/{category}/{subcategory}/`
-- Handle naming conflicts (sanitize folder names)
-- Store `gcs_path` for each folder
-- Transaction: all-or-nothing folder creation
+- Progress bar component showing percentage complete
+- Category-level progress (e.g., "Financial: 4/6 items")
+- Overall IRL progress (e.g., "32/45 items - 71%")
+- Visual indicators for each status type
+- Dashboard-style summary view
 
 **Acceptance Criteria:**
 
 ```gherkin
-Given I'm creating a new project
-When I upload an IRL Excel file
-Then the system parses the IRL structure
-And creates folders matching the IRL categories
-And each folder has a corresponding GCS path
+Given I have an IRL with items in various statuses
+When I view the IRL checklist
+Then I see an overall progress bar with percentage
 
-Given the IRL has categories: Financial, Legal, Operational
-When the folders are generated
-Then I see three top-level folders in Data Room
-And each has the expected subfolders
+Given I have categories with different completion levels
+When I view the category headers
+Then each shows its own progress (e.g., "Financial: 4/6")
 
-Given I navigate to the Data Room after IRL upload
-When I expand the Financial folder
-Then I see subfolders like "Audited Statements", "Projections", etc.
-And I can upload documents to any folder
+Given I want a summary view
+When I view the IRL dashboard
+Then I see counts for each status: not_started, pending, received, complete
 
-Given I upload a document to "Financial > Audited Statements"
-When the upload completes
-Then the document is stored in GCS at "{deal_id}/data-room/financial/audited-statements/{filename}"
-And appears in the folder view
-
-Given the IRL has special characters in category names
-When folders are generated
-Then folder names are sanitized (spaces → hyphens, lowercase)
-And the original IRL names are preserved for display
+Given items change status
+When I update an item's status
+Then the progress bar updates in real-time
 ```
 
 **Related FR:**
-- FR-IRL-005: Auto-Generate Folder Structure from IRL
+- FR-IRL-002: IRL Tracking
 
-**UX Reference:** Project Creation Wizard - IRL Upload Step
-
-**Definition of Done:**
-- [ ] Excel parsing with `xlsx` package
-- [ ] Category/subcategory extraction
-- [ ] `folders` table records created
-- [ ] GCS paths created for each folder
-- [ ] Parent-child relationships correct
-- [ ] Folder name sanitization
-- [ ] Error handling for malformed IRL files
-- [ ] Transaction rollback on failure
-- [ ] Integration with project creation flow
-
----
-
-#### Story E6.8: AI-Assisted IRL Generation
-
-**As an** M&A analyst
-**I want** the AI to suggest IRL items based on the deal type and uploaded documents
-**So that** I don't miss important items to request
-
-**Description:**
-Use the chat agent to suggest additional IRL items based on deal context, uploaded documents, and identified gaps. Agent analyzes what's been provided and recommends what might be missing.
-
-**Technical Details:**
-- Agent tool: `generate_irl_suggestions`
-- Input: deal metadata, current IRL items, uploaded document list
-- Output: suggested IRL items with categories and priorities
-- User can accept/reject suggestions
-- Suggestions based on deal type templates + gap analysis
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I have an IRL with some items
-When I ask the chat "What else should I request?"
-Then the agent analyzes my current IRL
-And suggests additional items based on deal type
-And explains why each item is recommended
-
-Given I've uploaded several financial documents
-When I ask "What financial documents am I missing?"
-Then the agent compares uploaded docs to standard IRL items
-And identifies gaps
-And suggests specific items to add
-
-Given the agent suggests an IRL item
-When I say "Add that to my IRL"
-Then the item is added to the IRL with suggested category and priority
-And the IRL checklist updates
-
-Given I'm working on a Tech M&A deal
-When I ask for IRL suggestions
-Then the agent prioritizes tech-specific items (IP, source code, tech debt, etc.)
-And deprioritizes items not relevant to tech deals
-```
-
-**Related FR:**
-- FR-IRL-001: IRL Creation (AI-assisted)
-
-**UX Reference:** Chat Interface - IRL Assistance Mode
+**UX Reference:** Data Room - IRL Progress Dashboard
 
 **Definition of Done:**
-- [ ] Agent tool `generate_irl_suggestions` implemented
-- [ ] Suggestions based on deal type templates
-- [ ] Gap analysis against uploaded documents
-- [ ] User can accept/reject suggestions via chat
-- [ ] Suggestions include category, priority, and rationale
-- [ ] Integration with IRL builder
+- [ ] Progress bar component
+- [ ] Category-level progress indicators
+- [ ] Overall progress calculation
+- [ ] Status breakdown visualization
+- [ ] Real-time updates on status change
+- [ ] Responsive design
 
 ---
 

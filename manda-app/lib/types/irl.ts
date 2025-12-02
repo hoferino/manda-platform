@@ -283,6 +283,37 @@ export const UpdateIRLItemStatusRequestSchema = z.object({
 })
 export type UpdateIRLItemStatusRequest = z.infer<typeof UpdateIRLItemStatusRequestSchema>
 
+/**
+ * IRL items reorder request schema
+ */
+export const ReorderIRLItemsRequestSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string().uuid(),
+      sortOrder: z.number().int().min(0),
+      category: z.string().optional(), // For cross-category drag
+    })
+  ).min(1, 'At least one item required'),
+})
+export type ReorderIRLItemsRequest = z.infer<typeof ReorderIRLItemsRequestSchema>
+
+/**
+ * Add category request schema
+ */
+export const AddCategoryRequestSchema = z.object({
+  name: z.string().min(1, 'Category name is required').max(100, 'Category name too long'),
+})
+export type AddCategoryRequest = z.infer<typeof AddCategoryRequestSchema>
+
+/**
+ * Rename category request schema
+ */
+export const RenameCategoryRequestSchema = z.object({
+  oldName: z.string().min(1),
+  newName: z.string().min(1, 'New category name is required').max(100, 'Category name too long'),
+})
+export type RenameCategoryRequest = z.infer<typeof RenameCategoryRequestSchema>
+
 // ============================================================================
 // Response Types
 // ============================================================================
