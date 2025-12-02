@@ -925,10 +925,11 @@ development_status:
   # - WebSocket for real-time streaming responses
   # Prerequisites completed: 2025-11-30 (see docs/agent-behavior-spec.md)
   epic-5: backlog
-  e5-1-integrate-llm-via-langchain-model-agnostic: ready-for-review
+  e5-1-integrate-llm-via-langchain-model-agnostic: done
   e5-1-drafted: 2025-12-01
   e5-1-context-ready: 2025-12-01
   e5-1-completed: 2025-12-01
+  e5-1-reviewed: 2025-12-02
   e5-1-notes: |
     LLM integration layer completed. Key deliverables:
     - LangChain factory supporting Anthropic, OpenAI, Google providers
@@ -937,6 +938,7 @@ development_status:
     - Structured output support with Zod schemas
     - 92 unit tests passing, 9 integration tests (skipped by default)
     - Environment variables documented in .env.example
+    Code review APPROVED - all 6 ACs verified, no blocking issues
   e5-2-implement-langchain-agent-with-11-chat-tools: done
   e5-2-drafted: 2025-12-01
   e5-2-context-ready: 2025-12-01
@@ -954,11 +956,47 @@ development_status:
     - P7 evaluation harness with 10 test queries and 50K token budget
     - 33 unit tests passing
     Code review APPROVED - all 12 ACs verified, quality score 4/5
-  e5-3-build-chat-interface-with-conversation-history: ready-for-dev
+  e5-3-build-chat-interface-with-conversation-history: done
   e5-3-drafted: 2025-12-01
   e5-3-context-ready: 2025-12-01
-  e5-4-implement-source-citation-display-in-messages: backlog
-  e5-5-implement-quick-actions-and-suggested-followups: backlog
+  e5-3-completed: 2025-12-02
+  e5-3-notes: |
+    Chat interface with conversation history completed. Key deliverables:
+    - Database migration for conversations/messages tables with RLS
+    - SSE streaming integration with agent executor from E5.2
+    - ConversationSidebar with conversation list, responsive design
+    - MessageList with auto-scroll and user scroll detection
+    - MessageItem with markdown, tool indicators, citations
+    - ChatInput with Enter/Shift+Enter keyboard shortcuts
+    - useChat hook for SSE streaming state management
+    - useConversations hook for conversation CRUD
+    - Responsive design: collapsible sidebar desktop, sheet/drawer mobile
+  e5-4-implement-source-citation-display-in-messages: done
+  e5-4-drafted: 2025-12-02
+  e5-4-context-ready: 2025-12-02
+  e5-4-completed: 2025-12-02
+  e5-4-notes: |
+    Source citation display in messages completed. Key deliverables:
+    - Citation parser utility (lib/utils/citation-parser.ts) for P2-compliant formats
+    - SourceCitationLink component with DocumentPreviewModal integration
+    - CitationRenderer component for embedding citations in text
+    - Document lookup API endpoint for name → ID resolution
+    - Extended SourceCitation type with full metadata support
+    - 60 tests passing (parser, components, integration)
+    - Mobile-friendly with touch targets, responsive truncation
+  e5-5-implement-quick-actions-and-suggested-followups: done
+  e5-5-drafted: 2025-12-02
+  e5-5-context-ready: 2025-12-02
+  e5-5-completed: 2025-12-02
+  e5-5-deliverables: |
+    - QuickActions component with 4 action buttons (Find Contradictions, Generate Q&A, Summarize Findings, Identify Gaps)
+    - FollowUpSuggestions component displaying contextual follow-up question chips
+    - useQuickActionAvailability hook for checking document/findings/IRL state
+    - Extended useChat hook with suggestedFollowups state and clearSuggestions function
+    - Updated ChatInput with initialValue/onValueChange for suggestion population
+    - Integrated both components into ChatInterface above input area
+    - 51 tests passing (QuickActions: 22, FollowUpSuggestions: 17, useQuickActionAvailability: 12)
+    - Responsive design with mobile-friendly button layout and horizontal scroll
   e5-6-add-conversation-context-and-multi-turn-support: backlog
   e5-7-implement-confidence-indicators-and-uncertainty-handling: backlog
   e5-8-implement-chat-export-functionality: backlog

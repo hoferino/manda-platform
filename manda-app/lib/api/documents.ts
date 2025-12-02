@@ -369,6 +369,167 @@ export function getFileExtension(filename: string): string {
 }
 
 /**
+ * Document lookup result for citation resolution
+ * Story: E5.4 - AC: #3 (Document Viewer Integration)
+ */
+export interface DocumentLookupResult {
+  documentId: string
+  documentName: string
+  chunkId?: string | null
+}
+
+/**
+ * Cache for document name lookups
+ * Key: `${projectId}:${documentName}`
+ */
+const documentLookupCache = new Map<string, DocumentLookupResult | null>()
+
+/**
+ * Find document by name within a project
+ * Used for resolving citation document names to IDs
+ * Story: E5.4 - AC: #3, #5
+ */
+export async function findDocumentByName(
+  projectId: string,
+  documentName: string
+): Promise<DocumentLookupResult | null> {
+  const cacheKey = `${projectId}:${documentName}`
+
+  // Check cache first
+  if (documentLookupCache.has(cacheKey)) {
+    return documentLookupCache.get(cacheKey) ?? null
+  }
+
+  try {
+    const response = await fetch(
+      `/api/projects/${projectId}/documents/lookup?name=${encodeURIComponent(documentName)}`
+    )
+
+    if (!response.ok) {
+      // Cache miss for 404s to avoid repeated lookups
+      if (response.status === 404) {
+        documentLookupCache.set(cacheKey, null)
+      }
+      return null
+    }
+
+    const data = await response.json()
+    const result: DocumentLookupResult = {
+      documentId: data.document.id,
+      documentName: data.document.name,
+      chunkId: data.chunkId ?? null,
+    }
+
+    documentLookupCache.set(cacheKey, result)
+    return result
+  } catch (error) {
+    console.error('Error looking up document:', error)
+    return null
+  }
+}
+
+/**
+ * Batch find documents by names within a project
+ * More efficient for resolving multiple citations at once
+ * Story: E5.4 - AC: #4 (Multiple Citations)
+ */
+export async function findDocumentsByNames(
+  projectId: string,
+  documentNames: string[]
+): Promise<Map<string, DocumentLookupResult>> {
+  const results = new Map<string, DocumentLookupResult>()
+  const uncachedNames: string[] = []
+
+  // Check cache for each name
+  for (const name of documentNames) {
+    const cacheKey = `${projectId}:${name}`
+    if (documentLookupCache.has(cacheKey)) {
+      const cached = documentLookupCache.get(cacheKey)
+      if (cached) {
+        results.set(name, cached)
+      }
+    } else {
+      uncachedNames.push(name)
+    }
+  }
+
+  // If all names are cached, return early
+  if (uncachedNames.length === 0) {
+    return results
+  }
+
+  // Fetch uncached names
+  try {
+    const response = await fetch(
+      `/api/projects/${projectId}/documents/lookup`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: uncachedNames }),
+      }
+    )
+
+    if (!response.ok) {
+      // Mark all as not found
+      for (const name of uncachedNames) {
+        documentLookupCache.set(`${projectId}:${name}`, null)
+      }
+      return results
+    }
+
+    const data = await response.json()
+    const documents = data.documents as Array<{
+      name: string
+      id: string
+      chunkId?: string | null
+    }>
+
+    // Cache and add to results
+    const foundNames = new Set<string>()
+    for (const doc of documents) {
+      const result: DocumentLookupResult = {
+        documentId: doc.id,
+        documentName: doc.name,
+        chunkId: doc.chunkId ?? null,
+      }
+      documentLookupCache.set(`${projectId}:${doc.name}`, result)
+      results.set(doc.name, result)
+      foundNames.add(doc.name)
+    }
+
+    // Cache misses for names not found
+    for (const name of uncachedNames) {
+      if (!foundNames.has(name)) {
+        documentLookupCache.set(`${projectId}:${name}`, null)
+      }
+    }
+
+    return results
+  } catch (error) {
+    console.error('Error batch looking up documents:', error)
+    return results
+  }
+}
+
+/**
+ * Clear the document lookup cache
+ * Call when documents are uploaded/deleted/renamed
+ */
+export function clearDocumentLookupCache(projectId?: string): void {
+  if (projectId) {
+    // Clear only for specific project
+    for (const key of documentLookupCache.keys()) {
+      if (key.startsWith(`${projectId}:`)) {
+        documentLookupCache.delete(key)
+      }
+    }
+  } else {
+    // Clear all
+    documentLookupCache.clear()
+  }
+}
+
+/**
  * Get icon name based on file type
  */
 export function getFileTypeIcon(mimeType: string | null): string {

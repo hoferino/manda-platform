@@ -1,6 +1,6 @@
 # Story E5.1: Integrate LLM via LangChain (Model-Agnostic)
 
-Status: ready-for-review
+Status: done
 
 ## Story
 

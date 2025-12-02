@@ -1,0 +1,219 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E5</epicId>
+    <storyId>5</storyId>
+    <title>Implement Quick Actions and Suggested Follow-ups</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e5-5-implement-quick-actions-and-suggested-followups.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>quick action buttons and suggested follow-up questions</iWant>
+    <soThat>I can efficiently perform common tasks and explore related topics without typing</soThat>
+    <tasks>
+      <task id="1" title="Create QuickActions component" status="pending">
+        <subtasks>
+          <subtask>Create `components/chat/QuickActions.tsx` with action button grid</subtask>
+          <subtask>Define quick action configurations: label, icon, prompt, toolName</subtask>
+          <subtask>Implement button loading state with spinner icon</subtask>
+          <subtask>Implement disabled state with tooltip via Tooltip component</subtask>
+          <subtask>Add data-testid attributes for testing</subtask>
+          <subtask>Support ARIA labels for accessibility</subtask>
+        </subtasks>
+      </task>
+      <task id="2" title="Implement quick action tool triggers" status="pending">
+        <subtasks>
+          <subtask>Create quick action prompt templates for each action</subtask>
+          <subtask>Wire onClick handlers to call existing sendMessage function</subtask>
+          <subtask>Ensure agent receives the prompt and selects appropriate tool</subtask>
+        </subtasks>
+      </task>
+      <task id="3" title="Integrate QuickActions into ChatInterface" status="pending">
+        <subtasks>
+          <subtask>Add QuickActions component above ChatInput</subtask>
+          <subtask>Pass sendMessage callback for triggering actions</subtask>
+          <subtask>Pass isLoading state to disable during agent processing</subtask>
+          <subtask>Pass project context to enable/disable based on document state</subtask>
+        </subtasks>
+      </task>
+      <task id="4" title="Create FollowUpSuggestions component" status="pending">
+        <subtasks>
+          <subtask>Create `components/chat/FollowUpSuggestions.tsx`</subtask>
+          <subtask>Display 2-3 suggestion chips/buttons below agent responses</subtask>
+          <subtask>Implement click handler that populates input via callback</subtask>
+          <subtask>Style with subtle background, rounded corners, hover state</subtask>
+          <subtask>Implement responsive layout (horizontal scroll on mobile)</subtask>
+          <subtask>Add fade-in animation for appearance</subtask>
+        </subtasks>
+      </task>
+      <task id="5" title="Implement LLM-generated follow-up suggestions" status="pending">
+        <subtasks>
+          <subtask>Extend chat API response to include suggested_followups: string[]</subtask>
+          <subtask>Update agent executor to generate follow-ups after each response</subtask>
+          <subtask>Add follow-up generation to system prompt or as post-processing step</subtask>
+          <subtask>Limit to 3 suggestions max</subtask>
+          <subtask>Store follow-ups in message metadata for persistence</subtask>
+        </subtasks>
+      </task>
+      <task id="6" title="Update ChatInterface with follow-up suggestions" status="pending">
+        <subtasks>
+          <subtask>Track current suggestions in state</subtask>
+          <subtask>Display FollowUpSuggestions after latest assistant message</subtask>
+          <subtask>Implement callback to populate input field on click</subtask>
+          <subtask>Clear suggestions when new message is sent</subtask>
+          <subtask>Update suggestions when new response arrives</subtask>
+        </subtasks>
+      </task>
+      <task id="7" title="Implement quick action availability checks" status="pending">
+        <subtasks>
+          <subtask>Create useQuickActionAvailability hook</subtask>
+          <subtask>Check for documents uploaded before enabling most actions</subtask>
+          <subtask>Check for findings before enabling "Summarize Findings"</subtask>
+          <subtask>Check for IRL existence before enabling "Identify Gaps"</subtask>
+          <subtask>Return disabled states with reason messages</subtask>
+        </subtasks>
+      </task>
+      <task id="8" title="Testing and verification" status="pending">
+        <subtasks>
+          <subtask>Write component tests for QuickActions</subtask>
+          <subtask>Write component tests for FollowUpSuggestions</subtask>
+          <subtask>Write integration test for quick action flow</subtask>
+          <subtask>Test follow-up suggestions appear after agent response</subtask>
+          <subtask>Verify responsive layout on mobile viewport</subtask>
+          <subtask>Verify build passes with all changes</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Quick Action Buttons Visible">The chat interface displays quick action buttons in a persistent location (bottom of chat or above input), with the following actions: "Find Contradictions", "Generate Q&A", "Summarize Findings", and "Identify Gaps"</criterion>
+    <criterion id="AC2" title="Quick Action Triggers Tool Call">Clicking a quick action button sends a pre-formatted message to the agent that triggers the appropriate tool (e.g., "Find Contradictions" triggers detect_contradictions, "Generate Q&A" triggers suggest_questions)</criterion>
+    <criterion id="AC3" title="Button Loading States">Quick action buttons show a loading indicator while the agent is processing and prevent duplicate clicks</criterion>
+    <criterion id="AC4" title="Disabled Button States">Quick action buttons are disabled when conditions aren't met (e.g., no documents uploaded) with a tooltip explaining why</criterion>
+    <criterion id="AC5" title="Suggested Follow-ups Generated">After each agent response, the system displays 2-3 contextually relevant follow-up question suggestions based on the conversation</criterion>
+    <criterion id="AC6" title="Follow-up Click Populates Input">Clicking a suggested follow-up question populates the chat input field with the question text, allowing the user to review/edit before submitting</criterion>
+    <criterion id="AC7" title="Follow-up Suggestions Contextual">Suggested follow-ups are generated by the LLM based on the current response and conversation context (not hardcoded)</criterion>
+    <criterion id="AC8" title="Responsive Button Layout">Quick actions and follow-up suggestions display correctly on both desktop and mobile viewports</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E5.md" title="Epic 5 Technical Specification" section="Module 5: Chat UI Components" snippet="Defines QuickActions.tsx and FollowUpSuggestions.tsx components for chat interface enhancements with quick action buttons and contextual follow-up suggestions." />
+      <doc path="docs/agent-behavior-spec.md" title="Agent Behavior Specification" section="P3: Expected Behavior per Use Case" snippet="Defines 7 inferred intent patterns: fact lookup, financial deep dive, due diligence check, comparison, synthesis, gap identification, general exploration. Quick actions map to these intents." />
+      <doc path="docs/agent-behavior-spec.md" title="Agent Behavior Specification" section="P2: Agent Behavior Framework" snippet="Core principles: structured responses, no hard length limits, every factual claim needs a source. Follow-up suggestions should align with proactive suggestions: add to IRL, generate Q&A, flag contradictions." />
+      <doc path="docs/sprint-artifacts/epics/epic-E5.md" title="Epic 5: Conversational Assistant" section="Story E5.5" snippet="Quick Actions and Suggested Follow-ups story enabling common action buttons and contextual follow-up suggestions for the chat interface." />
+      <doc path="docs/sprint-artifacts/stories/e5-4-implement-source-citation-display-in-messages.md" title="Story E5.4 (Completed)" section="Completion Notes" snippet="60 tests passing. Patterns to reuse: component styling (hover states, touch targets), CitationRenderer for text transformation, SSE streaming integration for final message processing." />
+    </docs>
+    <code>
+      <file path="manda-app/components/chat/ChatInterface.tsx" kind="component" symbol="ChatInterface" lines="1-224" reason="Main chat container where QuickActions and FollowUpSuggestions components will be integrated. Contains conversation management, message submission, and error handling." />
+      <file path="manda-app/components/chat/ChatInput.tsx" kind="component" symbol="ChatInput" lines="1-141" reason="Input component that QuickActions will sit above. Follow-ups will populate this input's value via callback." />
+      <file path="manda-app/lib/hooks/useChat.ts" kind="hook" symbol="useChat" lines="1-240" reason="Chat hook providing sendMessage function that quick actions will call. Handles SSE streaming and message state." />
+      <file path="manda-app/lib/hooks/useConversations.ts" kind="hook" symbol="useConversations" lines="1-150" reason="Conversation management hook. Quick actions depend on having an active conversation context." />
+      <file path="manda-app/lib/types/chat.ts" kind="types" symbol="SourceCitation, Message, SSEDoneEvent" lines="1-303" reason="Chat types including SSEDoneEvent with suggestedFollowups field (already defined), Message type for storing follow-ups in metadata." />
+      <file path="manda-app/lib/agent/tools/all-tools.ts" kind="module" symbol="allChatTools, TOOL_CATEGORIES" lines="1-122" reason="Defines all 11 chat tools. Quick actions map to: detect_contradictions, suggest_questions, query_knowledge_base, find_gaps." />
+      <file path="manda-app/lib/agent/streaming.ts" kind="module" symbol="AgentStreamHandler, generateFollowupSuggestions" lines="1-150" reason="Streaming utilities including generateFollowupSuggestions function for LLM-based follow-up generation." />
+      <file path="manda-app/app/api/projects/[id]/chat/route.ts" kind="api-route" symbol="POST" lines="1-213" reason="Chat API route that already generates follow-up suggestions via generateFollowupSuggestions() and includes them in SSE done event." />
+      <file path="manda-app/lib/api/chat.ts" kind="service" symbol="sendMessageStream, ChatStreamCallbacks" lines="1-100" reason="Client-side API for sending messages with SSE streaming. ChatStreamCallbacks.onDone receives suggestedFollowups." />
+      <file path="manda-app/components/chat/MessageItem.tsx" kind="component" symbol="MessageItem" lines="1-200" reason="Message rendering component. Follow-up suggestions could be rendered after the last assistant message." />
+      <file path="manda-app/__tests__/components/chat/SourceCitationLink.test.tsx" kind="test" symbol="SourceCitationLink tests" lines="1-150" reason="Test patterns for chat components: React Testing Library setup, mock supabase, accessibility testing." />
+    </code>
+    <dependencies>
+      <node>
+        <package name="@radix-ui/react-tooltip" version="^1.2.8" reason="Tooltip component for disabled quick action explanations" />
+        <package name="lucide-react" version="^0.554.0" reason="Icons for quick action buttons (Search, MessageSquare, AlertTriangle, HelpCircle, Loader2)" />
+        <package name="react" version="19.2.0" reason="React hooks for state management" />
+        <package name="sonner" version="^2.0.7" reason="Toast notifications for action feedback" />
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="architecture">Use existing useChat hook's sendMessage function - do not bypass the agent for tool selection</constraint>
+    <constraint source="architecture">Quick action prompts must be phrased to trigger the appropriate tool via natural language, not direct tool calls</constraint>
+    <constraint source="architecture">Follow-up suggestions come from SSE 'done' event's suggestedFollowups field (already implemented in streaming.ts)</constraint>
+    <constraint source="behavior-spec">P3 Compliance: Quick action prompts should align with the 7 inferred intent patterns from agent-behavior-spec.md</constraint>
+    <constraint source="behavior-spec">P2 Compliance: Agent responses already include sources; follow-ups should encourage deeper exploration</constraint>
+    <constraint source="testing">Component tests using React Testing Library following established patterns from E5.4</constraint>
+    <constraint source="accessibility">ARIA labels required for all interactive elements; min 44px touch targets for mobile</constraint>
+    <constraint source="styling">Use existing shadcn/ui components (Button, Tooltip) and Tailwind classes for consistency</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="QuickAction" kind="type">
+      <signature>
+interface QuickAction {
+  id: string
+  label: string
+  icon: LucideIcon
+  prompt: string
+  toolName: string  // For analytics/tracking
+  requiresDocuments?: boolean
+  requiresFindings?: boolean
+  requiresIRL?: boolean
+}
+      </signature>
+      <path>manda-app/components/chat/QuickActions.tsx</path>
+    </interface>
+    <interface name="FollowUpSuggestionsProps" kind="props">
+      <signature>
+interface FollowUpSuggestionsProps {
+  suggestions: string[]
+  onSelect: (suggestion: string) => void
+  isVisible: boolean
+}
+      </signature>
+      <path>manda-app/components/chat/FollowUpSuggestions.tsx</path>
+    </interface>
+    <interface name="useQuickActionAvailability" kind="hook-return">
+      <signature>
+interface QuickActionAvailability {
+  findContradictions: { enabled: boolean; reason?: string }
+  generateQA: { enabled: boolean; reason?: string }
+  summarizeFindings: { enabled: boolean; reason?: string }
+  identifyGaps: { enabled: boolean; reason?: string }
+  isLoading: boolean
+}
+      </signature>
+      <path>manda-app/lib/hooks/useQuickActionAvailability.ts</path>
+    </interface>
+    <interface name="ChatStreamCallbacks.onDone" kind="callback">
+      <signature>onDone?: (message: Message, suggestedFollowups?: string[]) => void</signature>
+      <path>manda-app/lib/api/chat.ts</path>
+    </interface>
+    <interface name="Quick Action to Tool Mapping" kind="mapping">
+      <signature>
+| Quick Action       | Expected Tool           | Intent Pattern      |
+|--------------------|-------------------------|---------------------|
+| Find Contradictions | detect_contradictions   | Due diligence check |
+| Generate Q&A       | suggest_questions       | Gap identification  |
+| Summarize Findings | query_knowledge_base    | Synthesis           |
+| Identify Gaps      | find_gaps               | Gap identification  |
+      </signature>
+      <path>docs/sprint-artifacts/stories/e5-5-implement-quick-actions-and-suggested-followups.md#Dev Notes</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Use Vitest with React Testing Library. Mock Supabase client using shared test utilities from __tests__/utils/supabase-mock.ts. Component tests should cover rendering, interactions, accessibility (ARIA labels, keyboard navigation), and error states. Follow patterns established in E5.4 citation tests.</standards>
+    <locations>
+      <location>manda-app/__tests__/components/chat/QuickActions.test.tsx</location>
+      <location>manda-app/__tests__/components/chat/FollowUpSuggestions.test.tsx</location>
+      <location>manda-app/__tests__/lib/hooks/useQuickActionAvailability.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test QuickActions renders all 4 action buttons with correct labels and icons</idea>
+      <idea ac="AC2">Test clicking quick action calls sendMessage with correct prompt text</idea>
+      <idea ac="AC3">Test loading state shows spinner and disables buttons during processing</idea>
+      <idea ac="AC4">Test disabled state with tooltip when documents/findings not available</idea>
+      <idea ac="AC5">Test FollowUpSuggestions renders 2-3 suggestions from SSE done event</idea>
+      <idea ac="AC6">Test clicking follow-up calls onSelect callback with suggestion text</idea>
+      <idea ac="AC7">Test suggestions are cleared when new message is sent</idea>
+      <idea ac="AC8">Test responsive layout - horizontal scroll on mobile viewport</idea>
+      <idea ac="AC1-8">Integration: Send message → receive response → follow-ups appear → click follow-up → input populated</idea>
+    </ideas>
+  </tests>
+</story-context>

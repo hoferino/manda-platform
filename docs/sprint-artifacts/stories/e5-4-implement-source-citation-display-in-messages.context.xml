@@ -1,0 +1,242 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E5</epicId>
+    <storyId>E5.4</storyId>
+    <title>Implement Source Citation Display in Messages</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e5-4-implement-source-citation-display-in-messages.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to see source citations in chat responses</iWant>
+    <soThat>I can verify the agent's answers by clicking through to the original documents</soThat>
+    <tasks>
+      <task id="1" status="pending">Create SourceCitationLink component for chat messages (AC: 2, 5)</task>
+      <task id="2" status="pending">Create citation parsing utility (AC: 1, 4)</task>
+      <task id="3" status="pending">Create CitationRenderer component (AC: 1, 4, 6)</task>
+      <task id="4" status="pending">Update MessageItem to use CitationRenderer (AC: 2, 3, 7)</task>
+      <task id="5" status="pending">Implement document lookup for citations (AC: 3)</task>
+      <task id="6" status="pending">Update SourceCitation type for richer metadata (AC: 3, 7)</task>
+      <task id="7" status="pending">Implement citation styling and responsiveness (AC: 5, 8)</task>
+      <task id="8" status="pending">Add fallback handling for unavailable documents (AC: 6)</task>
+      <task id="9" status="pending">Integration testing (AC: all)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Parse Citations from LLM Responses - When the agent responds with text containing source citations in the format `(source: filename.ext, location)`, the system parses and identifies each citation for enhanced rendering</criterion>
+    <criterion id="AC2">Clickable Citation Links - Each source citation renders as a clickable link with monospace styling, showing document name and location (e.g., "financials.xlsx, P&L, B15")</criterion>
+    <criterion id="AC3">Document Viewer Integration - Clicking a citation opens the DocumentPreviewModal at the exact location (page, cell, section) where the finding was extracted</criterion>
+    <criterion id="AC4">Multiple Citations Support - When a response contains multiple source citations, each renders as a separate clickable link and they're clearly distinguished from regular text</criterion>
+    <criterion id="AC5">Citation Styling - Citations are visually distinct with subtle background color, monospace font, and hover state that indicates clickability</criterion>
+    <criterion id="AC6">Fallback for Invalid Citations - If a citation format is invalid or the document is unavailable, the citation still displays with a fallback format and appropriate error handling</criterion>
+    <criterion id="AC7">Sources Section Display - When a message has a `sources` array in its metadata, render a "Sources" section at the bottom of the message with all citations as clickable links</criterion>
+    <criterion id="AC8">Mobile-Friendly Display - Citation links are tappable on mobile and don't break text flow on small screens</criterion>
+    <criterion id="AC9">P2 Compliance - Source attribution format matches agent-behavior-spec.md P2 rules: every claim has a source with filename and location specificity</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/agent-behavior-spec.md</path>
+        <title>Agent Behavior Specification</title>
+        <section>P2: Agent Behavior Framework</section>
+        <snippet>Source Attribution: Every factual claim must have a source. Format: `(source: filename.ext, location)`. Location specificity: page number, cell reference, section name. Sources are clickable links to exact document location. Multiple sources allowed: `(sources: doc1.pdf p.5, doc2.xlsx B15)`</snippet>
+      </doc>
+      <doc>
+        <path>docs/agent-behavior-spec.md</path>
+        <title>Agent Behavior Specification</title>
+        <section>P1: Response Formatting Rules</section>
+        <snippet>Never show confidence scores to users. Translate confidence factors into natural explanations. Example: "Q3 2024 revenue was €5.2M (source: Q3_Report.pdf, p.12)."</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic 5 Technical Specification</title>
+        <section>Module 5: Chat UI Components</section>
+        <snippet>Chat UI components include MessageItem.tsx (individual message with citations), SourceCitation.tsx (clickable source link). Source citations render inline and link to document viewer at exact location.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic 5 Technical Specification</title>
+        <section>TypeScript Types - SourceCitation</section>
+        <snippet>SourceCitation interface: document_id, document_name, location (Page 5, Cell B15, Section 3.2), text_snippet, url (Link to document viewer)</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E5.md</path>
+        <title>Epic 5 Technical Specification</title>
+        <section>Story E5.4: Source Citations Acceptance Criteria</section>
+        <snippet>Citations render inline: (source: filename, location). Citations are clickable links. Clicking opens document viewer at location. Relevant section highlighted in viewer. P2 compliance: Source attribution format matches agent-behavior-spec.md P2 rules.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e5-3-build-chat-interface-with-conversation-history.md</path>
+        <title>Story E5.3: Build Chat Interface</title>
+        <section>Implementation Status</section>
+        <snippet>Chat Interface completed with MessageItem.tsx containing basic citation rendering via renderInlineMarkdown(). Current implementation detects (source: filename, location) pattern but renders as non-clickable styled span. SourceCitations component exists but not integrated with DocumentPreviewModal.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/components/chat/MessageItem.tsx</path>
+        <kind>component</kind>
+        <symbol>MessageItem, renderInlineMarkdown, renderContent, SourceCitations</symbol>
+        <lines>1-317</lines>
+        <reason>Main component to enhance. Contains existing citation detection regex and styled span rendering that needs to be replaced with clickable SourceCitationLink components.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/chat/MessageItem.tsx</path>
+        <kind>function</kind>
+        <symbol>renderInlineMarkdown</symbol>
+        <lines>114-173</lines>
+        <reason>Key function that currently parses (source: filename, location) pattern and renders as non-clickable span. This is the primary integration point for CitationRenderer.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/chat/MessageItem.tsx</path>
+        <kind>function</kind>
+        <symbol>SourceCitations</symbol>
+        <lines>178-203</lines>
+        <reason>Renders sources array from message metadata as buttons with ExternalLink icon. Needs to be updated to use SourceCitationLink with DocumentPreviewModal support.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx</path>
+        <kind>component</kind>
+        <symbol>SourceAttributionLink</symbol>
+        <lines>1-197</lines>
+        <reason>Reference implementation from E4.5 to adapt for chat context. Contains styling patterns, DocumentPreviewModal integration, accessibility features, and formatting utilities.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx</path>
+        <kind>interface</kind>
+        <symbol>SourceAttributionLinkProps</symbol>
+        <lines>27-36</lines>
+        <reason>Props interface to reference for new SourceCitationLink component: documentId, documentName, chunkId, pageNumber, sheetName, cellReference, projectId</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx</path>
+        <kind>function</kind>
+        <symbol>formatSourceReference, buildFullSourcePath, getDocumentIcon</symbol>
+        <lines>41-106</lines>
+        <reason>Utility functions to reuse for citation formatting in chat context. Handles Excel cells, PDF pages, and document type icons.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/DocumentPreviewModal.tsx</path>
+        <kind>component</kind>
+        <symbol>DocumentPreviewModal</symbol>
+        <lines>1-327</lines>
+        <reason>Existing modal component to open when citation is clicked. Supports Excel, PDF, and other document types with chunk context fetching.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/shared/DocumentPreviewModal.tsx</path>
+        <kind>interface</kind>
+        <symbol>DocumentPreviewModalProps</symbol>
+        <lines>71-81</lines>
+        <reason>Props interface for modal: isOpen, onClose, documentId, documentName, chunkId, pageNumber, sheetName, cellReference, projectId</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/chat.ts</path>
+        <kind>type</kind>
+        <symbol>SourceCitation, Message</symbol>
+        <lines>13-47</lines>
+        <reason>Current SourceCitation type has documentName, location, documentId (optional). Needs extension with chunkId, pageNumber, sheetName, cellReference for full DocumentPreviewModal integration.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/types/chat.ts</path>
+        <kind>function</kind>
+        <symbol>dbMessageToMessage</symbol>
+        <lines>244-266</lines>
+        <reason>Database message converter that includes sources field. May need update to handle extended SourceCitation type.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/chat/ToolIndicator.tsx</path>
+        <kind>component</kind>
+        <symbol>ToolIndicator, TypingIndicator</symbol>
+        <lines>all</lines>
+        <reason>Existing chat component pattern showing how to create small, focused components in the chat module.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="react" version="19.2.0" />
+        <package name="next" version="16.0.4" />
+        <package name="lucide-react" version="^0.554.0" />
+        <package name="tailwind-merge" version="^3.4.0" />
+        <package name="clsx" version="^2.1.1" />
+        <package name="zod" version="^4.1.13" />
+        <package name="@radix-ui/react-tooltip" version="^1.2.8" />
+        <package name="@radix-ui/react-dialog" version="^1.1.15" />
+      </ecosystem>
+      <note>All UI components (Avatar, Tooltip, Dialog, Button) already installed via shadcn/ui</note>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Reuse existing SourceAttributionLink and DocumentPreviewModal components from knowledge-explorer module - adapt for chat context</constraint>
+    <constraint type="architecture">Citation format must match P2 spec: (source: filename.ext, location) - maintain compatibility with agent output format</constraint>
+    <constraint type="architecture">SSE Integration: Citations may arrive during streaming; rendering must handle partial content gracefully</constraint>
+    <constraint type="security">RLS Security: Document access respects project-level RLS policies - verify document access before showing preview</constraint>
+    <constraint type="pattern">Component Location: New components go in manda-app/components/chat/ directory</constraint>
+    <constraint type="pattern">Test Location: Tests go in manda-app/__tests__/components/chat/ following established patterns</constraint>
+    <constraint type="pattern">Use cn() from lib/utils for className merging</constraint>
+    <constraint type="pattern">Use memo() for performance on frequently re-rendered components</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>SourceAttributionLinkProps</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface SourceAttributionLinkProps { documentId: string; documentName: string; chunkId: string | null; pageNumber: number | null; sheetName: string | null; cellReference: string | null; projectId: string; className?: string; }</signature>
+      <path>manda-app/components/knowledge-explorer/shared/SourceAttributionLink.tsx:27-36</path>
+    </interface>
+    <interface>
+      <name>DocumentPreviewModalProps</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface DocumentPreviewModalProps { isOpen: boolean; onClose: () => void; documentId: string; documentName: string; chunkId: string | null; pageNumber: number | null; sheetName: string | null; cellReference: string | null; projectId: string; }</signature>
+      <path>manda-app/components/knowledge-explorer/shared/DocumentPreviewModal.tsx:71-81</path>
+    </interface>
+    <interface>
+      <name>SourceCitation (existing)</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface SourceCitation { documentName: string; location: string; documentId?: string; }</signature>
+      <path>manda-app/lib/types/chat.ts:13-17</path>
+    </interface>
+    <interface>
+      <name>Message</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface Message { id: string; conversationId: string; role: MessageRole; content: string; toolCalls?: ToolCall[]; sources?: SourceCitation[]; metadata?: Record&lt;string, unknown&gt;; tokensUsed?: number; createdAt: string; }</signature>
+      <path>manda-app/lib/types/chat.ts:37-47</path>
+    </interface>
+    <interface>
+      <name>Chunk API Endpoint</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /api/projects/{projectId}/chunks/{chunkId} -> ChunkResponse</signature>
+      <path>manda-app/app/api/projects/[id]/chunks/[chunkId]/route.ts</path>
+    </interface>
+    <interface>
+      <name>Citation Format (P2 Spec)</name>
+      <kind>Text format</kind>
+      <signature>(source: filename.ext, location) OR (sources: doc1.pdf p.5, doc2.xlsx B15)</signature>
+      <path>docs/agent-behavior-spec.md#P2</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Use Vitest for unit tests, React Testing Library for component tests. Follow existing test patterns in __tests__/components/chat/ and __tests__/components/knowledge-explorer/. Mock Supabase client using shared utilities from __tests__/utils/supabase-mock.ts. Use data-testid attributes for reliable test selection.</standards>
+    <locations>
+      <location>manda-app/__tests__/components/chat/*.test.tsx</location>
+      <location>manda-app/__tests__/lib/utils/*.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test citation parser with various formats: single citation, multiple citations, nested parentheses, malformed citations</idea>
+      <idea ac="AC2">Test SourceCitationLink renders with correct styling, icon, and text formatting</idea>
+      <idea ac="AC3">Test click handler opens DocumentPreviewModal with correct props</idea>
+      <idea ac="AC4">Test CitationRenderer handles multiple citations in a single text block</idea>
+      <idea ac="AC5">Test citation styling: monospace font, background color, hover states</idea>
+      <idea ac="AC6">Test fallback display when document lookup fails or citation format invalid</idea>
+      <idea ac="AC7">Test SourceCitations component renders sources array with clickable links</idea>
+      <idea ac="AC8">Test mobile tap targets meet 44x44px minimum</idea>
+      <idea ac="AC9">Test P2 format compliance: (source: filename, location) pattern matching</idea>
+    </ideas>
+  </tests>
+</story-context>
