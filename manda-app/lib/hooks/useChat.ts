@@ -5,11 +5,13 @@
  *
  * Manages chat state, message submission, and SSE streaming.
  * Story: E5.3 - Build Chat Interface with Conversation History
+ * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
  * AC: #2 (Message Submission), #3 (Streaming Responses), #9 (Chat Hook)
+ * AC: E5.7 #8 (Badge Display in Message Items)
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import type { Message, SourceCitation } from '@/lib/types/chat'
+import type { Message, SourceCitation, MessageConfidence } from '@/lib/types/chat'
 import { getConversation } from '@/lib/api/chat'
 import { sendMessageStream, type ChatStreamCallbacks } from '@/lib/api/chat'
 
@@ -58,6 +60,8 @@ export function useChat({
   const streamingContentRef = useRef<string>('')
   // Track collected sources
   const sourcesRef = useRef<SourceCitation[]>([])
+  // Track confidence data (E5.7)
+  const confidenceRef = useRef<MessageConfidence | undefined>(undefined)
 
   // Update internal ref when prop changes
   useEffect(() => {
@@ -123,6 +127,7 @@ export function useChat({
       setSuggestedFollowups([]) // Clear suggestions on new message
       streamingContentRef.current = ''
       sourcesRef.current = []
+      confidenceRef.current = undefined // Reset confidence (E5.7)
 
       // Create placeholder for assistant message
       const assistantMessageId = crypto.randomUUID()
@@ -156,8 +161,12 @@ export function useChat({
         onSources: (citations) => {
           sourcesRef.current = citations
         },
-        onDone: (message, followups) => {
-          // Update the assistant message with final content and sources
+        onDone: (message, followups, confidence) => {
+          // Store confidence for final update (E5.7)
+          if (confidence) {
+            confidenceRef.current = confidence
+          }
+          // Update the assistant message with final content, sources, and confidence
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMessageId
@@ -166,6 +175,7 @@ export function useChat({
                     id: message.id, // Use server-generated ID
                     content: message.content,
                     sources: sourcesRef.current,
+                    confidence: confidenceRef.current, // E5.7: Include confidence
                   }
                 : msg
             )

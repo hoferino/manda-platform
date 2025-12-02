@@ -6,8 +6,10 @@
  *
  * Story: E5.3 - Build Chat Interface with Conversation History
  * Story: E5.6 - Add Conversation Context and Multi-turn Support
+ * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
  * AC: #2 (Message Submission), #3 (Streaming Responses), #8 (API Routes)
  * AC: E5.6 #1 (Last N Messages), #3 (Context Persists), #4 (Long Conversations), #5 (Token Management)
+ * AC: E5.7 #1 (Confidence Score Extraction), #6 (Multiple Finding Aggregation)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -198,16 +200,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const content = handler.getContent()
         const followups = generateFollowupSuggestions(content)
 
+        // Extract confidence from tool results (E5.7)
+        const confidence = handler.getConfidence()
+
         // Generate message ID for the response
         const messageId = crypto.randomUUID()
 
-        // Save assistant message to database
+        // Save assistant message to database (E5.7: store confidence)
         await supabase.from('messages').insert({
           id: messageId,
           conversation_id: activeConversationId,
           role: 'assistant',
           content,
           sources: handler.getSources().length > 0 ? JSON.stringify(handler.getSources()) : null,
+          confidence: confidence ? JSON.stringify(confidence) : null,
         })
 
         // Update conversation updated_at

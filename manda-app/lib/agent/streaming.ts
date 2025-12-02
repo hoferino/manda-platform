@@ -3,13 +3,22 @@
  *
  * Utilities for Server-Sent Events (SSE) streaming of agent responses.
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
  *
  * Features:
  * - SSE event formatting
  * - Token streaming
  * - Tool execution events
+ * - Confidence extraction from tool results (E5.7)
  * - Error handling
  */
+
+import type { MessageConfidence } from '@/lib/types/chat'
+import {
+  extractConfidenceFromToolResults,
+  aggregateConfidence,
+  type ConfidenceData,
+} from '@/lib/utils/confidence'
 
 /**
  * SSE Event Types
@@ -59,6 +68,8 @@ export interface SSEDoneEvent {
     role: 'assistant'
   }
   suggestedFollowups?: string[]
+  /** Confidence data extracted from tool results (E5.7) */
+  confidence?: MessageConfidence
 }
 
 export interface SSEErrorEvent {
@@ -132,6 +143,7 @@ export function getSSEHeaders(): HeadersInit {
 
 /**
  * Stream handler that can be used with agent execution
+ * Enhanced in E5.7 to track confidence from tool results
  */
 export class AgentStreamHandler {
   private writer: {
@@ -141,6 +153,10 @@ export class AgentStreamHandler {
   }
   private sources: SSESourcesEvent['citations'] = []
   private fullContent: string = ''
+  /** Tool results for confidence extraction (E5.7) */
+  private toolResults: Array<{ tool: string; result: unknown }> = []
+  /** Collected confidence data (E5.7) */
+  private confidenceData: ConfidenceData[] = []
 
   constructor(writer: typeof AgentStreamHandler.prototype.writer) {
     this.writer = writer
@@ -167,8 +183,14 @@ export class AgentStreamHandler {
   onToolEnd(tool: string, output: unknown): void {
     this.writer.write({ type: 'tool_end', tool, result: output })
 
+    // Store tool result for confidence extraction (E5.7)
+    this.toolResults.push({ tool, result: output })
+
     // Extract sources from tool output if present
     this.extractSources(output)
+
+    // Extract confidence from tool output (E5.7)
+    this.extractConfidence(output)
   }
 
   /**
@@ -180,6 +202,9 @@ export class AgentStreamHandler {
       this.writer.write({ type: 'sources', citations: this.sources })
     }
 
+    // Build confidence data for done event (E5.7)
+    const confidence = this.buildConfidence()
+
     // Send done event
     this.writer.write({
       type: 'done',
@@ -189,6 +214,7 @@ export class AgentStreamHandler {
         role: 'assistant',
       },
       suggestedFollowups: followups,
+      confidence,
     })
 
     this.writer.close()
@@ -263,6 +289,54 @@ export class AgentStreamHandler {
    */
   getSources(): SSESourcesEvent['citations'] {
     return this.sources
+  }
+
+  /**
+   * Get aggregated confidence data (E5.7)
+   */
+  getConfidence(): MessageConfidence | undefined {
+    return this.buildConfidence()
+  }
+
+  /**
+   * Extract confidence from tool output (E5.7)
+   * Parses tool results to find confidence scores
+   */
+  private extractConfidence(output: unknown): void {
+    if (!output) return
+
+    // Wrap single output in array for extraction function
+    const results = [{ result: output }]
+    const extracted = extractConfidenceFromToolResults(results)
+
+    if (extracted.length > 0) {
+      this.confidenceData.push(...extracted)
+    }
+  }
+
+  /**
+   * Build aggregated confidence for the response (E5.7)
+   * Returns undefined if no confidence data was collected
+   */
+  private buildConfidence(): MessageConfidence | undefined {
+    if (this.confidenceData.length === 0) {
+      return undefined
+    }
+
+    const aggregated = aggregateConfidence(this.confidenceData)
+
+    // Collect all factors from confidence data
+    const allFactors = this.confidenceData.flatMap(
+      (c) => c.factors || []
+    )
+
+    return {
+      score: aggregated.lowest, // Use lowest (conservative)
+      level: aggregated.level,
+      sourceCount: aggregated.count,
+      hasVariance: aggregated.hasVariance,
+      factors: allFactors.length > 0 ? allFactors : undefined,
+    }
   }
 }
 

@@ -3,12 +3,14 @@
  *
  * Functions for interacting with the chat API endpoints.
  * Story: E5.3 - Build Chat Interface with Conversation History
+ * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
  */
 
 import type {
   Conversation,
   ConversationWithMessages,
   Message,
+  MessageConfidence,
   SSEEvent,
   parseSSEEvent,
 } from '@/lib/types/chat'
@@ -183,7 +185,8 @@ export interface ChatStreamCallbacks {
   onToolStart?: (tool: string, args: unknown) => void
   onToolEnd?: (tool: string, result: unknown) => void
   onSources?: (citations: Array<{ documentName: string; location: string; documentId?: string }>) => void
-  onDone?: (message: Message, suggestedFollowups?: string[]) => void
+  /** E5.7: Include confidence data in done callback */
+  onDone?: (message: Message, suggestedFollowups?: string[], confidence?: MessageConfidence) => void
   onError?: (error: Error, code?: string) => void
 }
 
@@ -287,6 +290,7 @@ function parseSSEEventSafe(data: string): SSEEvent | null {
 
 /**
  * Handle SSE event with callbacks
+ * E5.7: Include confidence in done event
  */
 function handleSSEEvent(event: SSEEvent, callbacks: ChatStreamCallbacks): void {
   switch (event.type) {
@@ -310,8 +314,11 @@ function handleSSEEvent(event: SSEEvent, callbacks: ChatStreamCallbacks): void {
           role: event.message.role,
           content: event.message.content,
           createdAt: new Date().toISOString(),
+          // E5.7: Include confidence in the message
+          confidence: event.confidence,
         },
-        event.suggestedFollowups
+        event.suggestedFollowups,
+        event.confidence
       )
       break
     case 'error':

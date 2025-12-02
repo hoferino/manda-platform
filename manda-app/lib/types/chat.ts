@@ -47,6 +47,27 @@ export interface ToolCall {
 export type MessageRole = 'user' | 'assistant' | 'system' | 'tool' | 'human' | 'ai'
 
 /**
+ * Confidence data for messages (P2 compliant - internal only)
+ * Story: E5.7 - AC: #1, #6
+ */
+export interface MessageConfidence {
+  /** Overall confidence score (0-1) - NEVER show to users */
+  score: number
+  /** Confidence level for badge display */
+  level: 'high' | 'medium' | 'low' | 'unknown'
+  /** Number of sources contributing */
+  sourceCount: number
+  /** Whether sources have varying confidence */
+  hasVariance?: boolean
+  /** Contributing factors for tooltip */
+  factors?: Array<{
+    type: string
+    value: string
+    impact: 'positive' | 'negative' | 'neutral'
+  }>
+}
+
+/**
  * Chat message
  */
 export interface Message {
@@ -56,6 +77,8 @@ export interface Message {
   content: string
   toolCalls?: ToolCall[]
   sources?: SourceCitation[]
+  /** Confidence data for the response (E5.7) */
+  confidence?: MessageConfidence
   metadata?: Record<string, unknown>
   tokensUsed?: number
   createdAt: string
@@ -140,6 +163,8 @@ export interface SSEDoneEvent {
     role: 'assistant'
   }
   suggestedFollowups?: string[]
+  /** Confidence data extracted from tool results (E5.7) */
+  confidence?: MessageConfidence
 }
 
 /**
@@ -264,6 +289,7 @@ export function dbMessageToMessage(dbMessage: {
   tool_calls?: unknown
   metadata?: unknown
   sources?: unknown
+  confidence?: unknown
   tokens_used?: number
   created_at: string
 }): Message {
@@ -274,6 +300,7 @@ export function dbMessageToMessage(dbMessage: {
     content: dbMessage.content,
     toolCalls: dbMessage.tool_calls as ToolCall[] | undefined,
     sources: dbMessage.sources as SourceCitation[] | undefined,
+    confidence: dbMessage.confidence as MessageConfidence | undefined,
     metadata: dbMessage.metadata as Record<string, unknown> | undefined,
     tokensUsed: dbMessage.tokens_used,
     createdAt: dbMessage.created_at,

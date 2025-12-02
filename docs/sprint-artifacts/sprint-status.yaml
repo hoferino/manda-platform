@@ -917,14 +917,32 @@ development_status:
           - Query-time: prefer superseding finding, optionally note update
           - Future: content-based detection, metadata matching (deferred)
 
-  # Epic 5: Conversational Assistant (9 stories)
+  # Epic 5: Conversational Assistant (9 stories - 8 done, 1 deferred)
   # Key Components:
   # - LLM integration via LangChain (model-agnostic: Claude, GPT, Gemini configurable)
   # - LangGraph for conversation workflow orchestration
   # - 11 chat tools for knowledge querying
-  # - WebSocket for real-time streaming responses
+  # - SSE for real-time streaming responses
   # Prerequisites completed: 2025-11-30 (see docs/agent-behavior-spec.md)
-  epic-5: backlog
+  # Duration: December 1-2, 2025 (2 days)
+  epic-5: done
+  epic-5-completed: 2025-12-02
+  epic-5-notes: |
+    8/9 stories completed (E5.8 Chat Export deferred to keep MVP lean).
+    Key deliverables:
+    - LangChain LLM factory with Anthropic/OpenAI/Google providers
+    - LangGraph agent with 11 chat tools
+    - Full chat UI with SSE streaming responses
+    - Conversation history with multi-turn context
+    - Source citations with document preview
+    - Quick actions and suggested follow-ups
+    - Confidence indicators with P2-compliant reasoning
+    - Document upload via chat (drag-drop + file picker)
+    - ~400+ tests added across all stories
+    Key patterns established:
+    - SSE streaming with event types (token, tool_start, tool_end, sources, done)
+    - Context management with token-aware truncation
+    - Confidence extraction from tool results
   e5-1-integrate-llm-via-langchain-model-agnostic: done
   e5-1-drafted: 2025-12-01
   e5-1-context-ready: 2025-12-01
@@ -1011,12 +1029,45 @@ development_status:
     - Integration with chat API route for context loading
     - 34 unit tests covering all context scenarios
     Code review APPROVED - all 9 ACs verified, no issues found
-  e5-7-implement-confidence-indicators-and-uncertainty-handling: ready-for-dev
+  e5-7-implement-confidence-indicators-and-uncertainty-handling: done
   e5-7-drafted: 2025-12-02
   e5-7-context-ready: 2025-12-02
-  e5-8-implement-chat-export-functionality: backlog
-  e5-9-implement-document-upload-via-chat-interface: backlog
-  epic-5-retrospective: optional
+  e5-7-completed: 2025-12-02
+  e5-7-deliverables: |
+    - lib/utils/confidence.ts - Confidence extraction and aggregation utilities
+    - lib/utils/confidence-reasoning.ts - Natural language reasoning generation (P2 compliant)
+    - components/chat/ConfidenceBadge.tsx - High/Medium/Low badge with tooltip
+    - components/chat/ConfidenceTooltipContent.tsx - Rich tooltip with contributing factors
+    - Enhanced AgentStreamHandler with confidence tracking from tool results
+    - MessageConfidence type added to chat types
+    - Enhanced prompts.ts with P2-compliant uncertainty handling instructions
+    - 43 unit tests for confidence utilities with P2 compliance verification
+    - Build verified, all acceptance criteria met
+  e5-8-implement-chat-export-functionality: deferred
+  e5-8-defer-reason: "Keep MVP lean - export functionality not critical for core agent experience"
+  e5-8-defer-date: 2025-12-02
+  e5-9-implement-document-upload-via-chat-interface: done
+  e5-9-drafted: 2025-12-02
+  e5-9-context-ready: 2025-12-02
+  e5-9-completed: 2025-12-02
+  e5-9-notes: |
+    - Created ChatUploadButton, ChatDropZone, ChatUploadStatus components
+    - Created useChatUpload hook with XHR progress tracking
+    - Created chat upload API endpoint at /api/projects/[id]/chat/upload
+    - Integrated with existing useDocumentUpdates for realtime status
+    - 72 unit tests passing, build verified
+  epic-5-retrospective: done
+  epic-5-retrospective-completed: 2025-12-02
+  epic-5-retrospective-notes: |
+    Completed: 2025-12-02
+    Document: docs/sprint-artifacts/retrospectives/epic-E5-retrospective.md
+    Key outcomes:
+    - 8/9 stories completed (E5.8 Chat Export deferred for MVP lean)
+    - 2-day epic duration (fastest yet)
+    - Prerequisites P1-P7 investment paid off
+    - Neo4j write integration identified as tech debt
+    - E5.3 unit test coverage noted for future attention
+    - No blocking prerequisites for Epic 6
 
   # Epic 6: IRL Management & Auto-Generation (8 stories)
   epic-6: backlog

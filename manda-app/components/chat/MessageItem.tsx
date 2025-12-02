@@ -10,6 +10,10 @@
  * Enhanced in E5.4 with clickable source citations.
  * Story: E5.4 - Implement Source Citation Display in Messages
  * AC: #2, #3, #4, #5, #7
+ *
+ * Enhanced in E5.7 with confidence badges.
+ * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
+ * AC: #8 (Badge Display in Message Items)
  */
 
 import { memo, useState, useMemo, useEffect, useCallback } from 'react'
@@ -17,12 +21,13 @@ import { User, Bot, Copy, Check } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import type { Message, SourceCitation } from '@/lib/types/chat'
+import type { Message, SourceCitation, MessageConfidence } from '@/lib/types/chat'
 import { normalizeMessageRole } from '@/lib/types/chat'
 import { cn } from '@/lib/utils'
 import { ToolIndicator, TypingIndicator } from './ToolIndicator'
 import { CitationRenderer, type DocumentLookup } from './CitationRenderer'
 import { SourceCitationLink } from './SourceCitationLink'
+import { ConfidenceBadge } from './ConfidenceBadge'
 import { hasCitations, parseCitations, getUniqueDocumentNames } from '@/lib/utils/citation-parser'
 import { findDocumentsByNames } from '@/lib/api/documents'
 
@@ -317,6 +322,18 @@ export const MessageItem = memo(function MessageItem({
               projectId={projectId}
               documentLookup={documentLookup}
             />
+          )}
+
+          {/* Confidence badge (E5.7) */}
+          {isAssistant && message.confidence && !isStreaming && (
+            <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Confidence:</span>
+              <ConfidenceBadge
+                level={message.confidence.level}
+                confidence={message.confidence.score}
+                size="sm"
+              />
+            </div>
           )}
         </div>
 

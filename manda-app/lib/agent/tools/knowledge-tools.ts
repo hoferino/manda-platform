@@ -14,6 +14,8 @@
 import { tool } from '@langchain/core/tools'
 import { createClient } from '@/lib/supabase/server'
 import { generateEmbedding } from '@/lib/services/embeddings'
+import { createRelationship, getNodeById, createNode } from '@/lib/neo4j/operations'
+import { NODE_LABELS, RELATIONSHIP_TYPES, type FindingNode } from '@/lib/neo4j/types'
 import {
   QueryKnowledgeBaseInputSchema,
   UpdateKnowledgeBaseInputSchema,
@@ -404,10 +406,10 @@ export const updateKnowledgeGraphTool = tool(
         return formatToolResponse(false, 'Authentication required')
       }
 
-      // Verify source finding exists
+      // Verify source finding exists in Supabase and get its details
       const { data: sourceFinding, error: findingError } = await supabase
         .from('findings')
-        .select('id, deal_id')
+        .select('id, deal_id, text, confidence, domain, status, document_id, source_document, created_at')
         .eq('id', findingId)
         .single()
 
@@ -415,11 +417,11 @@ export const updateKnowledgeGraphTool = tool(
         return formatToolResponse(false, 'Source finding not found')
       }
 
-      // Verify all target findings exist
+      // Verify all target findings exist in Supabase
       const targetIds = relationships.map((r) => r.targetId)
       const { data: targetFindings, error: targetError } = await supabase
         .from('findings')
-        .select('id')
+        .select('id, deal_id, text, confidence, domain, status, document_id, source_document, created_at')
         .in('id', targetIds)
 
       if (targetError) {
@@ -436,11 +438,110 @@ export const updateKnowledgeGraphTool = tool(
         )
       }
 
-      // Note: Neo4j integration would go here
-      // For now, we store relationships in metadata as a fallback
-      // TODO: Implement actual Neo4j relationship creation in Epic 5 or later
+      // === NEO4J INTEGRATION ===
+      // Ensure source finding node exists in Neo4j (create if not)
+      const sourceNode = await getNodeById<FindingNode>(NODE_LABELS.FINDING, findingId)
+      if (!sourceNode) {
+        // Create the finding node in Neo4j
+        // Note: Using created_at for both date_referenced and date_extracted since
+        // the findings table doesn't have a separate date_referenced column
+        await createNode<FindingNode>(NODE_LABELS.FINDING, {
+          id: sourceFinding.id,
+          text: sourceFinding.text,
+          confidence: sourceFinding.confidence ?? 0.5,
+          category: sourceFinding.domain ?? 'general',
+          date_referenced: sourceFinding.created_at,
+          date_extracted: sourceFinding.created_at,
+          source_document_id: sourceFinding.document_id ?? '',
+          source_location: sourceFinding.source_document ?? '',
+          deal_id: sourceFinding.deal_id,
+          user_id: user.id,
+          status: (sourceFinding.status ?? 'pending') as 'pending' | 'validated' | 'rejected',
+        })
+        console.log(`[update_knowledge_graph] Created source Finding node: ${findingId}`)
+      }
 
-      // Store relationship metadata in Supabase as fallback
+      // Create relationships in Neo4j
+      const createdRelationships: Array<{ type: string; sourceId: string; targetId: string }> = []
+      const errors: string[] = []
+
+      for (const rel of relationships) {
+        try {
+          // Ensure target finding node exists in Neo4j
+          const targetNode = await getNodeById<FindingNode>(NODE_LABELS.FINDING, rel.targetId)
+          if (!targetNode) {
+            // Find target in our fetched list
+            const targetData = targetFindings?.find((f) => f.id === rel.targetId)
+            if (targetData) {
+              await createNode<FindingNode>(NODE_LABELS.FINDING, {
+                id: targetData.id,
+                text: targetData.text,
+                confidence: targetData.confidence ?? 0.5,
+                category: targetData.domain ?? 'general',
+                date_referenced: targetData.created_at,
+                date_extracted: targetData.created_at,
+                source_document_id: targetData.document_id ?? '',
+                source_location: targetData.source_document ?? '',
+                deal_id: targetData.deal_id,
+                user_id: user.id,
+                status: (targetData.status ?? 'pending') as 'pending' | 'validated' | 'rejected',
+              })
+              console.log(`[update_knowledge_graph] Created target Finding node: ${rel.targetId}`)
+            }
+          }
+
+          // Map relationship type to Neo4j relationship type
+          let neo4jRelType: keyof typeof RELATIONSHIP_TYPES
+          let relProps: Record<string, unknown> = {
+            detected_at: new Date().toISOString(),
+            created_by: user.id,
+          }
+
+          switch (rel.type) {
+            case 'SUPPORTS':
+              neo4jRelType = 'SUPPORTS'
+              relProps = { ...relProps, strength: 0.8 }
+              break
+            case 'CONTRADICTS':
+              neo4jRelType = 'CONTRADICTS'
+              relProps = { ...relProps, confidence: 0.8, resolved: false }
+              break
+            case 'SUPERSEDES':
+              neo4jRelType = 'SUPERSEDES'
+              relProps = { ...relProps, reason: 'Updated information', superseded_at: new Date().toISOString() }
+              break
+            default:
+              neo4jRelType = 'SUPPORTS'
+          }
+
+          // Create the relationship in Neo4j
+          const success = await createRelationship(
+            NODE_LABELS.FINDING,
+            findingId,
+            NODE_LABELS.FINDING,
+            rel.targetId,
+            RELATIONSHIP_TYPES[neo4jRelType],
+            relProps
+          )
+
+          if (success) {
+            createdRelationships.push({
+              type: rel.type,
+              sourceId: findingId,
+              targetId: rel.targetId,
+            })
+            console.log(`[update_knowledge_graph] Created ${rel.type} relationship: ${findingId} -> ${rel.targetId}`)
+          } else {
+            errors.push(`Failed to create ${rel.type} relationship to ${rel.targetId}`)
+          }
+        } catch (relError) {
+          const errorMsg = relError instanceof Error ? relError.message : 'Unknown error'
+          errors.push(`Error creating ${rel.type} to ${rel.targetId}: ${errorMsg}`)
+          console.error(`[update_knowledge_graph] Relationship error:`, relError)
+        }
+      }
+
+      // Also store in Supabase metadata for redundancy/backup
       const { error: updateError } = await supabase
         .from('findings')
         .update({
@@ -450,23 +551,31 @@ export const updateKnowledgeGraphTool = tool(
               targetId: r.targetId,
               createdAt: new Date().toISOString(),
               createdBy: user.id,
+              storedInNeo4j: createdRelationships.some(
+                (cr) => cr.targetId === r.targetId && cr.type === r.type
+              ),
             })),
           },
         })
         .eq('id', findingId)
 
       if (updateError) {
-        console.error('[update_knowledge_graph] Update error:', updateError)
-        return formatToolResponse(false, 'Failed to store graph relationships')
+        console.warn('[update_knowledge_graph] Supabase metadata backup failed:', updateError)
+        // Don't fail the whole operation if just the backup fails
       }
 
+      if (createdRelationships.length === 0 && errors.length > 0) {
+        return formatToolResponse(false, `Failed to create relationships: ${errors.join('; ')}`)
+      }
+
+      const message = errors.length > 0
+        ? `Created ${createdRelationships.length} relationship(s) in Neo4j (${errors.length} failed)`
+        : `Created ${createdRelationships.length} relationship(s) in Neo4j from finding ${findingId}`
+
       return formatToolResponse(true, {
-        message: `Created ${relationships.length} relationship(s) from finding ${findingId}`,
-        relationships: relationships.map((r) => ({
-          type: r.type,
-          sourceId: findingId,
-          targetId: r.targetId,
-        })),
+        message,
+        relationships: createdRelationships,
+        errors: errors.length > 0 ? errors : undefined,
       })
     } catch (err) {
       return handleToolError(err, 'update_knowledge_graph')
@@ -474,9 +583,9 @@ export const updateKnowledgeGraphTool = tool(
   },
   {
     name: 'update_knowledge_graph',
-    description: `Create relationships between findings in the knowledge graph.
+    description: `Create relationships between findings in the knowledge graph (Neo4j).
 Supported relationship types: SUPPORTS (evidence), CONTRADICTS (conflict), SUPERSEDES (update/correction).
-Use this to link related findings and build the knowledge graph.`,
+Use this to link related findings and build the knowledge graph for cross-domain analysis.`,
     schema: UpdateKnowledgeGraphInputSchema,
   }
 )

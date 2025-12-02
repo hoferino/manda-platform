@@ -6,6 +6,7 @@
  * Main container for the chat interface.
  * Story: E5.3 - Build Chat Interface with Conversation History
  * Story: E5.5 - Quick Actions and Suggested Follow-ups
+ * Story: E5.9 - Document Upload via Chat Interface
  * AC: #1 (Chat Page UI), #10 (Responsive Design)
  */
 
@@ -16,12 +17,15 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useConversations } from '@/lib/hooks/useConversations'
 import { useChat } from '@/lib/hooks/useChat'
+import { useChatUpload } from '@/lib/hooks/useChatUpload'
 import { useQuickActionAvailability, getAvailabilityMap } from '@/lib/hooks/useQuickActionAvailability'
 import { ConversationSidebar, MobileConversationSidebar } from './ConversationSidebar'
 import { MessageList } from './MessageList'
 import { ChatInput } from './ChatInput'
 import { QuickActions } from './QuickActions'
 import { FollowUpSuggestions } from './FollowUpSuggestions'
+import { ChatDropZone } from './ChatDropZone'
+import { ChatUploadStatusList } from './ChatUploadStatus'
 import { cn } from '@/lib/utils'
 
 interface ChatInterfaceProps {
@@ -78,6 +82,16 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
 
   // Quick action availability
   const quickActionAvailability = useQuickActionAvailability({ projectId })
+
+  // Chat upload state (E5.9)
+  const {
+    uploads,
+    uploadFiles,
+    dismissUpload,
+    isUploading,
+  } = useChatUpload(projectId, {
+    conversationId: currentConversationId,
+  })
 
   // Input ref for populating with follow-up suggestions
   const inputValueRef = useRef<string>('')
@@ -148,7 +162,11 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
   const error = conversationsError || chatError
 
   return (
-    <div className={cn('flex h-[calc(100vh-4rem)] relative', className)}>
+    <ChatDropZone
+      projectId={projectId}
+      onFilesDropped={uploadFiles}
+      className={cn('flex h-[calc(100vh-4rem)] relative', className)}
+    >
       {/* Desktop sidebar */}
       <ConversationSidebar
         conversations={conversations}
@@ -240,6 +258,16 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
           className="flex-1"
         />
 
+        {/* Upload status messages (E5.9 AC: #4, #5, #6) */}
+        {uploads.length > 0 && (
+          <div className="px-4 py-2 max-w-3xl mx-auto w-full">
+            <ChatUploadStatusList
+              uploads={uploads}
+              onDismiss={dismissUpload}
+            />
+          </div>
+        )}
+
         {/* Follow-up suggestions (after latest assistant message) */}
         <FollowUpSuggestions
           suggestions={suggestedFollowups}
@@ -254,15 +282,17 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
           availability={getAvailabilityMap(quickActionAvailability)}
         />
 
-        {/* Input area */}
+        {/* Input area with upload button (E5.9 AC: #1) */}
         <ChatInput
           onSubmit={handleSendMessage}
           isDisabled={messagesLoading}
           isLoading={isStreaming}
           initialValue={inputValue}
           onValueChange={setInputValue}
+          onFilesSelected={uploadFiles}
+          isUploading={isUploading}
         />
       </div>
-    </div>
+    </ChatDropZone>
   )
 }

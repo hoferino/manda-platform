@@ -1,0 +1,218 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E5</epicId>
+    <storyId>9</storyId>
+    <title>Implement Document Upload via Chat Interface</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-02</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e5-9-implement-document-upload-via-chat-interface.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to upload documents directly in the chat interface</iWant>
+    <soThat>I can quickly add files without leaving the conversation and immediately see analysis results</soThat>
+    <tasks>
+      <task id="1" ac="1">Create ChatUploadButton component
+        <subtask>Create components/chat/ChatUploadButton.tsx with paperclip/upload icon</subtask>
+        <subtask>Add hidden file input with same accepted formats as UploadZone</subtask>
+        <subtask>Position button in ChatInput area (left of send button)</subtask>
+        <subtask>Add loading state during upload</subtask>
+        <subtask>Ensure accessible button with ARIA labels</subtask>
+      </task>
+      <task id="2" ac="2">Create ChatDropZone wrapper component
+        <subtask>Create components/chat/ChatDropZone.tsx that wraps ChatInterface</subtask>
+        <subtask>Implement drag-and-drop handlers (onDragEnter, onDragLeave, onDragOver, onDrop)</subtask>
+        <subtask>Show visual overlay when dragging files over chat window</subtask>
+        <subtask>Reuse validation logic from UploadZone (file type, size limits)</subtask>
+        <subtask>Handle multiple files dropped at once</subtask>
+      </task>
+      <task id="3" ac="3,8">Create upload API endpoint for chat
+        <subtask>Create app/api/projects/[id]/chat/upload/route.ts POST endpoint</subtask>
+        <subtask>Accept multipart/form-data with file(s)</subtask>
+        <subtask>Store file to GCS using existing document service</subtask>
+        <subtask>Create document record in database with status "processing"</subtask>
+        <subtask>Trigger processing pipeline via webhook (same as Data Room)</subtask>
+        <subtask>Return document ID and initial status</subtask>
+      </task>
+      <task id="4" ac="3,4">Create useChatUpload hook
+        <subtask>Create lib/hooks/useChatUpload.ts for managing upload state</subtask>
+        <subtask>Handle file upload with progress tracking (XHR for progress events)</subtask>
+        <subtask>Track multiple uploads concurrently</subtask>
+        <subtask>Emit status updates for chat display</subtask>
+        <subtask>Integrate with upload-store for consistency with Data Room</subtask>
+      </task>
+      <task id="5" ac="4,5">Create ChatUploadStatus component
+        <subtask>Create components/chat/ChatUploadStatus.tsx for system messages</subtask>
+        <subtask>Display upload progress bar during upload</subtask>
+        <subtask>Show processing stages: "Parsing...", "Generating embeddings...", "Analyzing..."</subtask>
+        <subtask>Show completion message with finding count</subtask>
+        <subtask>Style as system message (distinct from user/assistant messages)</subtask>
+      </task>
+      <task id="6" ac="4,5">Subscribe to document processing updates
+        <subtask>Use existing useDocumentUpdates hook or create chat-specific variant</subtask>
+        <subtask>Subscribe to Supabase Realtime for document status changes</subtask>
+        <subtask>Map processing_status changes to chat status messages</subtask>
+        <subtask>Detect completion and fetch finding count for summary</subtask>
+      </task>
+      <task id="7" ac="6">Implement error handling
+        <subtask>Handle upload failures (network, size, format)</subtask>
+        <subtask>Handle processing failures (parsing errors, analysis errors)</subtask>
+        <subtask>Display user-friendly error messages in chat</subtask>
+        <subtask>Offer retry action for transient failures</subtask>
+        <subtask>Suggest alternatives (e.g., "Try a smaller file" for size errors)</subtask>
+      </task>
+      <task id="8" ac="all">Integrate components into ChatInterface
+        <subtask>Wrap ChatInterface with ChatDropZone</subtask>
+        <subtask>Add ChatUploadButton to ChatInput</subtask>
+        <subtask>Insert ChatUploadStatus messages into message list</subtask>
+        <subtask>Ensure upload state persists across component re-renders</subtask>
+        <subtask>Handle conversation context (associate uploads with current conversation)</subtask>
+      </task>
+      <task id="9" ac="all">Testing and verification
+        <subtask>Write unit tests for ChatUploadButton component</subtask>
+        <subtask>Write unit tests for ChatDropZone component</subtask>
+        <subtask>Write unit tests for useChatUpload hook</subtask>
+        <subtask>Write integration tests for upload API endpoint</subtask>
+        <subtask>Test file picker flow end-to-end</subtask>
+        <subtask>Test drag-and-drop flow</subtask>
+        <subtask>Test error scenarios (oversized file, unsupported format, network failure)</subtask>
+        <subtask>Test multiple file upload</subtask>
+        <subtask>Verify files appear in Data Room after upload</subtask>
+        <subtask>Verify processing status updates appear in chat</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="File Picker Button in Chat Input">A file upload button is visible in the chat input area, allowing users to select files via a standard file picker dialog</criterion>
+    <criterion id="AC2" title="Drag-and-Drop Support">Users can drag and drop files onto the chat window to upload them, with visual feedback when dragging over the drop zone</criterion>
+    <criterion id="AC3" title="Upload Triggers Processing Pipeline">Uploaded files trigger the same E3 processing pipeline (parsing, embedding, analysis) as Data Room uploads</criterion>
+    <criterion id="AC4" title="Status Updates via Chat Messages">Upload progress and processing status are displayed as system messages in the chat (e.g., "Uploading financials.pdf...", "Analyzing document...", "Analysis complete")</criterion>
+    <criterion id="AC5" title="Post-Processing Notification">When document analysis completes, a notification message appears in chat showing results (e.g., "12 findings extracted from financials.xlsx")</criterion>
+    <criterion id="AC6" title="Error Handling">Upload or processing errors are displayed as clear, user-friendly messages in the chat with suggested actions to resolve</criterion>
+    <criterion id="AC7" title="Multiple File Format Support">Accepts PDF, Excel, Word, and image files (same formats as Data Room: .pdf, .xlsx, .xls, .docx, .doc, .jpg, .png, etc.)</criterion>
+    <criterion id="AC8" title="Data Room Integration">Uploaded files are stored in the project's Data Room (default to root folder or configurable destination)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E5.md" title="Epic 5 Technical Specification" section="E5.9: Document Upload via Chat">
+        Defines the document upload flow via chat, including drag-and-drop trigger, file picker, status messages in chat, and processing completion notification. API endpoint at POST /api/projects/[id]/chat/upload accepting FormData.
+      </doc>
+      <doc path="docs/agent-behavior-spec.md" title="Agent Behavior Specification" section="P8: Correction Chain Detection">
+        Describes filename pattern detection for document versions (_CORRECTED, _v2, _FINAL, etc.) to create SUPERSEDES relationships. Relevant when uploading corrected documents via chat.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E5.md" title="Epic 5 Technical Specification" section="Document Upload via Chat Flow">
+        Details the upload workflow: validate file (frontend) -> upload to GCS -> create document record -> queue processing job -> show status in chat ("Uploading...", "Analyzing...", "12 findings extracted").
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E3.md" title="Epic 3 Technical Specification" section="Processing Pipeline">
+        Reference for the E3 processing pipeline that E5.9 must trigger: document parsing, embedding generation, LLM analysis. Webhook at POST /webhooks/document-uploaded triggers pg-boss job queue.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="manda-app/components/data-room/upload-zone.tsx" kind="component" symbol="UploadZone" lines="1-376">
+        Existing drag-and-drop and file picker component to reuse validation logic. Exports MAX_FILE_SIZE (500MB), ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS. Uses useUploadStore for queue management.
+      </artifact>
+      <artifact path="manda-app/stores/upload-store.ts" kind="store" symbol="useUploadStore" lines="1-275">
+        Zustand store for upload state management with persistence. Tracks queued, uploading, completed, failed states. Provides addToQueue, updateProgress, markCompleted, markFailed actions. Max 3 concurrent uploads.
+      </artifact>
+      <artifact path="manda-app/lib/hooks/useDocumentUpdates.ts" kind="hook" symbol="useDocumentUpdates" lines="114-240">
+        Supabase Realtime subscription hook for document status changes. Provides onUpdate callback with INSERT/UPDATE/DELETE events. Helper functions: didProcessingComplete, didProcessingFail.
+      </artifact>
+      <artifact path="manda-app/components/chat/ChatInput.tsx" kind="component" symbol="ChatInput" lines="1-163">
+        Current chat input component to modify. Add upload button to the left of send button. Props: onSubmit, isLoading, placeholder, initialValue.
+      </artifact>
+      <artifact path="manda-app/components/chat/ChatInterface.tsx" kind="component" symbol="ChatInterface" lines="1-269">
+        Main chat container to wrap with ChatDropZone. Already imports useChat, QuickActions, FollowUpSuggestions. Need to integrate upload status into message list.
+      </artifact>
+      <artifact path="manda-app/components/chat/MessageItem.tsx" kind="component" symbol="MessageItem" lines="1-200">
+        Message display component to extend for system message type. Currently supports user, assistant, tool roles. Add 'system' role for upload status messages.
+      </artifact>
+      <artifact path="manda-app/hooks/use-upload-processor.ts" kind="hook" symbol="useUploadProcessor" lines="1-150">
+        Existing upload processing hook that handles XHR upload with progress. Use as reference for useChatUpload implementation.
+      </artifact>
+      <artifact path="manda-app/app/api/projects/[id]/documents/route.ts" kind="api" symbol="POST" lines="1-100">
+        Existing document upload endpoint to reference. Handles multipart form data, stores to GCS, creates database record, returns document ID.
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="npm">
+        <package name="lucide-react" version="*" reason="Icons: Paperclip for upload button" />
+        <package name="zustand" version="^4.5.0" reason="Upload state management" />
+        <package name="@supabase/supabase-js" version="^2.45.0" reason="Realtime subscriptions for processing status" />
+      </ecosystem>
+      <notes>No new dependencies required. Reuses existing upload infrastructure from E2/E3.</notes>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Architecture">Reuse E2 upload infrastructure (GCS storage, upload-store, file validation)</constraint>
+    <constraint source="Architecture">Reuse E3 processing pipeline (webhook trigger, pg-boss job flow)</constraint>
+    <constraint source="Tech Spec">Maximum file size: 500MB per file</constraint>
+    <constraint source="Tech Spec">Accepted formats: PDF, Excel, Word, PowerPoint, Text, CSV, Images</constraint>
+    <constraint source="UX Pattern">Upload status displayed as system messages in chat, not separate UI element</constraint>
+    <constraint source="Data Model">Files stored in project Data Room at root folder by default</constraint>
+    <constraint source="Performance">Max 3 concurrent uploads (from upload-store)</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="POST /api/projects/[id]/chat/upload" kind="REST endpoint">
+      <signature>Accept: multipart/form-data with file(s), optional folderPath. Returns: { documentId: string, status: string }</signature>
+      <path>manda-app/app/api/projects/[id]/chat/upload/route.ts</path>
+    </interface>
+    <interface name="useUploadStore" kind="Zustand store">
+      <signature>addToQueue(files, projectId, folderPath?, irlItemId?): UploadItem[] | updateProgress(id, progress) | markCompleted(id, doc) | markFailed(id, error)</signature>
+      <path>manda-app/stores/upload-store.ts</path>
+    </interface>
+    <interface name="useDocumentUpdates" kind="React hook">
+      <signature>useDocumentUpdates(projectId, { onUpdate, onConnectionChange, enabled }): { status, reconnect }</signature>
+      <path>manda-app/lib/hooks/useDocumentUpdates.ts</path>
+    </interface>
+    <interface name="ChatUploadButton" kind="React component">
+      <signature>Props: { onFilesSelected: (files: File[]) => void, isLoading?: boolean, disabled?: boolean }</signature>
+      <path>manda-app/components/chat/ChatUploadButton.tsx (new)</path>
+    </interface>
+    <interface name="ChatDropZone" kind="React component">
+      <signature>Props: { children: ReactNode, projectId: string, onFilesDropped: (files: File[]) => void, disabled?: boolean }</signature>
+      <path>manda-app/components/chat/ChatDropZone.tsx (new)</path>
+    </interface>
+    <interface name="ChatUploadStatus" kind="React component">
+      <signature>Props: { upload: UploadStatusItem, onRetry?: () => void, onDismiss?: () => void }</signature>
+      <path>manda-app/components/chat/ChatUploadStatus.tsx (new)</path>
+    </interface>
+    <interface name="useChatUpload" kind="React hook">
+      <signature>useChatUpload(projectId): { uploadFiles, uploads, clearCompleted, retryUpload }</signature>
+      <path>manda-app/lib/hooks/useChatUpload.ts (new)</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Use Vitest + React Testing Library for component tests. Follow existing test patterns from E5.3-E5.7. Mock Supabase Realtime for status update tests. Mock fetch/XHR for upload tests. Use createMockSupabaseClient from __tests__/utils/supabase-mock.ts for consistent mocking.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/chat/ChatUploadButton.test.tsx</location>
+      <location>manda-app/__tests__/components/chat/ChatDropZone.test.tsx</location>
+      <location>manda-app/__tests__/components/chat/ChatUploadStatus.test.tsx</location>
+      <location>manda-app/__tests__/hooks/useChatUpload.test.ts</location>
+      <location>manda-app/__tests__/app/api/projects/[id]/chat/upload/route.test.ts</location>
+    </locations>
+    <ideas>
+      <testIdea ac="AC1">Test ChatUploadButton renders file picker button and triggers file selection dialog on click</testIdea>
+      <testIdea ac="AC1">Test ChatUploadButton shows loading state when isLoading=true</testIdea>
+      <testIdea ac="AC2">Test ChatDropZone shows visual overlay when dragging files over</testIdea>
+      <testIdea ac="AC2">Test ChatDropZone validates file types and sizes on drop</testIdea>
+      <testIdea ac="AC2">Test ChatDropZone handles multiple files dropped at once</testIdea>
+      <testIdea ac="AC3">Test upload API endpoint stores file to GCS and creates document record</testIdea>
+      <testIdea ac="AC3">Test upload API endpoint triggers processing webhook</testIdea>
+      <testIdea ac="AC4">Test ChatUploadStatus displays upload progress bar during upload</testIdea>
+      <testIdea ac="AC4">Test ChatUploadStatus shows processing stages as they change</testIdea>
+      <testIdea ac="AC5">Test ChatUploadStatus shows completion message with finding count</testIdea>
+      <testIdea ac="AC6">Test ChatUploadStatus shows error message with retry action for transient errors</testIdea>
+      <testIdea ac="AC6">Test ChatUploadStatus shows helpful suggestions for size/format errors</testIdea>
+      <testIdea ac="AC7">Test validation rejects unsupported file types</testIdea>
+      <testIdea ac="AC7">Test validation accepts all supported formats (PDF, Excel, Word, images)</testIdea>
+      <testIdea ac="AC8">Test uploaded files appear in Data Room document list</testIdea>
+    </ideas>
+  </tests>
+</story-context>

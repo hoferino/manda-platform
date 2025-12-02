@@ -6,6 +6,7 @@
  * Input area for typing and submitting chat messages.
  * Story: E5.3 - Build Chat Interface with Conversation History
  * Story: E5.5 - Quick Actions and Suggested Follow-ups (AC: #6)
+ * Story: E5.9 - Document Upload via Chat Interface (AC: #1)
  * AC: #2 (Message Submission), #5 (Input Handling)
  */
 
@@ -13,6 +14,7 @@ import { useState, useRef, useCallback, useEffect, type KeyboardEvent, type Chan
 import { Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { ChatUploadButton } from './ChatUploadButton'
 import { cn } from '@/lib/utils'
 
 interface ChatInputProps {
@@ -26,6 +28,10 @@ interface ChatInputProps {
   initialValue?: string
   /** Callback when value changes (for controlled mode) */
   onValueChange?: (value: string) => void
+  /** Callback when files are selected for upload */
+  onFilesSelected?: (files: File[]) => void
+  /** Whether file uploads are in progress */
+  isUploading?: boolean
 }
 
 export function ChatInput({
@@ -37,6 +43,8 @@ export function ChatInput({
   className,
   initialValue = '',
   onValueChange,
+  onFilesSelected,
+  isUploading = false,
 }: ChatInputProps) {
   const [value, setValue] = useState(initialValue)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -110,36 +118,48 @@ export function ChatInput({
     <div className={cn('border-t bg-background p-4', className)}>
       <div className="mx-auto max-w-3xl">
         <div className="relative flex items-end gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={disabled}
-            rows={1}
-            className={cn(
-              'min-h-[44px] max-h-[200px] resize-none pr-12',
-              'focus-visible:ring-1 focus-visible:ring-ring',
-              disabled && 'opacity-50 cursor-not-allowed'
-            )}
-            aria-label="Chat message input"
-          />
+          {/* Upload button (E5.9 AC: #1) */}
+          {onFilesSelected && (
+            <ChatUploadButton
+              onFilesSelected={onFilesSelected}
+              isLoading={isUploading}
+              disabled={disabled}
+              className="flex-shrink-0"
+            />
+          )}
 
-          <Button
-            type="button"
-            size="icon"
-            onClick={handleSubmit}
-            disabled={disabled || !value.trim()}
-            className="absolute right-2 bottom-2 h-8 w-8"
-            aria-label="Send message"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+          <div className="relative flex-1">
+            <Textarea
+              ref={textareaRef}
+              value={value}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              disabled={disabled}
+              rows={1}
+              className={cn(
+                'min-h-[44px] max-h-[200px] resize-none pr-12',
+                'focus-visible:ring-1 focus-visible:ring-ring',
+                disabled && 'opacity-50 cursor-not-allowed'
+              )}
+              aria-label="Chat message input"
+            />
+
+            <Button
+              type="button"
+              size="icon"
+              onClick={handleSubmit}
+              disabled={disabled || !value.trim()}
+              className="absolute right-2 bottom-2 h-8 w-8"
+              aria-label="Send message"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Character count and hints */}
