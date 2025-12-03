@@ -3,12 +3,18 @@
  *
  * Tools for Q&A generation, IRL management, and workflow support.
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E6.3 - Implement AI-Assisted IRL Auto-Generation from Documents
  *
  * Tools:
  * - suggest_questions (AC: #7) - Generate Q&A suggestions (max 10)
  * - add_to_qa (AC: #8) - Store Q&A item with sources and priority
  * - create_irl (AC: #8) - Create IRL structure (stub until Epic 6)
+ * - generate_irl_suggestions (E6.3) - AI-generated IRL suggestions
+ * - add_to_irl (E6.3) - Add item to IRL
  */
+
+// Re-export IRL tools from irl-tools.ts
+export { generateIRLSuggestionsTool, addToIRLTool } from './irl-tools'
 
 import { tool } from '@langchain/core/tools'
 import { createClient } from '@/lib/supabase/server'

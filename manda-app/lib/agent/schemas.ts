@@ -262,6 +262,57 @@ export const CreateIRLInputSchema = z.object({
 
 export type CreateIRLInput = z.infer<typeof CreateIRLInputSchema>
 
+/**
+ * generate_irl_suggestions - Generate IRL item suggestions based on deal context
+ * Story: E6.3 - Implement AI-Assisted IRL Auto-Generation from Documents
+ * AC: #1, #2, #4, #5 - Suggests IRL items based on deal type and uploaded documents
+ */
+export const GenerateIRLSuggestionsInputSchema = z.object({
+  dealId: z.string().uuid().describe('The deal/project ID to generate suggestions for'),
+  currentIRLId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe('Optional: The current IRL ID to compare against for gap analysis'),
+  dealType: z
+    .string()
+    .optional()
+    .describe('Optional: Deal type for template-based suggestions (tech_ma, industrial, pharma, financial)'),
+})
+
+export type GenerateIRLSuggestionsInput = z.infer<typeof GenerateIRLSuggestionsInputSchema>
+
+/**
+ * add_to_irl - Add a suggested item to an IRL
+ * Story: E6.3 - Implement AI-Assisted IRL Auto-Generation from Documents
+ * AC: #3 - Adds suggested item to user's active IRL
+ */
+export const AddToIRLInputSchema = z.object({
+  irlId: z.string().uuid().describe('The IRL ID to add the item to'),
+  category: z.string().min(1).describe('Category for the IRL item'),
+  itemName: z.string().min(1).describe('Name of the IRL item'),
+  priority: z
+    .enum(['high', 'medium', 'low'])
+    .default('medium')
+    .describe('Priority level for the item'),
+  description: z.string().optional().describe('Optional description for the item'),
+})
+
+export type AddToIRLInput = z.infer<typeof AddToIRLInputSchema>
+
+/**
+ * IRL Suggestion output type
+ * AC: #2 - Includes category, item name, priority, and rationale
+ */
+export const IRLSuggestionSchema = z.object({
+  category: z.string().describe('Category for the suggested item'),
+  itemName: z.string().describe('Name of the suggested item'),
+  priority: z.enum(['high', 'medium', 'low']).describe('Priority level'),
+  rationale: z.string().describe('Explanation of why this item is recommended'),
+})
+
+export type IRLSuggestion = z.infer<typeof IRLSuggestionSchema>
+
 // =============================================================================
 // Output Schemas
 // =============================================================================
@@ -373,6 +424,8 @@ export const ToolSchemas = {
   SuggestQuestionsInput: SuggestQuestionsInputSchema,
   AddToQAInput: AddToQAInputSchema,
   CreateIRLInput: CreateIRLInputSchema,
+  GenerateIRLSuggestionsInput: GenerateIRLSuggestionsInputSchema,
+  AddToIRLInput: AddToIRLInputSchema,
 
   // Outputs
   QueryKnowledgeBaseOutput: QueryKnowledgeBaseOutputSchema,
@@ -381,4 +434,5 @@ export const ToolSchemas = {
   DocumentInfoOutput: DocumentInfoOutputSchema,
   QASuggestion: QASuggestionSchema,
   FindingWithSource: FindingWithSourceSchema,
+  IRLSuggestion: IRLSuggestionSchema,
 }

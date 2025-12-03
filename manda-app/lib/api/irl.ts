@@ -1,6 +1,7 @@
 /**
  * IRL (Information Request List) API Types and Functions
  * Story: E2.8 - Implement IRL Integration with Document Tracking
+ * Story: E6.3 - Implement AI-Assisted IRL Auto-Generation from Documents
  */
 
 import { createClient } from '@/lib/supabase/client'
@@ -308,4 +309,192 @@ export function groupItemsByCategory(items: IRLItem[]): IRLCategory[] {
       totalCount: categoryItems.length,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// ============================================================================
+// E6.3 - AI-Assisted IRL Suggestions
+// ============================================================================
+
+/**
+ * IRL Suggestion from AI
+ */
+export interface IRLSuggestion {
+  category: string
+  itemName: string
+  priority: 'high' | 'medium' | 'low'
+  rationale: string
+}
+
+/**
+ * Get AI-generated IRL suggestions for a project
+ * Uses the generate_irl_suggestions agent tool via chat API
+ */
+export async function getIRLSuggestions(
+  projectId: string,
+  irlId?: string,
+  dealType?: string
+): Promise<{
+  suggestions: IRLSuggestion[]
+  error?: string
+}> {
+  try {
+    // This would typically be called through the chat interface
+    // For direct API access, we call the suggestions endpoint
+    const response = await fetch(`/api/projects/${projectId}/irls/suggestions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        irlId,
+        dealType,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to get suggestions')
+    }
+
+    const data = await response.json()
+    return { suggestions: data.suggestions || [] }
+  } catch (error) {
+    console.error('Error getting IRL suggestions:', error)
+    return {
+      suggestions: [],
+      error: error instanceof Error ? error.message : 'Failed to get suggestions',
+    }
+  }
+}
+
+/**
+ * Add a suggested item to an IRL
+ */
+export async function addSuggestionToIRL(
+  projectId: string,
+  irlId: string,
+  suggestion: IRLSuggestion
+): Promise<{
+  success: boolean
+  itemId?: string
+  error?: string
+}> {
+  try {
+    const response = await fetch(`/api/projects/${projectId}/irls/${irlId}/items`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category: suggestion.category,
+        itemName: suggestion.itemName,
+        description: suggestion.rationale,
+        priority: suggestion.priority,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to add item')
+    }
+
+    const item = await response.json()
+    return { success: true, itemId: item.id }
+  } catch (error) {
+    console.error('Error adding suggestion to IRL:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add item',
+    }
+  }
+}
+
+/**
+ * Add multiple suggestions to IRL
+ */
+export async function addMultipleSuggestionsToIRL(
+  projectId: string,
+  irlId: string,
+  suggestions: IRLSuggestion[]
+): Promise<{
+  success: boolean
+  addedCount: number
+  errors: string[]
+}> {
+  const errors: string[] = []
+  let addedCount = 0
+
+  for (const suggestion of suggestions) {
+    const result = await addSuggestionToIRL(projectId, irlId, suggestion)
+    if (result.success) {
+      addedCount++
+    } else {
+      errors.push(`Failed to add "${suggestion.itemName}": ${result.error}`)
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    addedCount,
+    errors,
+  }
+}
+
+/**
+ * Get all IRLs for a project
+ */
+export async function getProjectIRLs(projectId: string): Promise<{
+  irls: Array<{
+    id: string
+    name: string
+    templateType: string | null
+    progressPercent: number
+    itemCount: number
+  }>
+  error?: string
+}> {
+  try {
+    const supabase = createClient()
+
+    const { data: irlsData, error: irlsError } = await supabase
+      .from('irls')
+      .select(`
+        id,
+        name,
+        template_type,
+        progress_percent
+      `)
+      .eq('deal_id', projectId)
+      .order('created_at', { ascending: false })
+
+    if (irlsError) {
+      throw irlsError
+    }
+
+    // Get item counts for each IRL
+    const irls = await Promise.all(
+      (irlsData || []).map(async (irl) => {
+        const { count } = await supabase
+          .from('irl_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('irl_id', irl.id)
+
+        return {
+          id: irl.id,
+          name: irl.name,
+          templateType: irl.template_type,
+          progressPercent: irl.progress_percent ?? 0,
+          itemCount: count ?? 0,
+        }
+      })
+    )
+
+    return { irls }
+  } catch (error) {
+    console.error('Error fetching IRLs:', error)
+    return {
+      irls: [],
+      error: error instanceof Error ? error.message : 'Failed to fetch IRLs',
+    }
+  }
 }

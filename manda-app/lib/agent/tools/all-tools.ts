@@ -1,8 +1,9 @@
 /**
  * All Chat Tools Array
  *
- * Exports all 11 chat tools for the LangChain AgentExecutor.
+ * Exports all 13 chat tools for the LangChain AgentExecutor.
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E6.3 - Implement AI-Assisted IRL Auto-Generation from Documents (+2 tools)
  *
  * Tool order matters for selection priority - more commonly used tools first.
  */
@@ -34,10 +35,12 @@ import {
   suggestQuestionsTool,
   addToQATool,
   createIRLTool,
+  generateIRLSuggestionsTool,
+  addToIRLTool,
 } from './workflow-tools'
 
 /**
- * All 11 chat tools for the LangChain agent.
+ * All 13 chat tools for the LangChain agent.
  *
  * Order:
  * 1. query_knowledge_base - Primary search tool (most used)
@@ -51,6 +54,8 @@ import {
  * 9. trigger_analysis - Document processing
  * 10. update_knowledge_graph - Graph relationships
  * 11. create_irl - IRL management (stub)
+ * 12. generate_irl_suggestions - AI-generated IRL suggestions (E6.3)
+ * 13. add_to_irl - Add item to IRL (E6.3)
  */
 export const allChatTools: StructuredToolInterface[] = [
   // Primary query tool - should be selected for most knowledge questions
@@ -79,8 +84,10 @@ export const allChatTools: StructuredToolInterface[] = [
   // Graph tools
   updateKnowledgeGraphTool,
 
-  // IRL tools (stub)
+  // IRL tools
   createIRLTool,
+  generateIRLSuggestionsTool,
+  addToIRLTool,
 ]
 
 /**
@@ -91,7 +98,7 @@ export const TOOL_NAMES = allChatTools.map((tool) => tool.name)
 /**
  * Tool count for validation
  */
-export const TOOL_COUNT = allChatTools.length // Should be 11
+export const TOOL_COUNT = allChatTools.length // Should be 13
 
 /**
  * Get tool by name
@@ -107,15 +114,15 @@ export const TOOL_CATEGORIES = {
   knowledge: ['query_knowledge_base', 'update_knowledge_base', 'validate_finding', 'update_knowledge_graph'],
   intelligence: ['detect_contradictions', 'find_gaps'],
   document: ['get_document_info', 'trigger_analysis'],
-  workflow: ['suggest_questions', 'add_to_qa', 'create_irl'],
+  workflow: ['suggest_questions', 'add_to_qa', 'create_irl', 'generate_irl_suggestions', 'add_to_irl'],
 } as const
 
 /**
- * Validate that all 11 tools are present
+ * Validate that all 13 tools are present
  */
 export function validateToolCount(): boolean {
-  if (TOOL_COUNT !== 11) {
-    console.error(`Expected 11 tools, found ${TOOL_COUNT}`)
+  if (TOOL_COUNT !== 13) {
+    console.error(`Expected 13 tools, found ${TOOL_COUNT}`)
     return false
   }
   return true
