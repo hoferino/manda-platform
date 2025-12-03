@@ -1179,10 +1179,11 @@ development_status:
     - 33 tests (17 service + 16 component) all passing
     - Dynamic import for pdfmake to avoid build-time font issues
   # Note: e6-7 (IRL Templates Library) was implemented as part of e6-1
-  e6-7-build-irl-checklist-progress-visualization: ready-for-review
+  e6-7-build-irl-checklist-progress-visualization: done
   e6-7-drafted: 2025-12-03
   e6-7-started: 2025-12-03
   e6-7-ready: 2025-12-03
+  e6-7-completed: 2025-12-03
   e6-7-deliverables:
     - IRLProgressByCategory type and calculateIRLProgressByCategory() in lib/types/irl.ts
     - IRLProgressBar component (size variants, count/percent labels)
