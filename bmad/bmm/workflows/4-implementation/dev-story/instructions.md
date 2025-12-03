@@ -161,14 +161,15 @@ Expected ready-for-dev or in-progress. Continuing anyway...
     <action>Cover edge cases and error handling scenarios noted in the test plan or story notes</action>
   </step>
 
-  <step n="4" goal="Run validations and tests">
+  <step n="4" goal="Run validations and tests (affected only - full suite in Step 6)">
     <action>Determine how to run tests for this repo (infer or use {{run_tests_command}} if provided)</action>
-    <action>Run all existing tests to ensure no regressions</action>
+    <action>Run AFFECTED tests only using `npm run test:affected` or equivalent (tests related to changed files)</action>
     <action>Run the new tests to verify implementation correctness</action>
     <action>Run linting and code quality checks if configured</action>
     <action>Validate implementation meets ALL story acceptance criteria; if ACs include quantitative thresholds (e.g., test pass rate), ensure they are met before marking complete</action>
-    <action if="regression tests fail">STOP and fix before continuing, consider how current changes made broke regression</action>
+    <action if="affected tests fail">STOP and fix before continuing, consider how current changes made broke these tests</action>
     <action if="new tests fail">STOP and fix before continuing</action>
+    <note>Full regression suite is deferred to Step 6 completion gate to optimize iteration speed during development</note>
   </step>
 
   <step n="5" goal="Mark task complete, track review resolutions, and update story">
@@ -207,7 +208,7 @@ Expected ready-for-dev or in-progress. Continuing anyway...
 
   <step n="6" goal="Story completion and mark for review" tag="sprint-status">
     <action>Verify ALL tasks and subtasks are marked [x] (re-scan the story document now)</action>
-    <action>Run the full regression suite (do not skip)</action>
+    <action>Run the FULL regression suite using `npm run test:run` (do not skip - this is the quality gate)</action>
     <action>Confirm File List includes every changed file</action>
     <action>Execute story definition-of-done checklist, if the story includes one</action>
     <action>Update the story Status to: review</action>

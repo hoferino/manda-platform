@@ -146,7 +146,7 @@ describe('FindingDetailPanel', () => {
     status: 'pending',
     validationHistory: [
       {
-        action: 'created',
+        action: 'validated',
         timestamp: '2024-01-15T10:00:00Z',
         userId: 'user-abc',
       },
@@ -186,7 +186,6 @@ describe('FindingDetailPanel', () => {
         metadata: null,
         createdAt: '2024-01-14T10:00:00Z',
         updatedAt: null,
-        similarity: 0.78,
       },
     ],
   }

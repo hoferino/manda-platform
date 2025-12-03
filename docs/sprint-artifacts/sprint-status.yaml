@@ -1107,7 +1107,9 @@ development_status:
   e6-2-implement-irl-creation-and-editing: in-progress
   e6-2-drafted: 2025-12-02
   e6-2-context-ready: 2025-12-02
-  e6-3-implement-ai-assisted-irl-auto-generation-from-documents: backlog
+  e6-3-implement-ai-assisted-irl-auto-generation-from-documents: ready-for-dev
+  e6-3-drafted: 2025-12-03
+  e6-3-context-ready: 2025-12-03
   e6-4-implement-data-room-folder-structure-auto-generation-from-irl: backlog
   e6-5-implement-irl-document-linking-and-progress-tracking: backlog
   e6-6-build-irl-export-functionality-excel-csv: backlog

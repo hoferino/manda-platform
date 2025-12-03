@@ -5,7 +5,7 @@
  * Story: E5.1 - Integrate LLM via LangChain (AC: 4)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   calculateCost,
   TokenCountingHandler,
@@ -58,7 +58,7 @@ describe('Cost Calculation', () => {
 
 describe('TokenCountingHandler', () => {
   let handler: TokenCountingHandler
-  const mockLLM = { id: ['langchain', 'chat', 'anthropic'] }
+  const mockLLM = { id: ['langchain', 'chat', 'anthropic'], lc: 1, type: 'not_implemented' as const }
 
   beforeEach(() => {
     handler = new TokenCountingHandler('anthropic', 'claude-sonnet-4-5-20250929')
@@ -191,7 +191,7 @@ describe('TokenCountingHandler', () => {
 
 describe('LoggingHandler', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>
-  const mockLLM = { id: ['langchain', 'chat', 'openai'] }
+  const mockLLM = { id: ['langchain', 'chat', 'openai'], lc: 1, type: 'not_implemented' as const }
 
   beforeEach(() => {
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -232,7 +232,7 @@ describe('LoggingHandler', () => {
     handler.onRetry(new Error('rate limit'), 'run-123')
 
     expect(warnSpy).toHaveBeenCalled()
-    const logArg = warnSpy.mock.calls[0][0]
+    const logArg = warnSpy.mock.calls[0]![0]
     const logData = JSON.parse(logArg)
 
     expect(logData.event).toBe('llm_retry')

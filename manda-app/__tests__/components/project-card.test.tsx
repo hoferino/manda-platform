@@ -20,6 +20,7 @@ const mockDeal: Deal = {
   irl_template: null,
   created_at: '2025-01-15T10:00:00Z',
   updated_at: '2025-01-20T15:30:00Z',
+  metadata: null,
 }
 
 describe('ProjectCard', () => {
@@ -65,6 +66,7 @@ describe('ProjectCard', () => {
       irl_template: null,
       created_at: '2025-01-15T10:00:00Z',
       updated_at: '2025-01-20T15:30:00Z',
+      metadata: null,
     }
 
     render(<ProjectCard deal={minimalDeal} />)

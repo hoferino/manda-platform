@@ -86,7 +86,7 @@ describe('InlineEdit', () => {
     })
 
     it('shows loading state during save', async () => {
-      const slowSave = vi.fn(() => new Promise(resolve => setTimeout(resolve, 100)))
+      const slowSave = vi.fn(async () => { await new Promise(resolve => setTimeout(resolve, 100)) })
       const user = userEvent.setup()
       render(<InlineEdit {...defaultProps} onSave={slowSave} />)
 

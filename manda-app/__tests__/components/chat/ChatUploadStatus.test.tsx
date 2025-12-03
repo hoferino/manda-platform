@@ -287,7 +287,7 @@ describe('ChatUploadStatus', () => {
 
       // Click the first dismiss button found
       const dismissButtons = screen.getAllByRole('button', { name: /dismiss/i })
-      await user.click(dismissButtons[0])
+      await user.click(dismissButtons[0]!)
 
       expect(mockOnDismiss).toHaveBeenCalledTimes(1)
     })
@@ -303,7 +303,7 @@ describe('ChatUploadStatus', () => {
       )
 
       const card = screen.getByTestId('chat-upload-status')
-      const dismissButton = within(card).getAllByRole('button')[0]
+      const dismissButton = within(card).getAllByRole('button')[0]!
       expect(dismissButton).toBeInTheDocument()
     })
 

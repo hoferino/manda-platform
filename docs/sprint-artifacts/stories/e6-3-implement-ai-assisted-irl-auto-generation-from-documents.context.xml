@@ -1,0 +1,184 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>6</epicId>
+    <storyId>3</storyId>
+    <title>Implement AI-Assisted IRL Auto-Generation from Documents</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-03</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e6-3-implement-ai-assisted-irl-auto-generation-from-documents.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>the AI to suggest IRL items based on the deal type and uploaded documents</iWant>
+    <soThat>I don't miss important items to request during due diligence</soThat>
+    <tasks>
+      <task id="1" title="Create generate_irl_suggestions agent tool" acs="1,2,4,5">
+        <subtask>Create lib/agent/tools/irl-tools.ts with new tool definition</subtask>
+        <subtask>Define GenerateIRLSuggestionsInputSchema in lib/agent/schemas.ts</subtask>
+        <subtask>Implement input parsing: dealId, currentIRLId (optional), dealType</subtask>
+        <subtask>Create structured output type: IRLSuggestion[] with category, name, priority, rationale</subtask>
+        <subtask>Write unit tests for schema validation (5+ tests)</subtask>
+      </task>
+      <task id="2" title="Implement deal context gathering" acs="4,5">
+        <subtask>Fetch current IRL items from irls + irl_items tables (or sections JSONB)</subtask>
+        <subtask>Fetch uploaded documents list from documents table for the deal</subtask>
+        <subtask>Fetch deal metadata (deal_type, industry) from deals table</subtask>
+        <subtask>Summarize current state: items already in IRL, document types uploaded</subtask>
+        <subtask>Write tests for context gathering functions (6+ tests)</subtask>
+      </task>
+      <task id="3" title="Implement gap analysis prompt" acs="5">
+        <subtask>Create prompt template in lib/agent/prompts/irl-suggestions.ts</subtask>
+        <subtask>Include: deal type, current IRL items, uploaded document list</subtask>
+        <subtask>Instruct LLM to identify missing categories and items</subtask>
+        <subtask>Return structured JSON output with suggestions array</subtask>
+        <subtask>Test prompt generation with different deal contexts (5+ tests)</subtask>
+      </task>
+      <task id="4" title="Implement IRL template comparison" acs="4">
+        <subtask>Load relevant IRL template based on deal type</subtask>
+        <subtask>Compare template items against current IRL items</subtask>
+        <subtask>Identify template items not present in user's IRL</subtask>
+        <subtask>Weight suggestions by template priority</subtask>
+        <subtask>Write tests for template comparison logic (5+ tests)</subtask>
+      </task>
+      <task id="5" title="Implement add_to_irl agent tool" acs="3">
+        <subtask>Create tool to add a single IRL item via API</subtask>
+        <subtask>Define AddToIRLInputSchema with: irlId, category, itemName, priority, description</subtask>
+        <subtask>Call POST /api/projects/[id]/irls/[irlId]/items to add item</subtask>
+        <subtask>Return confirmation message with added item details</subtask>
+        <subtask>Write unit tests (6+ tests)</subtask>
+      </task>
+      <task id="6" title="Update workflow-tools.ts exports" acs="1,3">
+        <subtask>Export generateIRLSuggestionsTool from workflow-tools.ts</subtask>
+        <subtask>Export addToIRLTool from workflow-tools.ts</subtask>
+        <subtask>Update all-tools.ts to include new tools (11 → 13 tools)</subtask>
+        <subtask>Update tool count validation and categories</subtask>
+        <subtask>Write tests verifying tool registration (3+ tests)</subtask>
+      </task>
+      <task id="7" title="Enhance system prompt for IRL context" acs="1,2">
+        <subtask>Update lib/agent/prompts.ts with IRL-specific guidance</subtask>
+        <subtask>Add examples of IRL suggestion queries user might ask</subtask>
+        <subtask>Define expected response format for suggestions</subtask>
+        <subtask>Ensure P2/P3 compliant output (structured, sourced, relevant)</subtask>
+      </task>
+      <task id="8" title="Create IRL API client functions" acs="3,5">
+        <subtask>Create lib/api/irls.ts if not exists</subtask>
+        <subtask>Implement getIRLItems(irlId) - fetches all items for an IRL</subtask>
+        <subtask>Implement addIRLItem(irlId, item) - adds single item</subtask>
+        <subtask>Implement getProjectDocuments(projectId) - fetches document list</subtask>
+        <subtask>Write API client tests (8+ tests)</subtask>
+      </task>
+      <task id="9" title="Write integration tests" acs="1,2,3,4,5">
+        <subtask>Test: "What else should I request?" returns suggestions</subtask>
+        <subtask>Test: Suggestions match deal type (Tech M&A gets tech-specific items)</subtask>
+        <subtask>Test: Suggestions consider uploaded documents (don't suggest what's already provided)</subtask>
+        <subtask>Test: "Add that to my IRL" adds item to database</subtask>
+        <subtask>Test: Error handling for missing IRL, invalid deal, etc.</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">"What else should I request?" in chat triggers AI-generated IRL suggestions based on current deal context</criterion>
+    <criterion id="AC2">Suggestions include category, item name, priority (high/medium/low), and rationale explaining why the item is recommended</criterion>
+    <criterion id="AC3">"Add that to my IRL" or similar command adds the suggested item to the user's active IRL</criterion>
+    <criterion id="AC4">Suggestions are tailored to deal type (Tech M&A, Industrial, Pharma, Financial Services)</criterion>
+    <criterion id="AC5">Gap analysis considers uploaded documents - suggestions reflect what's missing based on what has been provided</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E6.md" title="Epic 6 Technical Specification" section="E6.8: AI-Assisted IRL Generation">
+        Authoritative acceptance criteria and technical design for AI-suggested IRL items. Specifies generate_irl_suggestions tool in lib/agent/tools/irl-tools.ts.
+      </doc>
+      <doc path="docs/agent-behavior-spec.md" title="Agent Behavior Specification" section="P2: Agent Behavior Framework">
+        Defines agent response formatting rules: structured output, source attribution, uncertainty handling. All IRL suggestions must follow P2/P3 compliance.
+      </doc>
+      <doc path="docs/agent-behavior-spec.md" title="Agent Behavior Specification" section="P3: Expected Behavior per Use Case">
+        Inferred intent patterns. "What's missing?" triggers gap identification mode - IRL suggestions should follow this pattern.
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E6.md" title="Epic 6 Overview" section="Stories">
+        Epic context: E6.3 implements AI-assisted IRL suggestions using uploaded documents and deal type.
+      </doc>
+      <doc path="docs/manda-prd.md" title="Product Requirements Document" section="FR-IRL-002">
+        Functional requirement for IRL AI Generation - system suggests IRL items based on deal context.
+      </doc>
+    </docs>
+    <code>
+      <file path="manda-app/lib/agent/tools/workflow-tools.ts" kind="service" symbol="createIRLTool" lines="192-233" reason="Existing stub to replace with full implementation. Shows tool definition pattern."/>
+      <file path="manda-app/lib/agent/tools/all-tools.ts" kind="registry" symbol="allChatTools" lines="55-84" reason="Tool registration array - must add new tools here. Currently 11 tools, will become 13."/>
+      <file path="manda-app/lib/agent/schemas.ts" kind="schema" symbol="CreateIRLInputSchema" lines="256-263" reason="Existing schema to extend. Add GenerateIRLSuggestionsInputSchema and AddToIRLInputSchema."/>
+      <file path="manda-app/lib/types/irl.ts" kind="types" symbol="IRLTemplate, IRLItem" lines="1-349" reason="Complete IRL type definitions including templates, items, and Zod schemas. Reuse for tool output types."/>
+      <file path="manda-app/lib/services/irl-templates.ts" kind="service" symbol="listTemplates, getTemplate" lines="73-147" reason="Template loading service with caching. Use for template comparison in gap analysis."/>
+      <file path="manda-app/lib/agent/tools/utils.ts" kind="utility" symbol="formatToolResponse, handleToolError" reason="Standard utilities for tool responses. Use in all new tools."/>
+      <file path="manda-app/lib/llm/client.ts" kind="service" symbol="createLLMClient" reason="LLM factory for suggestion generation. Follow pattern from suggest_questions tool."/>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="@langchain/core" version="^0.3.x">Tool definition with tool() function, Zod schema integration</package>
+        <package name="@langchain/langgraph" version="^0.2.x">Agent executor for tool orchestration</package>
+        <package name="zod" version="^3.x">Schema validation for tool inputs/outputs</package>
+        <package name="@supabase/supabase-js" version="^2.x">Database access for IRL and document queries</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="agent-behavior-spec.md">P2 Compliance: Never show confidence scores to users. Translate to natural explanations.</constraint>
+    <constraint source="agent-behavior-spec.md">P3 Compliance: Infer intent from query - "What else should I request?" = gap identification mode.</constraint>
+    <constraint source="tech-spec-epic-E6.md">Tool count: Update from 11 to 13 tools in all-tools.ts and TOOL_COUNT validation.</constraint>
+    <constraint source="story-dev-notes">Schema flexibility: Check if irl_items table exists (E6.2), fall back to JSONB parsing from irls.sections if not.</constraint>
+    <constraint source="tech-spec-epic-E6.md">IRL templates stored at packages/shared/templates/irls/*.json - use for template comparison.</constraint>
+    <constraint source="all-tools.ts">Tool order matters: More commonly used tools first. Add IRL tools after existing workflow tools.</constraint>
+    <constraint source="workflow-tools.ts">Authentication required: All tools must verify user via supabase.auth.getUser() before operations.</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="generate_irl_suggestions" kind="agent-tool">
+      <signature>tool(async (input: GenerateIRLSuggestionsInput) => ToolResponse)</signature>
+      <input>dealId: string, currentIRLId?: string, dealType?: string</input>
+      <output>message: string, suggestions: IRLSuggestion[], total: number</output>
+      <path>manda-app/lib/agent/tools/irl-tools.ts</path>
+    </interface>
+    <interface name="add_to_irl" kind="agent-tool">
+      <signature>tool(async (input: AddToIRLInput) => ToolResponse)</signature>
+      <input>irlId: string, category: string, itemName: string, priority: string, description?: string</input>
+      <output>message: string, itemId: string</output>
+      <path>manda-app/lib/agent/tools/irl-tools.ts</path>
+    </interface>
+    <interface name="POST /api/projects/[id]/irls/[irlId]/items" kind="REST">
+      <signature>POST with CreateIRLItemRequest body</signature>
+      <path>manda-app/app/api/projects/[id]/irls/[irlId]/items/route.ts</path>
+    </interface>
+    <interface name="GET /api/projects/[id]/irls/[irlId]" kind="REST">
+      <signature>Returns IRL with items array</signature>
+      <path>manda-app/app/api/projects/[id]/irls/[irlId]/route.ts</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Unit tests use Vitest with mocked Supabase client and LLM calls. Integration tests use MSW for API mocking.
+      Evaluation tests tagged @slow for real LLM calls (50K token budget per run).
+      Follow patterns from E5 agent tools - see __tests__/lib/agent/tools/*.test.ts.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/agent/tools/irl-tools.test.ts</location>
+      <location>manda-app/__tests__/lib/api/irls.test.ts</location>
+      <location>manda-app/__tests__/integration/irl-suggestions.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test "What else should I request?" query triggers generate_irl_suggestions tool</idea>
+      <idea ac="AC2">Test suggestion output includes category, name, priority, rationale fields</idea>
+      <idea ac="AC3">Test "Add that to my IRL" invokes add_to_irl tool and creates database record</idea>
+      <idea ac="AC4">Test Tech M&A deal type returns tech-specific suggestions (Source Code Access, Cloud Infrastructure)</idea>
+      <idea ac="AC4">Test Industrial deal type returns industrial-specific suggestions</idea>
+      <idea ac="AC5">Test suggestions exclude items already covered by uploaded documents</idea>
+      <idea ac="AC5">Test suggestions include items not covered by current IRL</idea>
+      <idea>Test authentication failure returns appropriate error</idea>
+      <idea>Test invalid dealId returns error</idea>
+      <idea>Test missing IRL returns helpful message to create one first</idea>
+      <idea>Test template comparison correctly identifies missing items</idea>
+      <idea>Test LLM fallback when service unavailable</idea>
+    </ideas>
+  </tests>
+</story-context>

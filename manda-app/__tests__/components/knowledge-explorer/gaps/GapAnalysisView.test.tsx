@@ -80,10 +80,11 @@ describe('GapAnalysisView', () => {
       name: 'Annual Financial Statements',
       description: 'Audited financial statements for FY2023',
       required: true,
-      received: false,
       sortOrder: 1,
+      documentId: null,
+      documentName: null,
       createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: null,
+      updatedAt: '2024-01-01T00:00:00Z',
     },
     source: 'IRL Checklist',
     detectedAt: '2024-01-17T12:00:00Z',
@@ -138,8 +139,8 @@ describe('GapAnalysisView', () => {
     const keys = Array.from(mockSearchParams.keys())
     keys.forEach((key) => mockSearchParams.delete(key))
     vi.mocked(gapsApi.getProjectGaps).mockResolvedValue(mockResponse)
-    vi.mocked(gapsApi.resolveGap).mockResolvedValue({ success: true })
-    vi.mocked(gapsApi.undoGapResolution).mockResolvedValue({ success: true })
+    vi.mocked(gapsApi.resolveGap).mockResolvedValue(mockResolvedGap)
+    vi.mocked(gapsApi.undoGapResolution).mockResolvedValue(mockInfoGap)
   })
 
   describe('Filter Bar Rendering (AC1, AC2)', () => {
@@ -453,10 +454,10 @@ describe('GapAnalysisView', () => {
       render(<GapAnalysisView {...defaultProps} />)
 
       await waitFor(() => {
-        expect(screen.getAllByRole('button', { name: /mark as resolved/i })[0]).toBeInTheDocument()
+        expect(screen.getAllByRole('button', { name: /mark as resolved/i })[0]!).toBeInTheDocument()
       })
 
-      await user.click(screen.getAllByRole('button', { name: /mark as resolved/i })[0])
+      await user.click(screen.getAllByRole('button', { name: /mark as resolved/i })[0]!)
 
       await waitFor(() => {
         expect(gapsApi.resolveGap).toHaveBeenCalledWith(
@@ -479,7 +480,7 @@ describe('GapAnalysisView', () => {
       vi.mocked(gapsApi.getProjectGaps).mockClear()
       vi.mocked(gapsApi.getProjectGaps).mockResolvedValue(emptyResponse)
 
-      await user.click(screen.getAllByRole('button', { name: /mark as resolved/i })[0])
+      await user.click(screen.getAllByRole('button', { name: /mark as resolved/i })[0]!)
 
       await waitFor(() => {
         expect(gapsApi.getProjectGaps).toHaveBeenCalled()

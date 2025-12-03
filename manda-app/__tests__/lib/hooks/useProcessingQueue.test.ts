@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useProcessingQueue } from '@/lib/hooks/useProcessingQueue'
 import * as processingApi from '@/lib/api/processing'
+import type { QueueResponse } from '@/lib/api/processing'
 
 // Mock the processing API module
 vi.mock('@/lib/api/processing', () => ({
@@ -80,10 +81,10 @@ describe('useProcessingQueue Hook', () => {
 
   describe('Loading State', () => {
     it('sets loading state during fetch', async () => {
-      let resolvePromise: (value: unknown) => void
+      let resolvePromise: (value: QueueResponse) => void
       vi.mocked(processingApi.fetchQueueJobs).mockImplementation(
         () =>
-          new Promise((resolve) => {
+          new Promise<QueueResponse>((resolve) => {
             resolvePromise = resolve
           })
       )
@@ -171,7 +172,7 @@ describe('useProcessingQueue Hook', () => {
 
       // Prepare next page
       vi.mocked(processingApi.fetchQueueJobs).mockResolvedValue({
-        jobs: [{ ...mockJobs[0], id: 'job-2' }],
+        jobs: [{ ...mockJobs[0]!, id: 'job-2' }],
         total: 5,
         hasMore: false,
       })

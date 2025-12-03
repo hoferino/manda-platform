@@ -94,7 +94,7 @@ describe('GapActions', () => {
     vi.clearAllMocks()
     mockOnResolve.mockResolvedValue(undefined)
     mockOnUndo.mockResolvedValue(undefined)
-    vi.mocked(gapsApi.createManualFinding).mockResolvedValue({ finding: {} as never })
+    vi.mocked(gapsApi.createManualFinding).mockResolvedValue({} as never)
   })
 
   describe('Active Gap Buttons', () => {

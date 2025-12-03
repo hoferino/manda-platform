@@ -55,7 +55,7 @@ describe('FindingActions', () => {
     })
 
     it('shows loading state during validation', async () => {
-      const slowValidate = vi.fn(() => new Promise(resolve => setTimeout(resolve, 100)))
+      const slowValidate = vi.fn(async () => { await new Promise(resolve => setTimeout(resolve, 100)) })
       render(<FindingActions {...defaultProps} onValidate={slowValidate} />)
 
       fireEvent.click(screen.getByRole('button', { name: /validate finding/i }))
@@ -117,7 +117,7 @@ describe('FindingActions', () => {
     })
 
     it('disables edit button during loading', async () => {
-      const slowValidate = vi.fn(() => new Promise(resolve => setTimeout(resolve, 100)))
+      const slowValidate = vi.fn(async () => { await new Promise(resolve => setTimeout(resolve, 100)) })
       render(<FindingActions {...defaultProps} onValidate={slowValidate} />)
 
       fireEvent.click(screen.getByRole('button', { name: /validate finding/i }))

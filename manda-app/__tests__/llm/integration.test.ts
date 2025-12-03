@@ -160,9 +160,9 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('LLM Integration Tests', () => {
       }
 
       // All providers should return a response containing "hello"
-      expect(results.anthropic.toLowerCase()).toContain('hello')
-      expect(results.openai.toLowerCase()).toContain('hello')
-      expect(results.google.toLowerCase()).toContain('hello')
+      expect(results.anthropic!.toLowerCase()).toContain('hello')
+      expect(results.openai!.toLowerCase()).toContain('hello')
+      expect(results.google!.toLowerCase()).toContain('hello')
     }, 90000) // 30s per provider
   })
 })

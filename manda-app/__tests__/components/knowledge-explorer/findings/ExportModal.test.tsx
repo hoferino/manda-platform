@@ -289,7 +289,7 @@ describe('ExportModal', () => {
       await user.click(screen.getByRole('button', { name: /Export/i }))
 
       await waitFor(() => {
-        const call = mockFetch.mock.calls[0]
+        const call = mockFetch.mock.calls[0]!
         const body = JSON.parse(call[1].body)
         expect(body.format).toBe('csv')
       })
@@ -304,7 +304,7 @@ describe('ExportModal', () => {
       await user.click(screen.getByRole('button', { name: /Export/i }))
 
       await waitFor(() => {
-        const call = mockFetch.mock.calls[0]
+        const call = mockFetch.mock.calls[0]!
         const body = JSON.parse(call[1].body)
         expect(body.fields).not.toContain('createdAt')
       })
@@ -317,7 +317,7 @@ describe('ExportModal', () => {
       await user.click(screen.getByRole('button', { name: /Export/i }))
 
       await waitFor(() => {
-        const call = mockFetch.mock.calls[0]
+        const call = mockFetch.mock.calls[0]!
         const body = JSON.parse(call[1].body)
         expect(body.scope).toBe('selected')
         expect(body.findingIds).toEqual(['id-1', 'id-2'])

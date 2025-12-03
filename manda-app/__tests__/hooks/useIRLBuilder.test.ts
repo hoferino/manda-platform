@@ -122,7 +122,7 @@ describe('useIRLBuilder', () => {
       })
 
       expect(result.current.progress).not.toBeNull()
-      expect(result.current.progress?.totalItems).toBe(2)
+      expect(result.current.progress?.total).toBe(2)
     })
   })
 
@@ -278,7 +278,7 @@ describe('useIRLBuilder', () => {
       })
 
       expect(result.current.items).toHaveLength(3)
-      expect(result.current.items[2].itemName).toBe('Bank Statements')
+      expect(result.current.items[2]!.itemName).toBe('Bank Statements')
     })
   })
 
@@ -301,7 +301,7 @@ describe('useIRLBuilder', () => {
       })
 
       // Optimistic update
-      expect(result.current.items[0].status).toBe('received')
+      expect(result.current.items[0]!.status).toBe('received')
     })
 
     it('rolls back item on error', async () => {
@@ -321,7 +321,7 @@ describe('useIRLBuilder', () => {
       })
 
       // Should rollback
-      expect(result.current.items[0].status).toBe('not_started')
+      expect(result.current.items[0]!.status).toBe('not_started')
     })
   })
 
@@ -340,7 +340,7 @@ describe('useIRLBuilder', () => {
       })
 
       expect(result.current.items).toHaveLength(1)
-      expect(result.current.items[0].id).toBe('item-2')
+      expect(result.current.items[0]!.id).toBe('item-2')
     })
 
     it('rolls back on delete error', async () => {
@@ -381,8 +381,8 @@ describe('useIRLBuilder', () => {
       })
 
       // Items should be reordered
-      expect(result.current.items[0].id).toBe('item-2')
-      expect(result.current.items[1].id).toBe('item-1')
+      expect(result.current.items[0]!.id).toBe('item-2')
+      expect(result.current.items[1]!.id).toBe('item-1')
     })
   })
 

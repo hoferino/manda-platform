@@ -245,7 +245,7 @@ describe('ProcessingQueue Component', () => {
     it('calls cancelQueueJob when job is cancelled', async () => {
       const refetch = vi.fn()
       vi.mocked(hooks.useProcessingQueue).mockReturnValue({
-        jobs: [mockJobs[0]],
+        jobs: [mockJobs[0]!],
         total: 1,
         hasMore: false,
         isLoading: false,
@@ -284,7 +284,7 @@ describe('ProcessingQueue Component', () => {
   describe('Retry Functionality', () => {
     it('calls retry endpoint when retry clicked', async () => {
       const failedJob = {
-        ...mockJobs[0],
+        ...mockJobs[0]!,
         id: 'job-failed',
         status: 'failed' as const,
         error: 'Processing failed',
