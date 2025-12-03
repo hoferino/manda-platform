@@ -145,6 +145,25 @@ export interface IRLFulfilledProgress {
 }
 
 /**
+ * Progress tracking for a single IRL category
+ * Story: E6.7 - Build IRL Checklist Progress Visualization
+ */
+export interface IRLProgressByCategory {
+  category: string
+  fulfilled: number
+  total: number
+  percentComplete: number
+}
+
+/**
+ * Extended progress with category-level breakdown
+ * Story: E6.7 - Build IRL Checklist Progress Visualization
+ */
+export interface IRLFulfilledProgressWithCategories extends IRLFulfilledProgress {
+  byCategory: IRLProgressByCategory[]
+}
+
+/**
  * Calculate progress from IRL items based on fulfilled boolean
  * Used for the manual checklist in Data Room sidebar
  */
@@ -155,6 +174,43 @@ export function calculateIRLFulfilledProgress(items: IRLItem[]): IRLFulfilledPro
   const percentComplete = total > 0 ? Math.round((fulfilled / total) * 100) : 0
 
   return { total, fulfilled, unfulfilled, percentComplete }
+}
+
+/**
+ * Calculate progress by category from IRL items
+ * Story: E6.7 - Build IRL Checklist Progress Visualization
+ */
+export function calculateIRLProgressByCategory(items: IRLItem[]): IRLProgressByCategory[] {
+  // Group items by category
+  const categoryMap: Record<string, IRLItem[]> = {}
+  for (const item of items) {
+    if (!categoryMap[item.category]) {
+      categoryMap[item.category] = []
+    }
+    categoryMap[item.category]!.push(item)
+  }
+
+  // Calculate progress for each category
+  return Object.entries(categoryMap).map(([category, categoryItems]) => {
+    const total = categoryItems.length
+    const fulfilled = categoryItems.filter(i => i.fulfilled).length
+    const percentComplete = total > 0 ? Math.round((fulfilled / total) * 100) : 0
+
+    return { category, fulfilled, total, percentComplete }
+  })
+}
+
+/**
+ * Calculate overall progress with category-level breakdown
+ * Story: E6.7 - Build IRL Checklist Progress Visualization
+ */
+export function calculateIRLFulfilledProgressWithCategories(
+  items: IRLItem[]
+): IRLFulfilledProgressWithCategories {
+  const overall = calculateIRLFulfilledProgress(items)
+  const byCategory = calculateIRLProgressByCategory(items)
+
+  return { ...overall, byCategory }
 }
 
 // ============================================================================

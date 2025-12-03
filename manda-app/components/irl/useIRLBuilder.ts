@@ -14,13 +14,17 @@
  * - Optimistic updates with rollback
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   IRLWithItems,
   IRLItem,
   IRLProgress,
+  IRLFulfilledProgress,
+  IRLProgressByCategory,
   UpdateIRLItemRequest,
   calculateIRLProgress,
+  calculateIRLFulfilledProgress,
+  calculateIRLProgressByCategory,
   IRLPriority,
 } from '@/lib/types/irl'
 
@@ -46,6 +50,10 @@ interface UseIRLBuilderReturn {
   itemsByCategory: Record<string, IRLItem[]>
   categories: string[]
   progress: IRLProgress | null
+  /** Fulfilled-based progress for E6.7 checklist visualization */
+  fulfilledProgress: IRLFulfilledProgress | null
+  /** Per-category fulfilled progress for E6.7 visualization */
+  progressByCategory: IRLProgressByCategory[] | null
   isLoading: boolean
   isSaving: boolean
   error: string | null
@@ -92,8 +100,19 @@ export function useIRLBuilder({
   // Get unique categories preserving order
   const categories = Object.keys(itemsByCategory)
 
-  // Calculate progress
+  // Calculate progress (legacy status-based)
   const progress = items.length > 0 ? calculateIRLProgress(items) : null
+
+  // Calculate fulfilled-based progress (E6.7 enhancement)
+  // Using useMemo for efficiency - recalculates when items change
+  const fulfilledProgress = useMemo(() => {
+    return items.length > 0 ? calculateIRLFulfilledProgress(items) : null
+  }, [items])
+
+  // Calculate per-category progress (E6.7 enhancement)
+  const progressByCategory = useMemo(() => {
+    return items.length > 0 ? calculateIRLProgressByCategory(items) : null
+  }, [items])
 
   // Handle errors
   const handleError = useCallback((message: string) => {
@@ -430,6 +449,8 @@ export function useIRLBuilder({
     itemsByCategory,
     categories,
     progress,
+    fulfilledProgress,
+    progressByCategory,
     isLoading,
     isSaving,
     error,

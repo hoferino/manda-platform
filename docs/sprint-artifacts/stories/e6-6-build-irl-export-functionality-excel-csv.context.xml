@@ -1,0 +1,165 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E6</epicId>
+    <storyId>6</storyId>
+    <title>Build IRL Export Functionality (PDF/Word)</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-03</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e6-6-build-irl-export-functionality-excel-csv.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>export my IRL to PDF or Word format</iWant>
+    <soThat>I can send a professional document request list to the seller</soThat>
+    <tasks>
+      <task id="1" acs="2,3,4,5,6,7">Create IRL Export Service
+        <subtask id="1.1">Install dependencies: pdfmake for PDF, docx for Word</subtask>
+        <subtask id="1.2">Create lib/services/irl-export.ts with export logic</subtask>
+        <subtask id="1.3">Implement generateIRLPdf() function with pdfmake</subtask>
+        <subtask id="1.4">Implement generateIRLDocx() function with docx package</subtask>
+        <subtask id="1.5">Add project name and date header to both formats</subtask>
+        <subtask id="1.6">Format categories with proper hierarchy (category > subcategory > item)</subtask>
+        <subtask id="1.7">Add priority badges/labels (color-coded for PDF, text for Word)</subtask>
+        <subtask id="1.8">Include notes inline or as sub-bullets</subtask>
+        <subtask id="1.9">Add fulfilled status indicator (checkbox or [x]/[ ])</subtask>
+      </task>
+      <task id="2" acs="2,3,8">Create Export API Endpoint
+        <subtask id="2.1">Create API route POST /api/projects/[id]/irls/[irlId]/export</subtask>
+        <subtask id="2.2">Accept format parameter: { format: 'pdf' | 'word' }</subtask>
+        <subtask id="2.3">Load IRL with all items from database</subtask>
+        <subtask id="2.4">Return generated file as blob with appropriate content-type</subtask>
+        <subtask id="2.5">Add error handling for missing IRL or empty IRL</subtask>
+      </task>
+      <task id="3" acs="1,8">Create Export UI Components
+        <subtask id="3.1">Create components/irl/IRLExportDropdown.tsx with format selection</subtask>
+        <subtask id="3.2">Add PDF icon and Word icon for visual distinction</subtask>
+        <subtask id="3.3">Implement loading state during export generation</subtask>
+        <subtask id="3.4">Trigger browser download on successful export</subtask>
+        <subtask id="3.5">Show toast notification on success/failure</subtask>
+      </task>
+      <task id="4" acs="1">Integrate Export into IRL Builder
+        <subtask id="4.1">Add export button to IRLBuilder toolbar (next to save)</subtask>
+        <subtask id="4.2">Wire up export dropdown to API</subtask>
+        <subtask id="4.3">Pass project name and IRL data to export service</subtask>
+        <subtask id="4.4">Add keyboard shortcut hint (optional)</subtask>
+      </task>
+      <task id="5" acs="1-8">Write Tests
+        <subtask id="5.1">Unit tests for irl-export.ts service (PDF, Word generation)</subtask>
+        <subtask id="5.2">Unit tests for IRLExportDropdown component</subtask>
+        <subtask id="5.3">Integration test for export API endpoint</subtask>
+        <subtask id="5.4">Test with various IRL sizes (empty, small, large 200+ items)</subtask>
+        <subtask id="5.5">Test priority formatting and notes inclusion</subtask>
+        <subtask id="5.6">Test fulfilled status display</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Export dropdown in IRL Builder toolbar offers PDF and Word (.docx) format options</ac>
+    <ac id="2">PDF export includes all IRL categories and items with proper formatting and hierarchy</ac>
+    <ac id="3">Word export is editable and maintains professional formatting</ac>
+    <ac id="4">Export includes priority indicators (High, Medium, Low) with visual distinction</ac>
+    <ac id="5">Export includes project name and export date as header/letterhead</ac>
+    <ac id="6">Item notes are included in the export and clearly associated with each item</ac>
+    <ac id="7">Export shows fulfilled/unfulfilled status for each item</ac>
+    <ac id="8">Export generation shows loading state and downloads file to user's machine</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E6.md" title="Epic 6 Tech Spec" section="E6.6 Acceptance Criteria">
+        Defines export to PDF/Word with pdfmake ^0.2.x and docx ^8.x packages. Export must include all categories, items, priority indicators, project name, date header, notes, and fulfilled status.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E6.md" title="Epic 6 Tech Spec" section="Services and Modules">
+        IRL Export Service to be created at lib/services/irl-export.ts with generateIRLPdf() and generateIRLDocx() functions.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E6.md" title="Epic 6 Tech Spec" section="Performance">
+        Export generation should complete in &lt;10s for PDF, &lt;15s for Word per tech spec NFR.
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E6.md" title="Epic 6 Story List" section="Story E6.6">
+        Full story description: Build IRL Export Functionality (PDF, Word).
+      </doc>
+    </docs>
+    <code>
+      <artifact path="lib/types/irl.ts" kind="types" symbol="IRLItem, IRL, IRLWithItems, IRLPriority" lines="75-89" reason="Core IRL data types including fulfilled boolean and priority enum needed for export content">
+        IRLItem interface with: id, irlId, category, subcategory, itemName, description, priority ('high'|'medium'|'low'), fulfilled (boolean), notes, sortOrder.
+      </artifact>
+      <artifact path="lib/types/irl.ts" kind="types" symbol="IRL_PRIORITY_CONFIG" lines="178-182" reason="Priority display configuration for color coding in PDF export">
+        Priority colors: high=red, medium=yellow, low=green with text-white.
+      </artifact>
+      <artifact path="lib/services/irls.ts" kind="service" symbol="getIRLWithItems" lines="95-132" reason="Service function to load IRL with all items, required for export API endpoint">
+        Returns IRLWithItems (IRL with items array) from Supabase.
+      </artifact>
+      <artifact path="lib/api/findings.ts" kind="api-client" symbol="exportFindings" lines="304-345" reason="Reference pattern for file download using blob URL and browser download trigger">
+        Pattern: fetch blob, create URL.createObjectURL, create download link, trigger click, cleanup.
+      </artifact>
+      <artifact path="components/irl/IRLBuilder.tsx" kind="component" symbol="IRLBuilder" lines="289-454" reason="Main IRL builder component where export button will be integrated into toolbar">
+        Toolbar area at lines 339-363 contains Generate Folders button - export button should be placed next to it.
+      </artifact>
+      <artifact path="lib/api/irl.ts" kind="api-client" symbol="FolderGenerationResult" lines="490-509" reason="Pattern for API result type with errors array for export endpoint">
+        Similar result structure can be used for export with success/error handling.
+      </artifact>
+    </code>
+    <dependencies>
+      <package name="pdfmake" version="^0.2.x" status="NOT_INSTALLED" purpose="PDF generation for IRL export"/>
+      <package name="docx" version="^8.x" status="NOT_INSTALLED" purpose="Word document generation for IRL export"/>
+      <package name="exceljs" version="^4.4.0" status="installed" purpose="Already used for findings export, provides Excel generation patterns"/>
+      <package name="csv-stringify" version="^6.6.0" status="installed" purpose="CSV export reference"/>
+      <package name="@dnd-kit/core" version="^6.3.1" status="installed" purpose="Used in IRLBuilder for drag-and-drop"/>
+      <package name="lucide-react" version="^0.554.0" status="installed" purpose="Icons for PDF/Word format selection in dropdown"/>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="performance">Export generation must complete in &lt;10s for PDF, &lt;15s for Word (tech spec NFR)</constraint>
+    <constraint type="formatting">Export must include letterhead with project name and date per epics.md requirements</constraint>
+    <constraint type="architecture">Use server-side generation for consistency (pdfmake and docx both support server-side)</constraint>
+    <constraint type="ui-pattern">Follow existing dropdown patterns from ExportDropdown in Knowledge Explorer</constraint>
+    <constraint type="data-loading">Use getIRLWithItems() from lib/services/irls.ts to load IRL data for export</constraint>
+    <constraint type="error-handling">Handle empty IRL and missing IRL cases with appropriate error messages</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="POST /api/projects/[id]/irls/[irlId]/export" kind="REST endpoint">
+      <signature>Request: { format: 'pdf' | 'word' }</signature>
+      <signature>Response: File blob with Content-Type application/pdf or application/vnd.openxmlformats-officedocument.wordprocessingml.document</signature>
+      <signature>Headers: X-Export-Filename, X-Export-Count (following findings export pattern)</signature>
+      <path>app/api/projects/[id]/irls/[irlId]/export/route.ts</path>
+    </interface>
+    <interface name="generateIRLPdf" kind="function signature">
+      <signature>(irl: IRLWithItems, projectName: string, exportDate: Date) => Promise&lt;Buffer&gt;</signature>
+      <path>lib/services/irl-export.ts</path>
+    </interface>
+    <interface name="generateIRLDocx" kind="function signature">
+      <signature>(irl: IRLWithItems, projectName: string, exportDate: Date) => Promise&lt;Buffer&gt;</signature>
+      <path>lib/services/irl-export.ts</path>
+    </interface>
+    <interface name="exportIRL" kind="API client function">
+      <signature>(projectId: string, irlId: string, format: 'pdf' | 'word') => Promise&lt;ExportResult&gt;</signature>
+      <path>lib/api/irl.ts (to be added)</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Vitest for unit tests with @testing-library/react for components. Coverage target 80% for irl-export.ts service. Mock pdfmake and docx libraries to test document structure without generating files. Follow existing test patterns in __tests__/lib/services/ and __tests__/components/irl/.
+    </standards>
+    <locations>
+      <location>__tests__/lib/services/irl-export.test.ts</location>
+      <location>__tests__/components/irl/IRLExportDropdown.test.tsx</location>
+      <location>__tests__/api/projects/[id]/irls/[irlId]/export.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test dropdown renders with PDF and Word options, correct icons display</idea>
+      <idea ac="2">Test PDF export includes all categories in correct hierarchy, items listed under categories</idea>
+      <idea ac="3">Test Word export generates valid DOCX that can be opened/edited</idea>
+      <idea ac="4">Test priority indicators: high shows red/[HIGH], medium shows yellow/[MED], low shows green/[LOW]</idea>
+      <idea ac="5">Test project name and export date appear in header/letterhead of both formats</idea>
+      <idea ac="6">Test item notes appear inline or as sub-bullets below each item</idea>
+      <idea ac="7">Test fulfilled items show [x] or checkmark, unfulfilled show [ ] or empty box</idea>
+      <idea ac="8">Test loading state appears during export, download triggers on completion</idea>
+      <idea ac="all">Test empty IRL returns appropriate error message</idea>
+      <idea ac="all">Test large IRL (200+ items) completes within performance constraints</idea>
+    </ideas>
+  </tests>
+</story-context>

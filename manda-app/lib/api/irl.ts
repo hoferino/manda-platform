@@ -553,6 +553,70 @@ export async function generateFoldersFromIRL(
   }
 }
 
+// ============================================================================
+// E6.6 - IRL Export (PDF/Word)
+// ============================================================================
+
+/**
+ * Export format for IRL
+ */
+export type IRLExportFormat = 'pdf' | 'word'
+
+/**
+ * Result of IRL export
+ */
+export interface ExportResult {
+  filename: string
+  count: number
+}
+
+/**
+ * Export IRL to PDF or Word format
+ * Triggers browser download on success
+ *
+ * @param projectId - The project/deal ID
+ * @param irlId - The IRL ID to export
+ * @param format - Export format: 'pdf' or 'word'
+ * @returns ExportResult with filename and item count
+ */
+export async function exportIRL(
+  projectId: string,
+  irlId: string,
+  format: IRLExportFormat
+): Promise<ExportResult> {
+  const response = await fetch(`/api/projects/${projectId}/irls/${irlId}/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ format }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(errorData.error || 'Export failed')
+  }
+
+  // Get metadata from headers
+  const filename = response.headers.get('X-Export-Filename') || `irl-export.${format === 'word' ? 'docx' : 'pdf'}`
+  const count = parseInt(response.headers.get('X-Export-Count') || '0', 10)
+
+  // Get blob and trigger download
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+
+  // Create download link and trigger click
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+
+  // Cleanup
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+
+  return { filename, count }
+}
+
 /**
  * Get all IRLs for a project
  */

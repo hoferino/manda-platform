@@ -1,0 +1,138 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E6</epicId>
+    <storyId>7</storyId>
+    <title>Build IRL Checklist Progress Visualization</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-03</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e6-7-build-irl-checklist-progress-visualization.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to see visual progress indicators for my IRL checklist</iWant>
+    <soThat>I can quickly understand how much of my document request is fulfilled</soThat>
+    <tasks>
+      <task id="1" title="Enhance Progress Calculation Utilities">
+        <subtask id="1.1">Update calculateIRLFulfilledProgress() in lib/types/irl.ts to return category-level breakdown</subtask>
+        <subtask id="1.2">Create IRLProgressByCategory type: { category: string, fulfilled: number, total: number }</subtask>
+        <subtask id="1.3">Ensure progress recalculation on fulfilled toggle</subtask>
+      </task>
+      <task id="2" title="Create Progress Visualization Components">
+        <subtask id="2.1">Create components/irl/IRLProgressBar.tsx - enhanced progress bar with percentage label</subtask>
+        <subtask id="2.2">Create components/irl/IRLProgressSummary.tsx - dashboard-style summary (fulfilled/unfulfilled counts)</subtask>
+        <subtask id="2.3">Create components/irl/IRLCategoryProgress.tsx - inline progress for category headers</subtask>
+      </task>
+      <task id="3" title="Update IRLCategory Component">
+        <subtask id="3.1">Add category-level progress indicator to IRLCategory.tsx header</subtask>
+        <subtask id="3.2">Show "X/Y items" next to category name</subtask>
+        <subtask id="3.3">Use mini progress bar or badge for visual distinction</subtask>
+      </task>
+      <task id="4" title="Update IRLBuilder with Enhanced Progress">
+        <subtask id="4.1">Replace basic progress in IRLBuilder.tsx header with IRLProgressSummary</subtask>
+        <subtask id="4.2">Add progress summary section below title showing fulfilled/unfulfilled breakdown</subtask>
+        <subtask id="4.3">Ensure responsive layout for progress components</subtask>
+      </task>
+      <task id="5" title="Update useIRLBuilder Hook for Category Progress">
+        <subtask id="5.1">Extend useIRLBuilder to compute and expose progressByCategory</subtask>
+        <subtask id="5.2">Ensure category progress updates optimistically on fulfilled toggle</subtask>
+        <subtask id="5.3">Add categoryProgress to hook return value</subtask>
+      </task>
+      <task id="6" title="Write Tests">
+        <subtask id="6.1">Unit tests for enhanced progress calculation functions</subtask>
+        <subtask id="6.2">Component tests for IRLProgressBar, IRLProgressSummary, IRLCategoryProgress</subtask>
+        <subtask id="6.3">Integration test: toggling fulfilled updates all progress displays</subtask>
+        <subtask id="6.4">Test responsive behavior at different viewport sizes</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Overall progress bar shows percentage complete (e.g., "32/45 items - 71%")</criterion>
+    <criterion id="AC2">Category headers display category-level progress (e.g., "Financial: 4/6")</criterion>
+    <criterion id="AC3">Progress updates in real-time when item status changes (optimistic UI)</criterion>
+    <criterion id="AC4">Dashboard-style summary view shows counts for fulfilled vs unfulfilled items</criterion>
+    <criterion id="AC5">Progress visualization is responsive and works on tablet/desktop</criterion>
+    <criterion id="AC6">Progress calculation uses the fulfilled boolean field from irl_items</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/manda-prd.md" title="Product Requirements Document" section="FR-IRL-002: IRL Tracking" snippet="Simple checkbox for each requested item (unfulfilled / fulfilled). Manual checkbox updates only. Progress visualization (X of Y items fulfilled, percentage complete)." />
+      <doc path="docs/ux-design-specification.md" title="UX Design Specification" section="5.2 Data Room - IRL Integration" snippet="Progress bar (visual), Status badge (in progress, completed), Per-item upload actions. Document Checklist Panel with overall progress showing X/Y (Z%)." />
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E6.md" title="Epic 6 Tech Spec" section="E6.4: IRL Fulfillment Tracking" snippet="Progress bar shows X/Y items fulfilled (Z%). Document uploads do NOT auto-update checkboxes. Category sections are collapsible. Filter toggle to show only unfulfilled items." />
+      <doc path="docs/epics.md" title="Epic Stories" section="Story E6.7" snippet="Build visual progress indicators for the IRL checklist including progress bars, completion percentages, and status breakdowns by category." />
+    </docs>
+    <code>
+      <artifact path="manda-app/lib/types/irl.ts" kind="types" symbol="IRLFulfilledProgress, calculateIRLFulfilledProgress" lines="139-158" reason="Existing progress types and calculation utility - extend for category-level breakdown" />
+      <artifact path="manda-app/lib/types/irl.ts" kind="types" symbol="IRLItem" lines="75-89" reason="IRLItem interface with fulfilled boolean field used for progress calculation" />
+      <artifact path="manda-app/components/irl/useIRLBuilder.ts" kind="hook" symbol="useIRLBuilder" lines="68-451" reason="Hook managing IRL state - extend to expose progressByCategory" />
+      <artifact path="manda-app/components/irl/IRLBuilder.tsx" kind="component" symbol="IRLBuilder" lines="377-384" reason="Current basic progress display in header - replace with enhanced visualization" />
+      <artifact path="manda-app/components/irl/IRLCategory.tsx" kind="component" symbol="IRLCategory" lines="220-221" reason="Category header with item count - add category-level progress indicator" />
+      <artifact path="manda-app/components/ui/progress.tsx" kind="component" symbol="Progress" reason="shadcn/ui Progress component to use for progress bars" />
+      <artifact path="manda-app/components/ui/badge.tsx" kind="component" symbol="Badge" reason="shadcn/ui Badge component for status/count badges" />
+    </code>
+    <dependencies>
+      <node>
+        <package>@radix-ui/react-progress</package>
+        <version>^1.0.0</version>
+        <purpose>Progress primitive via shadcn/ui</purpose>
+      </node>
+      <node>
+        <package>tailwindcss</package>
+        <version>^3.4.1</version>
+        <purpose>Styling for progress components</purpose>
+      </node>
+      <node>
+        <package>lucide-react</package>
+        <version>^0.454.0</version>
+        <purpose>Icons for progress indicators (CheckCircle, Circle, etc.)</purpose>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Binary Fulfilled Status - The irl_items.fulfilled boolean is the ONLY status field for progress; no enum, just true/false</constraint>
+    <constraint>Existing Progress Utility - Extend calculateIRLFulfilledProgress(), do not recreate or duplicate</constraint>
+    <constraint>Optimistic UI Pattern - Follow existing useIRLBuilder hook pattern for instant UI updates with rollback on error</constraint>
+    <constraint>Component Naming - Follow existing IRL* component naming convention (IRLProgressBar, IRLProgressSummary, etc.)</constraint>
+    <constraint>Styling - Use Tailwind CSS and existing shadcn/ui components (Progress, Badge); no new dependencies</constraint>
+    <constraint>Hook Return Value - Use calculateIRLProgress (legacy) for complete count; use calculateIRLFulfilledProgress for fulfilled-based progress</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="IRLFulfilledProgress" kind="type" signature="{ total: number; fulfilled: number; unfulfilled: number; percentComplete: number }" path="manda-app/lib/types/irl.ts" />
+    <interface name="calculateIRLFulfilledProgress" kind="function" signature="(items: IRLItem[]) => IRLFulfilledProgress" path="manda-app/lib/types/irl.ts" />
+    <interface name="useIRLBuilder" kind="hook" signature="(options: UseIRLBuilderOptions) => UseIRLBuilderReturn" path="manda-app/components/irl/useIRLBuilder.ts" />
+    <interface name="Progress" kind="component" signature="React.FC<{ value: number; className?: string }>" path="manda-app/components/ui/progress.tsx" />
+  </interfaces>
+
+  <tests>
+    <standards>
+      Vitest with @testing-library/react for component tests.
+      Coverage target: 80% for new components.
+      Follow existing IRL component test patterns in __tests__/components/irl/.
+      Mock patterns: Use mockRouter and shadcn/ui mock providers as established.
+      Test file naming: ComponentName.test.tsx in __tests__/components/irl/.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/irl/</location>
+      <location>manda-app/__tests__/lib/types/</location>
+    </locations>
+    <ideas>
+      <idea acId="AC1">Test IRLProgressSummary renders "X/Y items - Z%" format correctly with various item counts</idea>
+      <idea acId="AC1">Test progress bar fills to correct percentage based on fulfilled count</idea>
+      <idea acId="AC2">Test IRLCategoryProgress shows "Category: X/Y" format in category header</idea>
+      <idea acId="AC2">Test each category displays independent progress (different categories have different completion rates)</idea>
+      <idea acId="AC3">Test progress updates immediately when toggleIRLItemFulfilled is called (optimistic update)</idea>
+      <idea acId="AC3">Test progress rolls back if API call fails</idea>
+      <idea acId="AC4">Test dashboard summary shows fulfilled and unfulfilled counts separately</idea>
+      <idea acId="AC4">Test summary distinguishes between 0/10 items vs 10/10 items visually</idea>
+      <idea acId="AC5">Test responsive layout at mobile (< 768px), tablet (768-1024px), and desktop (> 1024px) viewports</idea>
+      <idea acId="AC5">Test components render without overflow or truncation on smaller screens</idea>
+      <idea acId="AC6">Test calculateIRLFulfilledProgress only counts items where fulfilled === true</idea>
+      <idea acId="AC6">Test progress ignores status field and uses only fulfilled boolean</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -45,7 +45,8 @@ import {
   X,
 } from 'lucide-react'
 import { IRLItem } from './IRLItem'
-import { IRLItem as IRLItemType, IRLPriority, IRLItemStatus } from '@/lib/types/irl'
+import { IRLCategoryProgress } from './IRLCategoryProgress'
+import { IRLItem as IRLItemType, IRLPriority, IRLItemStatus, IRLProgressByCategory } from '@/lib/types/irl'
 import { cn } from '@/lib/utils'
 
 export interface IRLCategoryProps {
@@ -53,6 +54,8 @@ export interface IRLCategoryProps {
   name: string
   /** Items in this category */
   items: IRLItemType[]
+  /** Progress data for this category (fulfilled-based) */
+  progress?: IRLProgressByCategory
   /** Called when category is renamed */
   onRename?: (oldName: string, newName: string) => void
   /** Called when category is deleted */
@@ -76,6 +79,7 @@ export interface IRLCategoryProps {
 export function IRLCategory({
   name,
   items,
+  progress,
   onRename,
   onDelete,
   onAddItem,
@@ -217,9 +221,19 @@ export function IRLCategory({
                     {name}
                   </button>
                 </CollapsibleTrigger>
-                <span className="text-xs text-muted-foreground">
-                  {items.length} item{items.length !== 1 ? 's' : ''}
-                </span>
+                {/* Category progress indicator - show fulfilled progress if available, otherwise item count */}
+                {progress ? (
+                  <IRLCategoryProgress
+                    fulfilled={progress.fulfilled}
+                    total={progress.total}
+                    percentComplete={progress.percentComplete}
+                    variant="bar"
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {items.length} item{items.length !== 1 ? 's' : ''}
+                  </span>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

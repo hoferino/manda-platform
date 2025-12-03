@@ -29,7 +29,6 @@ import { arrayMove } from '@dnd-kit/sortable'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
@@ -43,6 +42,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Plus, Loader2, Pencil, Check, X, AlertCircle, FolderPlus, CheckCircle2 } from 'lucide-react'
 import { IRLCategory } from './IRLCategory'
 import { IRLItem } from './IRLItem'
+import { IRLExportDropdown } from './IRLExportDropdown'
+import { IRLProgressSummary } from './IRLProgressSummary'
 import { useIRLBuilder } from './useIRLBuilder'
 import { IRLItem as IRLItemType, getStatusInfo } from '@/lib/types/irl'
 import { generateFoldersFromIRL, FolderGenerationResult } from '@/lib/api/irl'
@@ -76,6 +77,8 @@ export function IRLBuilder({
     itemsByCategory,
     categories,
     progress,
+    fulfilledProgress,
+    progressByCategory,
     isLoading,
     isSaving,
     error,
@@ -337,7 +340,17 @@ export function IRLBuilder({
               </CardDescription>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {/* Export Button */}
+              {items.length > 0 && (
+                <IRLExportDropdown
+                  projectId={projectId}
+                  irlId={irlId}
+                  disabled={isSaving}
+                  onExportError={onError}
+                />
+              )}
+
               {/* Generate Folders Button */}
               {categories.length > 0 && (
                 <Tooltip>
@@ -361,18 +374,21 @@ export function IRLBuilder({
                   </TooltipContent>
                 </Tooltip>
               )}
-
-              {/* Progress */}
-              {progress && (
-                <div className="w-32 text-right">
-                  <div className="text-sm font-medium mb-1">
-                    {progress.complete}/{progress.total} Complete
-                  </div>
-                  <Progress value={progress.percentComplete} className="h-2" />
-                </div>
-              )}
             </div>
           </div>
+
+          {/* Fulfilled Progress Summary - E6.7 Enhancement */}
+          {fulfilledProgress && items.length > 0 && (
+            <IRLProgressSummary
+              fulfilled={fulfilledProgress.fulfilled}
+              unfulfilled={fulfilledProgress.unfulfilled}
+              total={fulfilledProgress.total}
+              percentComplete={fulfilledProgress.percentComplete}
+              categoryCount={categories.length}
+              compact
+              className="mt-4"
+            />
+          )}
 
           {/* Error banner */}
           {error && (
@@ -401,20 +417,25 @@ export function IRLBuilder({
 
           {/* Categories */}
           <div className="space-y-4">
-            {categories.map(category => (
-              <IRLCategory
-                key={category}
-                name={category}
-                items={itemsByCategory[category] || []}
-                onRename={renameCategory}
-                onDelete={deleteCategory}
-                onAddItem={handleOpenAddItem}
-                onUpdateItem={updateItem}
-                onDeleteItem={deleteItem}
-                isSaving={isSaving}
-                isDragDisabled={false}
-              />
-            ))}
+            {categories.map(category => {
+              // Find progress for this category from progressByCategory
+              const categoryProgress = progressByCategory?.find(p => p.category === category)
+              return (
+                <IRLCategory
+                  key={category}
+                  name={category}
+                  items={itemsByCategory[category] || []}
+                  progress={categoryProgress}
+                  onRename={renameCategory}
+                  onDelete={deleteCategory}
+                  onAddItem={handleOpenAddItem}
+                  onUpdateItem={updateItem}
+                  onDeleteItem={deleteItem}
+                  isSaving={isSaving}
+                  isDragDisabled={false}
+                />
+              )
+            })}
           </div>
 
           {/* Empty state */}

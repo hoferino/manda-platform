@@ -1164,9 +1164,34 @@ development_status:
     - Filter toggle to show unfulfilled items only
     - Optimistic UI updates with error rollback
     - 17 unit tests for checklist panel
-  e6-6-build-irl-export-functionality-excel-csv: backlog
+  e6-6-build-irl-export-functionality-excel-csv: done
+  e6-6-drafted: 2025-12-03
+  e6-6-context-ready: 2025-12-03
+  e6-6-done: 2025-12-03
+  e6-6-notes: |
+    IRL Export Functionality (PDF/Word) implementation complete.
+    Key deliverables:
+    - lib/services/irl-export.ts with generateIRLPdf and generateIRLDocx
+    - API route POST /api/projects/[id]/irls/[irlId]/export
+    - IRLExportDropdown component with PDF/Word options
+    - Export button integrated into IRLBuilder toolbar
+    - exportIRL client function in lib/api/irl.ts
+    - 33 tests (17 service + 16 component) all passing
+    - Dynamic import for pdfmake to avoid build-time font issues
   # Note: e6-7 (IRL Templates Library) was implemented as part of e6-1
-  e6-7-build-irl-checklist-progress-visualization: backlog
+  e6-7-build-irl-checklist-progress-visualization: ready-for-review
+  e6-7-drafted: 2025-12-03
+  e6-7-started: 2025-12-03
+  e6-7-ready: 2025-12-03
+  e6-7-deliverables:
+    - IRLProgressByCategory type and calculateIRLProgressByCategory() in lib/types/irl.ts
+    - IRLProgressBar component (size variants, count/percent labels)
+    - IRLProgressSummary component (dashboard-style, fulfilled/unfulfilled breakdown)
+    - IRLCategoryProgress component (text/badge/bar variants)
+    - IRLCategory updated with category-level progress display
+    - IRLBuilder integrated with IRLProgressSummary
+    - useIRLBuilder hook extended with fulfilledProgress and progressByCategory
+    - 36 new tests (12 unit + 24 component) all passing
   epic-6-retrospective: optional
 
   # Epic 7: Learning Loop (6 stories)

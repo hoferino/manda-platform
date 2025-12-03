@@ -37,6 +37,7 @@ const mockIRLWithItems = {
       description: 'Last 3 years',
       priority: 'high',
       status: 'not_started',
+      fulfilled: false,
       sortOrder: 0,
       createdAt: '2025-01-01T00:00:00Z',
       updatedAt: '2025-01-01T00:00:00Z',
@@ -49,6 +50,7 @@ const mockIRLWithItems = {
       description: 'Last 5 years',
       priority: 'medium',
       status: 'pending',
+      fulfilled: true,
       sortOrder: 1,
       createdAt: '2025-01-01T00:00:00Z',
       updatedAt: '2025-01-01T00:00:00Z',
@@ -61,6 +63,7 @@ const mockIRLWithItems = {
       description: 'Customer contracts',
       priority: 'high',
       status: 'received',
+      fulfilled: false,
       sortOrder: 2,
       createdAt: '2025-01-01T00:00:00Z',
       updatedAt: '2025-01-01T00:00:00Z',
@@ -126,12 +129,14 @@ describe('IRLBuilder', () => {
       })
     })
 
-    it('shows progress indicator', async () => {
+    it('shows progress indicator (E6.7 fulfilled-based)', async () => {
       render(<IRLBuilder projectId="proj-123" irlId="irl-123" />)
 
       await waitFor(() => {
-        // Progress shows complete count
-        expect(screen.getByText('0/3 Complete')).toBeInTheDocument()
+        // Progress summary shows fulfilled count (1 of 3 items is fulfilled in mock data)
+        expect(screen.getByTestId('irl-progress-summary')).toBeInTheDocument()
+        expect(screen.getByText('1/3')).toBeInTheDocument()
+        expect(screen.getByText('items fulfilled')).toBeInTheDocument()
       })
     })
   })
