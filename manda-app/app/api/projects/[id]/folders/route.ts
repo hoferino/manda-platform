@@ -2,10 +2,12 @@
  * Folders API Route
  * GET - List all folders for a project
  * POST - Create a new folder
+ * Story: E6.4 - Implement Data Room Folder Structure Auto-Generation from IRL
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createGCSFolderPrefix } from '@/lib/gcs/folder-operations'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -155,6 +157,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
         { error: 'Failed to create folder' },
         { status: 500 }
       )
+    }
+
+    // Create GCS folder prefix (don't fail if this fails, folder is created)
+    try {
+      const gcsPath = `${projectId}/data-room/${path}/`
+      await createGCSFolderPrefix(gcsPath)
+    } catch (gcsError) {
+      // Log but don't fail - DB folder was created successfully
+      console.error('Failed to create GCS folder prefix:', gcsError)
     }
 
     return NextResponse.json({ folder }, { status: 201 })

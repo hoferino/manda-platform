@@ -40,12 +40,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Plus, Loader2, Pencil, Check, X, AlertCircle } from 'lucide-react'
+import { Plus, Loader2, Pencil, Check, X, AlertCircle, FolderPlus, CheckCircle2 } from 'lucide-react'
 import { IRLCategory } from './IRLCategory'
 import { IRLItem } from './IRLItem'
 import { useIRLBuilder } from './useIRLBuilder'
 import { IRLItem as IRLItemType, getStatusInfo } from '@/lib/types/irl'
+import { generateFoldersFromIRL, FolderGenerationResult } from '@/lib/api/irl'
 import { cn } from '@/lib/utils'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 export interface IRLBuilderProps {
   /** Project ID */
@@ -92,6 +98,11 @@ export function IRLBuilder({
   const [newItemCategory, setNewItemCategory] = useState('')
   const [newItemName, setNewItemName] = useState('')
   const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Folder generation state
+  const [isGeneratingFolders, setIsGeneratingFolders] = useState(false)
+  const [folderResult, setFolderResult] = useState<FolderGenerationResult | null>(null)
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false)
 
   // DnD sensors
   const sensors = useSensors(
@@ -220,6 +231,30 @@ export function IRLBuilder({
     }
   }
 
+  // Generate folders from IRL
+  const handleGenerateFolders = async () => {
+    if (!irlId || categories.length === 0) return
+
+    setIsGeneratingFolders(true)
+    setFolderResult(null)
+
+    try {
+      const { result, error: folderError } = await generateFoldersFromIRL(projectId, irlId)
+
+      if (folderError) {
+        onError?.(folderError)
+        return
+      }
+
+      if (result) {
+        setFolderResult(result)
+        setFolderDialogOpen(true)
+      }
+    } finally {
+      setIsGeneratingFolders(false)
+    }
+  }
+
   // Loading state
   if (isLoading) {
     return (
@@ -302,15 +337,41 @@ export function IRLBuilder({
               </CardDescription>
             </div>
 
-            {/* Progress */}
-            {progress && (
-              <div className="w-32 text-right">
-                <div className="text-sm font-medium mb-1">
-                  {progress.complete}/{progress.total} Complete
+            <div className="flex items-center gap-4">
+              {/* Generate Folders Button */}
+              {categories.length > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateFolders}
+                      disabled={isGeneratingFolders || isSaving}
+                    >
+                      {isGeneratingFolders ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <FolderPlus className="h-4 w-4 mr-2" />
+                      )}
+                      Generate Folders
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Create Data Room folders from IRL categories</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Progress */}
+              {progress && (
+                <div className="w-32 text-right">
+                  <div className="text-sm font-medium mb-1">
+                    {progress.complete}/{progress.total} Complete
+                  </div>
+                  <Progress value={progress.percentComplete} className="h-2" />
                 </div>
-                <Progress value={progress.percentComplete} className="h-2" />
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Error banner */}
@@ -458,6 +519,84 @@ export function IRLBuilder({
             </Button>
             <Button onClick={handleAddItem} disabled={!newItemName.trim()}>
               Add Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Folder Generation Result Dialog */}
+      <Dialog open={folderDialogOpen} onOpenChange={setFolderDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              Data Room Folders Generated
+            </DialogTitle>
+            <DialogDescription>
+              Folder structure created from IRL categories.
+            </DialogDescription>
+          </DialogHeader>
+
+          {folderResult && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="flex gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-green-600">{folderResult.created}</span>
+                  <span className="text-muted-foreground">created</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-yellow-600">{folderResult.skipped}</span>
+                  <span className="text-muted-foreground">already existed</span>
+                </div>
+              </div>
+
+              {/* Folder tree preview */}
+              {folderResult.tree.length > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3 max-h-64 overflow-auto">
+                  <div className="text-sm font-medium mb-2">Folder Structure:</div>
+                  <div className="space-y-1">
+                    {folderResult.tree.map(node => (
+                      <div key={node.id}>
+                        <div className="flex items-center gap-2 text-sm">
+                          <FolderPlus className="h-4 w-4 text-muted-foreground" />
+                          <span>{node.name}</span>
+                        </div>
+                        {Array.isArray(node.children) && node.children.length > 0 && (
+                          <div className="ml-6 mt-1 space-y-1">
+                            {(node.children as Array<{ id: string; name: string }>).map(child => (
+                              <div key={child.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <FolderPlus className="h-3 w-3" />
+                                <span>{child.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Errors */}
+              {folderResult.errors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <ul className="list-disc list-inside">
+                      {folderResult.errors.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setFolderDialogOpen(false)}>
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>

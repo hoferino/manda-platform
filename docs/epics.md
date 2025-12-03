@@ -3909,14 +3909,14 @@ Then I see a warning that the folder is not empty
 **So that** I know what I'm still waiting for and can freely restructure my folders
 
 **Description:**
-Add manual status tracking to IRL items via an expandable checklist in the Data Room sidebar. Users check items off manually - no automatic status updates when documents are uploaded (this allows users to restructure folders without confusing the system).
+Add manual fulfillment tracking to IRL items via an expandable checklist in the Data Room sidebar. Users check items off manually with a simple checkbox - no automatic updates when documents are uploaded (this allows users to restructure folders without confusing the system).
 
 **Technical Details:**
-- Status enum: `not_started`, `pending`, `received`, `complete`
-- Status indicators: ○ Not started, ⏱ Pending, ✓ Received, ✅ Complete
-- Progress calculation: items complete / total items
-- **Manual status update only** (checkbox click or dropdown)
-- **No automatic status updates** - user may restructure folders
+- Simple boolean: `fulfilled` (true/false)
+- Checkbox display: unchecked = not fulfilled, checked = fulfilled
+- Progress calculation: items fulfilled / total items
+- **Manual checkbox toggle only**
+- **No automatic updates** - user may restructure folders
 - Expandable/collapsible category sections in checklist
 
 **Acceptance Criteria:**
@@ -3925,12 +3925,12 @@ Add manual status tracking to IRL items via an expandable checklist in the Data 
 Given I have an IRL with 10 items
 When I view the Data Room sidebar
 Then I see an expandable IRL checklist
-And each item shows a status indicator
+And each item shows a checkbox
 And the overall progress shows 0/10 (0%)
 
 Given I expand a category in the checklist
 When I click an item checkbox
-Then the item status changes (cycles through: not_started → pending → received → complete)
+Then the checkbox toggles (unfulfilled ↔ fulfilled)
 And the progress bar updates
 
 Given I upload a document to a folder
@@ -3938,12 +3938,12 @@ When the upload completes
 Then the IRL checklist does NOT auto-update
 And I must manually check off the relevant IRL item
 
-Given I mark an item as "Complete"
+Given I check an item as fulfilled
 When I click the checkbox
-Then the indicator changes to ✅
-And the item is styled as complete
+Then the checkbox shows as checked
+And the item is styled as fulfilled
 
-Given 8 out of 10 items are complete
+Given 8 out of 10 items are fulfilled
 When I view the progress
 Then it shows 8/10 (80%)
 And a progress bar reflects this visually
@@ -3955,14 +3955,14 @@ And a progress bar reflects this visually
 **UX Reference:** Data Room Sidebar - IRL Expandable Checklist
 
 **Definition of Done:**
-- [ ] Status field added to irl_items table
+- [ ] `fulfilled` boolean field added to irl_items table
 - [ ] Expandable checklist UI in Data Room sidebar
-- [ ] Status indicators implemented
+- [ ] Checkbox toggle implemented
 - [ ] Progress calculation correct
-- [ ] Manual status update works (checkbox/click)
-- [ ] **No automatic status updates** on document upload
+- [ ] Manual checkbox toggle works
+- [ ] **No automatic updates** on document upload
 - [ ] Progress bar visual
-- [ ] Status filters (show only pending, etc.)
+- [ ] Filter toggle (show only unfulfilled)
 - [ ] Category expand/collapse
 
 ---

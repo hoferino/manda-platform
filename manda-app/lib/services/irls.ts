@@ -19,9 +19,11 @@ import {
   IRLItem,
   IRLWithItems,
   IRLProgress,
+  IRLFulfilledProgress,
   CreateIRLItemRequest,
   UpdateIRLItemRequest,
   calculateIRLProgress,
+  calculateIRLFulfilledProgress,
 } from '@/lib/types/irl'
 
 type DbIRL = Database['public']['Tables']['irls']['Row']
@@ -55,6 +57,7 @@ function mapDbToIRLItem(row: DbIRLItem): IRLItem {
     description: row.description ?? undefined,
     priority: (row.priority as IRLItem['priority']) ?? 'medium',
     status: (row.status as IRLItem['status']) ?? 'not_started',
+    fulfilled: (row as { fulfilled?: boolean }).fulfilled ?? false,
     notes: row.notes ?? undefined,
     sortOrder: row.sort_order ?? 0,
     createdAt: row.created_at,
@@ -499,6 +502,75 @@ export async function updateIRLProgressPercent(
   irlId: string
 ): Promise<void> {
   const progress = await getIRLProgress(supabase, irlId)
+
+  if (progress) {
+    await supabase
+      .from('irls')
+      .update({ progress_percent: progress.percentComplete })
+      .eq('id', irlId)
+  }
+}
+
+/**
+ * Update the fulfilled status of an IRL item (binary toggle)
+ * Used for the manual checklist in Data Room sidebar
+ * Story: E6.5 - Implement IRL-Document Linking and Progress Tracking
+ */
+export async function updateIRLItemFulfilled(
+  supabase: SupabaseClient<Database>,
+  itemId: string,
+  fulfilled: boolean
+): Promise<IRLItem | null> {
+  const { data, error } = await supabase
+    .from('irl_items')
+    .update({ fulfilled } as unknown as Database['public']['Tables']['irl_items']['Update'])
+    .eq('id', itemId)
+    .select()
+    .single()
+
+  if (error || !data) {
+    console.error('Error updating IRL item fulfilled status:', error)
+    return null
+  }
+
+  return mapDbToIRLItem(data)
+}
+
+/**
+ * Get IRL fulfilled progress statistics (binary fulfilled-based)
+ * Used for the manual checklist in Data Room sidebar
+ */
+export async function getIRLFulfilledProgress(
+  supabase: SupabaseClient<Database>,
+  irlId: string
+): Promise<IRLFulfilledProgress | null> {
+  const { data, error } = await supabase
+    .from('irl_items')
+    .select('fulfilled')
+    .eq('irl_id', irlId)
+
+  if (error) {
+    console.error('Error fetching IRL fulfilled progress:', error)
+    return null
+  }
+
+  // Create items with fulfilled field for calculation
+  const items = (data || []).map(row => ({
+    fulfilled: (row as { fulfilled?: boolean }).fulfilled ?? false,
+  })) as Pick<IRLItem, 'fulfilled'>[]
+
+  return calculateIRLFulfilledProgress(items as IRLItem[])
+}
+
+/**
+ * Update progress_percent on the IRL based on fulfilled items
+ * Used after toggling fulfilled status
+ */
+export async function updateIRLProgressPercentFromFulfilled(
+  supabase: SupabaseClient<Database>,
+  irlId: string
+): Promise<void> {
+  const progress = await getIRLFulfilledProgress(supabase, irlId)
 
   if (progress) {
     await supabase

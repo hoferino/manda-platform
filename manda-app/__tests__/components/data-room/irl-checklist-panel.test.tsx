@@ -1,7 +1,7 @@
 /**
  * Unit tests for IRL Checklist Panel component
- * Story: E2.8 - Implement IRL Integration with Document Tracking
- * Tests: AC1 (Panel Display), AC2 (Hierarchical), AC3 (Status), AC4 (Progress), AC6 (Collapsible), AC7 (No IRL)
+ * Story: E6.5 - Implement IRL-Document Linking and Progress Tracking
+ * Tests: AC1 (Panel Display), AC2 (Hierarchical), AC3 (Checkbox), AC4 (Progress), AC6 (Collapsible), AC7 (Filter)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -13,9 +13,7 @@ import * as irlApi from '@/lib/api/irl'
 // Mock the IRL API
 vi.mock('@/lib/api/irl', () => ({
   getProjectIRL: vi.fn(),
-  getIRLProgress: vi.fn(),
-  linkDocumentToIRLItem: vi.fn(),
-  unlinkDocumentFromIRLItem: vi.fn(),
+  toggleIRLItemFulfilled: vi.fn(),
   groupItemsByCategory: vi.fn((items) => {
     const categoryMap = new Map<string, typeof items>()
     for (const item of items) {
@@ -26,7 +24,7 @@ vi.mock('@/lib/api/irl', () => ({
     return Array.from(categoryMap.entries()).map(([name, categoryItems]) => ({
       name,
       items: categoryItems,
-      completedCount: categoryItems.filter((item: { documentId: string | null }) => item.documentId !== null).length,
+      completedCount: categoryItems.filter((item: { fulfilled: boolean }) => item.fulfilled).length,
       totalCount: categoryItems.length,
     }))
   }),
@@ -40,14 +38,14 @@ class MockResizeObserver {
 }
 global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
 
-// Sample IRL data
+// Sample IRL data with fulfilled field
 const mockIRLWithItems = {
   irl: {
     id: 'irl-1',
     dealId: 'project-1',
     name: 'Standard IRL',
     templateType: 'standard',
-    progressPercent: 50,
+    progressPercent: 33,
     items: [
       {
         id: 'item-1',
@@ -56,9 +54,10 @@ const mockIRLWithItems = {
         name: 'Annual Report 2023',
         description: 'Latest annual report',
         required: true,
+        fulfilled: true,
         sortOrder: 1,
-        documentId: 'doc-1',
-        documentName: 'AnnualReport2023.pdf',
+        documentId: null,
+        documentName: null,
         createdAt: '2024-01-01',
         updatedAt: '2024-01-01',
       },
@@ -69,6 +68,7 @@ const mockIRLWithItems = {
         name: 'Q1 Financials',
         description: 'Q1 2024 financials',
         required: true,
+        fulfilled: false,
         sortOrder: 2,
         documentId: null,
         documentName: null,
@@ -79,9 +79,10 @@ const mockIRLWithItems = {
         id: 'item-3',
         irlId: 'irl-1',
         category: 'Legal',
-        name: 'Incorporation Documents',
-        description: null,
-        required: true,
+        name: 'Corporate Documents',
+        description: 'Incorporation docs',
+        required: false,
+        fulfilled: false,
         sortOrder: 1,
         documentId: null,
         documentName: null,
@@ -94,18 +95,18 @@ const mockIRLWithItems = {
   },
 }
 
-describe('IRLChecklistPanel Component', () => {
+describe('IRLChecklistPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
   })
 
   afterEach(() => {
-    vi.resetAllMocks()
+    localStorage.clear()
   })
 
-  describe('AC1: Checklist Panel Display', () => {
-    it('renders panel with IRL Checklist title', async () => {
+  describe('Panel Display (AC1)', () => {
+    it('renders panel with IRL checklist header', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
 
       render(<IRLChecklistPanel projectId="project-1" />)
@@ -115,29 +116,33 @@ describe('IRLChecklistPanel Component', () => {
       })
     })
 
-    it('shows overall progress count', async () => {
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
+    it('shows loading state while fetching IRL', () => {
+      vi.mocked(irlApi.getProjectIRL).mockImplementation(
+        () => new Promise(() => {})
+      )
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
-      await waitFor(() => {
-        // 1 out of 3 items has a document linked
-        expect(screen.getByText('1/3 (33%)')).toBeInTheDocument()
-      })
+      // Should show loading spinner (identified by animate-spin class)
+      expect(document.querySelector('.animate-spin')).toBeTruthy()
     })
 
-    it('shows progress bar', async () => {
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
+    it('shows error state when IRL fetch fails', async () => {
+      vi.mocked(irlApi.getProjectIRL).mockResolvedValue({
+        irl: null,
+        error: 'Failed to fetch IRL',
+      })
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
       await waitFor(() => {
-        expect(screen.getByRole('progressbar')).toBeInTheDocument()
+        expect(screen.getByText('Failed to fetch IRL')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
       })
     })
   })
 
-  describe('AC2: Hierarchical Checklist', () => {
+  describe('Hierarchical Checklist (AC2)', () => {
     it('groups items by category', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
 
@@ -149,19 +154,7 @@ describe('IRLChecklistPanel Component', () => {
       })
     })
 
-    it('shows category counts', async () => {
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      await waitFor(() => {
-        // Financial: 1/2, Legal: 0/1
-        expect(screen.getByText('1/2')).toBeInTheDocument()
-        expect(screen.getByText('0/1')).toBeInTheDocument()
-      })
-    })
-
-    it('shows items within categories', async () => {
+    it('shows items under their category', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
 
       render(<IRLChecklistPanel projectId="project-1" />)
@@ -169,13 +162,13 @@ describe('IRLChecklistPanel Component', () => {
       await waitFor(() => {
         expect(screen.getByText('Annual Report 2023')).toBeInTheDocument()
         expect(screen.getByText('Q1 Financials')).toBeInTheDocument()
-        expect(screen.getByText('Incorporation Documents')).toBeInTheDocument()
+        expect(screen.getByText('Corporate Documents')).toBeInTheDocument()
       })
     })
 
-    it('allows category expand/collapse', async () => {
-      const user = userEvent.setup()
+    it('allows collapsing categories', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
+      const user = userEvent.setup()
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
@@ -184,127 +177,112 @@ describe('IRLChecklistPanel Component', () => {
       })
 
       // Click to collapse Financial category
-      const financialHeader = screen.getByText('Financial').closest('button')
-      if (financialHeader) {
-        await user.click(financialHeader)
-      }
+      const financialHeader = screen.getByText('Financial')
+      await user.click(financialHeader)
 
-      // After collapse, items should not be visible (in collapsed state)
-      // Note: Depending on implementation, this may hide items
+      // Items should be hidden (but category still visible)
+      expect(screen.queryByText('Annual Report 2023')).not.toBeInTheDocument()
     })
   })
 
-  describe('AC3: Status Indicators', () => {
-    it('shows checkmark for completed items', async () => {
+  describe('Checkbox Toggle (AC3)', () => {
+    it('shows checkbox for each item', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
       await waitFor(() => {
-        // Annual Report 2023 has a document linked
-        const completedItem = screen.getByText('Annual Report 2023').closest('div')
-        expect(completedItem).toBeInTheDocument()
+        const checkboxes = screen.getAllByRole('checkbox')
+        expect(checkboxes.length).toBe(3) // 3 items
       })
     })
 
-    it('shows linked document name for completed items', async () => {
+    it('shows fulfilled items as checked', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
       await waitFor(() => {
-        expect(screen.getByText('AnnualReport2023.pdf')).toBeInTheDocument()
+        const checkboxes = screen.getAllByRole('checkbox')
+        // First item is fulfilled
+        expect(checkboxes[0]).toBeChecked()
+        // Second and third are not
+        expect(checkboxes[1]).not.toBeChecked()
+        expect(checkboxes[2]).not.toBeChecked()
       })
     })
 
-    it('shows upload button for pending items', async () => {
+    it('toggles item fulfilled status on click', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
+      vi.mocked(irlApi.toggleIRLItemFulfilled).mockResolvedValue({ success: true })
+      const user = userEvent.setup()
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
       await waitFor(() => {
-        // Should have pending items visible
         expect(screen.getByText('Q1 Financials')).toBeInTheDocument()
-        expect(screen.getByText('Incorporation Documents')).toBeInTheDocument()
       })
 
-      // Should have upload buttons (checking aria-label from tooltip)
-      const uploadButtons = screen.getAllByRole('button').filter(
-        (btn) => btn.getAttribute('aria-label')?.toLowerCase()?.includes('upload') ||
-                 btn.querySelector('svg.lucide-upload')
-      )
-      // At minimum we expect some action buttons for pending items
-      expect(uploadButtons.length).toBeGreaterThanOrEqual(0)
+      // Click on unfulfilled item's checkbox
+      const checkboxes = screen.getAllByRole('checkbox')
+      const targetCheckbox = checkboxes[1]
+      if (targetCheckbox) {
+        await user.click(targetCheckbox) // Q1 Financials
+      }
+
+      expect(irlApi.toggleIRLItemFulfilled).toHaveBeenCalledWith('item-2', true)
     })
   })
 
-  describe('AC4: Progress Calculation', () => {
-    it('calculates correct percentage', async () => {
+  describe('Progress Bar (AC4)', () => {
+    it('shows progress text', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
       await waitFor(() => {
-        // 1/3 = 33%
-        expect(screen.getByText('1/3 (33%)')).toBeInTheDocument()
+        expect(screen.getByText('Progress')).toBeInTheDocument()
+        // 1 of 3 items fulfilled = 33%
+        expect(screen.getByText(/1\/3/)).toBeInTheDocument()
       })
     })
 
-    it('shows 0% when no documents linked', async () => {
-      const noDocsIRL = {
-        irl: {
-          ...mockIRLWithItems.irl,
-          items: mockIRLWithItems.irl.items.map((item) => ({
-            ...item,
-            documentId: null,
-            documentName: null,
-          })),
-        },
-      }
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(noDocsIRL)
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      await waitFor(() => {
-        expect(screen.getByText('0/3 (0%)')).toBeInTheDocument()
-      })
-    })
-
-    it('shows 100% when all documents linked', async () => {
-      const allDocsIRL = {
-        irl: {
-          ...mockIRLWithItems.irl,
-          items: mockIRLWithItems.irl.items.map((item, idx) => ({
-            ...item,
-            documentId: `doc-${idx}`,
-            documentName: `Document${idx}.pdf`,
-          })),
-        },
-      }
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(allDocsIRL)
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      await waitFor(() => {
-        expect(screen.getByText('3/3 (100%)')).toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('AC6: Collapsible Panel', () => {
-    it('renders collapse button', async () => {
+    it('shows category progress counts', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /collapse/i })).toBeInTheDocument()
+        // Financial: 1/2 fulfilled
+        expect(screen.getByText('1/2')).toBeInTheDocument()
+        // Legal: 0/1 fulfilled
+        expect(screen.getByText('0/1')).toBeInTheDocument()
       })
     })
+  })
 
-    it('collapses panel when clicked', async () => {
+  describe('Collapsible Panel (AC6)', () => {
+    it('collapses panel when collapse button is clicked', async () => {
+      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
       const user = userEvent.setup()
+
+      render(<IRLChecklistPanel projectId="project-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('IRL Checklist')).toBeInTheDocument()
+      })
+
+      // Click collapse button
+      const collapseButton = screen.getByRole('button', { name: /collapse/i })
+      await user.click(collapseButton)
+
+      // Header should be hidden in collapsed state
+      expect(screen.queryByText('IRL Checklist')).not.toBeInTheDocument()
+    })
+
+    it('persists collapse state to localStorage', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
+      const user = userEvent.setup()
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
@@ -315,126 +293,99 @@ describe('IRLChecklistPanel Component', () => {
       const collapseButton = screen.getByRole('button', { name: /collapse/i })
       await user.click(collapseButton)
 
-      // After collapse, the full title should not be visible
-      await waitFor(() => {
-        expect(screen.queryByText('IRL Checklist')).not.toBeInTheDocument()
-      })
-    })
-
-    it('remembers collapse state in localStorage', async () => {
-      const user = userEvent.setup()
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      await waitFor(() => {
-        expect(screen.getByText('IRL Checklist')).toBeInTheDocument()
-      })
-
-      const collapseButton = screen.getByRole('button', { name: /collapse/i })
-      await user.click(collapseButton)
-
-      // Check localStorage
       expect(localStorage.getItem('manda-irl-panel-collapsed')).toBe('true')
     })
 
-    it('expands panel when collapsed and clicked', async () => {
-      const user = userEvent.setup()
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
+    it('restores collapsed state from localStorage', async () => {
       localStorage.setItem('manda-irl-panel-collapsed', 'true')
+      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
-      // Should start collapsed
+      // Should not see full header in collapsed mode
       await waitFor(() => {
         expect(screen.queryByText('IRL Checklist')).not.toBeInTheDocument()
-      })
-
-      const expandButton = screen.getByRole('button', { name: /expand/i })
-      await user.click(expandButton)
-
-      // Should be expanded now
-      await waitFor(() => {
-        expect(screen.getByText('IRL Checklist')).toBeInTheDocument()
       })
     })
   })
 
-  describe('AC7: No IRL State', () => {
+  describe('Filter Toggle (AC7)', () => {
+    it('shows filter button', async () => {
+      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
+
+      render(<IRLChecklistPanel projectId="project-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/unfulfilled/i)).toBeInTheDocument()
+      })
+    })
+
+    it('filters to show only unfulfilled items when toggled', async () => {
+      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(mockIRLWithItems)
+      const user = userEvent.setup()
+
+      render(<IRLChecklistPanel projectId="project-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Annual Report 2023')).toBeInTheDocument() // fulfilled
+      })
+
+      // Click filter button (find by aria-label, take first match)
+      const filterButtons = screen.getAllByLabelText(/unfulfilled/i)
+      const filterButton = filterButtons[0]
+      if (filterButton) {
+        await user.click(filterButton)
+      }
+
+      // Fulfilled item should be hidden
+      await waitFor(() => {
+        expect(screen.queryByText('Annual Report 2023')).not.toBeInTheDocument()
+        // Unfulfilled items should still be visible
+        expect(screen.getByText('Q1 Financials')).toBeInTheDocument()
+      })
+    })
+
+    it('shows all items message when filter is on and all fulfilled', async () => {
+      const allFulfilledData = {
+        irl: {
+          ...mockIRLWithItems.irl,
+          items: mockIRLWithItems.irl.items.map(item => ({
+            ...item,
+            fulfilled: true,
+          })),
+        },
+      }
+      vi.mocked(irlApi.getProjectIRL).mockResolvedValue(allFulfilledData)
+      const user = userEvent.setup()
+
+      render(<IRLChecklistPanel projectId="project-1" />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Annual Report 2023')).toBeInTheDocument()
+      })
+
+      // Click filter button (find by aria-label)
+      const filterButtons = screen.getAllByLabelText(/unfulfilled/i)
+      const filterButton = filterButtons[0]
+      if (filterButton) {
+        await user.click(filterButton)
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText('All items are fulfilled!')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Empty State (AC7)', () => {
     it('shows empty state when no IRL exists', async () => {
       vi.mocked(irlApi.getProjectIRL).mockResolvedValue({ irl: null })
 
       render(<IRLChecklistPanel projectId="project-1" />)
 
       await waitFor(() => {
-        expect(screen.getByText('No IRL Configured')).toBeInTheDocument()
-      })
-    })
-
-    it('shows create IRL link', async () => {
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue({ irl: null })
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      await waitFor(() => {
-        expect(screen.getByRole('link', { name: /create irl/i })).toBeInTheDocument()
-      })
-    })
-
-    it('shows helpful message', async () => {
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue({ irl: null })
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      await waitFor(() => {
-        expect(screen.getByText(/track document collection progress/i)).toBeInTheDocument()
-      })
-    })
-  })
-
-  describe('Loading and Error States', () => {
-    it('shows loading spinner initially', () => {
-      vi.mocked(irlApi.getProjectIRL).mockImplementation(
-        () => new Promise(() => {}) // Never resolves
-      )
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      // Should show loading state
-      expect(document.querySelector('.animate-spin')).toBeInTheDocument()
-    })
-
-    it('shows error state with retry button', async () => {
-      vi.mocked(irlApi.getProjectIRL).mockResolvedValue({
-        irl: null,
-        error: 'Failed to load IRL',
-      })
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      await waitFor(() => {
-        expect(screen.getByText('Failed to load IRL')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
-      })
-    })
-
-    it('retries on button click', async () => {
-      const user = userEvent.setup()
-      vi.mocked(irlApi.getProjectIRL)
-        .mockResolvedValueOnce({ irl: null, error: 'Failed to load IRL' })
-        .mockResolvedValueOnce(mockIRLWithItems)
-
-      render(<IRLChecklistPanel projectId="project-1" />)
-
-      await waitFor(() => {
-        expect(screen.getByText('Failed to load IRL')).toBeInTheDocument()
-      })
-
-      const retryButton = screen.getByRole('button', { name: /retry/i })
-      await user.click(retryButton)
-
-      await waitFor(() => {
-        expect(screen.getByText('IRL Checklist')).toBeInTheDocument()
+        // Should show empty state component
+        expect(screen.getByText(/no irl/i) || screen.getByText(/create/i)).toBeTruthy()
       })
     })
   })

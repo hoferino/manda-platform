@@ -1132,8 +1132,38 @@ development_status:
     - Agent tool count: 11 → 13
     - Suggestions API endpoint for direct access
     - 60 new tests, 1544 total tests passing
-  e6-4-implement-data-room-folder-structure-auto-generation-from-irl: backlog
-  e6-5-implement-irl-document-linking-and-progress-tracking: backlog
+  e6-4-implement-data-room-folder-structure-auto-generation-from-irl: done
+  e6-4-drafted: 2025-12-03
+  e6-4-started: 2025-12-03
+  e6-4-completed: 2025-12-03
+  e6-4-notes: |
+    All 6 tasks completed. Key deliverables:
+    - lib/services/folders.ts - Folder service with CRUD and IRL integration
+    - lib/gcs/folder-operations.ts - GCS folder prefix operations
+    - POST /api/projects/[id]/irls/[irlId]/generate-folders endpoint
+    - "Generate Folders" button in IRL Builder with result dialog
+    - GCS prefix creation/deletion on folder create/delete
+    - 48 unit tests, E2E tests for IRL→folder flow
+    - Data Room integration verified (already existed from E2.2):
+      * "+ New Folder" button in FolderTree header
+      * Context menu with New Subfolder/Rename/Delete
+      * Auto-refresh on folder operations
+      * Toast notifications for all operations
+    Test count: 1592 tests passing
+  e6-5-implement-irl-document-linking-and-progress-tracking: done
+  e6-5-completed: 2025-12-03
+  e6-5-notes: |
+    Simplified from document-linking approach to binary checkbox model.
+    Key deliverables:
+    - Database migration 00027: fulfilled BOOLEAN column on irl_items
+    - IRLChecklistPanel complete rewrite with filter toggle
+    - IRLChecklistItem simplified to checkbox toggle
+    - toggleIRLItemFulfilled API function
+    - calculateIRLFulfilledProgress utility
+    - Progress based on fulfilled boolean (manual-only tracking)
+    - Filter toggle to show unfulfilled items only
+    - Optimistic UI updates with error rollback
+    - 17 unit tests for checklist panel
   e6-6-build-irl-export-functionality-excel-csv: backlog
   # Note: e6-7 (IRL Templates Library) was implemented as part of e6-1
   e6-7-build-irl-checklist-progress-visualization: backlog

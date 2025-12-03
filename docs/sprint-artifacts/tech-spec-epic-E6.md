@@ -35,7 +35,7 @@ This epic delivers on PRD functional requirements FR-IRL-001 through FR-IRL-005,
 
 ### Out-of-Scope
 
-- **Automatic status updates** - No auto-linking between folder uploads and IRL status (users restructure freely)
+- **Automatic checkbox updates** - No auto-linking between folder uploads and IRL checkboxes (users restructure freely)
 - **IRL sharing/collaboration** - Multi-user IRL editing deferred to Phase 2
 - **Version control for IRLs** - IRL history tracking deferred
 - **External IRL sync** - Integration with external deal management systems deferred
@@ -195,7 +195,7 @@ CREATE TABLE irl_items (
   item_name TEXT NOT NULL,
   description TEXT,
   priority TEXT DEFAULT 'medium' CHECK (priority IN ('high', 'medium', 'low')),
-  status TEXT DEFAULT 'not_started' CHECK (status IN ('not_started', 'pending', 'received', 'complete')),
+  fulfilled BOOLEAN DEFAULT false,
   notes TEXT,
   sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -203,7 +203,7 @@ CREATE TABLE irl_items (
 );
 
 CREATE INDEX idx_irl_items_irl ON irl_items(irl_id);
-CREATE INDEX idx_irl_items_status ON irl_items(status);
+CREATE INDEX idx_irl_items_fulfilled ON irl_items(fulfilled);
 
 -- RLS Policy
 ALTER TABLE irl_items ENABLE ROW LEVEL SECURITY;
@@ -266,7 +266,7 @@ export interface IRLItem {
   itemName: string;
   description?: string;
   priority: 'high' | 'medium' | 'low';
-  status: 'not_started' | 'pending' | 'received' | 'complete';
+  fulfilled: boolean;
   notes?: string;
   sortOrder: number;
   createdAt: string;
@@ -287,10 +287,8 @@ export interface Folder {
 
 export interface IRLProgress {
   total: number;
-  notStarted: number;
-  pending: number;
-  received: number;
-  complete: number;
+  fulfilled: number;
+  unfulfilled: number;
   percentComplete: number;
 }
 ```
@@ -311,7 +309,7 @@ export interface IRLProgress {
 | POST | `/api/projects/[id]/irls/[irlId]/items` | Add item | `IRLItem` | `IRLItem` |
 | PUT | `/api/projects/[id]/irls/[irlId]/items/[itemId]` | Update item | `Partial<IRLItem>` | `IRLItem` |
 | DELETE | `/api/projects/[id]/irls/[irlId]/items/[itemId]` | Delete item | - | `{ success: boolean }` |
-| PATCH | `/api/projects/[id]/irls/[irlId]/items/[itemId]/status` | Update item status | `{ status }` | `IRLItem` |
+| PATCH | `/api/projects/[id]/irls/[irlId]/items/[itemId]/fulfilled` | Toggle item fulfilled | `{ fulfilled: boolean }` | `IRLItem` |
 | POST | `/api/projects/[id]/irls/[irlId]/reorder` | Reorder items | `{ items: { id, sortOrder }[] }` | `{ success: boolean }` |
 | POST | `/api/projects/[id]/irls/[irlId]/export` | Export IRL | `{ format: 'pdf' \| 'word' }` | File blob |
 | POST | `/api/projects/[id]/irls/upload` | Upload Excel IRL | FormData (file) | `IRL & { folders: Folder[] }` |
@@ -387,7 +385,7 @@ Return IRL with nested folders structure
 Frontend: Redirect to Data Room showing new folders
 ```
 
-#### Manual Status Tracking Flow
+#### Manual Fulfillment Tracking Flow
 
 ```
 User views Data Room
@@ -396,15 +394,15 @@ Sidebar shows IRL Checklist (collapsed by default)
   ↓
 User expands category section
   ↓
-User clicks item checkbox/dropdown
+User clicks item checkbox
   ↓
-PATCH /api/projects/[id]/irls/[irlId]/items/[itemId]/status
+PATCH /api/projects/[id]/irls/[irlId]/items/[itemId]/fulfilled
   ↓
-Status cycles: not_started → pending → received → complete
+Checkbox toggles: unfulfilled ↔ fulfilled
   ↓
-Progress bar updates
+Progress bar updates (X/Y fulfilled)
   ↓
-(Note: Document uploads do NOT trigger status changes)
+(Note: Document uploads do NOT trigger checkbox changes)
 ```
 
 #### Folder Management Flow
@@ -442,13 +440,13 @@ Context menu shows: Add Subfolder, Rename, Delete
 | IRL Builder render | < 1s | Even with 100+ items, UI should remain responsive |
 | Excel parsing | < 5s for 500-row IRL | Reasonable for complex IRL files |
 | Folder tree load | < 1s | Nested query with caching |
-| Status update | < 200ms | Single field update, immediate feedback |
+| Checkbox toggle | < 200ms | Single field update, immediate feedback |
 | Drag-and-drop reorder | < 300ms | Optimistic UI update |
 | Export generation | < 10s for PDF, < 15s for Word | Large IRLs may take longer |
 
 **Implementation Notes:**
 - Use React Query with staleTime for template caching
-- Optimistic updates for status changes with rollback on error
+- Optimistic updates for checkbox changes with rollback on error
 - Virtual scrolling if IRL exceeds 100 items
 - Background export with progress indicator for large IRLs
 
@@ -485,7 +483,7 @@ deal_id IN (SELECT id FROM deals WHERE user_id = auth.uid())
 | IRL created | Log: `irl.created { dealId, templateType, itemCount }` |
 | IRL uploaded | Log: `irl.uploaded { dealId, fileName, categories, items, folders }` |
 | Folder created | Log: `folder.created { dealId, folderId, gcsPath }` |
-| Status changed | Log: `irl_item.status_changed { itemId, oldStatus, newStatus }` |
+| Fulfilled toggled | Log: `irl_item.fulfilled_changed { itemId, fulfilled }` |
 | Export generated | Log: `irl.exported { irlId, format, duration }` |
 | Errors | Log with correlation ID: `irl.error { operation, error, context }` |
 
@@ -566,17 +564,17 @@ deal_id IN (SELECT id FROM deals WHERE user_id = auth.uid())
 | AC6 | Save persists all changes to database | Yes |
 | AC7 | Cancel discards unsaved changes | Yes |
 
-### E6.4: Implement IRL Status Tracking (Manual Checklist)
+### E6.4: Implement IRL Fulfillment Tracking (Manual Checklist)
 
 | AC# | Acceptance Criteria | Testable |
 |-----|---------------------|----------|
 | AC1 | Expandable checklist visible in Data Room sidebar | Yes |
-| AC2 | Status indicators: ○ Not started, ⏱ Pending, ✓ Received, ✅ Complete | Yes |
-| AC3 | Clicking checkbox cycles through status values | Yes |
-| AC4 | Progress bar shows X/Y items complete (Z%) | Yes |
-| AC5 | Document uploads do NOT auto-update IRL status | Yes |
+| AC2 | Simple checkbox for each item (unchecked = unfulfilled, checked = fulfilled) | Yes |
+| AC3 | Clicking checkbox toggles fulfilled state | Yes |
+| AC4 | Progress bar shows X/Y items fulfilled (Z%) | Yes |
+| AC5 | Document uploads do NOT auto-update checkboxes | Yes |
 | AC6 | Category sections are collapsible | Yes |
-| AC7 | Status filter shows only pending/incomplete items | Yes |
+| AC7 | Filter toggle to show only unfulfilled items | Yes |
 
 ### E6.5: Implement Folder Management (Add/Rename/Delete)
 

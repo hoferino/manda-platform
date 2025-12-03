@@ -210,6 +210,7 @@ async function detectIrlGaps(
           name: item.name,
           description: item.description,
           required: item.required ?? true,
+          fulfilled: (item as { fulfilled?: boolean }).fulfilled ?? false,
           sortOrder: item.sort_order ?? 0,
           documentId: null,
           documentName: null,

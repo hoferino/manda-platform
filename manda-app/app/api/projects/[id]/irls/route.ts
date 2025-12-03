@@ -140,6 +140,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           description: item.description,
           priority: item.priority,
           status: 'not_started' as const,
+          fulfilled: false,
           notes: undefined,
           sortOrder: sortOrder++,
           createdAt: irl.createdAt,

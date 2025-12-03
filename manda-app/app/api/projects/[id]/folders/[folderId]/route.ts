@@ -2,10 +2,12 @@
  * Individual Folder API Route
  * PUT - Rename a folder
  * DELETE - Delete a folder
+ * Story: E6.4 - Implement Data Room Folder Structure Auto-Generation from IRL
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { deleteGCSFolderPrefix } from '@/lib/gcs/folder-operations'
 
 interface RouteContext {
   params: Promise<{ id: string; folderId: string }>
@@ -236,6 +238,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         { error: 'Failed to delete folder' },
         { status: 500 }
       )
+    }
+
+    // Delete GCS folder prefix (don't fail if this fails, folder is deleted)
+    try {
+      const gcsPath = `${projectId}/data-room/${folder.path}/`
+      await deleteGCSFolderPrefix(gcsPath)
+    } catch (gcsError) {
+      // Log but don't fail - DB folder was deleted successfully
+      console.error('Failed to delete GCS folder prefix:', gcsError)
     }
 
     return NextResponse.json({ success: true })

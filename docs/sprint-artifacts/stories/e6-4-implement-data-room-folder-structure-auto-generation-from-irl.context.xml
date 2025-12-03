@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context Document
+  Generated: 2025-12-03
+  Story: E6.4 - Implement Data Room Folder Structure Auto-Generation from IRL
+-->
+<story-context>
+  <metadata>
+    <story-id>e6-4</story-id>
+    <story-title>Implement Data Room Folder Structure Auto-Generation from IRL</story-title>
+    <epic-id>E6</epic-id>
+    <epic-title>IRL Management &amp; Auto-Generation</epic-title>
+    <status>drafted</status>
+    <generated-date>2025-12-03</generated-date>
+  </metadata>
+
+  <!-- ================================================================== -->
+  <!-- STORY DEFINITION                                                   -->
+  <!-- ================================================================== -->
+  <story-definition>
+    <summary>
+      Implement auto-generation of Data Room folder structure from IRL (Information Request List)
+      categories. When an IRL is created or uploaded, the system should automatically create
+      corresponding folders in both PostgreSQL and GCS, providing users with a ready-to-use
+      Data Room structure that mirrors their IRL categories.
+    </summary>
+
+    <acceptance-criteria>
+      <criterion id="AC1">IRL category structure triggers folder creation in PostgreSQL folders table</criterion>
+      <criterion id="AC2">GCS folder prefixes are created for each folder</criterion>
+      <criterion id="AC3">Folder names are sanitized (lowercase, hyphens, no special chars)</criterion>
+      <criterion id="AC4">Hierarchical folder structure supports nested categories/subcategories</criterion>
+      <criterion id="AC5">Folder creation is transactional - all or nothing</criterion>
+      <criterion id="AC6">Existing folders are preserved (no duplicates created)</criterion>
+      <criterion id="AC7">API endpoint to trigger folder generation from existing IRL</criterion>
+      <criterion id="AC8">Error handling for GCS failures with transaction rollback</criterion>
+    </acceptance-criteria>
+
+    <technical-requirements>
+      <requirement>Create folders service method to auto-generate folders from IRL categories</requirement>
+      <requirement>Integrate GCS folder prefix creation for each new folder</requirement>
+      <requirement>Ensure folder paths follow pattern: {deal_id}/data-room/{sanitized_category}/{sanitized_subcategory}</requirement>
+      <requirement>Add API endpoint: POST /api/projects/[id]/irls/[irlId]/generate-folders</requirement>
+      <requirement>Integrate with project creation wizard for optional IRL-based folder setup</requirement>
+    </technical-requirements>
+  </story-definition>
+
+  <!-- ================================================================== -->
+  <!-- ARCHITECTURE CONTEXT                                               -->
+  <!-- ================================================================== -->
+  <architecture-context>
+    <components-involved>
+      <component name="PostgreSQL (Supabase)">
+        <role>Stores folders table with hierarchical folder records</role>
+        <table>folders</table>
+        <columns>id, deal_id, name, path, parent_path, created_at, updated_at</columns>
+      </component>
+
+      <component name="Google Cloud Storage">
+        <role>Creates folder prefixes at {deal_id}/data-room/{folder_path}/</role>
+        <implementation>PUT object with trailing slash to create prefix</implementation>
+      </component>
+
+      <component name="Next.js API Routes">
+        <role>API endpoints for folder and IRL operations</role>
+        <existing-routes>
+          <route>GET/POST /api/projects/[id]/folders</route>
+          <route>PUT/DELETE /api/projects/[id]/folders/[folderId]</route>
+          <route>GET/POST /api/projects/[id]/irls</route>
+          <route>GET /api/projects/[id]/irls/[irlId]</route>
+        </existing-routes>
+      </component>
+
+      <component name="IRL Service">
+        <role>CRUD operations for IRLs and IRL items</role>
+        <file>lib/services/irls.ts</file>
+      </component>
+
+      <component name="Folders API Client">
+        <role>Client-side folder operations</role>
+        <file>lib/api/folders.ts</file>
+      </component>
+    </components-involved>
+
+    <data-models>
+      <model name="Folder (PostgreSQL)">
+        <schema>
+          CREATE TABLE folders (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            deal_id UUID REFERENCES deals(id) ON DELETE CASCADE NOT NULL,
+            name TEXT NOT NULL,
+            path TEXT NOT NULL,
+            parent_path TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW(),
+            CONSTRAINT unique_folder_path UNIQUE (deal_id, path)
+          );
+        </schema>
+      </model>
+
+      <model name="IRLItem (TypeScript)">
+        <interface>
+          interface IRLItem {
+            id: string;
+            irlId: string;
+            category: string;
+            subcategory?: string;
+            itemName: string;
+            description?: string;
+            priority: 'high' | 'medium' | 'low';
+            status: 'not_started' | 'pending' | 'received' | 'complete';
+            notes?: string;
+            sortOrder: number;
+          }
+        </interface>
+      </model>
+    </data-models>
+
+    <integration-points>
+      <integration source="IRL Creation" target="Folder Generation">
+        When IRL is created from template, optionally generate folders from categories
+      </integration>
+      <integration source="IRL Upload" target="Folder Generation">
+        When Excel IRL is uploaded, parse categories and generate folders
+      </integration>
+      <integration source="Manual Trigger" target="Folder Generation">
+        API endpoint to generate folders from existing IRL on demand
+      </integration>
+    </integration-points>
+  </architecture-context>
+
+  <!-- ================================================================== -->
+  <!-- EXISTING CODE ARTIFACTS                                            -->
+  <!-- ================================================================== -->
+  <existing-code>
+    <artifact type="service" path="lib/services/irls.ts">
+      <description>IRL CRUD service with item management</description>
+      <key-functions>
+        <function name="getIRLWithItems">Fetches IRL with all items for category extraction</function>
+        <function name="getIRLItemsByCategory">Groups items by category - useful for folder generation</function>
+        <function name="getIRLCategories">Gets unique categories from IRL items</function>
+      </key-functions>
+    </artifact>
+
+    <artifact type="api-client" path="lib/api/folders.ts">
+      <description>Client-side folder operations</description>
+      <key-functions>
+        <function name="getFolders">Fetch all folders for a project</function>
+        <function name="createFolder">Create a new folder with parent path</function>
+        <function name="renameFolder">Rename existing folder</function>
+        <function name="deleteFolder">Delete a folder</function>
+      </key-functions>
+      <interface>
+        interface Folder {
+          id: string;
+          dealId: string;
+          name: string;
+          path: string;
+          parentPath: string | null;
+          createdAt: string;
+          updatedAt: string;
+        }
+      </interface>
+    </artifact>
+
+    <artifact type="api-route" path="app/api/projects/[id]/folders/route.ts">
+      <description>Folders API endpoint</description>
+      <methods>
+        <method name="GET">List all folders for project</method>
+        <method name="POST">Create a new folder with name and parentPath</method>
+      </methods>
+      <validation>
+        - Folder name cannot contain "/"
+        - Folder name max 100 characters
+        - Checks for duplicate paths
+      </validation>
+    </artifact>
+
+    <artifact type="api-route" path="app/api/projects/[id]/folders/[folderId]/route.ts">
+      <description>Single folder operations</description>
+      <methods>
+        <method name="PUT">Rename folder - updates path and child paths</method>
+        <method name="DELETE">Delete folder and child folders</method>
+      </methods>
+      <features>
+        - Updates child folder paths when parent renamed
+        - Updates document folder_path when folder renamed
+      </features>
+    </artifact>
+
+    <artifact type="component" path="components/data-room/folder-tree.tsx">
+      <description>Hierarchical folder navigation UI</description>
+      <exports>
+        <export name="FolderTree">Main tree component with expand/collapse</export>
+        <export name="FolderNode">Interface for folder hierarchy</export>
+        <export name="buildFolderTree">Utility to build tree from flat paths</export>
+      </exports>
+      <features>
+        - Expand/collapse state persistence in localStorage
+        - Context menu for create/rename/delete
+        - Drag-and-drop document support
+      </features>
+    </artifact>
+
+    <artifact type="types" path="lib/types/irl.ts">
+      <description>IRL type definitions and validation schemas</description>
+      <key-types>
+        <type name="IRL">Base IRL record</type>
+        <type name="IRLItem">IRL item with category, subcategory</type>
+        <type name="IRLWithItems">IRL with items array</type>
+        <type name="Folder">Folder with hierarchy support</type>
+      </key-types>
+    </artifact>
+  </existing-code>
+
+  <!-- ================================================================== -->
+  <!-- IMPLEMENTATION GUIDANCE                                            -->
+  <!-- ================================================================== -->
+  <implementation-guidance>
+    <new-files>
+      <file path="lib/services/folder-generator.ts">
+        <purpose>Service to auto-generate folders from IRL categories</purpose>
+        <functions>
+          <function name="sanitizeFolderName">Convert category name to folder-safe string</function>
+          <function name="generateFoldersFromIRL">Main function to create folders from IRL</function>
+          <function name="createGCSPrefix">Create empty object in GCS to represent folder</function>
+        </functions>
+      </file>
+
+      <file path="app/api/projects/[id]/irls/[irlId]/generate-folders/route.ts">
+        <purpose>API endpoint to trigger folder generation from IRL</purpose>
+        <method>POST</method>
+        <response>{ folders: Folder[], created: number, skipped: number }</response>
+      </file>
+    </new-files>
+
+    <algorithm>
+      <step n="1">Fetch IRL with items using getIRLWithItems()</step>
+      <step n="2">Extract unique categories from items</step>
+      <step n="3">For each category:
+        a. Sanitize name (lowercase, replace spaces with hyphens, remove special chars)
+        b. Check if folder with path already exists
+        c. If not exists:
+           - Create PostgreSQL record
+           - Create GCS prefix: PUT {deal_id}/data-room/{sanitized_path}/
+        d. If has subcategories, repeat for each subcategory as child
+      </step>
+      <step n="4">Wrap all operations in transaction</step>
+      <step n="5">On any failure, rollback DB and cleanup created GCS prefixes</step>
+    </algorithm>
+
+    <sanitization-rules>
+      <rule>Convert to lowercase</rule>
+      <rule>Replace spaces with hyphens</rule>
+      <rule>Remove special characters except hyphens and underscores</rule>
+      <rule>Collapse multiple hyphens to single</rule>
+      <rule>Trim leading/trailing hyphens</rule>
+      <rule>Max length: 100 characters</rule>
+      <example input="Financial Documents &amp; Reports" output="financial-documents-reports"/>
+      <example input="Legal (Contracts)" output="legal-contracts"/>
+      <example input="IT / Technology" output="it-technology"/>
+    </sanitization-rules>
+
+    <error-handling>
+      <scenario type="duplicate-folder">
+        Skip creation, increment skipped counter, continue with next category
+      </scenario>
+      <scenario type="gcs-failure">
+        Rollback entire transaction, return error with list of failed folders
+      </scenario>
+      <scenario type="invalid-category-name">
+        Log warning, attempt sanitization, if still invalid skip with warning
+      </scenario>
+    </error-handling>
+  </implementation-guidance>
+
+  <!-- ================================================================== -->
+  <!-- DEPENDENCIES                                                       -->
+  <!-- ================================================================== -->
+  <dependencies>
+    <internal>
+      <dependency>lib/services/irls.ts - getIRLWithItems, getIRLCategories</dependency>
+      <dependency>lib/api/folders.ts - Folder interface, createFolder</dependency>
+      <dependency>lib/supabase/server.ts - createClient for DB operations</dependency>
+      <dependency>lib/supabase/database.types.ts - Database type definitions</dependency>
+    </internal>
+
+    <external>
+      <dependency>@google-cloud/storage - GCS operations for prefix creation</dependency>
+      <dependency>@supabase/supabase-js - Database client</dependency>
+    </external>
+
+    <environment>
+      <variable>GCS_BUCKET_NAME - Bucket for document storage</variable>
+      <variable>SUPABASE_URL - Database URL</variable>
+      <variable>SUPABASE_SERVICE_ROLE_KEY - Service role for RLS bypass if needed</variable>
+    </environment>
+  </dependencies>
+
+  <!-- ================================================================== -->
+  <!-- TESTING STRATEGY                                                   -->
+  <!-- ================================================================== -->
+  <testing-strategy>
+    <unit-tests>
+      <test name="sanitizeFolderName">
+        <cases>
+          - Standard category name to lowercase hyphenated
+          - Special characters removed
+          - Consecutive hyphens collapsed
+          - Empty string handling
+          - Max length truncation
+        </cases>
+      </test>
+      <test name="generateFoldersFromIRL">
+        <cases>
+          - Creates folders for all categories
+          - Skips existing folders
+          - Handles subcategories correctly
+          - Returns correct created/skipped counts
+        </cases>
+      </test>
+    </unit-tests>
+
+    <integration-tests>
+      <test name="Full folder generation flow">
+        <steps>
+          1. Create IRL with categories via API
+          2. Call generate-folders endpoint
+          3. Verify folders exist in PostgreSQL
+          4. Verify GCS prefixes created (or mocked)
+        </steps>
+      </test>
+      <test name="Transaction rollback">
+        <steps>
+          1. Mock GCS failure mid-creation
+          2. Call generate-folders
+          3. Verify no partial folders in DB
+        </steps>
+      </test>
+    </integration-tests>
+
+    <e2e-tests>
+      <test name="IRL to folder workflow">
+        <steps>
+          1. Create project
+          2. Create IRL with 3 categories
+          3. Click "Generate Folders" button
+          4. Navigate to Data Room
+          5. Verify 3 top-level folders appear
+        </steps>
+      </test>
+    </e2e-tests>
+  </testing-strategy>
+
+  <!-- ================================================================== -->
+  <!-- RELATED DOCUMENTATION                                              -->
+  <!-- ================================================================== -->
+  <related-documentation>
+    <document path="docs/manda-prd.md">
+      <relevance>FR-IRL-005: Auto-generate folder structure from IRL</relevance>
+    </document>
+    <document path="docs/sprint-artifacts/tech-spec-epic-E6.md">
+      <relevance>
+        - Section "Auto-Generate Folder Structure from IRL Upload" (E6.7)
+        - Detailed folder creation workflow
+        - GCS prefix creation pattern
+        - Transaction handling requirements
+      </relevance>
+    </document>
+    <document path="docs/manda-architecture.md">
+      <relevance>
+        - GCS bucket structure
+        - Supabase integration patterns
+        - Folder table schema
+      </relevance>
+    </document>
+    <document path="docs/ux-design-specification.md">
+      <relevance>
+        - Data Room bucket/folder views
+        - IRL integration with Data Room
+        - Folder creation UX patterns
+      </relevance>
+    </document>
+  </related-documentation>
+
+  <!-- ================================================================== -->
+  <!-- NOTES AND CONSTRAINTS                                              -->
+  <!-- ================================================================== -->
+  <notes>
+    <note type="architecture-decision">
+      GCS paths are immutable once created. Folder rename only changes display name,
+      not the GCS path. This preserves document links.
+    </note>
+    <note type="performance">
+      For IRLs with many categories (50+), consider batch GCS operations to reduce
+      API calls. Current implementation is serial for simplicity.
+    </note>
+    <note type="security">
+      All folder operations go through RLS policies. User must own the deal to
+      create folders in that deal's data room.
+    </note>
+    <note type="future-consideration">
+      Phase 2 may add automatic folder suggestions based on document content
+      analysis, but E6.4 focuses on IRL-based generation only.
+    </note>
+  </notes>
+</story-context>

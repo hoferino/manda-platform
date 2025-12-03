@@ -1,0 +1,159 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E6</epicId>
+    <storyId>5</storyId>
+    <title>Implement IRL-Document Linking and Progress Tracking</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-03</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e6-5-implement-irl-document-linking-and-progress-tracking.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to manually track which IRL items are fulfilled via an expandable checklist in the Data Room sidebar</iWant>
+    <soThat>I know what I'm still waiting for and can freely restructure my folders without confusing the system</soThat>
+    <tasks>
+      <task n="1" title="Create IRL Checklist components" ac="1,2,6">
+        <subtask n="1.1">Create components/irl/IRLChecklist.tsx - main checklist container with expand/collapse</subtask>
+        <subtask n="1.2">Create components/irl/IRLChecklistCategory.tsx - collapsible category section</subtask>
+        <subtask n="1.3">Create components/irl/IRLChecklistItem.tsx - individual item with checkbox</subtask>
+        <subtask n="1.4">Create components/irl/IRLProgressBar.tsx - progress bar showing fulfillment percentage</subtask>
+        <subtask n="1.5">Use shadcn/ui Checkbox component for consistent styling</subtask>
+      </task>
+      <task n="2" title="Implement checkbox toggle and persistence" ac="3,8">
+        <subtask n="2.1">Create useIRLChecklist hook for state management and API calls</subtask>
+        <subtask n="2.2">Implement toggleItemFulfilled() function (boolean toggle)</subtask>
+        <subtask n="2.3">Update PATCH /api/projects/[id]/irls/[irlId]/items/[itemId]/status to accept fulfilled: boolean</subtask>
+        <subtask n="2.4">Implement optimistic updates with rollback on error</subtask>
+        <subtask n="2.5">Add toast notifications for changes</subtask>
+      </task>
+      <task n="3" title="Implement progress calculation and display" ac="4">
+        <subtask n="3.1">Update calculateIRLProgress() in lib/types/irl.ts for binary fulfilled/not fulfilled</subtask>
+        <subtask n="3.2">Create progress bar component with percentage display</subtask>
+        <subtask n="3.3">Add real-time progress updates when checkbox changes</subtask>
+        <subtask n="3.4">Show counts: "X of Y items fulfilled (Z%)"</subtask>
+      </task>
+      <task n="4" title="Database migration for binary fulfilled status" ac="2,3">
+        <subtask n="4.1">Create migration to add fulfilled BOOLEAN DEFAULT false column to irl_items</subtask>
+        <subtask n="4.2">Migrate existing status data: complete → fulfilled=true, others → fulfilled=false</subtask>
+        <subtask n="4.3">Update lib/types/irl.ts to use fulfilled: boolean instead of status enum</subtask>
+        <subtask n="4.4">Update IRL service and API routes to use fulfilled field</subtask>
+        <subtask n="4.5">Regenerate Supabase types</subtask>
+      </task>
+      <task n="5" title="Implement unfulfilled filter" ac="7">
+        <subtask n="5.1">Add toggle switch in checklist header: "Show only unfulfilled"</subtask>
+        <subtask n="5.2">Filter items based on toggle state</subtask>
+        <subtask n="5.3">Persist filter preference in localStorage</subtask>
+      </task>
+      <task n="6" title="Integrate checklist into Data Room sidebar" ac="1">
+        <subtask n="6.1">Add IRLChecklist component to Data Room layout sidebar</subtask>
+        <subtask n="6.2">Fetch IRL data when Data Room loads</subtask>
+        <subtask n="6.3">Show "No IRL yet" placeholder if no IRL exists</subtask>
+        <subtask n="6.4">Add expand/collapse toggle for entire checklist panel</subtask>
+      </task>
+      <task n="7" title="Write tests" ac="1-8">
+        <subtask n="7.1">Unit tests for IRLChecklist component (render, expand/collapse)</subtask>
+        <subtask n="7.2">Unit tests for IRLChecklistItem (checkbox display, click handling)</subtask>
+        <subtask n="7.3">Unit tests for useIRLChecklist hook (state management, API calls)</subtask>
+        <subtask n="7.4">Unit tests for progress calculation</subtask>
+        <subtask n="7.5">Integration tests for fulfilled toggle API</subtask>
+        <subtask n="7.6">E2E test: Open Data Room → Expand checklist → Toggle checkbox → Verify progress updates</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">An expandable IRL checklist is visible in the Data Room sidebar when an IRL exists for the project</criterion>
+    <criterion id="AC2">Each IRL item shows a simple checkbox (unchecked = not fulfilled, checked = fulfilled)</criterion>
+    <criterion id="AC3">Clicking an item checkbox toggles between fulfilled and not fulfilled</criterion>
+    <criterion id="AC4">A progress bar shows X/Y items fulfilled (Z%) at the top of the checklist</criterion>
+    <criterion id="AC5">Document uploads do NOT auto-update IRL status (users check manually)</criterion>
+    <criterion id="AC6">Category sections within the checklist are collapsible</criterion>
+    <criterion id="AC7">Filter toggle to show only unfulfilled items</criterion>
+    <criterion id="AC8">Checkbox changes are persisted to the database immediately with optimistic UI updates</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E6.md" title="Epic 6 Tech Spec" section="E6.4 Acceptance Criteria">
+        Technical specification covering IRL management and auto-generation. E6.4 section defines fulfillment tracking with expandable checklist, checkbox toggle, progress bar, and manual-only tracking (no auto-updates from document uploads).
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Architecture Document" section="Data Room Folder Architecture">
+        Defines: Real GCS folders, manual IRL tracking (checklist independent of folder structure), expandable checklist in Data Room sidebar, user-modifiable structure. Key decision: "Document uploads do NOT auto-update checkboxes."
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E6.md" title="Epic 6 Stories" section="E6.5">
+        Story E6.5: Implement IRL-Document Linking and Progress Tracking - manual checklist in Data Room sidebar.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="manda-app/lib/types/irl.ts" kind="types" symbol="IRLItem, IRLItemStatus, calculateIRLProgress" reason="Defines current IRL item structure with 4-status enum (not_started, pending, received, complete). Must update to use 'fulfilled: boolean' per story requirements."/>
+      <artifact path="manda-app/lib/services/irls.ts" kind="service" symbol="updateIRLItem, getIRLWithItems, getIRLProgress" reason="IRL CRUD service (500 lines). Contains status update logic that will need to handle 'fulfilled' boolean instead of status enum."/>
+      <artifact path="manda-app/components/irl/IRLBuilder.tsx" kind="component" symbol="IRLBuilder" reason="Main IRL editor component. Shows pattern for optimistic updates, progress display, and drag-drop. Reference for IRL UI patterns."/>
+      <artifact path="manda-app/components/irl/IRLItem.tsx" kind="component" symbol="IRLItem" reason="Existing IRL item component with status dropdown. Checklist item will be simpler (checkbox only vs dropdown)."/>
+      <artifact path="manda-app/components/data-room/irl-checklist-panel.tsx" kind="component" symbol="IRLChecklistPanel" lines="1-288" reason="EXISTING checklist panel from E2.8! Shows sidebar integration, expand/collapse, progress calculation. Current implementation uses documentId linkage - story changes to binary 'fulfilled' checkbox."/>
+      <artifact path="manda-app/components/data-room/irl-checklist-item.tsx" kind="component" symbol="IRLChecklistItem" lines="1-229" reason="EXISTING checklist item from E2.8! Shows completed state based on documentId. Story changes to simple checkbox toggle independent of documents."/>
+      <artifact path="manda-app/app/projects/[id]/data-room/data-room-wrapper.tsx" kind="page" symbol="DataRoomWrapper" reason="Data Room wrapper that already integrates IRLChecklistPanel in sidebar. May need minor updates for new fulfilled-based logic."/>
+      <artifact path="manda-app/lib/api/irl.ts" kind="api-client" symbol="getProjectIRL, IRLItem" reason="IRL API functions. Current IRLItem type has documentId/documentName - story changes progress calculation to use 'fulfilled' boolean."/>
+      <artifact path="manda-app/components/ui/checkbox.tsx" kind="ui" symbol="Checkbox" reason="shadcn/ui Checkbox component already installed. Use for checklist items."/>
+    </code>
+    <dependencies>
+      <node>
+        <package>@radix-ui/react-checkbox</package>
+        <version>^1.3.3</version>
+        <purpose>Checkbox component for IRL checklist items</purpose>
+      </node>
+      <node>
+        <package>@supabase/supabase-js</package>
+        <version>^2.84.0</version>
+        <purpose>Database operations for fulfilled status updates</purpose>
+      </node>
+      <node>
+        <package>sonner</package>
+        <version>^2.0.7</version>
+        <purpose>Toast notifications for checkbox changes</purpose>
+      </node>
+      <node>
+        <package>zustand</package>
+        <version>^5.0.8</version>
+        <purpose>State management if needed for checklist</purpose>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="PRD FR-IRL-002">Manual-Only Tracking: IRL status is updated ONLY by user action. Document uploads do NOT trigger automatic checkbox changes.</constraint>
+    <constraint source="tech-spec">Binary Status Model: Simplified from 4 statuses to boolean 'fulfilled' field. Replaces status enum.</constraint>
+    <constraint source="architecture">Optimistic Updates: Follow pattern from Knowledge Explorer FindingActions - update UI immediately, rollback on error.</constraint>
+    <constraint source="tech-spec">Checkbox toggle less than 200ms target for immediate feedback.</constraint>
+    <constraint source="tech-spec">RLS Policy: All queries filter by deal_id owned by user via auth.uid().</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="PATCH /api/projects/[id]/irls/[irlId]/items/[itemId]/fulfilled" kind="REST endpoint" signature="PATCH { fulfilled: boolean } → IRLItem" path="manda-app/app/api/projects/[id]/irls/[irlId]/items/[itemId]/route.ts"/>
+    <interface name="IRLItem.fulfilled" kind="type property" signature="fulfilled: boolean (replaces status enum)" path="manda-app/lib/types/irl.ts"/>
+    <interface name="calculateIRLProgress" kind="function" signature="(items: IRLItem[]) → { total, fulfilled, unfulfilled, percentComplete }" path="manda-app/lib/types/irl.ts"/>
+    <interface name="getProjectIRL" kind="api function" signature="async (projectId: string) → { irl, error? }" path="manda-app/lib/api/irl.ts"/>
+  </interfaces>
+  <tests>
+    <standards>Unit tests use Vitest with @testing-library/react for components. API tests use Supabase mock utilities from __tests__/utils/supabase-mock.ts. E2E tests use Playwright in e2e/ directory. Coverage target: 85% for new components/hooks. Test pyramid: unit (fast, CI), integration (DB mocks), E2E (full flow).</standards>
+    <locations>
+      <location>manda-app/__tests__/components/data-room/irl-checklist-panel.test.tsx (existing, may need updates)</location>
+      <location>manda-app/__tests__/components/irl/ (new checklist component tests)</location>
+      <location>manda-app/__tests__/hooks/ (useIRLChecklist hook tests)</location>
+      <location>manda-app/__tests__/lib/types/irl.test.ts (progress calculation tests)</location>
+      <location>manda-app/e2e/irl-checklist.spec.ts (E2E flow)</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test IRLChecklist renders in Data Room sidebar when IRL exists for project</idea>
+      <idea ac="2">Test IRLChecklistItem shows checkbox unchecked when fulfilled=false, checked when fulfilled=true</idea>
+      <idea ac="3">Test clicking checkbox calls toggleItemFulfilled and updates UI optimistically</idea>
+      <idea ac="4">Test IRLProgressBar shows correct X/Y fulfilled (Z%) format</idea>
+      <idea ac="5">Test document upload does NOT change checkbox state (manual-only tracking)</idea>
+      <idea ac="6">Test IRLChecklistCategory expand/collapse toggle works</idea>
+      <idea ac="7">Test "Show only unfulfilled" filter toggle hides fulfilled items</idea>
+      <idea ac="8">Test checkbox change persists to database and shows toast notification</idea>
+      <idea ac="8">Test optimistic update rollback on API error</idea>
+      <idea ac="all">E2E: Open Data Room → Expand checklist → Toggle checkbox → Verify progress updates → Reload → Verify persistence</idea>
+    </ideas>
+  </tests>
+</story-context>

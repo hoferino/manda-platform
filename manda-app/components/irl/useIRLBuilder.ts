@@ -298,6 +298,7 @@ export function useIRLBuilder({
       description: updates.description !== undefined ? (updates.description ?? undefined) : existingItem.description,
       priority: updates.priority !== undefined ? updates.priority : existingItem.priority,
       status: updates.status !== undefined ? updates.status : existingItem.status,
+      fulfilled: existingItem.fulfilled,
       notes: updates.notes !== undefined ? (updates.notes ?? undefined) : existingItem.notes,
       sortOrder: updates.sortOrder !== undefined ? updates.sortOrder : existingItem.sortOrder,
       createdAt: existingItem.createdAt,

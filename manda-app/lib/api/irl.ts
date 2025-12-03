@@ -16,6 +16,7 @@ export interface IRLItem {
   name: string
   description: string | null
   required: boolean
+  fulfilled: boolean
   sortOrder: number
   documentId: string | null
   documentName: string | null
@@ -91,6 +92,7 @@ export async function getProjectIRL(projectId: string): Promise<{
     }
 
     // Get IRL items with linked document info
+    // Note: fulfilled column will be added once migration is applied
     const { data: itemsData, error: itemsError } = await supabase
       .from('irl_items')
       .select(`
@@ -132,8 +134,10 @@ export async function getProjectIRL(projectId: string): Promise<{
     }
 
     // Map items with document info
+    // Use type assertion to access fulfilled until migration is applied
     const items: IRLItem[] = (itemsData || []).map((item) => {
       const linkedDoc = docsByItemId.get(item.id)
+      const itemWithFulfilled = item as typeof item & { fulfilled?: boolean }
       return {
         id: item.id,
         irlId: item.irl_id,
@@ -141,6 +145,7 @@ export async function getProjectIRL(projectId: string): Promise<{
         name: item.item_name,
         description: item.description,
         required: item.required ?? true,
+        fulfilled: itemWithFulfilled.fulfilled ?? false,
         sortOrder: item.sort_order ?? 0,
         documentId: linkedDoc?.id || null,
         documentName: linkedDoc?.name || null,
@@ -149,8 +154,8 @@ export async function getProjectIRL(projectId: string): Promise<{
       }
     })
 
-    // Calculate progress
-    const completedCount = items.filter((item) => item.documentId !== null).length
+    // Calculate progress based on fulfilled status
+    const completedCount = items.filter((item) => item.fulfilled).length
     const progressPercent = items.length > 0
       ? Math.round((completedCount / items.length) * 100)
       : 0
@@ -194,14 +199,14 @@ export async function getIRLProgress(projectId: string): Promise<{
     }
 
     const { items } = result.irl
-    const completedCount = items.filter((item) => item.documentId !== null).length
+    const completedCount = items.filter((item) => item.fulfilled).length
 
     // Group by category
     const categoryMap = new Map<string, { total: number; completed: number }>()
     for (const item of items) {
       const existing = categoryMap.get(item.category) || { total: 0, completed: 0 }
       existing.total++
-      if (item.documentId) {
+      if (item.fulfilled) {
         existing.completed++
       }
       categoryMap.set(item.category, existing)
@@ -305,10 +310,45 @@ export function groupItemsByCategory(items: IRLItem[]): IRLCategory[] {
     .map(([name, categoryItems]) => ({
       name,
       items: categoryItems.sort((a, b) => a.sortOrder - b.sortOrder),
-      completedCount: categoryItems.filter((item) => item.documentId !== null).length,
+      completedCount: categoryItems.filter((item) => item.fulfilled).length,
       totalCount: categoryItems.length,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// ============================================================================
+// E6.5 - IRL Item Fulfilled Toggle
+// ============================================================================
+
+/**
+ * Toggle the fulfilled status of an IRL item
+ * Used for the manual checklist in Data Room sidebar
+ * Story: E6.5 - Implement IRL-Document Linking and Progress Tracking
+ */
+export async function toggleIRLItemFulfilled(
+  itemId: string,
+  fulfilled: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient()
+
+    const { error } = await supabase
+      .from('irl_items')
+      .update({ fulfilled } as Record<string, unknown>)
+      .eq('id', itemId)
+
+    if (error) {
+      throw error
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error toggling IRL item fulfilled:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update item',
+    }
+  }
 }
 
 // ============================================================================
@@ -437,6 +477,79 @@ export async function addMultipleSuggestionsToIRL(
     success: errors.length === 0,
     addedCount,
     errors,
+  }
+}
+
+// ============================================================================
+// E6.4 - Folder Generation from IRL
+// ============================================================================
+
+/**
+ * Result of folder generation from IRL
+ */
+export interface FolderGenerationResult {
+  folders: Array<{
+    id: string
+    dealId: string
+    name: string
+    path: string
+    parentPath: string | null
+    createdAt: string
+    updatedAt: string
+  }>
+  tree: Array<{
+    id: string
+    name: string
+    path: string
+    children: Array<unknown>
+  }>
+  created: number
+  skipped: number
+  errors: string[]
+}
+
+/**
+ * Generate Data Room folder structure from IRL categories
+ *
+ * Extracts categories and subcategories from the IRL and creates:
+ * 1. Folder records in PostgreSQL
+ * 2. GCS folder prefixes for file storage
+ *
+ * @param projectId - The project/deal ID
+ * @param irlId - The IRL ID to generate folders from
+ * @returns FolderGenerationResult with created folders and tree structure
+ */
+export async function generateFoldersFromIRL(
+  projectId: string,
+  irlId: string
+): Promise<{
+  result: FolderGenerationResult | null
+  error?: string
+}> {
+  try {
+    const response = await fetch(
+      `/api/projects/${projectId}/irls/${irlId}/generate-folders`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to generate folders')
+    }
+
+    const result: FolderGenerationResult = await response.json()
+    return { result }
+  } catch (error) {
+    console.error('Error generating folders from IRL:', error)
+    return {
+      result: null,
+      error: error instanceof Error ? error.message : 'Failed to generate folders',
+    }
   }
 }
 

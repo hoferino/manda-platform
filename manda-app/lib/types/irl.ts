@@ -81,6 +81,7 @@ export interface IRLItem {
   description?: string
   priority: IRLPriority
   status: IRLItemStatus
+  fulfilled: boolean
   notes?: string
   sortOrder: number
   createdAt: string
@@ -107,7 +108,7 @@ export interface Folder {
 // ============================================================================
 
 /**
- * Progress tracking for an IRL
+ * Progress tracking for an IRL (legacy status-based)
  */
 export interface IRLProgress {
   total: number
@@ -119,7 +120,7 @@ export interface IRLProgress {
 }
 
 /**
- * Calculate progress from IRL items
+ * Calculate progress from IRL items (legacy status-based)
  */
 export function calculateIRLProgress(items: IRLItem[]): IRLProgress {
   const total = items.length
@@ -130,6 +131,30 @@ export function calculateIRLProgress(items: IRLItem[]): IRLProgress {
   const percentComplete = total > 0 ? Math.round((complete / total) * 100) : 0
 
   return { total, notStarted, pending, received, complete, percentComplete }
+}
+
+/**
+ * Progress tracking for an IRL (binary fulfilled-based)
+ * Used for the manual checklist in Data Room sidebar
+ */
+export interface IRLFulfilledProgress {
+  total: number
+  fulfilled: number
+  unfulfilled: number
+  percentComplete: number
+}
+
+/**
+ * Calculate progress from IRL items based on fulfilled boolean
+ * Used for the manual checklist in Data Room sidebar
+ */
+export function calculateIRLFulfilledProgress(items: IRLItem[]): IRLFulfilledProgress {
+  const total = items.length
+  const fulfilled = items.filter(i => i.fulfilled).length
+  const unfulfilled = total - fulfilled
+  const percentComplete = total > 0 ? Math.round((fulfilled / total) * 100) : 0
+
+  return { total, fulfilled, unfulfilled, percentComplete }
 }
 
 // ============================================================================
@@ -282,6 +307,14 @@ export const UpdateIRLItemStatusRequestSchema = z.object({
   status: z.enum(IRL_ITEM_STATUSES),
 })
 export type UpdateIRLItemStatusRequest = z.infer<typeof UpdateIRLItemStatusRequestSchema>
+
+/**
+ * IRL item fulfilled update schema (binary toggle for checklist)
+ */
+export const UpdateIRLItemFulfilledRequestSchema = z.object({
+  fulfilled: z.boolean(),
+})
+export type UpdateIRLItemFulfilledRequest = z.infer<typeof UpdateIRLItemFulfilledRequestSchema>
 
 /**
  * IRL items reorder request schema

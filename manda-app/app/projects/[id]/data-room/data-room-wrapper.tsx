@@ -3,13 +3,13 @@
  * Provides view switching between Folders and Buckets views with preference persistence
  * Story: E2.3 - Build Data Room Buckets View
  * Story: E2.4 - Implement View Toggle and User Preference
- * Story: E2.8 - IRL Integration with Document Tracking
+ * Story: E6.5 - IRL-Document Linking and Progress Tracking
  *
  * Features:
  * - View toggle (Folders/Buckets) with localStorage persistence
  * - Per-project preference storage
  * - Context preservation when switching views
- * - IRL Checklist panel integration (E2.8)
+ * - IRL Checklist panel integration (E6.5)
  * - Responsive design
  */
 
@@ -149,7 +149,7 @@ export function DataRoomWrapper({ projectId }: DataRoomWrapperProps) {
         />
       </div>
 
-      {/* Main Content with IRL Panel (E2.8) */}
+      {/* Main Content with IRL Panel (E6.5) */}
       <div className="flex flex-1 overflow-hidden">
         {/* View Content (AC2, AC3) */}
         <div className="flex-1 overflow-hidden">
@@ -180,7 +180,7 @@ export function DataRoomWrapper({ projectId }: DataRoomWrapperProps) {
           )}
         </div>
 
-        {/* IRL Checklist Panel (E2.8 - AC1, AC6) */}
+        {/* IRL Checklist Panel (E6.5 - AC1, AC6, AC7) */}
         <IRLChecklistPanel projectId={projectId} />
       </div>
 

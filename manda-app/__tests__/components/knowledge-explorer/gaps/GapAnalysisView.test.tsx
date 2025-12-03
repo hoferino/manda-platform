@@ -80,6 +80,7 @@ describe('GapAnalysisView', () => {
       name: 'Annual Financial Statements',
       description: 'Audited financial statements for FY2023',
       required: true,
+      fulfilled: false,
       sortOrder: 1,
       documentId: null,
       documentName: null,

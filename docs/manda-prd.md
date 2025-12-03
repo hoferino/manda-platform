@@ -633,12 +633,10 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 - IRL upload during project creation triggers folder generation
 
 **FR-IRL-002: IRL Tracking**
-- Status for each requested item (not_started, pending, received, complete)
-- **Manual status updates only** - user checks items via expandable checklist in Data Room
+- Simple checkbox for each requested item (unfulfilled / fulfilled)
+- **Manual checkbox updates only** - user checks items via expandable checklist in Data Room
 - No automatic status changes when documents are uploaded (user may restructure folders)
-- Expected vs actual receive dates
-- Follow-up reminders
-- Progress visualization (items complete / total items)
+- Progress visualization (X of Y items fulfilled, percentage complete)
 
 **FR-IRL-003: IRL-Document Linking**
 - Map received documents to IRL items manually via checklist
