@@ -3,10 +3,10 @@
 
 **Document Status:** In Development
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-25
+**Last Updated:** 2025-12-07
 **Owner:** Max
 **Contributors:** PM John
-**Version:** 1.6 (Infrastructure decisions: Supabase retained for MVP (PostgreSQL, Auth) with future GCP migration option. Epic 3 will use Docling for document parsing + Vertex AI RAG Engine for retrieval/indexing. Cloud Run identified as preferred deployment target.)
+**Version:** 1.7 (Epic E1-E6 complete, E7 contexted. Learning Loop tech spec includes source validation flow and feature flags for safe rollout.)
 
 ---
 
@@ -15,12 +15,12 @@
 | Epic | Status | Stories | Completion Date |
 |------|--------|---------|-----------------|
 | **E1: Project Foundation** | ✅ Complete | 9/9 | 2025-11-25 |
-| E2: Document Ingestion & Storage | Backlog | 0/8 | - |
-| E3: Intelligent Document Processing | Backlog | 0/9 | - |
-| E4: Collaborative Knowledge Workflow | Backlog | 0/14 | - |
-| E5: Conversational Assistant | Backlog | 0/8 | - |
-| E6: IRL Management & Auto-Generation | Backlog | 0/8 | - |
-| E7: Learning Loop | Backlog | 0/6 | - |
+| **E2: Document Ingestion & Storage** | ✅ Complete | 8/8 | 2025-11-26 |
+| **E3: Intelligent Document Processing** | ✅ Complete | 9/9 | 2025-11-28 |
+| **E4: Collaborative Knowledge Workflow** | ✅ Complete | 13/13 | 2025-11-30 |
+| **E5: Conversational Assistant** | ✅ Complete | 8/9 | 2025-12-02 |
+| **E6: IRL Management & Auto-Generation** | ✅ Complete | 7/7 | 2025-12-03 |
+| E7: Learning Loop | Contexted | 0/6 | - |
 | E8: Q&A Co-Creation Workflow | Backlog | 0/8 | - |
 | E9: CIM Company Overview Creation | Backlog | 0/9 | - |
 

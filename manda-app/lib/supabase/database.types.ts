@@ -289,6 +289,13 @@ export type Database = {
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "document_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_with_errors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       documents: {
@@ -296,6 +303,7 @@ export type Database = {
           category: string | null
           created_at: string
           deal_id: string
+          error_count: number | null
           file_path: string
           file_size: number | null
           folder_path: string | null
@@ -308,6 +316,8 @@ export type Database = {
           name: string
           processing_error: Json | null
           processing_status: string | null
+          reliability_notes: string | null
+          reliability_status: string
           retry_history: Json | null
           updated_at: string
           upload_status: string | null
@@ -317,6 +327,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           deal_id: string
+          error_count?: number | null
           file_path: string
           file_size?: number | null
           folder_path?: string | null
@@ -329,6 +340,8 @@ export type Database = {
           name: string
           processing_error?: Json | null
           processing_status?: string | null
+          reliability_notes?: string | null
+          reliability_status?: string
           retry_history?: Json | null
           updated_at?: string
           upload_status?: string | null
@@ -338,6 +351,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           deal_id?: string
+          error_count?: number | null
           file_path?: string
           file_size?: number | null
           folder_path?: string | null
@@ -350,6 +364,8 @@ export type Database = {
           name?: string
           processing_error?: Json | null
           processing_status?: string | null
+          reliability_notes?: string | null
+          reliability_status?: string
           retry_history?: Json | null
           updated_at?: string
           upload_status?: string | null
@@ -371,6 +387,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      feature_flags: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          enabled: boolean
+          flag_name: string
+          id: string
+          risk_level: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean
+          flag_name: string
+          id?: string
+          risk_level?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean
+          flag_name?: string
+          id?: string
+          risk_level?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       financial_metrics: {
         Row: {
@@ -457,7 +506,67 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "financial_metrics_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_with_errors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "financial_metrics_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finding_corrections: {
+        Row: {
+          analyst_id: string
+          corrected_value: string
+          correction_type: string
+          created_at: string | null
+          finding_id: string
+          id: string
+          original_source_document: string | null
+          original_source_location: string | null
+          original_value: string
+          reason: string | null
+          user_source_reference: string | null
+          validation_status: string
+        }
+        Insert: {
+          analyst_id: string
+          corrected_value: string
+          correction_type: string
+          created_at?: string | null
+          finding_id: string
+          id?: string
+          original_source_document?: string | null
+          original_source_location?: string | null
+          original_value: string
+          reason?: string | null
+          user_source_reference?: string | null
+          validation_status?: string
+        }
+        Update: {
+          analyst_id?: string
+          corrected_value?: string
+          correction_type?: string
+          created_at?: string | null
+          finding_id?: string
+          id?: string
+          original_source_document?: string | null
+          original_source_location?: string | null
+          original_value?: string
+          reason?: string | null
+          user_source_reference?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finding_corrections_finding_id_fkey"
             columns: ["finding_id"]
             isOneToOne: false
             referencedRelation: "findings"
@@ -476,8 +585,11 @@ export type Database = {
           embedding: string | null
           finding_type: Database["public"]["Enums"]["finding_type_enum"] | null
           id: string
+          last_corrected_at: string | null
           metadata: Json | null
+          needs_review: boolean | null
           page_number: number | null
+          review_reason: string | null
           source_document: string | null
           status: string | null
           text: string
@@ -495,8 +607,11 @@ export type Database = {
           embedding?: string | null
           finding_type?: Database["public"]["Enums"]["finding_type_enum"] | null
           id?: string
+          last_corrected_at?: string | null
           metadata?: Json | null
+          needs_review?: boolean | null
           page_number?: number | null
+          review_reason?: string | null
           source_document?: string | null
           status?: string | null
           text: string
@@ -514,8 +629,11 @@ export type Database = {
           embedding?: string | null
           finding_type?: Database["public"]["Enums"]["finding_type_enum"] | null
           id?: string
+          last_corrected_at?: string | null
           metadata?: Json | null
+          needs_review?: boolean | null
           page_number?: number | null
+          review_reason?: string | null
           source_document?: string | null
           status?: string | null
           text?: string
@@ -543,6 +661,13 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_with_errors"
             referencedColumns: ["id"]
           },
         ]
@@ -637,6 +762,7 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          fulfilled: boolean
           id: string
           irl_id: string
           item_name: string
@@ -652,6 +778,7 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          fulfilled?: boolean
           id?: string
           irl_id: string
           item_name: string
@@ -667,6 +794,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          fulfilled?: boolean
           id?: string
           irl_id?: string
           item_name?: string
@@ -828,7 +956,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      documents_with_errors: {
+        Row: {
+          created_at: string | null
+          deal_id: string | null
+          error_count: number | null
+          findings_needing_review: number | null
+          id: string | null
+          name: string | null
+          reliability_notes: string | null
+          reliability_status: string | null
+          total_findings: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       match_findings: {

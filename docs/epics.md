@@ -4091,6 +4091,8 @@ Then the progress bar updates in real-time
 
 **Learning Approach (MVP):** Uses **prompt optimization with few-shot examples** - system stores corrections in database and dynamically includes relevant correction patterns in agent system prompts. Future phases may explore fine-tuning or RAG-based learning enhancements.
 
+**Feature Flag Strategy:** The Learning Loop introduces potentially dangerous cascade operations. All high-impact features are gated behind feature flags for safe rollout. Source validation is ON by default; source error cascade and auto-flagging are OFF by default to allow gradual rollout with monitoring.
+
 **Functional Requirements Covered:**
 - FR-LEARN-001: Finding Corrections
 - FR-LEARN-002: Confidence Score Learning
@@ -4104,24 +4106,41 @@ Then the progress bar updates in real-time
 - Admin/Analytics - Feedback Dashboard (Phase 2)
 
 **Technical Components:**
-- Feedback database (PostgreSQL tables: `finding_corrections`, `validation_feedback`, `response_edits`)
-- Confidence score adjustment algorithm
-- Pattern learning service
+- Feedback database (PostgreSQL tables: `finding_corrections`, `validation_feedback`, `response_edits`, `edit_patterns`, `feature_flags`)
+- Source validation flow with original citation display
+- Confidence score adjustment algorithm (+0.05 validation, -0.10 rejection, capped [0.1, 0.95])
+- Pattern learning service with 3+ occurrence threshold
+- Document reliability tracking (`trusted`, `contains_errors`, `superseded`)
+- Source error cascade service (pgvector re-embedding, Neo4j sync)
 - Correction propagation to knowledge graph
-- Audit trail maintenance
+- Feature flags for safe rollout of dangerous operations
+- Audit trail maintenance (append-only, immutable)
 - Analytics aggregation (Phase 2)
+
+**Database Migrations (7 total):**
+- `00028_create_finding_corrections_table.sql` - Correction history with source validation
+- `00029_create_validation_feedback_table.sql` - Validate/reject tracking
+- `00030_create_response_edits_table.sql` - Response edit storage
+- `00031_create_edit_patterns_table.sql` - Pattern detection
+- `00032_add_needs_review_to_findings.sql` - Review flagging
+- `00033_add_document_reliability_tracking.sql` - Document error tracking
+- `00034_create_feature_flags_table.sql` - Runtime flag control
 
 **Acceptance Criteria (Epic Level):**
 - ✅ User can correct system-generated findings through chat or Knowledge Explorer
+- ✅ System shows original source citation before accepting corrections (source validation)
 - ✅ Corrected findings update knowledge graph immediately
 - ✅ System maintains complete correction history for audit
 - ✅ Corrected findings propagate to related insights and answers
+- ✅ When source document has errors, all findings from that document are flagged for review
+- ✅ Document reliability status tracks which documents contain known errors
 - ✅ System tracks analyst validation/rejection of findings
 - ✅ Confidence scores adjust based on validation history
 - ✅ User can edit agent-generated responses (Q&A, CIM content)
 - ✅ System stores edits as examples for future generations
 - ✅ All feedback linked to specific findings, sources, and contexts
 - ✅ System learns from correction patterns to improve extraction
+- ✅ Feature flags allow safe gradual rollout of dangerous cascade operations
 
 ### Stories
 
@@ -4132,28 +4151,59 @@ Then the progress bar updates in real-time
 **So that** the knowledge base reflects accurate information
 
 **Description:**
-Enable analysts to correct findings directly in chat using natural language commands like "That revenue number is wrong, it should be $50M not $45M" or "Correct: EBITDA margin is 22%, not 18%". System updates the finding, knowledge graph, and provides confirmation.
+Enable analysts to correct findings directly in chat using natural language commands like "That revenue number is wrong, it should be $50M not $45M" or "Correct: EBITDA margin is 22%, not 18%". System updates the finding, knowledge graph, and provides confirmation. **Critical:** Before accepting corrections, the system displays the original source citation to prevent blind knowledge base updates. User must confirm the basis for their correction.
 
 **Technical Details:**
 - Detect correction intent in chat messages
-- Agent tool: `update_knowledge_base` with correction flag
+- **Source Validation Flow:** Before accepting correction, retrieve and display original source document and location
+- Agent asks user for correction basis (source document, management call, etc.)
+- Agent tool: `update_knowledge_base` with correction flag and validation_status
+- Store original value in `finding_corrections` table with:
+  - `original_source_document` - Where finding was extracted from
+  - `original_source_location` - Page, cell, paragraph reference
+  - `user_source_reference` - User's basis for correction
+  - `validation_status` - 'confirmed_with_source', 'override_without_source', or 'source_error'
 - Update finding in `findings` table
-- Store original value in `finding_corrections` table
-- Update Neo4j relationships
+- **Source Error Cascade (gated by feature flag):** When `validation_status = 'source_error'`:
+  - Mark document `reliability_status = 'contains_errors'`
+  - Flag ALL findings from source document for review
+  - Regenerate corrected finding embedding in pgvector
+  - Sync document and finding updates to Neo4j
 - Propagate changes to related insights
-- Return confirmation message with updated finding
+- Return confirmation message with original source citation and impact summary
 
 **Acceptance Criteria:**
 
 ```gherkin
+# Basic Correction Flow
 Given I'm in a chat about financial findings
 When I say "The revenue should be $50M, not $45M"
 Then the system detects correction intent
-And updates the finding to $50M
-And stores the original $45M in corrections history
-And updates the knowledge graph
-And confirms "I've corrected the revenue finding to $50M. The original value ($45M) has been archived."
+And displays the original source: "Found in 2024_Financial_Model.xlsx (Sheet 'Revenue', Cell B14)"
+And asks: "What is the basis for your correction?"
 
+Given I provide a correction basis like "Management confirmed in yesterday's call"
+When I confirm the correction
+Then the finding is updated to $50M
+And the correction is stored with validation_status = 'confirmed_with_source'
+And confirms: "Revenue corrected to $50M. Original ($45M from 2024_Financial_Model.xlsx) archived with note: 'Management confirmed in yesterday's call'."
+
+Given I say "Just accept my correction" without providing a source
+When I confirm
+Then the correction is stored with validation_status = 'override_without_source'
+And the system logs this as an unverified override
+
+# Source Document Error Flow (Feature Flag: sourceErrorCascadeEnabled)
+Given I indicate "The spreadsheet has a typo - the audited financials say $50M"
+When I confirm the source document is wrong
+Then the correction is stored with validation_status = 'source_error'
+And the document is marked with reliability_status = 'contains_errors'
+And ALL findings from that document are flagged for review
+And the corrected finding embedding is regenerated
+And Neo4j nodes are updated
+And I see: "Revenue corrected. ⚠️ 12 other findings from this document are flagged for review."
+
+# Propagation and Multiple Corrections
 Given a corrected finding is linked to an insight
 When I correct the finding
 Then the related insight is flagged for review
@@ -4171,12 +4221,16 @@ And a summary confirmation is provided
 
 **Definition of Done:**
 - [ ] Chat detects correction intent
+- [ ] **Source validation:** Original source displayed before accepting correction
+- [ ] Agent asks for correction basis/source
 - [ ] Findings updated via update_knowledge_base tool
-- [ ] Original values stored in finding_corrections table
+- [ ] Original values stored in finding_corrections table with source validation fields
+- [ ] validation_status stored: 'confirmed_with_source', 'override_without_source', or 'source_error'
+- [ ] **Source error cascade (when flag enabled):** Document marked, sibling findings flagged, embedding regenerated, Neo4j synced
 - [ ] Correction history maintained with timestamp, analyst
 - [ ] Knowledge graph updates propagated
 - [ ] Related insights flagged for review
-- [ ] Confirmation message provided
+- [ ] Confirmation message includes original source citation and impact summary
 - [ ] Audit trail complete
 
 ---

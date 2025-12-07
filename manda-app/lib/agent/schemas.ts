@@ -314,6 +314,67 @@ export const IRLSuggestionSchema = z.object({
 export type IRLSuggestion = z.infer<typeof IRLSuggestionSchema>
 
 // =============================================================================
+// Correction Tools Input Schemas (Story E7.1)
+// =============================================================================
+
+/**
+ * Validation status for finding corrections
+ */
+export const ValidationStatusSchema = z.enum([
+  'pending',
+  'confirmed_with_source',
+  'override_without_source',
+  'source_error',
+])
+
+export type ValidationStatus = z.infer<typeof ValidationStatusSchema>
+
+/**
+ * Correction type schema
+ */
+export const CorrectionTypeSchema = z.enum(['value', 'source', 'confidence', 'text'])
+
+export type CorrectionType = z.infer<typeof CorrectionTypeSchema>
+
+/**
+ * correct_finding - Correct a finding via chat
+ * Story: E7.1 - Implement Finding Correction via Chat
+ * AC: #1, #2, #3, #4 - Agent detects correction intent and updates finding
+ */
+export const CorrectFindingInputSchema = z.object({
+  findingId: z.string().uuid().describe('UUID of the finding to correct'),
+  originalValue: z.string().min(1).describe('The original/incorrect value'),
+  correctedValue: z.string().min(1).describe('The new/corrected value'),
+  correctionType: CorrectionTypeSchema.default('text').describe('Type of correction'),
+  reason: z.string().optional().describe('Reason for the correction'),
+  userSourceReference: z.string().optional().describe('User basis for correction (e.g., "Management confirmed in call")'),
+  validationStatus: ValidationStatusSchema.default('override_without_source').describe('Source validation outcome'),
+})
+
+export type CorrectFindingInput = z.infer<typeof CorrectFindingInputSchema>
+
+/**
+ * get_finding_source - Get original source citation before correction
+ * Story: E7.1 - AC: #8, #10 - Display source before accepting correction
+ */
+export const GetFindingSourceInputSchema = z.object({
+  findingId: z.string().uuid().describe('UUID of the finding to get source for'),
+})
+
+export type GetFindingSourceInput = z.infer<typeof GetFindingSourceInputSchema>
+
+/**
+ * get_correction_history - Get correction history for a finding
+ * Story: E7.1 - AC: #3 - Audit trail of corrections
+ */
+export const GetCorrectionHistoryInputSchema = z.object({
+  findingId: z.string().uuid().describe('UUID of the finding to get history for'),
+  limit: z.number().int().min(1).max(100).default(20).describe('Max corrections to return'),
+})
+
+export type GetCorrectionHistoryInput = z.infer<typeof GetCorrectionHistoryInputSchema>
+
+// =============================================================================
 // Output Schemas
 // =============================================================================
 
@@ -426,6 +487,10 @@ export const ToolSchemas = {
   CreateIRLInput: CreateIRLInputSchema,
   GenerateIRLSuggestionsInput: GenerateIRLSuggestionsInputSchema,
   AddToIRLInput: AddToIRLInputSchema,
+  // Correction tools (E7.1)
+  CorrectFindingInput: CorrectFindingInputSchema,
+  GetFindingSourceInput: GetFindingSourceInputSchema,
+  GetCorrectionHistoryInput: GetCorrectionHistoryInputSchema,
 
   // Outputs
   QueryKnowledgeBaseOutput: QueryKnowledgeBaseOutputSchema,
