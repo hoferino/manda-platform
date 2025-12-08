@@ -46,6 +46,14 @@ export const LEARNING_FLAGS = {
   /** Detect edit patterns from response edits (low risk) */
   patternDetectionEnabled:
     process.env.LEARNING_PATTERN_DETECTION_ENABLED !== 'false',
+
+  /** Auto-adjust confidence thresholds based on feedback analysis (medium risk - OFF by default) */
+  autoThresholdAdjustmentEnabled:
+    process.env.LEARNING_AUTO_THRESHOLD_ADJUSTMENT_ENABLED === 'true',
+
+  /** Enable weekly feedback analysis job (low risk) */
+  weeklyFeedbackAnalysisEnabled:
+    process.env.LEARNING_WEEKLY_FEEDBACK_ANALYSIS_ENABLED !== 'false',
 } as const
 
 export type FeatureFlagName = keyof typeof LEARNING_FLAGS

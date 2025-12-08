@@ -1,0 +1,323 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>7</epicId>
+    <storyId>4</storyId>
+    <title>Build Feedback Incorporation System</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e7-4-build-feedback-incorporation-system.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>system</asA>
+    <iWant>to analyze all analyst feedback to identify systematic issues</iWant>
+    <soThat>extraction and generation quality improves over time</soThat>
+    <tasks>
+      <task id="1" title="Create Feedback Analysis Service" acs="1,2,3,4">
+        <subtask id="1.1">Create lib/services/feedback-analysis.ts</subtask>
+        <subtask id="1.2">Implement analyzeFeedbackPeriod(startDate, endDate) to query all feedback tables</subtask>
+        <subtask id="1.3">Implement groupByDocumentType() to categorize by PDF, Excel, Word, etc.</subtask>
+        <subtask id="1.4">Implement groupByDomain() to categorize by Financial, Operational, Legal, etc.</subtask>
+        <subtask id="1.5">Implement groupByExtractionPattern() to categorize by table, paragraph, cell, etc.</subtask>
+        <subtask id="1.6">Implement calculateRejectionRates() for each grouping</subtask>
+        <subtask id="1.7">Implement detectSystematicIssues(threshold: 0.40) to flag high-rejection groups</subtask>
+        <subtask id="1.8">Implement generatePromptSuggestions() to create actionable recommendations</subtask>
+        <subtask id="1.9">Write unit tests for feedback-analysis service (target 80% coverage)</subtask>
+      </task>
+      <task id="2" title="Implement Confidence Threshold Adjustment" acs="5">
+        <subtask id="2.1">Create lib/services/confidence-calibration.ts</subtask>
+        <subtask id="2.2">Implement getValidationHistoryBySource() to query validation patterns per document type</subtask>
+        <subtask id="2.3">Implement calculateOptimalThreshold() based on validation success rate</subtask>
+        <subtask id="2.4">Implement adjustConfidenceThreshold(source, newThreshold) with logging</subtask>
+        <subtask id="2.5">Store threshold adjustments in database for audit trail</subtask>
+        <subtask id="2.6">Gate auto-adjustment behind LEARNING_AUTO_THRESHOLD_ADJUSTMENT_ENABLED feature flag</subtask>
+        <subtask id="2.7">Write unit tests for confidence calibration</subtask>
+      </task>
+      <task id="3" title="Create Background Job Handler" acs="1">
+        <subtask id="3.1">Create pg-boss job handler analyze_feedback in manda-processing</subtask>
+        <subtask id="3.2">Configure weekly cron schedule (Sunday 2am)</subtask>
+        <subtask id="3.3">Implement job parameters (period: week | month | all)</subtask>
+        <subtask id="3.4">Store analysis results in feedback_analysis_results table</subtask>
+        <subtask id="3.5">Implement idempotent job design (can re-run safely)</subtask>
+        <subtask id="3.6">Add job to pg-boss initialization</subtask>
+        <subtask id="3.7">Write integration test for job handler</subtask>
+      </task>
+      <task id="4" title="Create Database Schema" acs="3,4,5,6">
+        <subtask id="4.1">Create migration 00035_create_feedback_analysis_results_table.sql</subtask>
+        <subtask id="4.2">Define schema: id, analysis_period_start, analysis_period_end, results (JSONB), created_at</subtask>
+        <subtask id="4.3">Create migration 00036_create_systematic_issues_table.sql</subtask>
+        <subtask id="4.4">Define schema: id, issue_type, description, source_pattern, rejection_rate, sample_count, status, suggested_fix, created_at, resolved_at, resolved_by</subtask>
+        <subtask id="4.5">Create migration 00037_create_confidence_threshold_adjustments_table.sql</subtask>
+        <subtask id="4.6">Define schema: id, source_type, domain, previous_threshold, new_threshold, reason, adjusted_at, adjusted_by</subtask>
+        <subtask id="4.7">Apply RLS policies: NO user access - service role only (Grafana uses read-only role)</subtask>
+        <subtask id="4.8">Apply migrations and regenerate Supabase types</subtask>
+      </task>
+      <task id="5" title="Create Grafana Analytics Infrastructure" acs="6,7">
+        <subtask id="5.1">Create read-only PostgreSQL role grafana_reader with minimal permissions</subtask>
+        <subtask id="5.2">Create analytics schema for aggregated views (no raw user data)</subtask>
+        <subtask id="5.3">Create view analytics.daily_correction_stats (anonymized, no user_id)</subtask>
+        <subtask id="5.4">Create view analytics.rejection_rate_by_source (document_type x domain matrix)</subtask>
+        <subtask id="5.5">Create view analytics.systematic_issues_summary for issue tracking</subtask>
+        <subtask id="5.6">Create view analytics.confidence_adjustment_log for threshold history</subtask>
+        <subtask id="5.7">Grant SELECT on analytics schema to grafana_reader role</subtask>
+        <subtask id="5.8">Document Grafana Cloud datasource connection string (in deployment docs)</subtask>
+      </task>
+      <task id="6" title="Create Grafana Dashboards (JSON)" acs="6,7">
+        <subtask id="6.1">Create grafana/dashboards/feedback-overview.json - summary statistics</subtask>
+        <subtask id="6.2">Create panel: Total corrections/validations/rejections over time (line chart)</subtask>
+        <subtask id="6.3">Create panel: Rejection rate heatmap by document_type x domain</subtask>
+        <subtask id="6.4">Create panel: Systematic issues table with status badges</subtask>
+        <subtask id="6.5">Create panel: Confidence threshold adjustments log</subtask>
+        <subtask id="6.6">Create panel: Top 10 problematic extraction patterns</subtask>
+        <subtask id="6.7">Configure alert rule: Rejection rate > 40% triggers Slack notification</subtask>
+        <subtask id="6.8">Configure alert rule: New systematic issue detected triggers email</subtask>
+        <subtask id="6.9">Add dashboard to grafana/ folder in repo for version control</subtask>
+      </task>
+      <task id="7" title="Add TypeScript Types" acs="all">
+        <subtask id="7.1">Add FeedbackAnalysisSummary type to lib/types/feedback.ts</subtask>
+        <subtask id="7.2">Add SystematicIssue type with status enum</subtask>
+        <subtask id="7.3">Add ConfidenceThresholdAdjustment type</subtask>
+        <subtask id="7.4">Add FeedbackAnalysisResult type for job output</subtask>
+        <subtask id="7.5">Add FeedbackGroup type for aggregation results</subtask>
+      </task>
+      <task id="8" title="Testing" acs="all">
+        <subtask id="8.1">Write unit tests for feedback-analysis service</subtask>
+        <subtask id="8.2">Write unit tests for confidence-calibration service</subtask>
+        <subtask id="8.3">Write integration tests for analysis job</subtask>
+        <subtask id="8.4">Verify analytics views return no user identifiers (GDPR compliance test)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">Weekly background job analyzes feedback from all tables (finding_corrections, validation_feedback, response_edits)</ac>
+    <ac id="2">Corrections grouped by document type, domain, and extraction pattern</ac>
+    <ac id="3">Systematic issues (>40% rejection rate) flagged for review</ac>
+    <ac id="4">Prompt improvement suggestions generated for flagged issues</ac>
+    <ac id="5">Confidence thresholds adjusted based on validation history</ac>
+    <ac id="6">Grafana dashboard shows summary statistics (developer-only)</ac>
+    <ac id="7">Developers can view and acknowledge flagged issues via Grafana (GDPR-compliant separation)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Technical Specification" section="E7.4: Build Feedback Incorporation System" snippet="Weekly background job analyzes feedback from all tables. Corrections grouped by document type, domain, extraction pattern. Systematic issues flagged when rejection rate > 40% with minimum 10 samples." />
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Technical Specification" section="Services and Modules" snippet="Feedback Analysis Service at lib/services/feedback-analysis.ts - Analyze feedback patterns, generate improvement suggestions" />
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Technical Specification" section="Workflows" snippet="Feedback Analysis Background Job Flow: Weekly cron job triggers (Sunday 2am), queries feedback, groups corrections, calculates rejection rates, flags systematic issues." />
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Technical Specification" section="Data Models" snippet="00035_feedback_analysis_results, 00036_systematic_issues, 00037_confidence_threshold_adjustments tables with RLS for service role only." />
+      <doc path="docs/sprint-artifacts/stories/e7-3-enable-response-editing-and-learning.md" title="Story E7.3" section="Dev Notes" snippet="Services Created: lib/services/response-edits.ts with pattern detection - REUSE detection algorithms. lib/services/prompt-enhancement.ts with few-shot injection." />
+    </docs>
+    <code>
+      <artifact path="manda-app/lib/types/feedback.ts" kind="types" symbol="FeedbackAnalysisSummary (partial)" lines="571-584" reason="Existing feedback types to extend with new analysis types" />
+      <artifact path="manda-app/lib/services/corrections.ts" kind="service" symbol="correctFinding, getCorrectionsByDeal, getCorrectionStats" lines="117-407" reason="Source for correction data querying patterns" />
+      <artifact path="manda-app/lib/services/validation-feedback.ts" kind="service" symbol="recordValidation, recordRejection, getValidationStats, calculateAdjustedConfidence" lines="57-65,208-342" reason="Source for validation data and confidence calculation algorithm" />
+      <artifact path="manda-app/lib/services/response-edits.ts" kind="service" symbol="saveResponseEdit, detectPatterns, getActivePatterns" lines="47-319" reason="Source for response edit querying and pattern detection" />
+      <artifact path="manda-app/lib/config/feature-flags.ts" kind="config" symbol="LEARNING_FLAGS, getFeatureFlag" lines="21-85" reason="Feature flag pattern to follow for new LEARNING_AUTO_THRESHOLD_ADJUSTMENT_ENABLED flag" />
+      <artifact path="manda-app/lib/services/prompt-enhancement.ts" kind="service" symbol="formatPatternsAsPromptInstructions" lines="all" reason="Reference for generating prompt improvement suggestions" />
+      <artifact path="manda-processing/src/jobs/handlers/parse_document.py" kind="job-handler" symbol="ParseDocumentHandler" lines="all" reason="Template for pg-boss job handler pattern in Python" />
+      <artifact path="manda-processing/src/jobs/handlers/detect_contradictions.py" kind="job-handler" symbol="DetectContradictionsHandler" lines="all" reason="Reference for background analysis job pattern" />
+      <artifact path="manda-app/supabase/migrations/00028_create_finding_corrections_table.sql" kind="migration" symbol="finding_corrections" lines="all" reason="RLS pattern for append-only feedback tables" />
+      <artifact path="manda-app/supabase/migrations/00029_create_validation_feedback_table.sql" kind="migration" symbol="validation_feedback, finding_validation_stats" lines="all" reason="Pattern for aggregation views" />
+      <artifact path="manda-app/supabase/migrations/00034_create_feature_flags_table.sql" kind="migration" symbol="feature_flags" lines="all" reason="Feature flag table pattern" />
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="@supabase/supabase-js" version="^2.x" reason="Database operations, RLS" />
+        <package name="date-fns" version="^2.x" reason="Date formatting for analysis periods" />
+        <package name="zod" version="^3.x" reason="Request/response validation" />
+        <package name="diff" version="^7.0.0" reason="Already installed - text diff for pattern detection reference" />
+      </ecosystem>
+      <ecosystem name="python">
+        <package name="pg-boss" version="via asyncpg" reason="Job queue for background analysis" />
+        <package name="supabase-py" version="^2.x" reason="Database operations in Python backend" />
+        <package name="asyncpg" version="^0.29" reason="PostgreSQL async driver" />
+        <package name="pydantic" version="^2.x" reason="Data validation for job parameters" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec" type="architectural">ADMIN-ONLY DASHBOARD: The feedback dashboard and systematic issues are internal diagnostics - NEVER exposed to regular users. Only platform admins/developers should see extraction quality metrics, rejection rates, or prompt improvement suggestions.</constraint>
+    <constraint source="tech-spec" type="architectural">Grafana Cloud for analytics instead of in-app admin dashboard for GDPR compliance. Creates complete isolation from user-facing app.</constraint>
+    <constraint source="tech-spec" type="operational">Weekly background job uses pg-boss job queue with cron schedule (Sunday 2am)</constraint>
+    <constraint source="tech-spec" type="reliability">Idempotent job design: Analysis job can be re-run safely; stores results with period identifier</constraint>
+    <constraint source="tech-spec" type="security">Feature flag gating: Auto-adjustment of confidence thresholds gated behind LEARNING_AUTO_THRESHOLD_ADJUSTMENT_ENABLED feature flag for safety</constraint>
+    <constraint source="tech-spec" type="compliance">Append-only audit trail: All threshold adjustments logged for compliance</constraint>
+    <constraint source="tech-spec" type="business-rule">40% rejection rate threshold: Systematic issues flagged when rejection rate exceeds 40% with minimum 10 samples</constraint>
+    <constraint source="tech-spec" type="compliance">Per-period analysis: Results stored per analysis period for trend tracking</constraint>
+    <constraint source="tech-spec" type="privacy">Analytics views must not expose user identifiers (GDPR compliance) - use read-only grafana_reader role</constraint>
+    <constraint source="tech-spec" type="performance">Feedback analysis job target: less than 5min for 1000 items</constraint>
+    <constraint source="tech-spec" type="performance">Dashboard load target: less than 1s (pre-computed summary from last analysis)</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="FeedbackAnalysisSummary" kind="typescript-type" path="manda-app/lib/types/feedback.ts">
+      <signature><![CDATA[
+interface FeedbackAnalysisSummary {
+  period: string;
+  totalCorrections: number;
+  totalValidations: number;
+  totalRejections: number;
+  totalEdits: number;
+  groupedByDocumentType: FeedbackGroup[];
+  groupedByDomain: FeedbackGroup[];
+  groupedByPattern: FeedbackGroup[];
+  systematicIssues: SystematicIssue[];
+  suggestedPromptImprovements: string[];
+}
+      ]]></signature>
+    </interface>
+    <interface name="FeedbackGroup" kind="typescript-type" path="manda-app/lib/types/feedback.ts">
+      <signature><![CDATA[
+interface FeedbackGroup {
+  key: string; // e.g., "excel_financial_table"
+  documentType: string;
+  domain: string;
+  extractionPattern: string;
+  totalFindings: number;
+  validations: number;
+  rejections: number;
+  corrections: number;
+  rejectionRate: number;
+}
+      ]]></signature>
+    </interface>
+    <interface name="SystematicIssue" kind="typescript-type" path="manda-app/lib/types/feedback.ts">
+      <signature><![CDATA[
+interface SystematicIssue {
+  id: string;
+  issueType: 'high_rejection_rate' | 'frequent_corrections' | 'low_confidence_pattern';
+  description: string;
+  sourcePattern: string;
+  documentType?: string;
+  domain?: string;
+  rejectionRate: number;
+  sampleCount: number;
+  sampleFindings: string[];
+  status: 'new' | 'acknowledged' | 'resolved';
+  suggestedFix: string;
+  createdAt: string;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolutionNotes?: string;
+}
+      ]]></signature>
+    </interface>
+    <interface name="ConfidenceThresholdAdjustment" kind="typescript-type" path="manda-app/lib/types/feedback.ts">
+      <signature><![CDATA[
+interface ConfidenceThresholdAdjustment {
+  id: string;
+  sourceType: string;
+  domain?: string;
+  extractionPattern?: string;
+  previousThreshold: number;
+  newThreshold: number;
+  reason: string;
+  validationSuccessRate?: number;
+  sampleCount?: number;
+  adjustedAt: string;
+  adjustedBy: string; // 'system' or user_id
+}
+      ]]></signature>
+    </interface>
+    <interface name="analyzeFeedbackPeriod" kind="function" path="manda-app/lib/services/feedback-analysis.ts">
+      <signature><![CDATA[
+async function analyzeFeedbackPeriod(
+  supabase: SupabaseClient<Database>,
+  startDate: Date,
+  endDate: Date
+): Promise<FeedbackAnalysisSummary>
+      ]]></signature>
+    </interface>
+    <interface name="detectSystematicIssues" kind="function" path="manda-app/lib/services/feedback-analysis.ts">
+      <signature><![CDATA[
+function detectSystematicIssues(
+  groups: FeedbackGroup[],
+  threshold: number = 0.40,
+  minSamples: number = 10
+): SystematicIssue[]
+      ]]></signature>
+    </interface>
+    <interface name="calculateOptimalThreshold" kind="function" path="manda-app/lib/services/confidence-calibration.ts">
+      <signature><![CDATA[
+async function calculateOptimalThreshold(
+  sourceType: string,
+  validationHistory: ValidationFeedback[]
+): Promise<number>
+// Target: 80% validation success rate
+// If current success rate < 70%, raise threshold
+// If current success rate > 90%, lower threshold slightly
+// Clamp to [0.50, 0.95] range
+      ]]></signature>
+    </interface>
+    <interface name="analyze_feedback job" kind="pg-boss-job" path="manda-processing/src/jobs/handlers/analyze_feedback.py">
+      <signature><![CDATA[
+Job Name: analyze_feedback
+Schedule: 0 2 * * 0 (Sunday 2am)
+Parameters:
+  - period: 'week' | 'month' | 'all'
+Output: Stores in feedback_analysis_results table
+      ]]></signature>
+    </interface>
+    <interface name="analytics.daily_correction_stats" kind="sql-view" path="manda-app/supabase/migrations/00035_create_feedback_analysis_results_table.sql">
+      <signature><![CDATA[
+CREATE VIEW analytics.daily_correction_stats AS
+SELECT
+  DATE(created_at) as date,
+  COUNT(*) as total_corrections,
+  COUNT(DISTINCT finding_id) as unique_findings,
+  COUNT(*) FILTER (WHERE validation_status = 'confirmed_with_source') as confirmed,
+  COUNT(*) FILTER (WHERE validation_status = 'override_without_source') as overrides,
+  COUNT(*) FILTER (WHERE validation_status = 'source_error') as source_errors
+FROM finding_corrections
+GROUP BY DATE(created_at)
+ORDER BY date DESC;
+-- NO user_id column - GDPR compliant
+      ]]></signature>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use existing Supabase mock utilities from __tests__/utils/supabase-mock.ts.
+      Use pg-boss test mode for job handler tests in Python.
+      Target 80% coverage for feedback-analysis service.
+      Follow component testing patterns established in E4/E5/E6.
+      Test edge cases: empty feedback, single-item groups, boundary thresholds.
+      TypeScript strict mode - ensure all test files pass type checking.
+      Mock consistency - use shared mock utilities for Supabase.
+      Background job testing - use pg-boss test mode for job handler tests.
+      GDPR compliance test - verify analytics views return no user identifiers.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/services/feedback-analysis.test.ts</location>
+      <location>manda-app/__tests__/lib/services/confidence-calibration.test.ts</location>
+      <location>manda-processing/tests/jobs/handlers/test_analyze_feedback.py</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test analyzeFeedbackPeriod returns correct totals for week/month periods</idea>
+      <idea ac="1">Test query spans all three feedback tables (corrections, validations, edits)</idea>
+      <idea ac="2">Test groupByDocumentType correctly categorizes PDF, Excel, Word findings</idea>
+      <idea ac="2">Test groupByDomain handles Financial, Operational, Legal, Technical domains</idea>
+      <idea ac="2">Test groupByExtractionPattern identifies table, paragraph, cell patterns</idea>
+      <idea ac="3">Test detectSystematicIssues flags groups with > 40% rejection rate</idea>
+      <idea ac="3">Test minimum sample threshold (10) prevents false positives</idea>
+      <idea ac="3">Test boundary conditions at exactly 40% and 10 samples</idea>
+      <idea ac="4">Test generatePromptSuggestions produces actionable recommendations</idea>
+      <idea ac="4">Test suggestions reference specific document types and domains</idea>
+      <idea ac="5">Test calculateOptimalThreshold raises threshold when success rate < 70%</idea>
+      <idea ac="5">Test calculateOptimalThreshold lowers threshold when success rate > 90%</idea>
+      <idea ac="5">Test threshold clamping to [0.50, 0.95] range</idea>
+      <idea ac="5">Test feature flag gates auto-adjustment (does nothing when flag OFF)</idea>
+      <idea ac="6">Test analytics views return no user_id or analyst_id columns (GDPR)</idea>
+      <idea ac="6">Test grafana_reader role has SELECT-only permissions</idea>
+      <idea ac="7">Test systematic_issues_summary view includes status for acknowledgment</idea>
+      <idea ac="all">Test idempotent job design - re-running with same period updates existing record</idea>
+      <idea ac="all">Test job completes within 5 minute target for 1000 feedback items</idea>
+      <idea ac="all">Test empty feedback scenario returns valid summary with zero counts</idea>
+    </ideas>
+  </tests>
+</story-context>

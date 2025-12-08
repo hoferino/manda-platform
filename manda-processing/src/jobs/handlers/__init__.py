@@ -73,6 +73,30 @@ def handle_detect_contradictions(job):
     return _handler(job)
 
 
+def get_handle_analyze_feedback():
+    """Get the analyze_feedback handler (lazy import)."""
+    from src.jobs.handlers.analyze_feedback import handle_analyze_feedback
+    return handle_analyze_feedback
+
+
+def get_handle_analyze_feedback_all():
+    """Get the analyze_feedback_all handler (lazy import)."""
+    from src.jobs.handlers.analyze_feedback import handle_analyze_feedback_all
+    return handle_analyze_feedback_all
+
+
+def handle_analyze_feedback(job):
+    """Handle an analyze-feedback job (lazy wrapper)."""
+    from src.jobs.handlers.analyze_feedback import handle_analyze_feedback as _handler
+    return _handler(job)
+
+
+def handle_analyze_feedback_all(job):
+    """Handle an analyze-feedback-all job (lazy wrapper)."""
+    from src.jobs.handlers.analyze_feedback import handle_analyze_feedback_all as _handler
+    return _handler(job)
+
+
 __all__ = [
     "handle_parse_document",
     "get_handle_parse_document",
@@ -84,4 +108,8 @@ __all__ = [
     "get_handle_extract_financials",
     "handle_detect_contradictions",
     "get_handle_detect_contradictions",
+    "handle_analyze_feedback",
+    "get_handle_analyze_feedback",
+    "handle_analyze_feedback_all",
+    "get_handle_analyze_feedback_all",
 ]

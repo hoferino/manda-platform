@@ -460,3 +460,243 @@ export function mapDbToEditPattern(row: {
     isActive: row.is_active ?? true,
   }
 }
+
+// ============================================================================
+// Feedback Analysis Types (E7.4)
+// ============================================================================
+
+/**
+ * Aggregated feedback data for a single finding
+ * Used for analysis and confidence threshold adjustments
+ */
+export interface FindingFeedbackAggregate {
+  findingId: string
+  findingText: string
+  domain: string
+  sourceDocument?: string
+
+  // Correction stats
+  correctionCount: number
+  lastCorrectedAt?: string
+
+  // Validation/rejection stats
+  validationCount: number
+  rejectionCount: number
+  netValidations: number // validationCount - rejectionCount
+
+  // Confidence info
+  originalConfidence: number
+  currentConfidence: number
+
+  // Analysis flags
+  needsReview: boolean
+  hasCascadeImpact: boolean
+}
+
+/**
+ * Pattern-based feedback analysis result
+ * Identifies systematic patterns in corrections/rejections
+ */
+export interface FeedbackPattern {
+  patternType: 'domain_bias' | 'source_quality' | 'confidence_drift' | 'extraction_error'
+  description: string
+  affectedCount: number
+  severity: 'low' | 'medium' | 'high'
+  recommendation: string
+  examples: string[]
+}
+
+/**
+ * Feedback analysis summary for a project/deal
+ */
+export interface FeedbackAnalysisSummary {
+  dealId: string
+  analysisDate: string
+  periodStart: string
+  periodEnd: string
+
+  // Aggregate stats
+  totalFindings: number
+  totalCorrections: number
+  totalValidations: number
+  totalRejections: number
+
+  // Patterns identified
+  patterns: FeedbackPattern[]
+
+  // Per-domain breakdown
+  domainStats: DomainFeedbackStats[]
+
+  // Recommendations
+  recommendations: AnalysisRecommendation[]
+
+  // Confidence threshold recommendations
+  confidenceAdjustments: ConfidenceThresholdAdjustment[]
+}
+
+/**
+ * Per-domain feedback statistics
+ */
+export interface DomainFeedbackStats {
+  domain: string
+  findingCount: number
+  correctionCount: number
+  validationCount: number
+  rejectionCount: number
+  averageConfidence: number
+  rejectionRate: number
+}
+
+/**
+ * Recommendation from feedback analysis
+ */
+export interface AnalysisRecommendation {
+  id: string
+  type: 'prompt_improvement' | 'threshold_adjustment' | 'source_review' | 'domain_focus'
+  priority: 'low' | 'medium' | 'high'
+  title: string
+  description: string
+  actionable: boolean
+  autoApplicable: boolean
+  applied?: boolean
+  appliedAt?: string
+}
+
+/**
+ * Confidence threshold adjustment recommendation
+ */
+export interface ConfidenceThresholdAdjustment {
+  domain: string
+  currentThreshold: number
+  recommendedThreshold: number
+  reason: string
+  basedOnSampleSize: number
+  statisticalConfidence: number
+}
+
+/**
+ * Feedback analysis job request
+ */
+export interface FeedbackAnalysisJobRequest {
+  dealId: string
+  analysisType: 'full' | 'incremental'
+  periodDays?: number // Default 7 days
+  includePatternDetection?: boolean
+  includeConfidenceAdjustments?: boolean
+}
+
+/**
+ * Feedback analysis job result
+ */
+export interface FeedbackAnalysisJobResult {
+  success: boolean
+  jobId: string
+  summary?: FeedbackAnalysisSummary
+  error?: string
+  processingTimeMs: number
+}
+
+/**
+ * Prompt improvement suggestion from analysis
+ */
+export interface PromptImprovementSuggestion {
+  id: string
+  domain?: string
+  correctionPattern: string
+  originalPromptSnippet?: string
+  suggestedImprovement: string
+  basedOnCorrections: number
+  confidence: number
+  createdAt: string
+}
+
+/**
+ * Feedback analytics record in database
+ */
+export interface FeedbackAnalyticsRecord {
+  id: string
+  dealId: string
+  analysisDate: string
+  periodStart: string
+  periodEnd: string
+  summaryJson: FeedbackAnalysisSummary
+  createdAt: string
+}
+
+/**
+ * Map database row to FeedbackAnalyticsRecord
+ */
+export function mapDbToFeedbackAnalyticsRecord(row: {
+  id: string
+  deal_id: string
+  analysis_date: string
+  period_start: string
+  period_end: string
+  summary_json: unknown
+  created_at: string | null
+}): FeedbackAnalyticsRecord {
+  return {
+    id: row.id,
+    dealId: row.deal_id,
+    analysisDate: row.analysis_date,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    summaryJson: row.summary_json as FeedbackAnalysisSummary,
+    createdAt: row.created_at ?? new Date().toISOString(),
+  }
+}
+
+/**
+ * Confidence threshold record in database
+ */
+export interface ConfidenceThresholdRecord {
+  id: string
+  dealId: string
+  domain: string
+  threshold: number
+  previousThreshold?: number
+  reason: string
+  appliedAt: string
+  appliedBy: string
+  autoApplied: boolean
+}
+
+/**
+ * Map database row to ConfidenceThresholdRecord
+ */
+export function mapDbToConfidenceThresholdRecord(row: {
+  id: string
+  deal_id: string
+  domain: string
+  threshold: number
+  previous_threshold: number | null
+  reason: string
+  applied_at: string | null
+  applied_by: string
+  auto_applied: boolean | null
+}): ConfidenceThresholdRecord {
+  return {
+    id: row.id,
+    dealId: row.deal_id,
+    domain: row.domain,
+    threshold: row.threshold,
+    previousThreshold: row.previous_threshold ?? undefined,
+    reason: row.reason,
+    appliedAt: row.applied_at ?? new Date().toISOString(),
+    appliedBy: row.applied_by,
+    autoApplied: row.auto_applied ?? false,
+  }
+}
+
+/**
+ * Weekly analysis job status
+ */
+export interface AnalysisJobStatus {
+  jobId: string
+  dealId: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  progress: number
+  startedAt?: string
+  completedAt?: string
+  error?: string
+}
