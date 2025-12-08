@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { ConfidenceBadge, DomainTag, StatusBadge, SourceAttributionLink } from '../shared'
 import { FindingActions } from './FindingActions'
 import { InlineEdit } from './InlineEdit'
+import { NeedsReviewBadge } from '@/components/feedback'
 import { ChevronDown, ChevronUp, FileText, Calendar } from 'lucide-react'
 import type { Finding, FindingWithSimilarity } from '@/lib/types/findings'
 import { cn } from '@/lib/utils'
@@ -257,6 +258,12 @@ export function FindingCard({
             <DomainTag domain={finding.domain} size="sm" />
             <StatusBadge status={finding.status} size="sm" />
             {showSimilarityBadge && <SimilarityBadge similarity={similarity!} />}
+            {/* E7.6: Show review badge if flagged */}
+            <NeedsReviewBadge
+              show={finding.needsReview}
+              reason={finding.reviewReason ?? undefined}
+              size="sm"
+            />
           </div>
           <ConfidenceBadge confidence={finding.confidence} size="sm" showPercentage />
         </div>

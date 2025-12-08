@@ -700,3 +700,218 @@ export interface AnalysisJobStatus {
   completedAt?: string
   error?: string
 }
+
+// ============================================================================
+// Audit Trail Types (E7.5)
+// ============================================================================
+
+/**
+ * Audit entry type identifier
+ */
+export type AuditEntryType = 'correction' | 'validation' | 'edit'
+
+/**
+ * Parameters for querying audit trail records
+ * (AC: #5 - queryable by date range, analyst, finding)
+ */
+export interface AuditQueryParams {
+  startDate?: Date | string
+  endDate?: Date | string
+  analystId?: string
+  findingId?: string
+  messageId?: string
+  limit?: number
+  offset?: number
+  orderBy?: 'created_at' | 'analyst_id'
+  orderDir?: 'asc' | 'desc'
+  types?: AuditEntryType[]
+}
+
+/**
+ * Unified audit entry type that wraps all feedback types
+ * (AC: #1, #2, #3 - all logged with required fields)
+ */
+export interface AuditEntry {
+  type: AuditEntryType
+  id: string
+  timestamp: string
+  analystId: string
+  // Finding-related (for corrections and validations)
+  findingId?: string
+  // Message-related (for response edits)
+  messageId?: string
+  // Type-specific data
+  data: FindingCorrection | ValidationFeedback | ResponseEdit
+}
+
+/**
+ * Finding history entry with correction lineage
+ * (AC: #7 - complete correction lineage)
+ */
+export interface FindingHistoryEntry {
+  findingId: string
+  // All corrections for this finding
+  corrections: FindingCorrection[]
+  // All validation/rejection feedback
+  validations: ValidationFeedback[]
+  // Calculated confidence impact from validations
+  confidenceImpact: {
+    original: number
+    current: number
+    validationCount: number
+    rejectionCount: number
+  }
+  // Combined timeline (sorted by timestamp)
+  timeline: AuditEntry[]
+}
+
+/**
+ * Export format options
+ */
+export type AuditExportFormat = 'csv' | 'json'
+
+/**
+ * Export options for audit trail
+ * (AC: #6 - export to CSV/JSON with all fields)
+ */
+export interface AuditExportOptions {
+  format: AuditExportFormat
+  types?: AuditEntryType[]
+  fields?: string[]
+  includeMetadata?: boolean
+  // Filter options
+  startDate?: Date | string
+  endDate?: Date | string
+  analystId?: string
+  findingId?: string
+}
+
+/**
+ * Audit export result with metadata
+ */
+export interface AuditExportResult {
+  success: boolean
+  filename: string
+  format: AuditExportFormat
+  recordCount: number
+  exportedAt: string
+  exportedBy: string
+  dateRange: {
+    start: string | null
+    end: string | null
+  }
+  filters: {
+    analystId?: string
+    findingId?: string
+    types?: AuditEntryType[]
+  }
+  // For JSON export, includes the actual records
+  records?: AuditEntry[]
+  // For CSV export, includes the raw CSV content
+  content?: string
+}
+
+/**
+ * JSON export structure with full metadata
+ */
+export interface AuditExportJSON {
+  exportedAt: string
+  exportedBy: string
+  dateRange: { start: string | null; end: string | null }
+  filters: { analystId?: string; findingId?: string; types?: AuditEntryType[] }
+  totalRecords: number
+  records: AuditEntry[]
+}
+
+/**
+ * Paginated query result
+ */
+export interface PaginatedAuditResult<T> {
+  data: T[]
+  total: number
+  limit: number
+  offset: number
+  hasMore: boolean
+}
+
+/**
+ * Map an AuditEntry to CSV row format
+ */
+export function auditEntryToCsvRow(entry: AuditEntry): Record<string, string> {
+  const baseRow = {
+    type: entry.type,
+    id: entry.id,
+    timestamp: entry.timestamp,
+    analyst_id: entry.analystId,
+    finding_id: entry.findingId || '',
+    message_id: entry.messageId || '',
+  }
+
+  if (entry.type === 'correction') {
+    const data = entry.data as FindingCorrection
+    return {
+      ...baseRow,
+      original_value: data.originalValue,
+      corrected_value: data.correctedValue,
+      correction_type: data.correctionType,
+      action: '',
+      reason: data.reason || '',
+      source_document: data.originalSourceDocument || '',
+      source_location: data.originalSourceLocation || '',
+      user_source_reference: data.userSourceReference || '',
+      validation_status: data.validationStatus,
+    }
+  }
+
+  if (entry.type === 'validation') {
+    const data = entry.data as ValidationFeedback
+    return {
+      ...baseRow,
+      original_value: '',
+      corrected_value: '',
+      correction_type: '',
+      action: data.action,
+      reason: data.reason || '',
+      source_document: '',
+      source_location: '',
+      user_source_reference: '',
+      validation_status: '',
+    }
+  }
+
+  // edit type
+  const data = entry.data as ResponseEdit
+  return {
+    ...baseRow,
+    original_value: data.originalText,
+    corrected_value: data.editedText,
+    correction_type: data.editType,
+    action: '',
+    reason: '',
+    source_document: '',
+    source_location: '',
+    user_source_reference: '',
+    validation_status: '',
+  }
+}
+
+/**
+ * CSV headers for audit export
+ */
+export const AUDIT_CSV_HEADERS = [
+  'type',
+  'id',
+  'timestamp',
+  'analyst_id',
+  'finding_id',
+  'message_id',
+  'original_value',
+  'corrected_value',
+  'correction_type',
+  'action',
+  'reason',
+  'source_document',
+  'source_location',
+  'user_source_reference',
+  'validation_status',
+] as const

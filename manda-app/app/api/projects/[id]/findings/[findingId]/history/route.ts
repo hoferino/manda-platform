@@ -1,14 +1,21 @@
 /**
- * Finding Correction History API Route
- * Story: E7.1 - Implement Finding Correction via Chat
- * AC: #3 - Audit trail of corrections
+ * Finding History API Route
+ * Story: E7.1 - Implement Finding Correction via Chat (AC: #3)
+ * Story: E7.5 - Maintain Comprehensive Audit Trail (AC: #7)
  *
- * GET /api/projects/[id]/findings/[findingId]/history - Get correction history
+ * GET /api/projects/[id]/findings/[findingId]/history - Get complete finding history
+ *
+ * Returns:
+ * - Complete correction lineage with before/after values
+ * - All validation/rejection feedback
+ * - Confidence impact calculation
+ * - Combined timeline sorted by timestamp
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCorrectionHistory } from '@/lib/services/corrections'
+import { getFindingHistory } from '@/lib/services/audit-trail'
 
 interface RouteContext {
   params: Promise<{ id: string; findingId: string }>
@@ -16,14 +23,19 @@ interface RouteContext {
 
 /**
  * GET /api/projects/[id]/findings/[findingId]/history
- * Get the correction history for a finding
+ * Get the complete history for a finding (corrections + validations + timeline)
+ *
+ * Query params:
+ * - full=true: Return full FindingHistoryEntry with timeline (default: false)
+ * - limit: Max corrections to return in legacy mode (default: 50)
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id: projectId, findingId } = await context.params
 
-    // Get limit from query params
+    // Get query params
     const { searchParams } = new URL(request.url)
+    const full = searchParams.get('full') === 'true'
     const limit = parseInt(searchParams.get('limit') || '50', 10)
 
     // Validate limit
@@ -68,7 +80,21 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Finding not found' }, { status: 404 })
     }
 
-    // Get correction history
+    // If full=true, return complete FindingHistoryEntry (E7.5 AC#7)
+    if (full) {
+      const history = await getFindingHistory(supabase, findingId)
+
+      if (!history) {
+        return NextResponse.json(
+          { error: 'Failed to load finding history' },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json(history)
+    }
+
+    // Legacy mode: return corrections only (E7.1 AC#3)
     const history = await getCorrectionHistory(supabase, findingId, limit)
 
     return NextResponse.json({

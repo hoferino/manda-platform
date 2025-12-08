@@ -58,6 +58,7 @@ import {
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ConfidenceBadge, DomainTag, StatusBadge, SourceAttributionLink } from '../shared'
+import { NeedsReviewBadge } from '@/components/feedback'
 import type { Finding, FindingWithSimilarity } from '@/lib/types/findings'
 import { cn } from '@/lib/utils'
 
@@ -372,7 +373,17 @@ export function FindingsTable({
       id: 'status',
       accessorKey: 'status',
       header: 'Status',
-      cell: ({ row }) => <StatusBadge status={row.original.status} size="sm" />,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <StatusBadge status={row.original.status} size="sm" />
+          {/* E7.6: Show review badge if flagged */}
+          <NeedsReviewBadge
+            show={row.original.needsReview}
+            reason={row.original.reviewReason ?? undefined}
+            size="sm"
+          />
+        </div>
+      ),
     },
     {
       id: 'createdAt',

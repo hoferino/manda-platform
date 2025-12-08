@@ -43,6 +43,9 @@ export interface Finding {
   metadata: Record<string, unknown> | null
   createdAt: string
   updatedAt: string | null
+  // Review flags (E7.6 - Propagate Corrections)
+  needsReview?: boolean
+  reviewReason?: string | null
 }
 
 /**

@@ -1,0 +1,234 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>7</epicId>
+    <storyId>5</storyId>
+    <title>Maintain Comprehensive Audit Trail</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e7-5-maintain-comprehensive-audit-trail.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>compliance officer / analyst</asA>
+    <iWant>a complete audit trail of all corrections and feedback</iWant>
+    <soThat>I can track what changed, when, and why</soThat>
+    <tasks>
+      <task id="1" title="Create Audit Trail Service" acs="1,2,3,5">
+        <subtask id="1.1">Create lib/services/audit-trail.ts</subtask>
+        <subtask id="1.2">Implement queryCorrections() with date range, analyst, finding filters</subtask>
+        <subtask id="1.3">Implement queryValidations() with same filter patterns</subtask>
+        <subtask id="1.4">Implement queryResponseEdits() with same filter patterns</subtask>
+        <subtask id="1.5">Implement queryAllFeedback() combining all three types</subtask>
+        <subtask id="1.6">Implement getFindingHistory() for complete correction lineage</subtask>
+      </task>
+      <task id="2" title="Create Export Service" acs="6">
+        <subtask id="2.1">Create lib/services/audit-export.ts</subtask>
+        <subtask id="2.2">Implement exportToCSV() with streaming for large datasets</subtask>
+        <subtask id="2.3">Implement exportToJSON() with complete field mapping</subtask>
+        <subtask id="2.4">Add UTF-8 BOM for Excel compatibility in CSV export</subtask>
+        <subtask id="2.5">Implement field selection for export customization</subtask>
+      </task>
+      <task id="3" title="Create API Endpoints" acs="5,6">
+        <subtask id="3.1">Create /api/projects/[id]/audit/corrections route (GET)</subtask>
+        <subtask id="3.2">Create /api/projects/[id]/audit/validations route (GET)</subtask>
+        <subtask id="3.3">Create /api/projects/[id]/audit/edits route (GET)</subtask>
+        <subtask id="3.4">Create /api/projects/[id]/audit/export route (GET)</subtask>
+        <subtask id="3.5">Implement query parameter validation with Zod</subtask>
+        <subtask id="3.6">Add pagination support (limit, offset)</subtask>
+      </task>
+      <task id="4" title="Create Finding History Endpoint" acs="7">
+        <subtask id="4.1">Create /api/projects/[id]/findings/[findingId]/history route (GET)</subtask>
+        <subtask id="4.2">Return complete correction lineage with timestamps</subtask>
+        <subtask id="4.3">Include related validations and their impact on confidence</subtask>
+        <subtask id="4.4">Format response with before/after values for each correction</subtask>
+      </task>
+      <task id="5" title="Create FindingHistoryPanel Component" acs="7">
+        <subtask id="5.1">Create components/knowledge-explorer/FindingHistoryPanel.tsx</subtask>
+        <subtask id="5.2">Display timeline of all corrections</subtask>
+        <subtask id="5.3">Show original/corrected values with diff highlighting</subtask>
+        <subtask id="5.4">Include analyst name and timestamp for each entry</subtask>
+        <subtask id="5.5">Add validation_status badge for each correction</subtask>
+        <subtask id="5.6">Add expandable details for source validation info</subtask>
+      </task>
+      <task id="6" title="Create AuditTrailExport Component" acs="6">
+        <subtask id="6.1">Create components/feedback/AuditTrailExport.tsx</subtask>
+        <subtask id="6.2">Implement date range picker</subtask>
+        <subtask id="6.3">Implement analyst filter dropdown</subtask>
+        <subtask id="6.4">Implement finding filter (optional)</subtask>
+        <subtask id="6.5">Implement format selection (CSV/JSON)</subtask>
+        <subtask id="6.6">Show export progress for large datasets</subtask>
+        <subtask id="6.7">Add download button with proper content-disposition</subtask>
+      </task>
+      <task id="7" title="Verify Immutability" acs="4">
+        <subtask id="7.1">Review existing RLS policies on finding_corrections, validation_feedback, response_edits</subtask>
+        <subtask id="7.2">Confirm NO UPDATE/DELETE policies exist</subtask>
+        <subtask id="7.3">Add integration test verifying immutability</subtask>
+        <subtask id="7.4">Document immutability guarantee in audit-trail service</subtask>
+      </task>
+      <task id="8" title="Add TypeScript Types" acs="all">
+        <subtask id="8.1">Add AuditQueryParams type to lib/types/feedback.ts</subtask>
+        <subtask id="8.2">Add AuditEntry unified type for all feedback types</subtask>
+        <subtask id="8.3">Add FindingHistoryEntry type with correction lineage</subtask>
+        <subtask id="8.4">Add ExportOptions type with format, fields, filters</subtask>
+        <subtask id="8.5">Add AuditExportResult type for streaming response</subtask>
+      </task>
+      <task id="9" title="Testing" acs="all">
+        <subtask id="9.1">Write unit tests for audit-trail service</subtask>
+        <subtask id="9.2">Write unit tests for audit-export service</subtask>
+        <subtask id="9.3">Write component tests for FindingHistoryPanel</subtask>
+        <subtask id="9.4">Write component tests for AuditTrailExport</subtask>
+        <subtask id="9.5">Write integration test for immutability verification</subtask>
+        <subtask id="9.6">All tests passing</subtask>
+        <subtask id="9.7">Build passing with no TypeScript errors</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">All corrections logged with finding_id, original, corrected, analyst, timestamp</criterion>
+    <criterion id="AC2">All validations logged with finding_id, action, analyst, timestamp</criterion>
+    <criterion id="AC3">All response edits logged with message_id, original, edited, analyst, timestamp</criterion>
+    <criterion id="AC4">Audit trail is immutable (no UPDATE/DELETE operations)</criterion>
+    <criterion id="AC5">Audit trail queryable by date range, analyst, finding</criterion>
+    <criterion id="AC6">Export to CSV/JSON with all fields included</criterion>
+    <criterion id="AC7">Finding history view shows complete correction lineage</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Technical Specification" section="E7.5 Acceptance Criteria">
+        Story E7.5 requirements: immutable audit trail, date/analyst/finding query filters, CSV/JSON export, correction lineage view. 7-year retention requirement for M&A compliance.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Technical Specification" section="Data Models">
+        Three existing audit tables: finding_corrections (00028), validation_feedback (00029), response_edits (00030). All append-only with NO UPDATE/DELETE RLS policies.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Technical Specification" section="APIs and Interfaces">
+        Audit Trail API Endpoints: GET /audit/corrections, GET /audit/export with format=csv|json, date range, and analyst filters.
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Architecture Document" section="Technology Stack">
+        FastAPI backend, Next.js 15 frontend, Supabase PostgreSQL with RLS, Vitest for unit tests, Playwright for E2E.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="manda-app/lib/services/corrections.ts" kind="service" symbol="getCorrectionsByDeal" lines="239-308" reason="Existing query pattern for corrections with date range, analyst, status filters - directly reusable for audit-trail service">
+        Has pagination support (limit, offset), filter chaining with Supabase query builder.
+      </artifact>
+      <artifact path="manda-app/lib/services/corrections.ts" kind="service" symbol="getCorrectionHistory" lines="209-234" reason="Existing history fetch pattern for single finding - reference for getFindingHistory lineage query">
+        Returns CorrectionHistoryEntry with mapDbToFindingCorrection transformation.
+      </artifact>
+      <artifact path="manda-app/lib/services/validation-feedback.ts" kind="service" symbol="getValidationHistory" lines="462-504" reason="Query pattern for validation feedback records - same filter approach for audit queries">
+        Uses type assertion for validation_feedback table, ordered by created_at DESC.
+      </artifact>
+      <artifact path="manda-app/lib/types/feedback.ts" kind="types" symbol="FindingCorrection,ValidationFeedback,ResponseEdit" lines="38-395" reason="Existing type definitions for all three audit data types - extend with AuditQueryParams and AuditEntry">
+        Contains mapDbToFindingCorrection, mapDbToResponseEdit, mapDbToEditPattern helper functions.
+      </artifact>
+      <artifact path="manda-app/lib/services/feedback-analysis.ts" kind="service" symbol="DomainFeedbackStats" reason="Reference for aggregation patterns when querying feedback data by domain">
+        Query patterns for grouping by domain with counts.
+      </artifact>
+      <artifact path="manda-app/app/api/projects/[id]/findings/export/route.ts" kind="api" symbol="POST" lines="535-734" reason="Export pattern with CSV (csv-stringify with BOM), Excel (exceljs), streaming response - directly reusable for audit export">
+        Uses Zod validation, Blob response, Content-Disposition header, field selection.
+      </artifact>
+      <artifact path="manda-app/components/knowledge-explorer/findings/FindingDetailPanel.tsx" kind="component" symbol="FindingDetailPanel" lines="1-200" reason="Slide-out Sheet panel pattern - reference for FindingHistoryPanel component structure">
+        Uses Sheet from shadcn/ui, loading skeleton, error state, Escape key handling.
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package name="csv-stringify" version="^6.6.0" purpose="CSV export with UTF-8 BOM support" />
+        <package name="exceljs" version="^4.4.0" purpose="Excel export (optional for audit)" />
+        <package name="date-fns" version="^4.1.0" purpose="Date formatting for timestamps" />
+        <package name="zod" version="^4.1.13" purpose="Request/response validation schemas" />
+        <package name="diff" version="^8.0.2" purpose="Text diff for correction comparisons" />
+        <package name="sonner" version="^2.0.7" purpose="Toast notifications" />
+        <package name="lucide-react" version="^0.554.0" purpose="Icons for UI components" />
+      </node>
+      <shadcn>
+        <component name="Sheet" purpose="Slide-out panel for FindingHistoryPanel" />
+        <component name="Button" purpose="Export/filter action buttons" />
+        <component name="Skeleton" purpose="Loading states" />
+        <component name="Badge" purpose="Validation status badges" />
+        <component name="Separator" purpose="Section dividers" />
+        <component name="ScrollArea" purpose="Scrollable history list" />
+        <component name="Calendar/DatePicker" purpose="Date range selection" note="May need to add from shadcn" />
+        <component name="Select" purpose="Format/analyst dropdowns" />
+        <component name="Collapsible" purpose="Expandable source validation details" />
+      </shadcn>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="immutability">All three audit tables (finding_corrections, validation_feedback, response_edits) are APPEND-ONLY. NO UPDATE/DELETE RLS policies exist. This is a compliance requirement for M&A due diligence.</constraint>
+    <constraint type="retention">7-year retention requirement for audit trail records per M&A compliance standards.</constraint>
+    <constraint type="rls">RLS policies use nested deal ownership check: finding_id IN (SELECT id FROM findings WHERE deal_id IN (SELECT id FROM deals WHERE user_id = auth.uid()))</constraint>
+    <constraint type="performance">Correction history load: &lt;500ms. Audit export CSV: &lt;30s for 10,000 records. Use streaming for large exports.</constraint>
+    <constraint type="security">Only deal owners can export audit trail. All feedback entries include analyst_id from auth.uid().</constraint>
+    <constraint type="data-isolation">Edit patterns scoped to individual analyst by default (per-analyst learning).</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Audit Query API" kind="REST" path="/api/projects/[id]/audit/corrections">
+      <method>GET</method>
+      <params>startDate, endDate, analystId, findingId, limit, offset</params>
+      <response>FindingCorrection[]</response>
+    </interface>
+    <interface name="Audit Query API" kind="REST" path="/api/projects/[id]/audit/validations">
+      <method>GET</method>
+      <params>startDate, endDate, analystId, findingId, limit, offset</params>
+      <response>ValidationFeedback[]</response>
+    </interface>
+    <interface name="Audit Query API" kind="REST" path="/api/projects/[id]/audit/edits">
+      <method>GET</method>
+      <params>startDate, endDate, analystId, messageId, limit, offset</params>
+      <response>ResponseEdit[]</response>
+    </interface>
+    <interface name="Audit Export API" kind="REST" path="/api/projects/[id]/audit/export">
+      <method>GET</method>
+      <params>format (csv|json), startDate, endDate, analystId, findingId, types (corrections|validations|edits|all)</params>
+      <response>File blob (CSV or JSON)</response>
+    </interface>
+    <interface name="Finding History API" kind="REST" path="/api/projects/[id]/findings/[findingId]/history">
+      <method>GET</method>
+      <response>{ corrections: FindingCorrection[], validations: ValidationFeedback[], confidenceImpact: number }</response>
+    </interface>
+    <interface name="AuditQueryParams" kind="TypeScript">
+      <definition>{ startDate?: Date; endDate?: Date; analystId?: string; findingId?: string; limit?: number; offset?: number; orderBy?: 'created_at' | 'analyst_id'; orderDir?: 'asc' | 'desc' }</definition>
+    </interface>
+    <interface name="AuditEntry" kind="TypeScript">
+      <definition>{ type: 'correction' | 'validation' | 'edit'; id: string; timestamp: string; analystId: string; data: FindingCorrection | ValidationFeedback | ResponseEdit }</definition>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit testing with Vitest, component testing with React Testing Library. Use shared Supabase mock utilities from __tests__/utils/supabase-mock.ts. Mock query builder with chainable methods.
+      Service tests should cover query building, filter application, pagination, and error handling.
+      Component tests should cover loading states, error states, keyboard navigation, accessibility (ARIA labels).
+      Integration tests for immutability verification using database constraints.
+    </standards>
+    <locations>
+      <location>__tests__/services/audit-trail.test.ts</location>
+      <location>__tests__/services/audit-export.test.ts</location>
+      <location>__tests__/components/knowledge-explorer/FindingHistoryPanel.test.tsx</location>
+      <location>__tests__/components/feedback/AuditTrailExport.test.tsx</location>
+      <location>__tests__/integration/audit-immutability.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test queryCorrections returns all fields: finding_id, original_value, corrected_value, analyst_id, created_at</idea>
+      <idea ac="AC2">Test queryValidations returns finding_id, action, analyst_id, created_at</idea>
+      <idea ac="AC3">Test queryResponseEdits returns message_id, original_text, edited_text, analyst_id, created_at</idea>
+      <idea ac="AC4">Integration test: attempt UPDATE/DELETE on audit tables should fail with RLS policy error</idea>
+      <idea ac="AC5">Test date range filter returns only records within range</idea>
+      <idea ac="AC5">Test analyst filter returns only records from specified analyst</idea>
+      <idea ac="AC5">Test finding filter returns only records for specified finding</idea>
+      <idea ac="AC5">Test pagination with limit/offset returns correct subset</idea>
+      <idea ac="AC6">Test CSV export includes UTF-8 BOM and all fields</idea>
+      <idea ac="AC6">Test JSON export includes metadata (exportedAt, exportedBy, dateRange, totalRecords)</idea>
+      <idea ac="AC6">Test export respects filter criteria</idea>
+      <idea ac="AC7">Test getFindingHistory returns corrections ordered by timestamp</idea>
+      <idea ac="AC7">Test history includes validation impact on confidence</idea>
+      <idea ac="AC7">Component test: FindingHistoryPanel displays timeline correctly</idea>
+      <idea ac="AC7">Component test: diff highlighting shows original vs corrected values</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context: E7.6 - Propagate Corrections to Related Insights
+  Generated: 2025-12-08
+  Epic: E7 - Learning Loop & Feedback
+-->
+<story-context>
+  <metadata>
+    <story-id>E7.6</story-id>
+    <story-title>Propagate Corrections to Related Insights</story-title>
+    <epic-id>E7</epic-id>
+    <epic-title>Learning Loop &amp; Feedback</epic-title>
+    <generated-date>2025-12-08</generated-date>
+    <status>drafted</status>
+  </metadata>
+
+  <user-story>
+    <as-a>M&amp;A analyst</as-a>
+    <i-want>corrected findings to update related insights automatically</i-want>
+    <so-that>downstream work reflects accurate information</so-that>
+  </user-story>
+
+  <acceptance-criteria>
+    <criterion id="1">
+      <title>Automatic Q&amp;A Answer Flagging</title>
+      <description>When a finding is corrected, Q&amp;A answers citing that finding are flagged for review</description>
+      <implementation-notes>
+        - Extend correction-propagation.ts to handle Q&amp;A answers
+        - Query qa_lists table for entries with sources JSON containing the finding_id
+        - Add "flagged_for_review" column or use existing status field
+        - Use JSONB containment query: sources @> '[{"findingId": "uuid"}]'
+      </implementation-notes>
+    </criterion>
+    <criterion id="2">
+      <title>CIM Section Flagging</title>
+      <description>CIM sections using corrected findings are flagged with the old vs. new value shown</description>
+      <implementation-notes>
+        - Query cims table for entries with content JSON referencing the finding
+        - Store flagged state in a new field or separate tracking table
+        - Return old_value and new_value in the flag record for display
+      </implementation-notes>
+    </criterion>
+    <criterion id="3">
+      <title>Notification Banner</title>
+      <description>User sees notification banner: "3 items updated based on correction to [finding]"</description>
+      <implementation-notes>
+        - Return PropagationResult from correction API with affected counts
+        - Frontend displays toast/banner using sonner library
+        - Include counts by type: Q&amp;A answers, CIM sections, insights
+      </implementation-notes>
+    </criterion>
+    <criterion id="4">
+      <title>Review Queue for Flagged Items</title>
+      <description>Review queue shows all flagged items with one-click accept/reject</description>
+      <implementation-notes>
+        - Create new API endpoint: GET /api/projects/[id]/review-queue
+        - Aggregate flagged items from qa_lists, cims, findings (needs_review=true)
+        - Return unified list with type, title, old_value, new_value, finding_id
+        - Add accept/reject endpoints that update the item with new value or dismiss
+      </implementation-notes>
+    </criterion>
+    <criterion id="5">
+      <title>Auto-Update Option for Low-Impact Changes</title>
+      <description>Option to auto-update for low-impact corrections (e.g., typos)</description>
+      <implementation-notes>
+        - Add correction_impact field to finding_corrections: 'low', 'medium', 'high'
+        - Low impact: spelling corrections, minor formatting
+        - Auto-update logic: if impact='low' and user preference allows, update directly
+        - Store preference in user settings or deal metadata
+      </implementation-notes>
+    </criterion>
+    <criterion id="6">
+      <title>Cascade Disabled When Not Confident</title>
+      <description>Cascade disabled when correction confidence is low (user warned)</description>
+      <implementation-notes>
+        - Check validation_status on correction: 'override_without_source' = low confidence
+        - If low confidence, do not auto-cascade to Q&amp;A/CIM
+        - Display warning: "This correction bypassed source validation. Cascade disabled."
+        - Still flag items for manual review
+      </implementation-notes>
+    </criterion>
+  </acceptance-criteria>
+
+  <technical-context>
+    <architecture>
+      <component name="Frontend">
+        <framework>Next.js 16 (App Router)</framework>
+        <ui-library>React 19.2</ui-library>
+        <styling>Tailwind CSS 4 + shadcn/ui</styling>
+        <state-management>Zustand</state-management>
+        <notifications>Sonner toast library</notifications>
+      </component>
+      <component name="Backend">
+        <framework>Next.js API Routes (TypeScript)</framework>
+        <database>PostgreSQL 18 (Supabase)</database>
+        <graph-database>Neo4j 2025.01 (BASED_ON relationships)</graph-database>
+        <auth>Supabase Auth with RLS</auth>
+      </component>
+    </architecture>
+
+    <existing-code>
+      <file path="lib/services/correction-propagation.ts">
+        <description>Core propagation service - already handles findings and insights via Neo4j BASED_ON relationships</description>
+        <key-functions>
+          <function name="findDependentInsights">Queries Neo4j for insights BASED_ON the finding</function>
+          <function name="findDependentFindings">Finds findings with BASED_ON or SUPPORTS relationships</function>
+          <function name="flagDependentFindingsInDb">Sets needs_review=true on dependent findings</function>
+          <function name="propagateCorrection">Main entry point - orchestrates finding dependencies</function>
+          <function name="generateImpactSummary">Creates human-readable summary for UI</function>
+        </key-functions>
+        <extension-points>
+          <point>Add findDependentQAAnswers() - query qa_lists.sources JSONB</point>
+          <point>Add findDependentCIMSections() - query cims.content JSONB</point>
+          <point>Extend propagateCorrection() to include Q&amp;A and CIM propagation</point>
+          <point>Extend PropagationResult type with qa_count and cim_count</point>
+        </extension-points>
+      </file>
+
+      <file path="lib/types/feedback.ts">
+        <description>TypeScript types for feedback system</description>
+        <relevant-types>
+          <type name="DependentInsight">Already supports qa_answer and cim_section types</type>
+          <type name="PropagationResult">Result structure for propagation - extend for Q&amp;A/CIM</type>
+          <type name="CorrectionType">value | source | confidence | text</type>
+          <type name="ValidationStatus">pending | confirmed_with_source | override_without_source | source_error</type>
+        </relevant-types>
+      </file>
+
+      <file path="lib/services/audit-trail.ts">
+        <description>Comprehensive audit trail querying</description>
+        <notes>Use for tracking cascade operations in audit log</notes>
+      </file>
+
+      <file path="lib/neo4j/types.ts">
+        <description>Neo4j node and relationship types</description>
+        <relevant-types>
+          <type name="InsightNode">insight_type: pattern | contradiction | gap | trend</type>
+          <type name="BASED_ON">Relationship linking insights to findings</type>
+        </relevant-types>
+      </file>
+
+      <file path="app/api/projects/[id]/findings/[findingId]/correct/route.ts">
+        <description>Correction API endpoint - calls propagateCorrection()</description>
+        <notes>Entry point for triggering cascades</notes>
+      </file>
+
+      <file path="components/feedback/AuditTrailExport.tsx">
+        <description>Existing feedback UI component</description>
+      </file>
+
+      <file path="components/knowledge-explorer/findings/FindingHistoryPanel.tsx">
+        <description>Shows correction history for a finding</description>
+      </file>
+    </existing-code>
+
+    <database-schema>
+      <table name="qa_lists">
+        <columns>
+          <column name="id" type="uuid" primary-key="true"/>
+          <column name="deal_id" type="uuid" foreign-key="deals"/>
+          <column name="user_id" type="uuid" foreign-key="auth.users"/>
+          <column name="question" type="text"/>
+          <column name="answer" type="text"/>
+          <column name="sources" type="jsonb" description="JSON array of source citations - search for finding references here"/>
+          <column name="category" type="text"/>
+          <column name="priority" type="text" check="low|medium|high"/>
+          <column name="status" type="text" check="pending|draft|answered|verified"/>
+          <column name="created_at" type="timestamptz"/>
+          <column name="updated_at" type="timestamptz"/>
+        </columns>
+        <extension-needed>
+          <column name="needs_review" type="boolean" default="false" description="Flag for Q&amp;A affected by corrections"/>
+          <column name="review_reason" type="text" description="Reason for flagging"/>
+          <column name="flagged_finding_id" type="uuid" description="The finding that triggered the flag"/>
+        </extension-needed>
+      </table>
+
+      <table name="cims">
+        <columns>
+          <column name="id" type="uuid" primary-key="true"/>
+          <column name="deal_id" type="uuid" foreign-key="deals"/>
+          <column name="user_id" type="uuid" foreign-key="auth.users"/>
+          <column name="version" type="int"/>
+          <column name="title" type="text"/>
+          <column name="content" type="jsonb" description="JSON content structure - search for finding references"/>
+          <column name="workflow_state" type="text" check="draft|in_progress|review|completed"/>
+          <column name="export_formats" type="text[]"/>
+          <column name="created_at" type="timestamptz"/>
+          <column name="updated_at" type="timestamptz"/>
+        </columns>
+        <extension-needed>
+          <column name="flagged_sections" type="jsonb" description="Array of {section_id, finding_id, old_value, new_value}"/>
+        </extension-needed>
+      </table>
+
+      <table name="findings">
+        <relevant-columns>
+          <column name="needs_review" type="boolean" description="Already exists from E7.1"/>
+          <column name="review_reason" type="text" description="Already exists from E7.1"/>
+        </relevant-columns>
+      </table>
+
+      <table name="finding_corrections">
+        <relevant-columns>
+          <column name="validation_status" type="text" description="Use for cascade confidence check"/>
+          <column name="original_value" type="text"/>
+          <column name="corrected_value" type="text"/>
+        </relevant-columns>
+        <extension-needed>
+          <column name="correction_impact" type="text" check="low|medium|high" description="For auto-update decision"/>
+        </extension-needed>
+      </table>
+
+      <proposed-new-table name="review_queue_items">
+        <description>Unified review queue for all flagged items (optional - could use views instead)</description>
+        <columns>
+          <column name="id" type="uuid" primary-key="true"/>
+          <column name="deal_id" type="uuid"/>
+          <column name="item_type" type="text" check="qa_answer|cim_section|finding|insight"/>
+          <column name="item_id" type="uuid"/>
+          <column name="finding_id" type="uuid" description="The corrected finding"/>
+          <column name="old_value" type="text"/>
+          <column name="new_value" type="text"/>
+          <column name="status" type="text" check="pending|accepted|rejected"/>
+          <column name="created_at" type="timestamptz"/>
+          <column name="resolved_at" type="timestamptz"/>
+          <column name="resolved_by" type="uuid"/>
+        </columns>
+      </proposed-new-table>
+    </database-schema>
+
+    <api-endpoints>
+      <existing>
+        <endpoint method="POST" path="/api/projects/[id]/findings/[findingId]/correct">
+          <description>Create finding correction - already calls propagateCorrection()</description>
+          <extension>Return extended PropagationResult with Q&amp;A and CIM counts</extension>
+        </endpoint>
+        <endpoint method="GET" path="/api/projects/[id]/audit">
+          <description>Get audit trail for a project</description>
+        </endpoint>
+      </existing>
+      <new>
+        <endpoint method="GET" path="/api/projects/[id]/review-queue">
+          <description>Get all items flagged for review</description>
+          <query-params>type (qa|cim|finding|all), limit, offset</query-params>
+          <response>Array of ReviewQueueItem with type, title, old_value, new_value</response>
+        </endpoint>
+        <endpoint method="POST" path="/api/projects/[id]/review-queue/[itemId]/accept">
+          <description>Accept a flagged item (apply the correction)</description>
+          <body>Optional: custom_value if user wants to modify</body>
+        </endpoint>
+        <endpoint method="POST" path="/api/projects/[id]/review-queue/[itemId]/reject">
+          <description>Reject a flagged item (dismiss without updating)</description>
+          <body>reason: string</body>
+        </endpoint>
+        <endpoint method="GET" path="/api/projects/[id]/review-queue/count">
+          <description>Get count of pending review items (for badge/notification)</description>
+        </endpoint>
+      </new>
+    </api-endpoints>
+  </technical-context>
+
+  <implementation-guidance>
+    <phase number="1" title="Database Schema Extensions">
+      <tasks>
+        <task>Create migration 00038_add_qa_lists_review_columns.sql</task>
+        <task>Create migration 00039_add_cims_flagged_sections.sql</task>
+        <task>Create migration 00040_add_correction_impact.sql</task>
+        <task>Optionally create review_queue_items table or use views</task>
+        <task>Run db:types to regenerate TypeScript types</task>
+      </tasks>
+    </phase>
+
+    <phase number="2" title="Service Layer Extensions">
+      <tasks>
+        <task>Add findDependentQAAnswers() to correction-propagation.ts</task>
+        <task>Add findDependentCIMSections() to correction-propagation.ts</task>
+        <task>Extend PropagationResult type with qaCount, cimCount</task>
+        <task>Update propagateCorrection() to include Q&amp;A and CIM propagation</task>
+        <task>Add flagQAAnswersInDb() and flagCIMSectionsInDb() functions</task>
+        <task>Implement cascade confidence check (skip if override_without_source)</task>
+        <task>Extend generateImpactSummary() for Q&amp;A and CIM counts</task>
+      </tasks>
+    </phase>
+
+    <phase number="3" title="Review Queue API">
+      <tasks>
+        <task>Create /api/projects/[id]/review-queue/route.ts (GET)</task>
+        <task>Create /api/projects/[id]/review-queue/[itemId]/accept/route.ts (POST)</task>
+        <task>Create /api/projects/[id]/review-queue/[itemId]/reject/route.ts (POST)</task>
+        <task>Create /api/projects/[id]/review-queue/count/route.ts (GET)</task>
+        <task>Add lib/services/review-queue.ts for business logic</task>
+      </tasks>
+    </phase>
+
+    <phase number="4" title="Frontend Components">
+      <tasks>
+        <task>Create components/review-queue/ReviewQueuePanel.tsx</task>
+        <task>Create components/review-queue/ReviewQueueItem.tsx</task>
+        <task>Create components/review-queue/ReviewQueueBadge.tsx (for nav count)</task>
+        <task>Add notification banner component using sonner toast</task>
+        <task>Integrate banner display after correction API response</task>
+        <task>Add review queue link/page to project navigation</task>
+      </tasks>
+    </phase>
+
+    <phase number="5" title="Auto-Update Logic">
+      <tasks>
+        <task>Add correction_impact assessment logic</task>
+        <task>Implement auto-update for low-impact corrections</task>
+        <task>Add user preference for auto-update (deal metadata or user settings)</task>
+        <task>Add low-confidence cascade warning UI</task>
+      </tasks>
+    </phase>
+  </implementation-guidance>
+
+  <testing-requirements>
+    <unit-tests>
+      <test file="__tests__/lib/services/correction-propagation-extended.test.ts">
+        <case>findDependentQAAnswers returns Q&amp;A items with matching finding in sources</case>
+        <case>findDependentCIMSections returns CIM sections referencing the finding</case>
+        <case>propagateCorrection flags all dependent items correctly</case>
+        <case>cascade skipped when validation_status is override_without_source</case>
+        <case>impact summary includes Q&amp;A and CIM counts</case>
+      </test>
+      <test file="__tests__/lib/services/review-queue.test.ts">
+        <case>getReviewQueueItems returns all flagged items</case>
+        <case>acceptReviewItem updates the item with new value</case>
+        <case>rejectReviewItem clears the flag without updating</case>
+        <case>getReviewQueueCount returns correct counts by type</case>
+      </test>
+    </unit-tests>
+    <api-tests>
+      <test file="__tests__/api/review-queue/route.test.ts">
+        <case>GET returns paginated review queue items</case>
+        <case>POST accept updates the item</case>
+        <case>POST reject dismisses the item</case>
+        <case>Unauthorized users cannot access review queue</case>
+      </test>
+    </api-tests>
+    <integration-tests>
+      <test file="__tests__/integration/correction-cascade.test.ts">
+        <case>End-to-end: correction triggers Q&amp;A flag</case>
+        <case>End-to-end: correction triggers CIM section flag</case>
+        <case>End-to-end: accepting review item updates Q&amp;A answer</case>
+      </test>
+    </integration-tests>
+  </testing-requirements>
+
+  <dependencies>
+    <npm-packages>
+      <package name="sonner" version="^2.0.7" purpose="Toast notifications for cascade banner"/>
+      <package name="@supabase/supabase-js" version="^2.84.0" purpose="Database queries"/>
+      <package name="neo4j-driver" version="^6.0.1" purpose="Graph relationship queries"/>
+    </npm-packages>
+    <internal-services>
+      <service name="correction-propagation.ts">Extend with Q&amp;A and CIM logic</service>
+      <service name="audit-trail.ts">Log cascade operations</service>
+      <service name="neo4j/client.ts">Graph queries for BASED_ON relationships</service>
+    </internal-services>
+  </dependencies>
+
+  <ui-patterns>
+    <pattern name="NotificationBanner">
+      <description>Toast notification showing cascade impact</description>
+      <example>
+        toast.success("3 items updated based on correction to 'Q3 Revenue'", {
+          action: { label: "View Queue", onClick: () => router.push('/review-queue') }
+        })
+      </example>
+    </pattern>
+    <pattern name="ReviewQueueItem">
+      <description>Card showing flagged item with old/new values and accept/reject buttons</description>
+      <structure>
+        - Type badge (Q&amp;A, CIM, Finding)
+        - Title/question text
+        - Old value (struck through)
+        - New value (highlighted)
+        - Source finding reference
+        - Accept/Reject button group
+      </structure>
+    </pattern>
+    <pattern name="ReviewQueueBadge">
+      <description>Badge in navigation showing pending review count</description>
+      <behavior>Real-time updates via Supabase subscription</behavior>
+    </pattern>
+  </ui-patterns>
+
+  <related-stories>
+    <story id="E7.1" title="Finding Correction via Chat">
+      <relationship>Provides the correction mechanism this story extends</relationship>
+      <shared-code>correction-propagation.ts, PropagationResult type</shared-code>
+    </story>
+    <story id="E7.5" title="Maintain Comprehensive Audit Trail">
+      <relationship>Cascade operations should be logged in audit trail</relationship>
+      <shared-code>audit-trail.ts</shared-code>
+    </story>
+    <story id="E7.2" title="Finding Validation/Rejection">
+      <relationship>ValidationStatus used for cascade confidence check</relationship>
+    </story>
+  </related-stories>
+
+  <constraints>
+    <constraint type="performance">
+      JSONB queries on qa_lists.sources and cims.content should use GIN indexes for efficiency
+    </constraint>
+    <constraint type="data-integrity">
+      Cascade operations must be transactional - either all flags succeed or none
+    </constraint>
+    <constraint type="user-experience">
+      Notification banner should not block user workflow - use non-modal toast
+    </constraint>
+    <constraint type="security">
+      Review queue API must enforce RLS - users can only see their own deal's items
+    </constraint>
+  </constraints>
+
+  <out-of-scope>
+    <item>Automatic text replacement in Q&amp;A answers (only flagging)</item>
+    <item>CIM content regeneration (only section flagging)</item>
+    <item>Real-time collaborative editing of review items</item>
+    <item>Email/push notifications for flagged items</item>
+  </out-of-scope>
+</story-context>

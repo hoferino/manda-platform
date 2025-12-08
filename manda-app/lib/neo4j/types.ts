@@ -63,6 +63,42 @@ export interface InsightNode {
   confidence: number // 0.0 to 1.0
   deal_id: string
   created_at: string // ISO date
+  needs_review?: boolean // Flagged for review due to correction propagation
+  review_reason?: string // Why the insight needs review
+  [key: string]: unknown // Index signature for Neo4j compatibility
+}
+
+/**
+ * Q&A Answer node - represents an answer in the Q&A workflow
+ * Story: E7.6 - Propagate Corrections to Related Insights
+ */
+export interface QAAnswerNode {
+  id: string // UUID
+  question: string
+  answer: string
+  qa_list_id: string
+  deal_id: string
+  created_at: string // ISO date
+  updated_at?: string
+  needs_review?: boolean // Flagged for review due to correction propagation
+  review_reason?: string
+  [key: string]: unknown // Index signature for Neo4j compatibility
+}
+
+/**
+ * CIM Section node - represents a section in a CIM document
+ * Story: E7.6 - Propagate Corrections to Related Insights
+ */
+export interface CIMSectionNode {
+  id: string // UUID (from content JSONB key or generated)
+  cim_id: string
+  section_title: string
+  section_content: string
+  deal_id: string
+  created_at: string // ISO date
+  updated_at?: string
+  needs_review?: boolean // Flagged for review due to correction propagation
+  review_reason?: string
   [key: string]: unknown // Index signature for Neo4j compatibility
 }
 
@@ -145,6 +181,8 @@ export const NODE_LABELS = {
   DOCUMENT: 'Document',
   FINDING: 'Finding',
   INSIGHT: 'Insight',
+  QA_ANSWER: 'QAAnswer',      // E7.6: Q&A workflow answers
+  CIM_SECTION: 'CIMSection',  // E7.6: CIM document sections
 } as const
 
 export type NodeLabel = (typeof NODE_LABELS)[keyof typeof NODE_LABELS]
@@ -161,6 +199,8 @@ export const RELATIONSHIP_TYPES = {
   PATTERN_DETECTED: 'PATTERN_DETECTED',
   BASED_ON: 'BASED_ON',
   BELONGS_TO: 'BELONGS_TO',
+  DERIVED_FROM: 'DERIVED_FROM',   // E7.6: Q&A/CIM derived from Finding
+  REFERENCES: 'REFERENCES',       // E7.6: Q&A/CIM references Finding
 } as const
 
 export type RelationshipType =
