@@ -1230,10 +1230,11 @@ development_status:
   epic-7: contexted
   epic-7-contexted: 2025-12-07
   epic-7-tech-spec: docs/sprint-artifacts/tech-spec-epic-E7.md
-  e7-1-implement-finding-correction-via-chat: review
+  e7-1-implement-finding-correction-via-chat: done
   e7-1-drafted: 2025-12-07
   e7-1-context-ready: 2025-12-07
   e7-1-completed: 2025-12-08
+  e7-1-reviewed: 2025-12-08
   e7-1-notes: |
     Finding correction via chat completed. Key deliverables:
     - 4 database migrations: finding_corrections table (append-only),
@@ -1248,8 +1249,40 @@ development_status:
     - 3 API endpoints: /correct, /source, /history
     - All 16 acceptance criteria addressed
     - Build passing, types verified
-  e7-2-track-validation-rejection-feedback: backlog
-  e7-3-enable-response-editing-and-learning: backlog
+    - CODE REVIEW: APPROVED (2025-12-08)
+  e7-2-track-validation-rejection-feedback: done
+  e7-2-context-ready: 2025-12-08
+  e7-2-completed: 2025-12-08
+  e7-2-notes: |
+    Validation feedback tracking completed. Key deliverables:
+    - Database migration 00029: validation_feedback table (append-only),
+      finding_validation_stats view, RLS policies
+    - lib/services/validation-feedback.ts with recordValidation/recordRejection,
+      calculateAdjustedConfidence (capped [0.1, 0.95]), checkSourceRejectionRate (>50% threshold),
+      flagSourceForReview
+    - Updated validate route and new reject/stats endpoints
+    - FindingValidationButtons component with optimistic UI
+    - RejectionReasonDialog for optional reason input
+    - 17 unit tests for confidence calculation
+    - All 7 acceptance criteria addressed
+  e7-3-enable-response-editing-and-learning: done
+  e7-3-context-ready: 2025-12-08
+  e7-3-drafted: 2025-12-08
+  e7-3-completed: 2025-12-08
+  e7-3-reviewed: 2025-12-08
+  e7-3-notes: |
+    Response editing and learning completed. Key deliverables:
+    - 2 database migrations: response_edits (append-only), edit_patterns (per-analyst)
+    - lib/services/response-edits.ts with text diff (diff package), pattern detection,
+      pattern CRUD, pattern classification (word_replacement, phrase_removal, tone_adjustment, structure_change)
+    - lib/services/prompt-enhancement.ts for few-shot prompt injection
+    - API endpoints for edits (/messages/[messageId]/edits) and patterns (/user/patterns)
+    - ResponseEditMode component with inline editing and real-time diff preview
+    - PatternManagement component for viewing/toggling/deleting patterns
+    - MessageItem integration with edit button for assistant messages
+    - 15 unit tests for pattern detection and prompt formatting
+    - All 7 acceptance criteria addressed
+    - CODE REVIEW: APPROVED (2025-12-08) - All ACs verified, no blocking issues
   e7-4-build-feedback-incorporation-system: backlog
   e7-5-maintain-comprehensive-audit-trail: backlog
   e7-6-propagate-corrections-to-related-insights: backlog

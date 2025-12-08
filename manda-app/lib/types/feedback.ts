@@ -234,3 +234,229 @@ export interface ParsedCorrectionIntent {
     confidence: number
   }[]
 }
+
+// ============================================================================
+// Validation Feedback Types (E7.2)
+// ============================================================================
+
+/**
+ * Validation feedback action type
+ */
+export type ValidationAction = 'validate' | 'reject'
+
+/**
+ * Validation feedback record from database
+ */
+export interface ValidationFeedback {
+  id: string
+  findingId: string
+  action: ValidationAction
+  reason?: string
+  analystId: string
+  createdAt: string
+}
+
+/**
+ * Request to record validation feedback
+ */
+export interface RecordValidationRequest {
+  findingId: string
+  action: ValidationAction
+  reason?: string
+}
+
+/**
+ * Aggregated validation statistics for a finding
+ * From the finding_validation_stats view
+ */
+export interface FindingValidationStats {
+  findingId: string
+  validationCount: number
+  rejectionCount: number
+  totalFeedback: number
+}
+
+/**
+ * Result of recording validation/rejection with updated confidence
+ */
+export interface ValidationFeedbackResult {
+  success: boolean
+  feedbackId: string
+  newConfidence: number
+  previousConfidence: number
+  sourceFlagged?: boolean
+  sourceFlaggedReason?: string
+}
+
+/**
+ * Source rejection rate info for flagging decisions
+ */
+export interface SourceRejectionInfo {
+  documentId: string
+  documentName: string
+  totalFindings: number
+  rejectedFindings: number
+  rejectionRate: number
+  exceedsThreshold: boolean
+}
+
+/**
+ * Validation API response type
+ */
+export interface ValidationApiResponse {
+  success: boolean
+  newConfidence: number
+  previousConfidence?: number
+  feedbackId?: string
+  error?: string
+}
+
+/**
+ * Stats API response type
+ */
+export interface ValidationStatsApiResponse {
+  findingId: string
+  validationCount: number
+  rejectionCount: number
+  totalFeedback: number
+  adjustedConfidence: number
+  baseConfidence: number
+}
+
+// ============================================================================
+// Response Edit Types (E7.3)
+// ============================================================================
+
+/**
+ * Type of edit being made to a response
+ */
+export type EditType = 'style' | 'content' | 'factual' | 'formatting'
+
+/**
+ * Type of pattern detected from edits
+ */
+export type PatternType = 'word_replacement' | 'phrase_removal' | 'tone_adjustment' | 'structure_change'
+
+/**
+ * Response edit record from database
+ */
+export interface ResponseEdit {
+  id: string
+  messageId: string
+  originalText: string
+  editedText: string
+  editType: EditType
+  analystId: string
+  createdAt: string
+}
+
+/**
+ * Request to save a response edit
+ */
+export interface SaveResponseEditRequest {
+  messageId: string
+  originalText: string
+  editedText: string
+  editType: EditType
+}
+
+/**
+ * Edit pattern record from database
+ */
+export interface EditPattern {
+  id: string
+  analystId: string
+  patternType: PatternType
+  originalPattern: string
+  replacementPattern: string
+  occurrenceCount: number
+  firstSeen: string
+  lastSeen: string
+  isActive: boolean
+}
+
+/**
+ * Detected pattern from text diff analysis
+ */
+export interface DetectedPattern {
+  patternType: PatternType
+  originalPattern: string
+  replacementPattern: string
+}
+
+/**
+ * Result of saving a response edit
+ */
+export interface ResponseEditResult {
+  success: boolean
+  edit: ResponseEdit
+  detectedPatterns: DetectedPattern[]
+  patternsUpdated: number
+}
+
+/**
+ * Request to toggle pattern active state
+ */
+export interface TogglePatternRequest {
+  patternId: string
+  isActive: boolean
+}
+
+/**
+ * Few-shot example for prompt enhancement
+ */
+export interface FewShotExample {
+  original: string
+  preferred: string
+  patternType: PatternType
+}
+
+/**
+ * Map database row to ResponseEdit interface
+ */
+export function mapDbToResponseEdit(row: {
+  id: string
+  message_id: string
+  original_text: string
+  edited_text: string
+  edit_type: string
+  analyst_id: string
+  created_at: string | null
+}): ResponseEdit {
+  return {
+    id: row.id,
+    messageId: row.message_id,
+    originalText: row.original_text,
+    editedText: row.edited_text,
+    editType: row.edit_type as EditType,
+    analystId: row.analyst_id,
+    createdAt: row.created_at ?? new Date().toISOString(),
+  }
+}
+
+/**
+ * Map database row to EditPattern interface
+ */
+export function mapDbToEditPattern(row: {
+  id: string
+  analyst_id: string
+  pattern_type: string
+  original_pattern: string
+  replacement_pattern: string
+  occurrence_count: number | null
+  first_seen: string | null
+  last_seen: string | null
+  is_active: boolean | null
+}): EditPattern {
+  return {
+    id: row.id,
+    analystId: row.analyst_id,
+    patternType: row.pattern_type as PatternType,
+    originalPattern: row.original_pattern,
+    replacementPattern: row.replacement_pattern,
+    occurrenceCount: row.occurrence_count ?? 1,
+    firstSeen: row.first_seen ?? new Date().toISOString(),
+    lastSeen: row.last_seen ?? new Date().toISOString(),
+    isActive: row.is_active ?? true,
+  }
+}

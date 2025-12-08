@@ -388,6 +388,42 @@ export type Database = {
           },
         ]
       }
+      edit_patterns: {
+        Row: {
+          analyst_id: string
+          first_seen: string | null
+          id: string
+          is_active: boolean | null
+          last_seen: string | null
+          occurrence_count: number | null
+          original_pattern: string
+          pattern_type: string
+          replacement_pattern: string
+        }
+        Insert: {
+          analyst_id: string
+          first_seen?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_seen?: string | null
+          occurrence_count?: number | null
+          original_pattern: string
+          pattern_type: string
+          replacement_pattern: string
+        }
+        Update: {
+          analyst_id?: string
+          first_seen?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_seen?: string | null
+          occurrence_count?: number | null
+          original_pattern?: string
+          pattern_type?: string
+          replacement_pattern?: string
+        }
+        Relationships: []
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -954,6 +990,79 @@ export type Database = {
           },
         ]
       }
+      response_edits: {
+        Row: {
+          analyst_id: string
+          created_at: string | null
+          edit_type: string
+          edited_text: string
+          id: string
+          message_id: string
+          original_text: string
+        }
+        Insert: {
+          analyst_id: string
+          created_at?: string | null
+          edit_type: string
+          edited_text: string
+          id?: string
+          message_id: string
+          original_text: string
+        }
+        Update: {
+          analyst_id?: string
+          created_at?: string | null
+          edit_type?: string
+          edited_text?: string
+          id?: string
+          message_id?: string
+          original_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "response_edits_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      validation_feedback: {
+        Row: {
+          action: string
+          analyst_id: string
+          created_at: string | null
+          finding_id: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          analyst_id: string
+          created_at?: string | null
+          finding_id: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          analyst_id?: string
+          created_at?: string | null
+          finding_id?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_feedback_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       documents_with_errors: {
@@ -975,6 +1084,23 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finding_validation_stats: {
+        Row: {
+          finding_id: string | null
+          rejection_count: number | null
+          total_feedback: number | null
+          validation_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_feedback_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
             referencedColumns: ["id"]
           },
         ]

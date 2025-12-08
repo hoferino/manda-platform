@@ -14,10 +14,14 @@
  * Enhanced in E5.7 with confidence badges.
  * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
  * AC: #8 (Badge Display in Message Items)
+ *
+ * Enhanced in E7.3 with response editing.
+ * Story: E7.3 - Enable Response Editing and Learning
+ * AC: #1 (Edit button for assistant messages)
  */
 
 import { memo, useState, useMemo, useEffect, useCallback } from 'react'
-import { User, Bot, Copy, Check } from 'lucide-react'
+import { User, Bot, Copy, Check, Edit2 } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -28,8 +32,10 @@ import { ToolIndicator, TypingIndicator } from './ToolIndicator'
 import { CitationRenderer, type DocumentLookup } from './CitationRenderer'
 import { SourceCitationLink } from './SourceCitationLink'
 import { ConfidenceBadge } from './ConfidenceBadge'
+import { ResponseEditMode } from './ResponseEditMode'
 import { hasCitations, parseCitations, getUniqueDocumentNames } from '@/lib/utils/citation-parser'
 import { findDocumentsByNames } from '@/lib/api/documents'
+import type { EditType } from '@/lib/types/feedback'
 
 interface MessageItemProps {
   message: Message
@@ -201,6 +207,8 @@ export const MessageItem = memo(function MessageItem({
 }: MessageItemProps) {
   const [copied, setCopied] = useState(false)
   const [documentLookup, setDocumentLookup] = useState<DocumentLookup>({})
+  const [isEditing, setIsEditing] = useState(false)
+  const [displayContent, setDisplayContent] = useState(message.content)
 
   const role = normalizeMessageRole(message.role)
   const isUser = role === 'user'
@@ -260,12 +268,48 @@ export const MessageItem = memo(function MessageItem({
     }
   }, [isStreaming, documentNamesToLookup.length, resolveDocuments])
 
+  // Sync display content when message changes
+  useEffect(() => {
+    setDisplayContent(message.content)
+  }, [message.content])
+
   // Copy message content
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(message.content)
+    await navigator.clipboard.writeText(displayContent)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  // Handle save from edit mode (E7.3)
+  const handleSaveEdit = useCallback(async (editedText: string, editType: EditType) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/messages/${message.id}/edits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          originalText: message.content,
+          editedText,
+          editType,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save edit')
+      }
+
+      // Update display content with edited text
+      setDisplayContent(editedText)
+      setIsEditing(false)
+    } catch (err) {
+      // Re-throw to let ResponseEditMode handle the error display
+      throw err
+    }
+  }, [projectId, message.id, message.content])
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false)
+  }, [])
 
   return (
     <div
@@ -299,14 +343,24 @@ export const MessageItem = memo(function MessageItem({
             isStreaming && isAssistant && 'animate-pulse'
           )}
         >
-          {/* Message text */}
-          <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-            {message.content ? (
-              renderContent(message.content, projectId, documentLookup)
-            ) : isStreaming ? (
-              <TypingIndicator />
-            ) : null}
-          </div>
+          {/* Message text or edit mode (E7.3) */}
+          {isEditing && isAssistant ? (
+            <ResponseEditMode
+              originalText={message.content}
+              messageId={message.id}
+              projectId={projectId}
+              onSave={handleSaveEdit}
+              onCancel={handleCancelEdit}
+            />
+          ) : (
+            <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+              {displayContent ? (
+                renderContent(displayContent, projectId, documentLookup)
+              ) : isStreaming ? (
+                <TypingIndicator />
+              ) : null}
+            </div>
+          )}
 
           {/* Tool indicator (while streaming) */}
           {isStreaming && currentTool && (
@@ -345,6 +399,7 @@ export const MessageItem = memo(function MessageItem({
           )}
         >
           <TooltipProvider>
+            {/* Copy button */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -364,6 +419,26 @@ export const MessageItem = memo(function MessageItem({
                 <p>{copied ? 'Copied!' : 'Copy message'}</p>
               </TooltipContent>
             </Tooltip>
+
+            {/* Edit button - only for assistant messages, not during streaming (E7.3) */}
+            {isAssistant && !isStreaming && !isEditing && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setIsEditing(true)}
+                    data-testid="edit-message-button"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Edit response</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </TooltipProvider>
 
           <span className="text-xs text-muted-foreground">

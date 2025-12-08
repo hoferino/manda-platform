@@ -34,3 +34,6 @@ export {
   type ExportHistoryItem,
   EXPORT_FIELDS,
 } from './ExportModal'
+// E7.2: Validation Feedback Components
+export { FindingValidationButtons, type FindingValidationButtonsProps } from './FindingValidationButtons'
+export { RejectionReasonDialog, type RejectionReasonDialogProps } from './RejectionReasonDialog'

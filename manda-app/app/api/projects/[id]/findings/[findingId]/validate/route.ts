@@ -1,11 +1,12 @@
 /**
  * Finding Validate API Route
- * Handles validation (confirm/reject) of individual findings
+ * Handles validation (confirm/reject) of individual findings with feedback tracking
  * Story: E4.3 - Implement Inline Finding Validation (AC: 5)
+ * Story: E7.2 - Track Validation/Rejection Feedback (AC: 2, 3, 4, 5, 7)
  *
  * POST /api/projects/[id]/findings/[findingId]/validate
- * Body: { action: 'confirm' | 'reject' }
- * Response: { finding: Finding }
+ * Body: { action: 'confirm' | 'reject', reason?: string }
+ * Response: { finding: Finding, newConfidence: number, feedbackId?: string }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -13,10 +14,15 @@ import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import type { Finding, FindingStatus, ValidationEvent } from '@/lib/types/findings'
 import type { Json } from '@/lib/supabase/database.types'
+import {
+  recordValidation,
+  recordRejection,
+} from '@/lib/services/validation-feedback'
 
-// Request body validation schema
+// Request body validation schema (E7.2: added reason support)
 const ValidateRequestSchema = z.object({
   action: z.enum(['confirm', 'reject']),
+  reason: z.string().optional(),
 })
 
 interface RouteContext {
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       )
     }
 
-    const { action } = parseResult.data
+    const { action, reason } = parseResult.data
 
     const supabase = await createClient()
 
@@ -83,16 +89,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Finding not found' }, { status: 404 })
     }
 
+    // E7.2: Record validation/rejection feedback and get adjusted confidence
+    const feedbackResult = action === 'confirm'
+      ? await recordValidation(supabase, findingId, user.id, reason)
+      : await recordRejection(supabase, findingId, user.id, reason)
+
+    if (!feedbackResult) {
+      console.error('[api/findings/validate] Failed to record feedback')
+      // Continue with legacy behavior if feedback fails
+    }
+
     // Calculate new values based on action
     const newStatus: FindingStatus = action === 'confirm' ? 'validated' : 'rejected'
 
-    // Confidence adjustment: +5% on confirm, unchanged on reject (capped at 1.0)
-    let newConfidence = existingFinding.confidence
-    if (action === 'confirm' && newConfidence !== null) {
-      newConfidence = Math.min(1, newConfidence + 0.05)
-    } else if (action === 'confirm' && newConfidence === null) {
-      // If no confidence, set to default + 5%
-      newConfidence = 0.55 // 0.5 default + 0.05
+    // E7.2: Use confidence from feedback service if available
+    let newConfidence = feedbackResult?.newConfidence ?? existingFinding.confidence
+    if (newConfidence === null) {
+      // If no confidence, set to default
+      newConfidence = 0.5
     }
 
     // Get current validation history
@@ -153,7 +167,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       updatedAt: updatedFinding.updated_at,
     }
 
-    return NextResponse.json({ finding })
+    // E7.2: Include feedback info in response
+    return NextResponse.json({
+      finding,
+      newConfidence: finding.confidence ?? 0.5,
+      previousConfidence: feedbackResult?.previousConfidence,
+      feedbackId: feedbackResult?.feedbackId,
+      sourceFlagged: feedbackResult?.sourceFlagged,
+    })
   } catch (err) {
     console.error('[api/findings/validate] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

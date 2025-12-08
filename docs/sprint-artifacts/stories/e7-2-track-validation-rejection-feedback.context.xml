@@ -1,0 +1,239 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>7</epicId>
+    <storyId>2</storyId>
+    <title>Track Validation/Rejection Feedback</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e7-2-track-validation-rejection-feedback.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to validate or reject AI-generated findings in the Knowledge Explorer</iWant>
+    <soThat>the system can adjust confidence scores and flag unreliable sources for review</soThat>
+    <tasks>
+      <task id="1" title="Create Database Migration">
+        <subtask id="1.1">Create migration 00029_create_validation_feedback_table.sql</subtask>
+        <subtask id="1.2">Create finding_validation_stats view for aggregating validations/rejections</subtask>
+        <subtask id="1.3">Apply RLS policies (append-only for users, read own deal's feedback)</subtask>
+        <subtask id="1.4">Apply migration and regenerate Supabase types</subtask>
+        <subtask id="1.5">Write migration verification tests</subtask>
+      </task>
+      <task id="2" title="Implement Validation Feedback Service">
+        <subtask id="2.1">Create lib/services/validation-feedback.ts</subtask>
+        <subtask id="2.2">Implement recordValidation() function</subtask>
+        <subtask id="2.3">Implement recordRejection() function with optional reason</subtask>
+        <subtask id="2.4">Implement getValidationStats() using finding_validation_stats view</subtask>
+        <subtask id="2.5">Implement calculateAdjustedConfidence() (+0.05 validate, -0.10 reject, capped [0.1, 0.95])</subtask>
+        <subtask id="2.6">Implement updateFindingConfidence() for atomic confidence update</subtask>
+        <subtask id="2.7">Implement checkSourceRejectionRate() for >50% threshold detection</subtask>
+        <subtask id="2.8">Implement flagSourceForReview() when rejection rate exceeded</subtask>
+        <subtask id="2.9">Gate confidence adjustment behind confidenceAdjustmentEnabled feature flag</subtask>
+        <subtask id="2.10">Write unit tests for validation service (target: 95% coverage)</subtask>
+      </task>
+      <task id="3" title="Create API Endpoints">
+        <subtask id="3.1">Create POST /api/projects/[id]/findings/[findingId]/validate endpoint</subtask>
+        <subtask id="3.2">Create POST /api/projects/[id]/findings/[findingId]/reject endpoint</subtask>
+        <subtask id="3.3">Create GET /api/projects/[id]/findings/[findingId]/stats endpoint</subtask>
+        <subtask id="3.4">Add Zod validation schemas for request/response</subtask>
+        <subtask id="3.5">Ensure authentication and project ownership checks</subtask>
+        <subtask id="3.6">Return newConfidence in response for UI update</subtask>
+        <subtask id="3.7">Write API integration tests</subtask>
+      </task>
+      <task id="4" title="Build FindingValidationButtons Component">
+        <subtask id="4.1">Create components/knowledge-explorer/FindingValidationButtons.tsx</subtask>
+        <subtask id="4.2">Implement Validate button with checkmark icon</subtask>
+        <subtask id="4.3">Implement Reject button with X icon and optional reason dialog</subtask>
+        <subtask id="4.4">Implement optimistic UI update on button click</subtask>
+        <subtask id="4.5">Update confidence badge immediately after response</subtask>
+        <subtask id="4.6">Show loading state during API call</subtask>
+        <subtask id="4.7">Handle error states with toast notification</subtask>
+        <subtask id="4.8">Write component tests for all button states</subtask>
+      </task>
+      <task id="5" title="Integrate with FindingsTable and FindingCard">
+        <subtask id="5.1">Add FindingValidationButtons to FindingsTable actions column</subtask>
+        <subtask id="5.2">Add FindingValidationButtons to FindingCard component</subtask>
+        <subtask id="5.3">Pass findingId and current confidence to buttons</subtask>
+        <subtask id="5.4">Handle confidence badge update via callback</subtask>
+        <subtask id="5.5">Write integration tests for table/card rendering</subtask>
+      </task>
+      <task id="6" title="Build Rejection Reason Dialog">
+        <subtask id="6.1">Create rejection reason dialog using shadcn/ui Dialog component</subtask>
+        <subtask id="6.2">Add optional textarea for rejection reason</subtask>
+        <subtask id="6.3">Submit with or without reason</subtask>
+        <subtask id="6.4">Write component tests</subtask>
+      </task>
+      <task id="7" title="Implement Source Review Flagging">
+        <subtask id="7.1">Create flagSourceForReview() function in validation-feedback service</subtask>
+        <subtask id="7.2">Add needs_review flag to documents or create review_flags table</subtask>
+        <subtask id="7.3">Trigger flag when source rejection rate >50%</subtask>
+        <subtask id="7.4">Display warning badge on findings from flagged sources</subtask>
+        <subtask id="7.5">Write tests for source flagging logic</subtask>
+      </task>
+      <task id="8" title="Add TypeScript Types">
+        <subtask id="8.1">Add ValidationFeedback type to lib/types/feedback.ts</subtask>
+        <subtask id="8.2">Add FindingValidationStats type</subtask>
+        <subtask id="8.3">Add API request/response types</subtask>
+        <subtask id="8.4">Ensure type consistency with database schema</subtask>
+      </task>
+      <task id="9" title="Testing">
+        <subtask id="9.1">Write unit tests for validation-feedback service</subtask>
+        <subtask id="9.2">Write component tests for FindingValidationButtons</subtask>
+        <subtask id="9.3">Write API integration tests for validate/reject endpoints</subtask>
+        <subtask id="9.4">Write integration tests for confidence adjustment</subtask>
+        <subtask id="9.5">Verify all tests pass with npm run test:run</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Validate and Reject buttons appear on findings in Knowledge Explorer</criterion>
+    <criterion id="AC2">Clicking Validate inserts record in validation_feedback with action='validate'</criterion>
+    <criterion id="AC3">Clicking Reject inserts record with action='reject' and optional reason</criterion>
+    <criterion id="AC4">Confidence score increases by 0.05 per validation (capped at 0.95)</criterion>
+    <criterion id="AC5">Confidence score decreases by 0.10 per rejection (floored at 0.1)</criterion>
+    <criterion id="AC6">Sources with >50% rejection rate are flagged for review</criterion>
+    <criterion id="AC7">UI shows updated confidence badge after validation/rejection</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Technical Specification" section="E7.2: Track Validation/Rejection Feedback">
+        Defines validation_feedback table schema, confidence adjustment algorithm (+0.05 validate, -0.10 reject, capped [0.1, 0.95]), API endpoints, and acceptance criteria. Source of truth for this story.
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E7.md" title="Epic 7: Learning Loop" section="Stories">
+        Epic overview with E7.2 story definition. Key decisions: confidence adjustment formula, feature flag gating, append-only audit design.
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e7-1-implement-finding-correction-via-chat.md" title="Story E7.1 (Previous)" section="Dev Agent Record">
+        Learnings from E7.1: Feature flags created at lib/config/feature-flags.ts, types defined at lib/types/feedback.ts, migration patterns established. Code review APPROVED.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="lib/config/feature-flags.ts" kind="config" symbol="LEARNING_FLAGS.confidenceAdjustmentEnabled" reason="Feature flag for confidence adjustment - gate adjustment logic behind this flag">
+        Exports LEARNING_FLAGS object and getFeatureFlag() async function. confidenceAdjustmentEnabled defaults true but can be disabled via env or database override.
+      </artifact>
+      <artifact path="lib/types/feedback.ts" kind="types" symbol="ValidationFeedback, FindingValidationStats" reason="Types may already be defined from E7.1 - reuse or add missing types">
+        Contains FindingCorrection, CorrectionWithImpact, and related types. May need ValidationFeedback and FindingValidationStats types added.
+      </artifact>
+      <artifact path="lib/types/findings.ts" kind="types" symbol="Finding, FindingStatus" reason="Core finding types used throughout Knowledge Explorer">
+        FindingStatus is 'pending' | 'validated' | 'rejected'. Finding interface includes confidence: number | null. Used by all Knowledge Explorer components.
+      </artifact>
+      <artifact path="components/knowledge-explorer/findings/FindingsTable.tsx" kind="component" symbol="FindingsTable" lines="182-632" reason="Table view with validation actions column - add FindingValidationButtons here">
+        Already has validate/reject buttons in actions column (lines 408-467). Uses onValidate callback. Needs integration with new validation API.
+      </artifact>
+      <artifact path="components/knowledge-explorer/findings/FindingCard.tsx" kind="component" symbol="FindingCard" lines="122-352" reason="Card view component - add FindingValidationButtons here">
+        Uses FindingActions component for validate/reject/edit. Needs same validation integration.
+      </artifact>
+      <artifact path="components/knowledge-explorer/findings/FindingActions.tsx" kind="component" symbol="FindingActions" lines="38-172" reason="Current validation buttons - enhance or replace with new validation feedback logic">
+        Current implementation uses local state for loading. onValidate returns Promise void. Needs to return newConfidence for badge update.
+      </artifact>
+      <artifact path="components/knowledge-explorer/shared/ConfidenceBadge.tsx" kind="component" symbol="ConfidenceBadge" reason="Badge component to update after validation/rejection">
+        Displays confidence level (high/medium/low) with color coding. Needs to update reactively when confidence changes.
+      </artifact>
+      <artifact path="lib/services/corrections.ts" kind="service" symbol="correctFinding" reason="E7.1 correction service - similar pattern for validation service">
+        Established pattern: Supabase client, transaction handling, error handling with try/catch.
+      </artifact>
+      <artifact path="supabase/migrations/00028_create_finding_corrections_table.sql" kind="migration" reason="E7.1 migration - follow same RLS pattern for validation_feedback table">
+        Append-only RLS policies: INSERT WITH CHECK for own deals, SELECT for own deals, no UPDATE/DELETE.
+      </artifact>
+      <artifact path="__tests__/utils/supabase-mock.ts" kind="test-util" symbol="createMockSupabaseClient, mockSupabaseModule" reason="Test utilities for mocking Supabase client">
+        Provides createMockSupabaseClient() for chainable query mocks, mockSupabaseModule() for vi.mock(), data factories for common types.
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@supabase/supabase-js" version="^2.84.0">Database operations, RLS</package>
+        <package name="zod" version="^4.1.13">Request/response validation</package>
+        <package name="sonner" version="^2.0.7">Toast notifications for validation feedback</package>
+        <package name="lucide-react" version="^0.554.0">Check, X icons for buttons</package>
+        <package name="@tanstack/react-table" version="^8.21.3">FindingsTable data table</package>
+      </node>
+      <testing>
+        <package name="vitest" version="^4.0.14">Unit and integration testing</package>
+        <package name="@testing-library/react" version="^16.3.0">Component testing</package>
+        <package name="@testing-library/user-event" version="^14.6.1">User interaction simulation</package>
+      </testing>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec" type="data-model">validation_feedback table is append-only - no UPDATE/DELETE RLS policies for compliance audit trail</constraint>
+    <constraint source="tech-spec" type="algorithm">Confidence adjustment: +0.05 per validation, -0.10 per rejection, capped at [0.1, 0.95]</constraint>
+    <constraint source="tech-spec" type="feature-flag">Confidence adjustment gated behind confidenceAdjustmentEnabled feature flag (default: true)</constraint>
+    <constraint source="tech-spec" type="performance">Validation button click must complete in less than 500ms - single row update should feel instant</constraint>
+    <constraint source="tech-spec" type="performance">Confidence recalculation must complete in less than 200ms - simple arithmetic, no external calls</constraint>
+    <constraint source="architecture" type="security">RLS policies must enforce deal ownership - users can only validate findings on their own deals</constraint>
+    <constraint source="architecture" type="pattern">Follow existing API route patterns from E7.1 - authentication, project ownership, Zod validation</constraint>
+    <constraint source="e7-1-learnings" type="pattern">Use existing feature-flags.ts getFeatureFlag() function for flag checks</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="POST /api/projects/[id]/findings/[findingId]/validate" kind="REST endpoint">
+      Request: { reason?: string }
+      Response: { success: boolean, newConfidence: number }
+      Auth: Required, project ownership check
+    </interface>
+    <interface name="POST /api/projects/[id]/findings/[findingId]/reject" kind="REST endpoint">
+      Request: { reason?: string }
+      Response: { success: boolean, newConfidence: number }
+      Auth: Required, project ownership check
+    </interface>
+    <interface name="GET /api/projects/[id]/findings/[findingId]/stats" kind="REST endpoint">
+      Response: FindingValidationStats { findingId, validationCount, rejectionCount, totalFeedback, adjustedConfidence }
+      Auth: Required, project ownership check
+    </interface>
+    <interface name="recordValidation(findingId, analystId, reason?)" kind="service function">
+      Inserts validation_feedback record with action='validate'
+      Calls calculateAdjustedConfidence() and updateFindingConfidence() if flag enabled
+      Returns { success: boolean, newConfidence: number }
+    </interface>
+    <interface name="recordRejection(findingId, analystId, reason?)" kind="service function">
+      Inserts validation_feedback record with action='reject'
+      Calls calculateAdjustedConfidence() and updateFindingConfidence() if flag enabled
+      Checks source rejection rate, flags source if greater than 50%
+      Returns { success: boolean, newConfidence: number }
+    </interface>
+    <interface name="calculateAdjustedConfidence(baseConfidence, validationCount, rejectionCount)" kind="utility function">
+      Formula: baseConfidence + (validationCount * 0.05) - (rejectionCount * 0.10)
+      Capped to [0.1, 0.95]
+      Pure function, no side effects
+    </interface>
+    <interface name="finding_validation_stats VIEW" kind="database view">
+      SELECT finding_id, COUNT(*) FILTER (WHERE action = 'validate') AS validation_count, COUNT(*) FILTER (WHERE action = 'reject') AS rejection_count, COUNT(*) AS total_feedback FROM validation_feedback GROUP BY finding_id
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Vitest for unit tests and integration tests. Target 95% coverage for validation-feedback service (higher than typical 90% due to simplicity of logic). Follow component testing patterns from E4 FindingActions tests. Use existing Supabase mock utilities from __tests__/utils/supabase-mock.ts. Mock feature flag calls to test both enabled/disabled states.
+    </standards>
+    <locations>
+      <location>__tests__/services/validation-feedback.test.ts - Unit tests for service functions</location>
+      <location>__tests__/api/findings/validate.test.ts - API integration tests</location>
+      <location>__tests__/api/findings/reject.test.ts - API integration tests</location>
+      <location>__tests__/components/knowledge-explorer/FindingValidationButtons.test.tsx - Component tests</location>
+      <location>__tests__/components/knowledge-explorer/RejectionReasonDialog.test.tsx - Dialog component tests</location>
+    </locations>
+    <ideas>
+      <test ac="AC1">Render FindingsTable and verify Validate/Reject buttons visible in actions column</test>
+      <test ac="AC1">Render FindingCard and verify Validate/Reject buttons visible</test>
+      <test ac="AC2">Click Validate button, verify POST request to /validate endpoint</test>
+      <test ac="AC2">Verify validation_feedback record created with action='validate'</test>
+      <test ac="AC3">Click Reject button, verify dialog opens for optional reason</test>
+      <test ac="AC3">Submit rejection with reason, verify record has reason field</test>
+      <test ac="AC3">Submit rejection without reason, verify record created</test>
+      <test ac="AC4">Mock 0 validations, call calculateAdjustedConfidence(0.7, 1, 0), expect 0.75</test>
+      <test ac="AC4">Mock high validation count, verify confidence capped at 0.95</test>
+      <test ac="AC5">Mock 0 rejections, call calculateAdjustedConfidence(0.7, 0, 1), expect 0.60</test>
+      <test ac="AC5">Mock multiple rejections, verify confidence floored at 0.1</test>
+      <test ac="AC6">Create 10 rejections and 5 validations for a source, verify source flagged (66% rejection rate exceeds 50%)</test>
+      <test ac="AC6">Create 5 rejections and 10 validations, verify source NOT flagged (33% below 50%)</test>
+      <test ac="AC7">Click Validate, verify ConfidenceBadge re-renders with new confidence value</test>
+      <test ac="AC7">Test optimistic UI update - badge updates before API response</test>
+      <test featureFlag="true">When confidenceAdjustmentEnabled=false, verify validation recorded but confidence unchanged</test>
+      <test error="true">API returns error, verify toast notification and rollback of optimistic update</test>
+    </ideas>
+  </tests>
+</story-context>

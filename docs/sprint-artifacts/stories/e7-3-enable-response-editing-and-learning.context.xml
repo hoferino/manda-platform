@@ -1,0 +1,192 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>7</epicId>
+    <storyId>3</storyId>
+    <title>Enable Response Editing and Learning</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-08</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e7-3-enable-response-editing-and-learning.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>edit agent-generated responses (Q&A answers, CIM content)</iWant>
+    <soThat>the system learns my preferred style and improves over time</soThat>
+    <tasks>
+      <task id="1" title="Create Database Migrations" acs="3,5">
+        <subtask id="1.1">Create migration 00030_create_response_edits_table.sql</subtask>
+        <subtask id="1.2">Create migration 00031_create_edit_patterns_table.sql</subtask>
+        <subtask id="1.3">Apply RLS policies (append-only for response_edits, analyst ownership for patterns)</subtask>
+        <subtask id="1.4">Apply migrations and regenerate Supabase types</subtask>
+      </task>
+      <task id="2" title="Implement Response Edit Service" acs="3,4,5">
+        <subtask id="2.1">Create lib/services/response-edits.ts</subtask>
+        <subtask id="2.2">Implement saveResponseEdit() function</subtask>
+        <subtask id="2.3">Implement getEditHistory() function</subtask>
+        <subtask id="2.4">Implement detectEditPatterns() using diff package</subtask>
+        <subtask id="2.5">Implement extractWordReplacements()</subtask>
+        <subtask id="2.6">Implement extractPhraseRemovals()</subtask>
+        <subtask id="2.7">Implement classifyEditType()</subtask>
+        <subtask id="2.8">Implement upsertPattern()</subtask>
+        <subtask id="2.9">Gate pattern detection behind patternDetectionEnabled feature flag</subtask>
+        <subtask id="2.10">Write unit tests for response-edits service</subtask>
+      </task>
+      <task id="3" title="Create API Endpoints" acs="3,5,7">
+        <subtask id="3.1">Create POST /api/projects/[id]/responses/[messageId]/edit</subtask>
+        <subtask id="3.2">Create GET /api/projects/[id]/responses/[messageId]/history</subtask>
+        <subtask id="3.3">Create GET /api/projects/[id]/patterns</subtask>
+        <subtask id="3.4">Create PUT /api/projects/[id]/patterns/[patternId]</subtask>
+        <subtask id="3.5">Add Zod validation schemas</subtask>
+        <subtask id="3.6">Ensure authentication and project ownership checks</subtask>
+        <subtask id="3.7">Return detected patterns in edit response</subtask>
+      </task>
+      <task id="4" title="Build ResponseEditMode Component" acs="1,2">
+        <subtask id="4.1">Create components/chat/ResponseEditMode.tsx</subtask>
+        <subtask id="4.2">Implement Edit Response button on assistant messages</subtask>
+        <subtask id="4.3">Implement inline textarea with original text pre-filled</subtask>
+        <subtask id="4.4">Implement Save button with loading state</subtask>
+        <subtask id="4.5">Implement Cancel button to discard changes</subtask>
+        <subtask id="4.6">Add keyboard shortcuts (Ctrl/Cmd+Enter to save, Escape to cancel)</subtask>
+        <subtask id="4.7">Show detected patterns after save</subtask>
+        <subtask id="4.8">Handle error states with toast notification</subtask>
+      </task>
+      <task id="5" title="Integrate with MessageItem Component" acs="1">
+        <subtask id="5.1">Add edit button to MessageItem for assistant messages</subtask>
+        <subtask id="5.2">Conditionally render ResponseEditMode when editing</subtask>
+        <subtask id="5.3">Update message display after edit saved</subtask>
+        <subtask id="5.4">Store edited text in message state or refetch</subtask>
+      </task>
+      <task id="6" title="Build Pattern Management UI" acs="7">
+        <subtask id="6.1">Create components/feedback/PatternManagement.tsx</subtask>
+        <subtask id="6.2">List all patterns with occurrence_count and last_seen</subtask>
+        <subtask id="6.3">Add toggle switch to activate/deactivate patterns</subtask>
+        <subtask id="6.4">Group patterns by pattern_type</subtask>
+        <subtask id="6.5">Add settings page or modal for pattern management access</subtask>
+        <subtask id="6.6">Show pattern examples (original to replacement)</subtask>
+      </task>
+      <task id="7" title="Implement Prompt Enhancement Service" acs="6">
+        <subtask id="7.1">Create lib/services/prompt-enhancement.ts</subtask>
+        <subtask id="7.2">Implement getActivePatterns()</subtask>
+        <subtask id="7.3">Implement generateFewShotExamples()</subtask>
+        <subtask id="7.4">Implement enhanceSystemPrompt()</subtask>
+        <subtask id="7.5">Filter to top N patterns by occurrence_count</subtask>
+        <subtask id="7.6">Integrate with chat agent system prompt generation</subtask>
+        <subtask id="7.7">Write unit tests for prompt-enhancement service</subtask>
+      </task>
+      <task id="8" title="Add TypeScript Types" acs="all">
+        <subtask id="8.1">Add ResponseEdit type to lib/types/feedback.ts</subtask>
+        <subtask id="8.2">Add EditPattern type to lib/types/feedback.ts</subtask>
+        <subtask id="8.3">Add PatternType union type</subtask>
+        <subtask id="8.4">Add API request/response types</subtask>
+      </task>
+      <task id="9" title="Testing" acs="all">
+        <subtask id="9.1">Write unit tests for response-edits service</subtask>
+        <subtask id="9.2">Write unit tests for prompt-enhancement service</subtask>
+        <subtask id="9.3">Write component tests for ResponseEditMode</subtask>
+        <subtask id="9.4">Write component tests for PatternManagement</subtask>
+        <subtask id="9.5">Write integration tests for edit to pattern to prompt flow</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Edit Response button appears on agent messages (Q&amp;A answers, CIM content)</criterion>
+    <criterion id="AC2">Inline edit mode allows text modification with save/cancel controls</criterion>
+    <criterion id="AC3">Original and edited text stored in response_edits table with analyst_id and timestamp</criterion>
+    <criterion id="AC4">Text diff algorithm detects word replacements (e.g., utilize to use)</criterion>
+    <criterion id="AC5">Patterns with 3+ occurrences stored in edit_patterns table</criterion>
+    <criterion id="AC6">Future generations use active patterns in few-shot prompts</criterion>
+    <criterion id="AC7">User can toggle patterns on/off in pattern management UI</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Tech Spec" section="E7.3 Response Editing">
+        Defines response_edits and edit_patterns table schemas, text diff algorithm with `diff` package, pattern detection threshold (3+ occurrences), few-shot prompt injection, and feature flag `patternDetectionEnabled`.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Tech Spec" section="Services and Modules">
+        Response Edit Service (lib/services/response-edits.ts) and Prompt Enhancement Service (lib/services/prompt-enhancement.ts) responsibilities defined.
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Tech Spec" section="APIs and Interfaces">
+        API endpoints: POST /responses/[messageId]/edit, GET /responses/[messageId]/history, GET /patterns, PUT /patterns/[patternId].
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E7.md" title="Epic 7 Tech Spec" section="Data Models">
+        SQL migrations 00030 (response_edits) and 00031 (edit_patterns) with RLS policies. ResponseEdit and EditPattern TypeScript types.
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e7-2-track-validation-rejection-feedback.md" title="E7.2 Story" section="Dev Notes">
+        Learnings: feature-flags.ts infrastructure, feedback.ts types pattern, RLS pattern with nested deal ownership, optimistic UI pattern.
+      </doc>
+    </docs>
+    <code>
+      <file path="manda-app/lib/types/feedback.ts" kind="types" symbol="ValidationFeedback, FindingValidationStats" lines="238-324" reason="Existing feedback types - extend with ResponseEdit and EditPattern types (verify if already defined)"/>
+      <file path="manda-app/lib/config/feature-flags.ts" kind="config" symbol="LEARNING_FLAGS, getFeatureFlag" lines="1-175" reason="Feature flags infrastructure - use patternDetectionEnabled flag"/>
+      <file path="manda-app/components/chat/MessageItem.tsx" kind="component" symbol="MessageItem" lines="1-380" reason="Target component to add Edit Response button for assistant messages"/>
+      <file path="manda-app/lib/types/chat.ts" kind="types" symbol="Message, MessageRole" lines="1-330" reason="Chat types - Message interface for edit integration"/>
+      <file path="manda-app/lib/agent/prompts.ts" kind="service" symbol="getSystemPrompt, TOOL_USAGE_PROMPT" lines="1-267" reason="Agent prompts - target for few-shot pattern injection"/>
+      <file path="manda-app/lib/services/validation-feedback.ts" kind="service" reason="Pattern reference for service implementation - uses same RLS and Supabase patterns"/>
+      <file path="manda-app/app/api/projects/[id]/findings/[findingId]/validate/route.ts" kind="route" reason="API route pattern reference for authentication and ownership checks"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="diff" version="^7.0.0" reason="Text diff algorithm for detecting edit patterns (NEW - needs installation)"/>
+        <package name="@supabase/supabase-js" version="existing" reason="Database operations with RLS"/>
+        <package name="zod" version="existing" reason="Request/response validation"/>
+        <package name="sonner" version="existing" reason="Toast notifications for edit feedback"/>
+        <package name="lucide-react" version="existing" reason="Icons for edit button"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec">Append-only response_edits table - no UPDATE/DELETE RLS policies for compliance audit trail</constraint>
+    <constraint source="tech-spec">Pattern detection threshold: 3+ occurrences before storing in edit_patterns</constraint>
+    <constraint source="tech-spec">Per-analyst learning: edit patterns scoped to individual analyst (team-wide deferred to Phase 2)</constraint>
+    <constraint source="tech-spec">Feature flag gating: pattern detection behind `patternDetectionEnabled` flag (defaults true)</constraint>
+    <constraint source="tech-spec">Few-shot injection: top N patterns by occurrence_count to prevent prompt size explosion</constraint>
+    <constraint source="tech-spec">Performance: Response edit save &lt; 1s (text diff + pattern detection is lightweight)</constraint>
+    <constraint source="tech-spec">RLS pattern: nested deal ownership check via conversations -&gt; deals -&gt; user_id</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="POST /api/projects/[id]/responses/[messageId]/edit" kind="REST endpoint" signature="{ editedText: string, editType: EditType } => ResponseEdit" path="app/api/projects/[id]/responses/[messageId]/edit/route.ts"/>
+    <interface name="GET /api/projects/[id]/responses/[messageId]/history" kind="REST endpoint" signature="() => ResponseEdit[]" path="app/api/projects/[id]/responses/[messageId]/history/route.ts"/>
+    <interface name="GET /api/projects/[id]/patterns" kind="REST endpoint" signature="() => EditPattern[]" path="app/api/projects/[id]/patterns/route.ts"/>
+    <interface name="PUT /api/projects/[id]/patterns/[patternId]" kind="REST endpoint" signature="{ isActive: boolean } => EditPattern" path="app/api/projects/[id]/patterns/[patternId]/route.ts"/>
+    <interface name="ResponseEdit" kind="TypeScript type" signature="{ id, messageId, originalText, editedText, editType, analystId, createdAt }" path="lib/types/feedback.ts"/>
+    <interface name="EditPattern" kind="TypeScript type" signature="{ id, analystId, patternType, originalPattern, replacementPattern, occurrenceCount, firstSeen, lastSeen, isActive }" path="lib/types/feedback.ts"/>
+    <interface name="PatternType" kind="TypeScript union" signature="'word_replacement' | 'phrase_removal' | 'tone_adjustment' | 'structure_change'" path="lib/types/feedback.ts"/>
+    <interface name="EditType" kind="TypeScript union" signature="'style' | 'content' | 'factual' | 'formatting'" path="lib/types/feedback.ts"/>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Vitest for unit tests, React Testing Library for component tests. Supabase mock utilities from __tests__/utils/supabase-mock.ts. Target 85% coverage for services. Follow component testing patterns from E4/E5 (MessageItem). Test edge cases: empty edits, no changes, very long text, special characters.
+    </standards>
+    <locations>
+      <location pattern="manda-app/__tests__/services/response-edits.test.ts"/>
+      <location pattern="manda-app/__tests__/services/prompt-enhancement.test.ts"/>
+      <location pattern="manda-app/__tests__/components/chat/ResponseEditMode.test.tsx"/>
+      <location pattern="manda-app/__tests__/components/feedback/PatternManagement.test.tsx"/>
+      <location pattern="manda-app/__tests__/api/responses-edit.test.ts"/>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test Edit Response button renders only on assistant messages, not user messages</idea>
+      <idea ac="AC2">Test inline edit textarea pre-fills with original content, save/cancel buttons work</idea>
+      <idea ac="AC2">Test keyboard shortcuts: Ctrl/Cmd+Enter saves, Escape cancels</idea>
+      <idea ac="AC3">Test saveResponseEdit() stores original + edited text with analyst_id and timestamp</idea>
+      <idea ac="AC4">Test detectEditPatterns() identifies word replacements (e.g., "utilize" -&gt; "use")</idea>
+      <idea ac="AC4">Test extractWordReplacements() handles adjacent removed/added diff chunks</idea>
+      <idea ac="AC4">Test extractPhraseRemovals() identifies removed text without replacement</idea>
+      <idea ac="AC5">Test upsertPattern() creates new pattern when occurrence_count &lt; 3</idea>
+      <idea ac="AC5">Test upsertPattern() increments occurrence_count when pattern exists</idea>
+      <idea ac="AC5">Test patterns with 3+ occurrences are marked as significant</idea>
+      <idea ac="AC6">Test enhanceSystemPrompt() injects active patterns as few-shot examples</idea>
+      <idea ac="AC6">Test top N pattern filtering by occurrence_count</idea>
+      <idea ac="AC7">Test PatternManagement lists patterns grouped by pattern_type</idea>
+      <idea ac="AC7">Test toggle switch updates isActive via API</idea>
+      <idea ac="all">Test feature flag patternDetectionEnabled gates pattern detection</idea>
+      <idea ac="all">Test RLS: users can only view/edit patterns for their own conversations</idea>
+    </ideas>
+  </tests>
+</story-context>
