@@ -687,29 +687,39 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 
 ### 5.6 Q&A Co-Creation (Platform Service + Agent)
 
+**Purpose:** Q&A lists are questions sent to the CLIENT to answer (not AI-generated answers). The AI helps identify gaps and inconsistencies during document analysis, suggests questions for the client, and manages the Excel round-trip workflow.
+
 **FR-QA-001: Question List Management (Platform Service)**
-- Create and organize Q&A lists
-- Categorize questions by topic/domain
-- Priority ranking of questions
-- Status tracking (draft, answered, reviewed, approved)
+- Create and organize Q&A lists with real-time collaborative editing
+- Categorize questions by topic/domain (Financials, Legal, Operations, Market, Technology, HR)
+- Priority ranking (High/Medium/Low)
+- Track dates: date_added, date_answered
+- Optimistic locking for concurrent edit conflict detection
+- Conflict resolution UI (Keep Mine / Keep Theirs / Merge)
 
 **FR-QA-002: AI-Suggested Questions (Agent)**
-- Agent suggests questions based on knowledge base analysis
-- Questions target information gaps identified by agent
-- Questions surface potential concerns from cross-domain analysis
-- User accepts/rejects/modifies suggestions through conversation
+- Agent suggests Q&A items when knowledge base cannot resolve a gap or inconsistency
+- Workflow: User asks question → AI checks KB → If unresolved after discussion → "Should I add this to the Q&A list?"
+- Questions derived from inconsistency findings with one-click add to Q&A
+- Agent drafts question text from context, user confirms before adding
+- Link Q&A items to source findings via source_finding_id
 
-**FR-QA-003: Collaborative Answering (Agent + Platform)**
-- Agent generates draft answers with sources from knowledge base
-- Platform stores answer versions and status
-- User edits and refines through conversational interface
-- Platform locks finalized answers
+**FR-QA-003: Excel Export (Platform Service)**
+- Export Q&A list to Excel format for client distribution
+- Columns: Question | Priority | Answer | Date Answered (Category as grouping)
+- Filter before export (by category, priority, status)
+- Professional formatting for client-facing document
 
-**FR-QA-004: Answer Quality (Agent)**
-- All answers have source attribution
-- Confidence indicators for AI-generated content
-- Highlight areas needing human verification
-- Track answer provenance (AI draft, user edit, final)
+**FR-QA-004: Excel Import and Merge (Platform Service + Agent)**
+- UI upload path: Import button in Q&A management section
+- Chat upload path: User says "Here's the new Q&A" with file attachment
+- Matching logic:
+  - Primary: Exact text match on Question field
+  - Fallback: Fuzzy match (>90% similarity) with user confirmation
+  - Handle new questions added by client (prompt to import)
+  - Handle questions removed by client (prompt to keep or delete)
+- Import preview showing: exact matches (auto-merge), fuzzy matches (confirm), new items, missing items
+- Merge client answers and update date_answered
 
 ### 5.6 CIM Company Overview Creation (Platform Service + Agent)
 

@@ -3,10 +3,10 @@
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-28
+**Last Updated:** 2025-12-09
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 2.8 (Test infrastructure enhancement; CI pipeline with sharding)
+**Version:** 3.0 (Q&A Co-Creation redesign; expanded agent tools)
 
 ---
 
@@ -463,6 +463,38 @@ CREATE TABLE irl_items (
 
 CREATE INDEX idx_irl_items_irl ON irl_items(irl_id);
 CREATE INDEX idx_irl_items_status ON irl_items(status);
+```
+
+**PostgreSQL Schema - Q&A Items:**
+```sql
+-- Q&A items are questions sent to the CLIENT to answer (not AI-generated answers)
+-- Used during document analysis when gaps/inconsistencies cannot be resolved from knowledge base
+CREATE TABLE qa_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id UUID REFERENCES deals(id) ON DELETE CASCADE NOT NULL,
+  question TEXT NOT NULL,
+  category TEXT NOT NULL,  -- 'Financials', 'Legal', 'Operations', 'Market', 'Technology', 'HR'
+  priority TEXT DEFAULT 'medium',  -- 'high', 'medium', 'low'
+  answer TEXT,  -- Client's response (NULL until answered)
+  comment TEXT,  -- Optional notes from client or team
+  source_finding_id UUID REFERENCES findings(id),  -- Link to finding that triggered Q&A
+  created_by UUID REFERENCES auth.users(id),
+  date_added TIMESTAMPTZ DEFAULT NOW(),
+  date_answered TIMESTAMPTZ,  -- NULL = pending, NOT NULL = answered (replaces status field)
+  updated_at TIMESTAMPTZ DEFAULT NOW(),  -- Used for optimistic locking on concurrent edits
+
+  CONSTRAINT valid_category CHECK (category IN ('Financials', 'Legal', 'Operations', 'Market', 'Technology', 'HR')),
+  CONSTRAINT valid_priority CHECK (priority IN ('high', 'medium', 'low'))
+);
+
+CREATE INDEX idx_qa_items_deal ON qa_items(deal_id);
+CREATE INDEX idx_qa_items_category ON qa_items(category);
+CREATE INDEX idx_qa_items_pending ON qa_items(deal_id) WHERE date_answered IS NULL;
+CREATE INDEX idx_qa_items_source_finding ON qa_items(source_finding_id);
+
+-- Optimistic locking: UPDATE fails if updated_at changed since read
+-- Client must include updated_at in UPDATE WHERE clause
+-- On conflict: UI shows "Keep Mine | Keep Theirs | Merge" options
 ```
 
 **GCS Folder Structure:**
@@ -1044,7 +1076,7 @@ llm_config = LLMConfig(
 - ✅ **Vendor Independence**: No lock-in to single provider
 - ✅ **Fallback Support**: LangChain provides automatic fallback if primary fails
 
-### Agent Tools (14 Total: 11 Chat + 3 CIM Workflow)
+### Agent Tools (19 Total: 16 Chat + 3 CIM Workflow)
 
 **Knowledge Management:**
 1. `query_knowledge_base(query, filters)` - Semantic search across findings
@@ -1058,17 +1090,24 @@ llm_config = LLMConfig(
 
 **Workflow Management:**
 7. `create_irl(deal_type)` - Generate IRL from template
-8. `suggest_questions(topic, max_count=10)` - Generate Q&A suggestions (capped at 10)
-9. `add_to_qa(question, answer, sources)` - Add question/answer to Q&A list
+
+**Q&A Management (Questions for CLIENT to answer - not AI-generated answers):**
+8. `add_qa_item(question, category, priority, source_finding_id?)` - Add single Q&A item, optionally linked to finding
+9. `add_qa_items_batch(items[])` - Add multiple Q&A items at once
+10. `suggest_qa_from_finding(finding_id)` - Suggest Q&A item from an inconsistency/gap finding
+11. `get_qa_summary()` - Return counts by category/priority (lightweight for context)
+12. `get_qa_items(filters?)` - Retrieve Q&A items with optional filters
+13. `update_qa_item(id, updates)` - Modify existing Q&A item
+14. `remove_qa_item(id)` - Delete Q&A item
 
 **Intelligence:**
-10. `detect_contradictions(topic)` - Find inconsistencies
-11. `find_gaps(category)` - Identify missing information
+15. `detect_contradictions(topic)` - Find inconsistencies
+16. `find_gaps(category)` - Identify missing information
 
 **CIM v3 Workflow Tools (Separate CIM Agent - Not in Chat):**
-12. `suggest_narrative_outline(buyer_persona, context)` - Propose story arc for CIM Company Overview
-13. `validate_idea_coherence(narrative, proposed_idea)` - Check narrative alignment against established story
-14. `generate_slide_blueprint(slide_topic, narrative_context, content_elements)` - Create slide guidance with extreme visual precision
+17. `suggest_narrative_outline(buyer_persona, context)` - Propose story arc for CIM Company Overview
+18. `validate_idea_coherence(narrative, proposed_idea)` - Check narrative alignment against established story
+19. `generate_slide_blueprint(slide_topic, narrative_context, content_elements)` - Create slide guidance with extreme visual precision
 
 **Note:** Legacy `generate_cim_section()` tool removed - CIM creation now exclusively handled by dedicated CIM v3 workflow agent (Epic 9)
 
@@ -1157,12 +1196,13 @@ system_prompt = """You are an M&A intelligence assistant with access to a compre
 Your capabilities:
 - Query findings from documents (query_knowledge_base)
 - Update knowledge with new findings (update_knowledge_base)
-- Detect contradictions (detect_contradictions)
-- Suggest questions for Q&A (suggest_questions)
-- Generate CIM narrative outlines (suggest_narrative_outline)
-- And 10 more specialized tools...
+- Detect contradictions and gaps (detect_contradictions, find_gaps)
+- Manage Q&A list for client questions (add_qa_item, get_qa_items, suggest_qa_from_finding)
+- When you cannot resolve an issue from the knowledge base, suggest adding it to the Q&A list
+- And more specialized tools...
 
 Always cite sources when providing information. Use tool calls to access the knowledge base.
+When you can't find an answer in documents, suggest adding to Q&A list for client clarification.
 When you don't know something, say so - don't hallucinate."""
 
 prompt = ChatPromptTemplate.from_messages([
@@ -1172,17 +1212,27 @@ prompt = ChatPromptTemplate.from_messages([
     ("placeholder", "{agent_scratchpad}"),  # Tool invocation history
 ])
 
-# Register 11 chat agent tools (CIM v3 tools are in separate CIM agent)
+# Register 16 chat agent tools (CIM v3 tools are in separate CIM agent)
 tools = [
+    # Knowledge Management
     query_knowledge_base_tool,
     update_knowledge_base_tool,
     update_knowledge_graph_tool,
     validate_finding_tool,
+    # Document Operations
     get_document_info_tool,
     trigger_analysis_tool,
+    # Workflow Management
     create_irl_tool,
-    suggest_questions_tool,  # Max 10 suggestions
-    add_to_qa_tool,
+    # Q&A Management (questions for CLIENT to answer)
+    add_qa_item_tool,
+    add_qa_items_batch_tool,
+    suggest_qa_from_finding_tool,
+    get_qa_summary_tool,
+    get_qa_items_tool,
+    update_qa_item_tool,
+    remove_qa_item_tool,
+    # Intelligence
     detect_contradictions_tool,
     find_gaps_tool,
 ]
@@ -2220,6 +2270,36 @@ npm install
 
 ## Changelog
 
+### Version 3.0 (2025-12-09)
+**Q&A Co-Creation Redesign - Epic 8:**
+- **Fundamental Q&A Model Change:**
+  - Q&A items are now questions for the CLIENT to answer (not AI-generated answers)
+  - AI's role: identify gaps/inconsistencies → discuss with user → suggest Q&A item if unresolved
+  - Removed `status` field - derive state from `date_answered` (NULL = pending, NOT NULL = answered)
+- **New `qa_items` Table Schema:**
+  - Added complete schema with optimistic locking via `updated_at`
+  - Category enum: Financials, Legal, Operations, Market, Technology, HR
+  - Priority: high/medium/low
+  - `source_finding_id` links Q&A to findings that triggered them
+  - Conflict resolution: Keep Mine / Keep Theirs / Merge UI pattern
+- **Agent Tools Expanded (14 → 19 total):**
+  - Replaced old Q&A tools with 7 new Q&A management tools:
+    - `add_qa_item()` - Add single Q&A item
+    - `add_qa_items_batch()` - Bulk add
+    - `suggest_qa_from_finding()` - Generate Q&A from inconsistency finding
+    - `get_qa_summary()` - Lightweight counts for context efficiency
+    - `get_qa_items()` - Retrieve with filters
+    - `update_qa_item()` - Modify existing
+    - `remove_qa_item()` - Delete
+  - Updated system prompt to emphasize Q&A workflow pattern
+- **Excel Export/Import Design:**
+  - Export columns: Question | Priority | Answer | Date Answered (Category for grouping)
+  - Import matching: exact text match → fuzzy match (>90% Levenshtein) → handle new items
+  - Client can edit entire Excel (mostly adding answers and comments)
+- **Related Documentation Updates:**
+  - PRD section 5.6 updated with new requirements (FR-QA-001 through FR-QA-004)
+  - epics.md Epic 8 completely rewritten with 7 stories (E8.1-E8.7)
+
 ### Version 2.9 (2025-11-28)
 **pgvector Index Documentation - HNSW Dimension Limit:**
 - **Critical Documentation Update:**
@@ -2480,4 +2560,4 @@ npm install
 ---
 
 *Generated using BMAD Method architecture workflow*
-*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25 | Version 2.6: 2025-11-26 | Version 2.7: 2025-11-28 | Version 2.8: 2025-11-28 | Version 2.9: 2025-11-28*
+*Version 1.0: 2025-11-19 | Version 2.0: 2025-11-21 | Version 2.1: 2025-11-23 | Version 2.2: 2025-11-23 | Version 2.5: 2025-11-25 | Version 2.6: 2025-11-26 | Version 2.7: 2025-11-28 | Version 2.8: 2025-11-28 | Version 2.9: 2025-11-28 | Version 3.0: 2025-12-09*

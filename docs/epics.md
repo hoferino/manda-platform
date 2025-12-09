@@ -4530,63 +4530,86 @@ And I see a summary: "This correction affects 5 Q&A answers and 2 CIM sections"
 
 ## Epic 8: Q&A Co-Creation Workflow
 
-**User Value:** Users can collaboratively build comprehensive Q&A lists with AI assistance
+**User Value:** Users can collaboratively build comprehensive Q&A lists for clients with AI assistance during document analysis
 
-**Description:** Enables analysts to create, organize, and collaboratively answer questions with AI assistance. The system suggests questions (max 10 at a time) based on knowledge base analysis, generates draft answers with sources, and supports iterative refinement through conversational interface.
+**Description:** Enables analysts to create, organize, and manage Q&A lists that are sent to clients for answers. The Q&A list captures questions that CANNOT be answered from available documents - if AI can find the answer in the knowledge base, it's not a Q&A item. AI suggests Q&A items when it identifies gaps or inconsistencies during document analysis that cannot be resolved through discussion. The workflow supports real-time collaborative editing, Excel round-trip (export to client → import answers), and links questions to source findings.
 
-**Q&A Format:** Excel spreadsheet with columns: Question | Priority | Answer | Date Answered. User can modify format or request agent to create alternative formats (Word, PDF).
+**Q&A Purpose:** Questions for the CLIENT to answer, not AI-generated answers. The AI helps identify what's missing, not fill in the blanks.
 
-**Workflow Simplification:** Streamlined to 2-3 phases - user requests suggestions (max 10), agent drafts answers, user edits and exports. No complex multi-phase orchestration needed.
+**Q&A Format:** Excel spreadsheet with columns: Question | Priority | Answer | Date Answered (Category for grouping). Client returns Excel with answers filled in.
+
+**Workflow:**
+1. During document analysis, AI identifies gaps/inconsistencies
+2. AI discusses with user → if unresolved → suggests adding to Q&A list
+3. User manages list collaboratively with colleagues (real-time table editing)
+4. Export to Excel → send to client
+5. Client returns answered Excel → import and merge answers
 
 **Functional Requirements Covered:**
-- FR-QA-001: Question List Management
-- FR-QA-002: AI-Suggested Questions
-- FR-QA-003: Collaborative Answering
-- FR-QA-004: Answer Quality
+- FR-QA-001: Question List Management (with collaborative editing + conflict resolution)
+- FR-QA-002: AI-Suggested Questions (from gaps/inconsistencies, not proactive generation)
+- FR-QA-003: Excel Export (client-facing format)
+- FR-QA-004: Excel Import and Merge (pattern matching + fuzzy matching)
 - FR-COLLAB-003: Q&A Integration
 
 **Technical Foundation:**
-- Q&A data model (questions, answers, categories, status)
-- Agent tool: `suggest_questions(topic)`
-- Agent tool: `add_to_qa(question, answer, sources)`
-- Knowledge base integration for answer generation
-- Source attribution and confidence scoring
+- Q&A data model: `qa_items` table (question, category, priority, date_added, date_answered, answer, comment, source_finding_id, created_by, updated_at)
+- No status field - use date_answered: NULL = pending, NOT NULL = answered
+- Optimistic locking via updated_at for concurrent edit conflict detection
+- Agent tools (7 total):
+  - `add_qa_item()` - Add single Q&A item
+  - `add_qa_items_batch()` - Add multiple Q&A items at once
+  - `suggest_qa_from_finding()` - Suggest Q&A from inconsistency/gap finding
+  - `get_qa_summary()` - Lightweight counts by category/priority
+  - `get_qa_items()` - Retrieve with filters
+  - `update_qa_item()` - Modify existing item
+  - `remove_qa_item()` - Delete item
+- Excel export/import with pattern matching + fuzzy matching (>90% similarity)
 
 **Acceptance Criteria (Epic Level):**
-- ✅ User can create and organize Q&A lists by topic
-- ✅ AI suggests relevant questions based on KB analysis
-- ✅ AI generates draft answers with source attribution
-- ✅ User can edit and refine answers conversationally
-- ✅ All answers track provenance (AI draft, user edit, final)
-- ✅ Q&A items link to source findings and documents
+- ✅ User can create and organize Q&A lists by category
+- ✅ AI suggests Q&A items when KB cannot resolve a gap/inconsistency
+- ✅ One-click add to Q&A from inconsistency findings
+- ✅ Real-time collaborative table editing with conflict resolution
+- ✅ Export to Excel in client-facing format
+- ✅ Import client-answered Excel with intelligent matching
+- ✅ Q&A items link to source findings
 
 ### Stories
 
-#### Story E8.1: Q&A Data Model and Basic CRUD
+#### Story E8.1: Q&A Data Model and CRUD API
 
 **As a** developer
-**I want** a Q&A data model with CRUD operations
-**So that** the system can store and manage Q&A lists
+**I want** a Q&A data model with CRUD operations and conflict detection
+**So that** the system can store and manage Q&A items with collaborative editing support
 
 **Technical Details:**
-- Tables: `qa_lists`, `qa_items` (question + answer), `qa_categories`
-- Fields: question, answer, category, priority, status, sources, confidence, provenance
-- Status enum: draft, answered, reviewed, approved
+- Table: `qa_items`
+- Fields: id, deal_id, question, category (enum: Financials, Legal, Operations, Market, Technology, HR), priority (enum: high, medium, low), answer (nullable), comment (nullable), source_finding_id (nullable FK to findings), created_by (FK to auth.users), date_added, date_answered (nullable), updated_at
+- No status field - derive from date_answered (NULL = pending, NOT NULL = answered)
+- Indexes: deal_id, category, partial index on pending items (WHERE date_answered IS NULL), source_finding_id
+- CHECK constraints for category and priority enums
 - RLS policies for project isolation
+- Optimistic locking: include updated_at in UPDATE WHERE clause
 
 **Acceptance Criteria:**
 
 ```gherkin
 Given I am authenticated
-When I create a Q&A list with name and deal_id
-Then the list is saved and I can retrieve it by deal_id
+When I create a Q&A item with question, category, and priority
+Then the item is saved with date_added = now() and date_answered = NULL
 
-Given a Q&A list exists
-When I add a question with category and priority
-Then the question is saved with status "draft"
+Given a Q&A item exists
+When I update it with the correct updated_at timestamp
+Then the update succeeds and updated_at refreshes
 
-Given I have multiple Q&A items
-When I query by category or status
+Given a Q&A item was modified by another user
+When I try to update with stale updated_at
+Then the update fails with 0 rows affected
+And I receive a conflict error
+
+Given I query Q&A items by deal_id
+When I filter by category or answered status
 Then I get filtered results sorted by priority
 ```
 
@@ -4594,224 +4617,272 @@ Then I get filtered results sorted by priority
 
 **Definition of Done:**
 - [ ] Database schema created and migrated
-- [ ] CRUD API endpoints implemented
+- [ ] CRUD API endpoints implemented (POST, GET, PUT, DELETE)
+- [ ] Optimistic locking implemented via updated_at check
 - [ ] RLS policies enforced
-- [ ] Filtering and sorting works
+- [ ] Filtering by category, priority, answered status works
 
 ---
 
-#### Story E8.2: Q&A Management UI
+#### Story E8.2: Q&A Management UI with Collaborative Editing
 
 **As an** analyst
-**I want** to view and manage my Q&A lists
-**So that** I can organize questions by topic and track their status
+**I want** to view and edit Q&A items in a collaborative table
+**So that** I can manage questions with colleagues in real-time
 
 **Technical Details:**
 - New route: `/projects/[id]/qa`
-- List view with expandable categories
-- Status badges and priority indicators
-- Filter controls
+- Editable table view (inline editing for question, category, priority)
+- Category grouping with collapsible sections
+- Priority badges (High=red, Medium=yellow, Low=green)
+- Status indicator: pending (no date_answered) vs answered
+- Conflict resolution modal: Keep Mine / Keep Theirs / Merge
+- "Last edited by [name] at [time]" indicator per row
+- Refresh button to fetch latest
 
 **Acceptance Criteria:**
 
 ```gherkin
 Given I navigate to Q&A section
 When the page loads
-Then I see all Q&A lists grouped by category
-And each question shows status and priority
+Then I see all Q&A items grouped by category
+And each item shows priority badge and answered status
 
-Given I filter by status "answered"
-Then I see only answered questions
+Given I edit a question inline
+When I blur the field
+Then the update is saved to the database
+And updated_at and updated_by refresh
+
+Given another user edited the same item
+When I try to save my changes
+Then I see a conflict modal showing both versions
+And I can choose Keep Mine, Keep Theirs, or Merge
+
+Given I click the Refresh button
+Then the table reloads with latest data
 ```
 
 **Related FR:** FR-QA-001
 
 **Definition of Done:**
-- [ ] Q&A list view renders
+- [ ] Q&A table view renders with inline editing
 - [ ] Category grouping works
-- [ ] Filtering works
+- [ ] Priority badges display correctly
+- [ ] Conflict detection triggers modal
+- [ ] Conflict resolution (keep mine/theirs/merge) works
+- [ ] Refresh button fetches latest data
 
 ---
 
-#### Story E8.3: Agent Tool - suggest_questions()
+#### Story E8.3: Agent Tool - add_qa_item()
 
 **As an** analyst
-**I want** the AI to suggest relevant questions
-**So that** I don't miss important areas of inquiry
+**I want** to add Q&A items through chat
+**So that** I can quickly capture questions during document analysis
 
 **Technical Details:**
-- New agent tool: `suggest_questions(topic: string, max_count: int = 10)`
-- Queries Neo4j knowledge graph for findings
-- Identifies information gaps
-- Returns structured array with rationale
-- **Hard cap at 10 suggestions** to prevent overwhelming user
+- Agent tool: `add_qa_item(question: str, category: str, priority: str, source_finding_id: str | None)`
+- Validates category and priority enums
+- Returns confirmation with item ID
+- Lightweight response for context efficiency
 
 **Acceptance Criteria:**
 
 ```gherkin
-Given the knowledge base has findings about "Revenue Model"
-When I ask "Suggest questions about revenue"
-Then the agent returns up to 10 relevant questions with rationale
-And questions target information gaps in the KB
-And suggestions are prioritized by importance
+Given I'm in a chat session
+When the agent calls add_qa_item("What is the 2024 revenue forecast?", "Financials", "high", "finding_123")
+Then a Q&A item is created in the database
+And the agent returns: "Added Q&A item #42 to Financials (High priority)"
 
-Given I request more than 10 suggestions
-When the agent processes my request
-Then exactly 10 questions are returned (capped)
-And agent explains "showing top 10 most critical questions"
+Given an invalid category is provided
+When add_qa_item is called
+Then the tool returns an error message
+And no item is created
 ```
 
 **Related FR:** FR-QA-002
 
 **Definition of Done:**
-- [ ] suggest_questions() tool implemented
-- [ ] Gap analysis logic works
-- [ ] Agent can call tool in conversation
+- [ ] add_qa_item() tool implemented
+- [ ] Category and priority validation works
+- [ ] Source finding linked when provided
+- [ ] Lightweight confirmation returned
 
 ---
 
 #### Story E8.4: Conversational Q&A Suggestion Flow
 
 **As an** analyst
-**I want** to ask the AI for question suggestions
-**So that** I can quickly build comprehensive Q&A lists
+**I want** the AI to suggest Q&A items when it can't resolve a gap
+**So that** I capture questions for the client at the right moment
+
+**Technical Details:**
+- Flow: User asks about topic → AI checks KB → If info not found or contradictory → AI discusses → If unresolved → "Should I add this to your Q&A list?"
+- AI drafts question text based on context
+- User confirms before adding
+- Agent calls add_qa_item() on confirmation
 
 **Acceptance Criteria:**
 
 ```gherkin
-Given I say "Suggest questions about market size"
-Then the agent suggests 5 questions with rationale
-And I see options to accept/reject/modify
+Given I ask "What's the customer churn rate?"
+When the AI cannot find this in the knowledge base
+Then the AI says "I couldn't find churn rate data in the documents. Should I add this to your Q&A list for the client?"
 
-Given I say "Accept question 1 and 3"
-Then Q&A items are created with status "draft"
+Given I say "Yes, add it"
+Then the agent calls add_qa_item() with the drafted question
+And confirms: "Added to Q&A list under Operations category"
+
+Given I say "No, I'll ask differently"
+Then the conversation continues without adding to Q&A
 ```
 
 **Related FR:** FR-QA-002
 
 **Definition of Done:**
-- [ ] Conversational flow works
-- [ ] Accept/reject/modify flows implemented
-- [ ] Draft Q&A items created
+- [ ] AI detects when KB cannot answer
+- [ ] AI suggests Q&A addition conversationally
+- [ ] User confirmation required before adding
+- [ ] Question text drafted from context
 
 ---
 
-#### Story E8.5: Agent Tool - generate_answer()
+#### Story E8.5: Finding → Q&A Quick-Add
 
 **As an** analyst
-**I want** the AI to draft answers with sources
-**So that** I can quickly build comprehensive answers
+**I want** to quickly add inconsistency findings to my Q&A list
+**So that** I can ask the client to clarify contradictions
 
 **Technical Details:**
-- New agent tool: `generate_answer(question: string)`
-- Queries KB using vector similarity
-- Synthesizes answer with source attribution
-- Returns confidence score
+- "Add to Q&A" button on inconsistency findings in Knowledge Explorer
+- Click opens modal with pre-drafted question (from finding context)
+- User can edit question, select category/priority
+- Submit calls add_qa_item() with source_finding_id linked
+- Finding card shows indicator when Q&A item exists
 
 **Acceptance Criteria:**
 
 ```gherkin
-Given a question "What is the company's revenue model?"
-When generate_answer() executes
-Then it generates a comprehensive answer
-And includes source citations with confidence score
+Given I view an inconsistency finding
+When I click "Add to Q&A"
+Then a modal opens with a pre-drafted question based on the finding
+And category is pre-selected based on finding domain
+
+Given I edit the question and click "Add"
+Then a Q&A item is created linked to this finding
+And the finding card shows "Q&A added" indicator
+
+Given this finding already has a linked Q&A item
+When I view the finding
+Then I see "Q&A item exists" with link to view it
 ```
 
-**Related FR:** FR-QA-003, FR-QA-004
+**Related FR:** FR-QA-002, FR-COLLAB-003
 
 **Definition of Done:**
-- [ ] generate_answer() tool implemented
-- [ ] Source attribution works
-- [ ] Confidence scoring implemented
+- [ ] Add to Q&A button on inconsistency findings
+- [ ] Modal with pre-drafted question
+- [ ] Category pre-selection based on domain
+- [ ] source_finding_id linked on creation
+- [ ] Visual indicator when Q&A exists for finding
 
 ---
 
-#### Story E8.6: Conversational Answer Generation Flow
+#### Story E8.6: Excel Export
 
 **As an** analyst
-**I want** to ask the AI to draft answers
-**So that** I can quickly build Q&A responses grounded in my knowledge base
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I say "Draft an answer for question #42"
-Then the agent generates an answer with source citations
-
-Given I say "Make it more concise"
-Then the agent shortens the answer maintaining sources
-
-Given I say "Approve this answer"
-Then the answer is saved with provenance tracking
-```
-
-**Related FR:** FR-QA-003, FR-QA-004
-
-**Definition of Done:**
-- [ ] Conversational flow works
-- [ ] Refinement requests work
-- [ ] Approval saves with provenance
-
----
-
-#### Story E8.7: Q&A Answer Editor UI
-
-**As an** analyst
-**I want** to manually edit Q&A answers
-**So that** I can refine AI drafts or write my own answers
+**I want** to export my Q&A list to Excel
+**So that** I can send it to the client for answers
 
 **Technical Details:**
-- Rich text editor (Tiptap)
-- Source picker
-- Provenance display
+- Export endpoint: `GET /api/deals/{id}/qa/export`
+- Excel format: Question | Priority | Answer | Date Answered
+- Group rows by Category (each category as a section with header)
+- Filter options before export (category, priority, answered status)
+- Professional formatting (headers, borders, column widths)
+- Filename: `{company_name}_QA_List_{date}.xlsx`
 
 **Acceptance Criteria:**
 
 ```gherkin
-Given I click "Edit" on a Q&A item
-Then I see rich text editing controls
-And I see attached sources
+Given I have 25 Q&A items across 4 categories
+When I click "Export to Excel"
+Then an .xlsx file is generated
+And questions are grouped by category sections
+And columns are: Question | Priority | Answer | Date Answered
 
-Given I click "Finalize"
-Then status changes to "answered"
-And provenance shows edit history
+Given I filter to "Financials" category only
+When I export
+Then only Financials questions are in the Excel
+
+Given I export unanswered items only
+When the Excel is generated
+Then Answer and Date Answered columns are empty (for client to fill)
 ```
 
-**Related FR:** FR-QA-003, FR-QA-004
+**Related FR:** FR-QA-003
 
 **Definition of Done:**
-- [ ] Rich text editor works
-- [ ] Source picker works
-- [ ] Provenance tracking works
+- [ ] Excel export endpoint implemented
+- [ ] Category grouping in Excel works
+- [ ] Filter before export works
+- [ ] Professional formatting applied
+- [ ] Correct filename generated
 
 ---
 
-#### Story E8.8: Q&A Export
+#### Story E8.7: Excel Import with Pattern Matching
 
 **As an** analyst
-**I want** to export Q&A lists
-**So that** I can share them with stakeholders
+**I want** to import the client's answered Q&A Excel
+**So that** I can update my Q&A list with their responses
 
 **Technical Details:**
-- Export formats: Word (.docx), PDF, JSON, CSV
-- Filter before export
-- Word template with source footnotes
+- Import endpoint: `POST /api/deals/{id}/qa/import`
+- Also support agent tool: `import_qa_excel(file_id: str)`
+- Matching logic:
+  1. Exact text match on Question field → auto-merge answer
+  2. Fuzzy match (>90% Levenshtein similarity) → show for confirmation
+  3. New questions in client Excel → prompt to import as new items
+  4. Questions in system but missing from Excel → prompt to keep or delete
+- Import preview UI showing match status
+- Bulk merge action
 
 **Acceptance Criteria:**
 
 ```gherkin
-Given I have 50 Q&A items
-When I click "Export to Word"
-Then a formatted .docx file is generated
-And questions have source footnotes
+Given client returns Excel with 25 answered questions
+When I upload it via "Import Q&A" button
+Then I see an import preview:
+  - "20 exact matches - will auto-merge answers"
+  - "3 fuzzy matches - need confirmation"
+  - "2 new questions from client"
+
+Given I click "Review Fuzzy Matches"
+Then I see side-by-side comparison
+And I can confirm or reject each match
+
+Given I click "Import All"
+Then exact matches merge automatically
+Then confirmed fuzzy matches merge
+Then new questions are added
+Then date_answered is set for all merged items
+
+Given I upload via chat: "Here's the new Q&A" with file attached
+When the agent processes it
+Then the agent calls import_qa_excel() and summarizes results
 ```
 
-**Related FR:** FR-QA-001
+**Related FR:** FR-QA-004
 
 **Definition of Done:**
-- [ ] Export to Word works
-- [ ] Filtering before export works
-- [ ] Formatting templates applied
+- [ ] Excel import endpoint implemented
+- [ ] Exact text matching works
+- [ ] Fuzzy matching (>90%) with confirmation UI
+- [ ] New question detection and import
+- [ ] Missing question handling
+- [ ] Agent tool wrapper for chat upload
+- [ ] Import preview UI with bulk actions
 
 ---
 

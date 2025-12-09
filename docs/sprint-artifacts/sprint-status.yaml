@@ -1,6 +1,6 @@
 # Sprint Status - Manda Platform Implementation
 # Generated: 2025-11-28
-# Last Updated: 2025-11-28
+# Last Updated: 2025-12-09
 # Project: Manda
 # Tracking System: file-system
 # Story Location: docs/sprint-artifacts
@@ -1349,18 +1349,52 @@ development_status:
     - ReviewQueuePanel and ReviewQueuePageClient UI components
     - Regeneration service placeholder (actual LLM deferred to E8/E9)
     - 10 tasks completed, sidebar nav and tests deferred as non-critical
-  epic-7-retrospective: optional
+  epic-7-retrospective: completed
+  epic-7-retrospective-completed: 2025-12-09
+  epic-7-retrospective-notes: |
+    Document: docs/sprint-artifacts/retrospectives/epic-E7-retrospective.md
+    Key outcomes:
+    - 6/6 stories completed in 2 days (Dec 7-8)
+    - 77+ tests added, 10 database migrations
+    - Source validation flow prevents knowledge base contamination
+    - Confidence adjustment (+0.05 validate, -0.10 reject)
+    - Feature flags gate high-risk cascade operations
+    - E7.6 tests deferred as tech debt
+    - Review queue ready for E8/E9 integration
+    Epic 8 prerequisites identified:
+    - P1: Verify qa_lists/qa_items schema
+    - P2: Plan review queue integration for Q&A
 
-  # Epic 8: Q&A Co-Creation Workflow (8 stories)
-  epic-8: backlog
-  e8-1-build-qa-list-builder-ui: backlog
-  e8-2-implement-ai-assisted-question-generation: backlog
-  e8-3-implement-answer-drafting-with-source-citations: backlog
-  e8-4-build-collaborative-qa-editing-workflow: backlog
-  e8-5-implement-qa-organization-and-categorization: backlog
-  e8-6-build-qa-export-word-pdf: backlog
-  e8-7-implement-qa-version-control: backlog
-  e8-8-build-qa-templates-library: backlog
+  # Epic 8: Q&A Co-Creation Workflow (7 stories) - REDESIGNED 2025-12-09
+  # KEY DESIGN CHANGE: Q&A items are questions for CLIENT to answer (not AI-generated answers)
+  # AI's role: identify gaps/inconsistencies → discuss with user → suggest Q&A item if unresolved
+  # Status field removed - derive from date_answered (NULL = pending, NOT NULL = answered)
+  # Optimistic locking via updated_at for concurrent edit conflict detection
+  # Excel round-trip: export to client → client fills answers → import back with pattern matching
+  # Architecture v3.0 updated: qa_items schema, 19 agent tools (7 new Q&A tools)
+  # CONTEXTED: 2025-12-09
+  # Tech Spec: docs/sprint-artifacts/tech-spec-epic-E8.md
+  epic-8: contexted
+  epic-8-contexted: 2025-12-09
+  epic-8-tech-spec: docs/sprint-artifacts/tech-spec-epic-E8.md
+  epic-8-redesigned: 2025-12-09
+  epic-8-prd-updated: 2025-12-09  # docs/manda-prd.md section 5.6
+  epic-8-arch-updated: 2025-12-09  # docs/manda-architecture.md v3.0
+  epic-8-epics-updated: 2025-12-09  # docs/epics.md
+  e8-1-data-model-and-crud-api: backlog
+  e8-1-description: "qa_items table with optimistic locking, CRUD API endpoints"
+  e8-2-qa-management-ui: backlog
+  e8-2-description: "Collaborative editing with conflict resolution (Keep Mine/Theirs/Merge)"
+  e8-3-agent-tool-add-qa-item: backlog
+  e8-3-description: "add_qa_item() tool for single Q&A item creation"
+  e8-4-conversational-qa-flow: backlog
+  e8-4-description: "AI discusses issues → suggests Q&A when KB can't resolve"
+  e8-5-finding-to-qa-quickadd: backlog
+  e8-5-description: "One-click Q&A creation from inconsistency findings"
+  e8-6-excel-export: backlog
+  e8-6-description: "Export Q&A list (Question|Priority|Answer|Date Answered)"
+  e8-7-excel-import-with-matching: backlog
+  e8-7-description: "Import answers with pattern matching (exact → fuzzy → new items)"
   epic-8-retrospective: optional
 
   # Epic 9: CIM Company Overview Creation (CIM v3 Workflow) (9 stories)
