@@ -1,0 +1,158 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>8</epicId>
+    <storyId>1</storyId>
+    <title>Q&A Data Model and CRUD API</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-09</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e8-1-data-model-and-crud-api.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>a Q&A data model with CRUD operations and conflict detection</iWant>
+    <soThat>the system can store and manage Q&A items with collaborative editing support</soThat>
+    <tasks>
+      <task id="1" title="Create qa_items Database Migration" acs="1,6">
+        <subtask>1.1 Create migration 00038_create_qa_items_table.sql</subtask>
+        <subtask>1.2 Define qa_items table with columns: id, deal_id, question, category (enum), priority (enum), answer (nullable), comment (nullable), source_finding_id (FK to findings), created_by (FK to auth.users), date_added, date_answered (nullable), updated_at</subtask>
+        <subtask>1.3 Add CHECK constraints for category (Financials, Legal, Operations, Market, Technology, HR) and priority (high, medium, low)</subtask>
+        <subtask>1.4 Create indexes: deal_id, category, partial index on pending items (WHERE date_answered IS NULL), source_finding_id</subtask>
+        <subtask>1.5 Create RLS policies for deal-level isolation (SELECT, INSERT, UPDATE, DELETE)</subtask>
+        <subtask>1.6 Add updated_at trigger for automatic timestamp refresh</subtask>
+        <subtask>1.7 Apply migration and regenerate Supabase types</subtask>
+      </task>
+      <task id="2" title="Create TypeScript Types" acs="1,4">
+        <subtask>2.1 Create lib/types/qa.ts with QACategory, QAPriority, QAItem interfaces</subtask>
+        <subtask>2.2 Define CreateQAItemInput and UpdateQAItemInput types with Zod schemas</subtask>
+        <subtask>2.3 Define QAConflictError type for optimistic locking responses</subtask>
+        <subtask>2.4 Define QASummary type for aggregate statistics</subtask>
+        <subtask>2.5 Add helper functions: isPending(), isAnswered()</subtask>
+      </task>
+      <task id="3" title="Create Q&A Service Layer" acs="1,2,3,4,5">
+        <subtask>3.1 Create lib/services/qa.ts with CRUD operations</subtask>
+        <subtask>3.2 Implement createQAItem(supabase, input) - inserts new item</subtask>
+        <subtask>3.3 Implement getQAItems(supabase, dealId, filters) - filtered list with pagination</subtask>
+        <subtask>3.4 Implement getQAItem(supabase, itemId) - single item by id</subtask>
+        <subtask>3.5 Implement updateQAItem(supabase, itemId, input) - with optimistic locking check</subtask>
+        <subtask>3.6 Implement deleteQAItem(supabase, itemId) - removes item</subtask>
+        <subtask>3.7 Implement getQASummary(supabase, dealId) - aggregate statistics</subtask>
+      </task>
+      <task id="4" title="Create API Routes" acs="1,2,3,4,5,7">
+        <subtask>4.1 Create app/api/projects/[id]/qa/route.ts (GET list, POST create)</subtask>
+        <subtask>4.2 Create app/api/projects/[id]/qa/[itemId]/route.ts (GET single, PUT update, DELETE)</subtask>
+        <subtask>4.3 Create app/api/projects/[id]/qa/summary/route.ts (GET summary stats)</subtask>
+        <subtask>4.4 Implement Zod validation for all request bodies</subtask>
+        <subtask>4.5 Handle 409 Conflict response for stale updated_at</subtask>
+        <subtask>4.6 Add proper error responses (400, 404, 409, 500)</subtask>
+      </task>
+      <task id="5" title="Create Client API Functions" acs="1,2,3,4,5,7">
+        <subtask>5.1 Create lib/api/qa.ts with client-side API functions</subtask>
+        <subtask>5.2 Implement createQAItem, getQAItems, getQAItem, updateQAItem, deleteQAItem</subtask>
+        <subtask>5.3 Implement getQASummary for aggregate stats</subtask>
+        <subtask>5.4 Handle conflict errors with proper typing</subtask>
+      </task>
+      <task id="6" title="Write Unit Tests" acs="all">
+        <subtask>6.1 Write unit tests for lib/services/qa.ts (CRUD operations, conflict detection)</subtask>
+        <subtask>6.2 Write unit tests for lib/types/qa.ts (Zod validation, helper functions)</subtask>
+        <subtask>6.3 Write API route tests for all endpoints</subtask>
+        <subtask>6.4 Verify RLS policies prevent cross-deal access</subtask>
+      </task>
+      <task id="7" title="Verify Build and Integration" acs="all">
+        <subtask>7.1 Run type-check to verify no TypeScript errors</subtask>
+        <subtask>7.2 Run all tests to verify no regressions</subtask>
+        <subtask>7.3 Verify migration applies cleanly to Supabase</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1">POST /qa with valid input returns 201 with QAItem including generated id and timestamps</ac>
+    <ac id="2">GET /qa returns list filtered by category, priority, and status (pending/answered) query params</ac>
+    <ac id="3">PUT /qa/{id} with current updated_at timestamp succeeds and returns updated item</ac>
+    <ac id="4">PUT /qa/{id} with stale updated_at returns 409 Conflict with current item state</ac>
+    <ac id="5">DELETE /qa/{id} returns 204 No Content and removes the item</ac>
+    <ac id="6">RLS policies enforce deal-level isolation - users cannot access other users' Q&A items</ac>
+    <ac id="7">GET /qa/summary returns aggregate stats (total, pending, answered, by_category, by_priority)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E8.md" title="Epic 8 Tech Spec" section="Database Schema, TypeScript Types, APIs">
+        Complete Q&A item schema with optimistic locking, RLS policies, category/priority enums, and conflict error handling.
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Architecture v3.0" section="Q&A Items Schema (lines 468-498)">
+        Authoritative qa_items table schema with updated_at optimistic locking pattern and index definitions.
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E8.md" title="Epic 8 Epic File" section="Stories">
+        Story breakdown and functional requirements FR-QA-001 through FR-QA-004.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="lib/services/irls.ts" kind="service" symbol="getIRL, getIRLWithItems" lines="71-130" reason="Reference service pattern for CRUD operations with Supabase client typing and error handling"/>
+      <artifact path="lib/types/irl.ts" kind="types" symbol="IRL, IRLItem, IRLPriority" lines="1-100" reason="Reference type pattern with Zod schemas, enums, and helper functions"/>
+      <artifact path="lib/types/findings.ts" kind="types" symbol="Finding, FindingFilters" lines="1-80" reason="Reference type pattern with database enum types and filter interfaces"/>
+      <artifact path="lib/types/feedback.ts" kind="types" symbol="FindingCorrection, QAConflictError" reason="Reference for conflict error typing and append-only audit patterns"/>
+      <artifact path="app/api/projects/[id]/irls/route.ts" kind="route" symbol="POST, GET" lines="1-228" reason="Reference API route pattern with auth, project validation, Zod parsing, error handling"/>
+      <artifact path="app/api/projects/[id]/findings/route.ts" kind="route" symbol="GET, POST" reason="Reference pattern for findings CRUD with filters and pagination"/>
+      <artifact path="lib/api/irl.ts" kind="client" symbol="createIRL, getIRLs" reason="Reference client API pattern for CRUD operations"/>
+      <artifact path="lib/api/findings.ts" kind="client" symbol="getFindings, createFinding" reason="Reference client API pattern with filter params and error handling"/>
+      <artifact path="supabase/migrations/00037_create_prompt_improvements_table.sql" kind="migration" reason="Latest migration - next migration should be 00038"/>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@supabase/supabase-js" version="^2.x" purpose="Supabase client for database operations"/>
+        <package name="zod" version="^3.x" purpose="Schema validation for request/response types"/>
+        <package name="next" version="^15.x" purpose="Next.js API routes"/>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Tech Spec">Optimistic locking: Include updated_at in UPDATE WHERE clause. On mismatch, return 409 with current item state.</constraint>
+    <constraint source="Tech Spec">No status column: Derive from date_answered (NULL = pending, NOT NULL = answered).</constraint>
+    <constraint source="Architecture">RLS pattern: deal_id IN (SELECT id FROM deals WHERE user_id = auth.uid())</constraint>
+    <constraint source="Architecture">API path: /api/projects/[id]/qa/* following existing project-scoped patterns</constraint>
+    <constraint source="Tech Spec">Category values: 'Financials', 'Legal', 'Operations', 'Market', 'Technology', 'HR'</constraint>
+    <constraint source="Tech Spec">Priority values: 'high', 'medium', 'low'</constraint>
+    <constraint source="Tech Spec">Performance: Create/Update &lt; 200ms, List &lt; 500ms, Summary &lt; 300ms</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="POST /api/projects/[id]/qa" kind="REST" signature="CreateQAItemInput → 201 QAItem" path="app/api/projects/[id]/qa/route.ts"/>
+    <interface name="GET /api/projects/[id]/qa" kind="REST" signature="QAListParams → QAItem[]" path="app/api/projects/[id]/qa/route.ts"/>
+    <interface name="GET /api/projects/[id]/qa/[itemId]" kind="REST" signature="void → QAItem" path="app/api/projects/[id]/qa/[itemId]/route.ts"/>
+    <interface name="PUT /api/projects/[id]/qa/[itemId]" kind="REST" signature="UpdateQAItemInput → QAItem | 409 QAConflictError" path="app/api/projects/[id]/qa/[itemId]/route.ts"/>
+    <interface name="DELETE /api/projects/[id]/qa/[itemId]" kind="REST" signature="void → 204 No Content" path="app/api/projects/[id]/qa/[itemId]/route.ts"/>
+    <interface name="GET /api/projects/[id]/qa/summary" kind="REST" signature="void → QASummary" path="app/api/projects/[id]/qa/summary/route.ts"/>
+    <interface name="createQAItem" kind="function" signature="(supabase: SupabaseClient, dealId: string, input: CreateQAItemInput) → Promise&lt;QAItem&gt;" path="lib/services/qa.ts"/>
+    <interface name="getQAItems" kind="function" signature="(supabase: SupabaseClient, dealId: string, filters?: QAFilters) → Promise&lt;QAItem[]&gt;" path="lib/services/qa.ts"/>
+    <interface name="updateQAItem" kind="function" signature="(supabase: SupabaseClient, itemId: string, input: UpdateQAItemInput) → Promise&lt;QAItem | QAConflictError&gt;" path="lib/services/qa.ts"/>
+    <interface name="deleteQAItem" kind="function" signature="(supabase: SupabaseClient, itemId: string) → Promise&lt;void&gt;" path="lib/services/qa.ts"/>
+    <interface name="getQASummary" kind="function" signature="(supabase: SupabaseClient, dealId: string) → Promise&lt;QASummary&gt;" path="lib/services/qa.ts"/>
+  </interfaces>
+  <tests>
+    <standards>
+      Vitest for unit/integration tests with React Testing Library for components.
+      Thread pool parallelization with 3-way CI sharding.
+      Shared Supabase mock utilities at __tests__/utils/supabase-mock.ts.
+      Target: 85% coverage on service functions.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/services/qa.test.ts</location>
+      <location>manda-app/__tests__/lib/types/qa.test.ts</location>
+      <location>manda-app/__tests__/app/api/projects/[id]/qa/route.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="1">POST with valid CreateQAItemInput returns 201 with id, date_added, updated_at populated</idea>
+      <idea ac="2">GET with category=Financials returns only Financials items; GET with status=pending returns items with date_answered NULL</idea>
+      <idea ac="3">PUT with fresh updated_at succeeds, returns item with new updated_at</idea>
+      <idea ac="4">PUT with stale updated_at returns 409 with currentItem containing latest values</idea>
+      <idea ac="5">DELETE returns 204; subsequent GET returns 404</idea>
+      <idea ac="6">Create item as user A; user B GET returns empty list (RLS isolation)</idea>
+      <idea ac="7">GET /summary returns correct counts for total, pending (date_answered IS NULL), answered, by_category, by_priority</idea>
+      <idea ac="validation">Zod rejects invalid category ('Marketing'), invalid priority ('urgent'), empty question</idea>
+      <idea ac="optimistic">Simulate concurrent edit: User A reads, User B updates, User A update fails with 409</idea>
+    </ideas>
+  </tests>
+</story-context>

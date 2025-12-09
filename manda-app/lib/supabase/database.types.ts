@@ -97,6 +97,120 @@ export type Database = {
           },
         ]
       }
+      confidence_threshold_history: {
+        Row: {
+          auto_changed: boolean | null
+          changed_at: string | null
+          changed_by: string | null
+          deal_id: string
+          domain: string
+          id: string
+          new_threshold: number
+          old_threshold: number | null
+          reason: string
+          threshold_id: string
+        }
+        Insert: {
+          auto_changed?: boolean | null
+          changed_at?: string | null
+          changed_by?: string | null
+          deal_id: string
+          domain: string
+          id?: string
+          new_threshold: number
+          old_threshold?: number | null
+          reason: string
+          threshold_id: string
+        }
+        Update: {
+          auto_changed?: boolean | null
+          changed_at?: string | null
+          changed_by?: string | null
+          deal_id?: string
+          domain?: string
+          id?: string
+          new_threshold?: number
+          old_threshold?: number | null
+          reason?: string
+          threshold_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "confidence_threshold_history_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "confidence_threshold_history_threshold_id_fkey"
+            columns: ["threshold_id"]
+            isOneToOne: false
+            referencedRelation: "confidence_thresholds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      confidence_thresholds: {
+        Row: {
+          analysis_id: string | null
+          applied_at: string | null
+          applied_by: string | null
+          auto_applied: boolean | null
+          based_on_sample_size: number | null
+          deal_id: string
+          domain: string
+          id: string
+          previous_threshold: number | null
+          reason: string
+          statistical_confidence: number | null
+          threshold: number
+        }
+        Insert: {
+          analysis_id?: string | null
+          applied_at?: string | null
+          applied_by?: string | null
+          auto_applied?: boolean | null
+          based_on_sample_size?: number | null
+          deal_id: string
+          domain: string
+          id?: string
+          previous_threshold?: number | null
+          reason: string
+          statistical_confidence?: number | null
+          threshold: number
+        }
+        Update: {
+          analysis_id?: string | null
+          applied_at?: string | null
+          applied_by?: string | null
+          auto_applied?: boolean | null
+          based_on_sample_size?: number | null
+          deal_id?: string
+          domain?: string
+          id?: string
+          previous_threshold?: number | null
+          reason?: string
+          statistical_confidence?: number | null
+          threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "confidence_thresholds_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_analytics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "confidence_thresholds_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contradictions: {
         Row: {
           confidence: number | null
@@ -456,6 +570,74 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      feedback_analytics: {
+        Row: {
+          analysis_date: string
+          analysis_type: string
+          created_at: string | null
+          deal_id: string
+          id: string
+          pattern_count: number
+          period_end: string
+          period_start: string
+          processing_time_ms: number | null
+          recommendation_count: number
+          summary_json: Json
+          total_corrections: number
+          total_findings: number
+          total_rejections: number
+          total_validations: number
+          trigger_type: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          analysis_date?: string
+          analysis_type?: string
+          created_at?: string | null
+          deal_id: string
+          id?: string
+          pattern_count?: number
+          period_end: string
+          period_start: string
+          processing_time_ms?: number | null
+          recommendation_count?: number
+          summary_json: Json
+          total_corrections?: number
+          total_findings?: number
+          total_rejections?: number
+          total_validations?: number
+          trigger_type?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          analysis_date?: string
+          analysis_type?: string
+          created_at?: string | null
+          deal_id?: string
+          id?: string
+          pattern_count?: number
+          period_end?: string
+          period_start?: string
+          processing_time_ms?: number | null
+          recommendation_count?: number
+          summary_json?: Json
+          total_corrections?: number
+          total_findings?: number
+          total_rejections?: number
+          total_validations?: number
+          trigger_type?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_analytics_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_metrics: {
         Row: {
@@ -940,6 +1122,144 @@ export type Database = {
           },
         ]
       }
+      prompt_improvements: {
+        Row: {
+          analysis_id: string | null
+          applied_at: string | null
+          applied_by: string | null
+          based_on_corrections: number
+          confidence: number
+          correction_pattern: string
+          created_at: string | null
+          deal_id: string | null
+          domain: string | null
+          example_corrections: Json | null
+          id: string
+          original_prompt_snippet: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          suggested_improvement: string
+          updated_at: string | null
+        }
+        Insert: {
+          analysis_id?: string | null
+          applied_at?: string | null
+          applied_by?: string | null
+          based_on_corrections?: number
+          confidence: number
+          correction_pattern: string
+          created_at?: string | null
+          deal_id?: string | null
+          domain?: string | null
+          example_corrections?: Json | null
+          id?: string
+          original_prompt_snippet?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_improvement: string
+          updated_at?: string | null
+        }
+        Update: {
+          analysis_id?: string | null
+          applied_at?: string | null
+          applied_by?: string | null
+          based_on_corrections?: number
+          confidence?: number
+          correction_pattern?: string
+          created_at?: string | null
+          deal_id?: string | null
+          domain?: string | null
+          example_corrections?: Json | null
+          id?: string
+          original_prompt_snippet?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_improvement?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_improvements_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_analytics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_improvements_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_items: {
+        Row: {
+          answer: string | null
+          category: string
+          comment: string | null
+          created_by: string | null
+          date_added: string | null
+          date_answered: string | null
+          deal_id: string
+          id: string
+          priority: string | null
+          question: string
+          source_finding_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          answer?: string | null
+          category: string
+          comment?: string | null
+          created_by?: string | null
+          date_added?: string | null
+          date_answered?: string | null
+          deal_id: string
+          id?: string
+          priority?: string | null
+          question: string
+          source_finding_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          answer?: string | null
+          category?: string
+          comment?: string | null
+          created_by?: string | null
+          date_added?: string | null
+          date_answered?: string | null
+          deal_id?: string
+          id?: string
+          priority?: string | null
+          question?: string
+          source_finding_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_items_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_items_source_finding_id_fkey"
+            columns: ["source_finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qa_lists: {
         Row: {
           answer: string | null
@@ -1065,6 +1385,18 @@ export type Database = {
       }
     }
     Views: {
+      common_correction_patterns: {
+        Row: {
+          affected_domains:
+            | Database["public"]["Enums"]["finding_domain_enum"][]
+            | null
+          correction_type: string | null
+          occurrence_count: number | null
+          unique_analysts: number | null
+          unique_findings: number | null
+        }
+        Relationships: []
+      }
       documents_with_errors: {
         Row: {
           created_at: string | null
@@ -1081,6 +1413,26 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "documents_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      domain_rejection_rates: {
+        Row: {
+          avg_confidence: number | null
+          deal_id: string | null
+          domain: Database["public"]["Enums"]["finding_domain_enum"] | null
+          rejection_count: number | null
+          rejection_rate: number | null
+          total_findings: number | null
+          validation_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "findings_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"

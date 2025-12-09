@@ -1381,10 +1381,39 @@ development_status:
   epic-8-prd-updated: 2025-12-09  # docs/manda-prd.md section 5.6
   epic-8-arch-updated: 2025-12-09  # docs/manda-architecture.md v3.0
   epic-8-epics-updated: 2025-12-09  # docs/epics.md
-  e8-1-data-model-and-crud-api: backlog
+  e8-1-data-model-and-crud-api: done
+  e8-1-drafted: 2025-12-09
+  e8-1-context-ready: 2025-12-09
+  e8-1-completed: 2025-12-09
   e8-1-description: "qa_items table with optimistic locking, CRUD API endpoints"
-  e8-2-qa-management-ui: backlog
+  e8-1-notes: |
+    Q&A Data Model and CRUD API completed. Key deliverables:
+    - Database migration 00038_create_qa_items_table.sql with RLS policies (applied)
+    - lib/types/qa.ts with QAItem, CreateQAItemInput, UpdateQAItemInput, Zod schemas
+    - lib/services/qa.ts with CRUD operations and optimistic locking
+    - lib/api/qa.ts client-side API functions
+    - API routes: /api/projects/[id]/qa (GET/POST), /qa/[itemId] (GET/PUT/DELETE), /qa/summary
+    - 59 tests passing (43 type + 16 API route tests)
+    - Build verified successful
+    - Supabase types regenerated, all `any` workarounds removed
+  e8-2-qa-management-ui: done
+  e8-2-drafted: 2025-12-09
+  e8-2-context-ready: 2025-12-09
+  e8-2-completed: 2025-12-09
   e8-2-description: "Collaborative editing with conflict resolution (Keep Mine/Theirs/Merge)"
+  e8-2-notes: |
+    Q&A Management UI completed. Key deliverables:
+    - Q&A page route at /projects/[id]/qa with sidebar navigation
+    - QATable with category grouping (Financials, Legal, Operations, Market, Technology, HR)
+    - Collapsible sections with pending/answered status indicators
+    - QAInlineEdit component with keyboard shortcuts (Enter save, Escape cancel)
+    - Auto-sets dateAnswered when answer is saved
+    - ConflictResolutionModal with compare view (Keep Mine/Keep Theirs)
+    - Manual merge option with "Use Mine"/"Use Theirs" per field
+    - QAFilterBar with category, priority, status filters and clear all
+    - useQAItems hook with optimistic updates and rollback
+    - 94 component tests passing (PriorityBadge, QAInlineEdit, QATable, QAFilterBar, ConflictResolutionModal, useQAItems)
+    - Build verified successful
   e8-3-agent-tool-add-qa-item: backlog
   e8-3-description: "add_qa_item() tool for single Q&A item creation"
   e8-4-conversational-qa-flow: backlog

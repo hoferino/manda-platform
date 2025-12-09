@@ -1,0 +1,310 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>8</epicId>
+    <storyId>2</storyId>
+    <title>Q&amp;A Management UI with Collaborative Editing</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-09</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e8-2-qa-management-ui.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>analyst</asA>
+    <iWant>to view and edit Q&amp;A items in a collaborative table</iWant>
+    <soThat>I can manage questions with colleagues in real-time</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create Q&amp;A Page Route and Layout</title>
+        <subtasks>
+          <subtask>Create app/projects/[id]/qa/page.tsx with server component</subtask>
+          <subtask>Create components/qa/QAPageClient.tsx client wrapper</subtask>
+          <subtask>Add Q&amp;A navigation item to project sidebar (if not present)</subtask>
+          <subtask>Implement loading skeleton state</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="1,7,8">
+        <title>Create QATable Component with Category Grouping</title>
+        <subtasks>
+          <subtask>Create components/qa/QATable.tsx with @tanstack/react-table</subtask>
+          <subtask>Implement category grouping with collapsible sections using Accordion pattern</subtask>
+          <subtask>Add table columns: Question, Priority, Status (answered/pending), Last Edited</subtask>
+          <subtask>Display "Last edited by [name] at [time]" using relative time formatting</subtask>
+          <subtask>Add status indicator column (badge for pending/answered based on date_answered null check)</subtask>
+          <subtask>Style table with existing DataTable patterns from Knowledge Explorer</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Create PriorityBadge Component</title>
+        <subtasks>
+          <subtask>Create components/qa/PriorityBadge.tsx with variant prop</subtask>
+          <subtask>Apply colors: High=destructive/red, Medium=warning/yellow, Low=secondary/green</subtask>
+          <subtask>Add accessibility labels for screen readers</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="2">
+        <title>Implement Inline Editing</title>
+        <subtasks>
+          <subtask>Create components/qa/QAInlineEdit.tsx component</subtask>
+          <subtask>Implement click-to-edit behavior with text input</subtask>
+          <subtask>Handle blur event to trigger save via updateQAItem API</subtask>
+          <subtask>Add optimistic UI update with rollback on error</subtask>
+          <subtask>Handle Escape key to cancel edit, Enter key to save</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="1,6">
+        <title>Create useQAItems Hook</title>
+        <subtasks>
+          <subtask>Create hooks/useQAItems.ts with SWR or React Query pattern</subtask>
+          <subtask>Implement fetch with category/priority/status filters</subtask>
+          <subtask>Add refresh function for manual refetch</subtask>
+          <subtask>Handle loading, error, and empty states</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="4,5">
+        <title>Implement Conflict Detection and Modal</title>
+        <subtasks>
+          <subtask>Create components/qa/ConflictResolutionModal.tsx</subtask>
+          <subtask>Display "Your version" vs "Their version" side-by-side comparison</subtask>
+          <subtask>Implement "Keep Mine" button - force update with current user's changes</subtask>
+          <subtask>Implement "Keep Theirs" button - refresh with server version</subtask>
+          <subtask>Implement "Merge" button - open merge view for manual reconciliation</subtask>
+          <subtask>Detect 409 response in update handler and trigger modal</subtask>
+          <subtask>Pass currentItem from 409 response to modal for comparison</subtask>
+        </subtasks>
+      </task>
+      <task id="7" ac="1">
+        <title>Create Category/Priority Filter Controls</title>
+        <subtasks>
+          <subtask>Create components/qa/QAFilterBar.tsx with filter dropdowns</subtask>
+          <subtask>Add category filter (All, Financials, Legal, Operations, Market, Technology, HR)</subtask>
+          <subtask>Add priority filter (All, High, Medium, Low)</subtask>
+          <subtask>Add status filter (All, Pending, Answered)</subtask>
+          <subtask>Persist filters in URL query params for shareability</subtask>
+        </subtasks>
+      </task>
+      <task id="8" ac="6">
+        <title>Add Refresh Button</title>
+        <subtasks>
+          <subtask>Add Refresh button to toolbar with RefreshCw icon</subtask>
+          <subtask>Wire to useQAItems.refresh() function</subtask>
+          <subtask>Show loading spinner during refresh</subtask>
+          <subtask>Display toast on successful refresh</subtask>
+        </subtasks>
+      </task>
+      <task id="9" ac="all">
+        <title>Write Component Tests</title>
+        <subtasks>
+          <subtask>Write unit tests for QATable rendering and grouping</subtask>
+          <subtask>Write unit tests for PriorityBadge variants</subtask>
+          <subtask>Write unit tests for QAInlineEdit blur/save behavior</subtask>
+          <subtask>Write unit tests for ConflictResolutionModal options</subtask>
+          <subtask>Write unit tests for useQAItems hook</subtask>
+          <subtask>Write integration tests for conflict detection flow</subtask>
+        </subtasks>
+      </task>
+      <task id="10" ac="all">
+        <title>Verify Build and Integration</title>
+        <subtasks>
+          <subtask>Run type-check to verify no TypeScript errors</subtask>
+          <subtask>Run all tests to verify no regressions</subtask>
+          <subtask>Manually test conflict resolution flow with two browser tabs</subtask>
+          <subtask>Verify inline editing saves correctly</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Q&amp;A items display in a table with category grouping (collapsible sections per category)</criterion>
+    <criterion id="AC2">Inline editing enabled for question text - click to edit, blur to save</criterion>
+    <criterion id="AC3">Priority badges display with correct colors (High=red, Medium=yellow, Low=green)</criterion>
+    <criterion id="AC4">409 Conflict response from API triggers conflict resolution modal showing both versions</criterion>
+    <criterion id="AC5">Conflict resolution options (Keep Mine/Keep Theirs/Merge) function correctly and resolve the conflict</criterion>
+    <criterion id="AC6">Refresh button reloads Q&amp;A list from server with latest data</criterion>
+    <criterion id="AC7">Status indicator shows pending (no date_answered) vs answered items</criterion>
+    <criterion id="AC8">"Last edited by [name] at [time]" indicator displays per row</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E8.md</path>
+        <title>Epic 8 Technical Specification</title>
+        <section>E8.2: Q&amp;A Management UI</section>
+        <snippet>AC-8.2.1 through AC-8.2.6 define table rendering, inline editing, priority badges, conflict modal, conflict resolution options, and refresh functionality. Optimistic locking via updated_at field.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Platform Architecture v3.0</title>
+        <section>Q&amp;A Items Schema and Frontend Patterns</section>
+        <snippet>Version 3.0 includes Q&amp;A Co-Creation redesign. qa_items table stores questions for clients. Frontend uses Next.js with shadcn/ui components and @tanstack/react-table for data tables.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e8-1-data-model-and-crud-api.md</path>
+        <title>Story E8.1 - Q&amp;A Data Model and CRUD API</title>
+        <section>Completed Story - Dev Notes</section>
+        <snippet>Types available at lib/types/qa.ts: QAItem, QAConflictError, isPending(), isAnswered(). API functions at lib/api/qa.ts: updateQAItem returns 409 conflict with currentItem. 59 tests passing.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/types/qa.ts</path>
+        <kind>types</kind>
+        <symbol>QAItem, QAConflictError, QAFilters, isPending, isAnswered, getQAItemStatus, isQAConflictError, QA_PRIORITY_CONFIG</symbol>
+        <lines>1-371</lines>
+        <reason>Core Q&amp;A types with conflict handling, status derivation helpers, and priority display config created in E8.1</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/api/qa.ts</path>
+        <kind>api-client</kind>
+        <symbol>getQAItems, getQAItem, updateQAItem, updateQAItemWithConflictCheck, retryUpdateAfterConflict</symbol>
+        <lines>1-279</lines>
+        <reason>Client-side API functions with optimistic locking support. updateQAItem returns QAConflictError on 409.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/InlineEdit.tsx</path>
+        <kind>component</kind>
+        <symbol>InlineEdit</symbol>
+        <lines>1-187</lines>
+        <reason>Reference implementation for inline editing with save/cancel, keyboard shortcuts (Enter/Escape), and error handling. Adapt for QAInlineEdit.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx</path>
+        <kind>component</kind>
+        <symbol>FindingsBrowser</symbol>
+        <lines>1-927</lines>
+        <reason>Reference implementation for data table with filters, URL state, optimistic updates, and undo support. Pattern for QAPageClient.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/knowledge-explorer/KnowledgeExplorerClient.tsx</path>
+        <kind>component</kind>
+        <symbol>KnowledgeExplorerClient</symbol>
+        <lines>1-218</lines>
+        <reason>Reference for tab navigation, badge counts, and page layout patterns. Use similar structure for Q&amp;A page.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/hooks/useConversations.ts</path>
+        <kind>hook</kind>
+        <symbol>useConversations</symbol>
+        <reason>Reference SWR-style data fetching hook pattern for useQAItems implementation.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/qa/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>GET, POST</symbol>
+        <reason>Existing API routes for Q&amp;A list and creation from E8.1.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/api/projects/[id]/qa/[itemId]/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>GET, PUT, DELETE</symbol>
+        <reason>Existing API routes with 409 conflict response for optimistic locking from E8.1.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <npm>
+        <package name="@tanstack/react-table" version="^8.21.3">Data table with sorting, pagination, grouping</package>
+        <package name="sonner">Toast notifications for success/error feedback</package>
+        <package name="lucide-react">Icons (RefreshCw, Check, X, etc.)</package>
+        <package name="date-fns">Relative time formatting (formatDistanceToNow)</package>
+      </npm>
+      <shadcn>
+        <component>table</component>
+        <component>badge</component>
+        <component>button</component>
+        <component>dialog</component>
+        <component>input</component>
+        <component>select</component>
+        <component>collapsible</component>
+        <component>skeleton</component>
+        <component>tooltip</component>
+        <component>checkbox</component>
+      </shadcn>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="architecture">Use existing shadcn/ui components - do not create custom UI primitives</constraint>
+    <constraint source="architecture">Follow @tanstack/react-table patterns from FindingsTable in Knowledge Explorer</constraint>
+    <constraint source="tech-spec">Status derived from date_answered (NULL = pending, NOT NULL = answered) - no status column in DB</constraint>
+    <constraint source="tech-spec">Optimistic locking via updated_at - always include in PUT requests</constraint>
+    <constraint source="tech-spec">409 Conflict response includes currentItem - use for conflict resolution modal</constraint>
+    <constraint source="story">Inline editing: click to edit, blur to save, Enter to save, Escape to cancel</constraint>
+    <constraint source="story">URL state persistence for filters (category, priority, status query params)</constraint>
+    <constraint source="performance">Q&amp;A list load &lt; 500ms for 100 items</constraint>
+    <constraint source="performance">Inline save &lt; 200ms API response time</constraint>
+    <constraint source="performance">Conflict modal render &lt; 100ms</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>QAItem</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface QAItem { id: string; dealId: string; question: string; category: QACategory; priority: QAPriority; answer: string | null; comment: string | null; sourceFindingId: string | null; createdBy: string | null; dateAdded: string; dateAnswered: string | null; updatedAt: string; }</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+    </interface>
+    <interface>
+      <name>QAConflictError</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface QAConflictError { type: 'conflict'; message: string; currentItem: QAItem; yourChanges: Partial&lt;UpdateQAItemInput&gt;; }</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+    </interface>
+    <interface>
+      <name>UpdateQAItemInput</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface UpdateQAItemInput { question?: string; category?: QACategory; priority?: QAPriority; answer?: string | null; comment?: string | null; dateAnswered?: string | null; updatedAt: string; }</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+    </interface>
+    <interface>
+      <name>updateQAItem</name>
+      <kind>async function</kind>
+      <signature>async function updateQAItem(projectId: string, itemId: string, input: UpdateQAItemInput): Promise&lt;QAItem | QAConflictError&gt;</signature>
+      <path>manda-app/lib/api/qa.ts</path>
+    </interface>
+    <interface>
+      <name>getQAItems</name>
+      <kind>async function</kind>
+      <signature>async function getQAItems(projectId: string, filters?: QAFilters): Promise&lt;QAListResponse&gt;</signature>
+      <path>manda-app/lib/api/qa.ts</path>
+    </interface>
+    <interface>
+      <name>isQAConflictError</name>
+      <kind>type guard</kind>
+      <signature>function isQAConflictError(error: unknown): error is QAConflictError</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+    </interface>
+    <interface>
+      <name>isPending / isAnswered</name>
+      <kind>helper functions</kind>
+      <signature>function isPending(item: QAItem): boolean; function isAnswered(item: QAItem): boolean</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Vitest for unit tests with React Testing Library for components. Follow existing test patterns from __tests__/app/api/projects/[id]/qa/ for API tests. Component tests should cover rendering, user interactions, and accessibility. Use mock data from test utilities. Target 85% coverage on new services, full coverage on interactive components.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/qa/*.test.tsx</location>
+      <location>manda-app/__tests__/hooks/useQAItems.test.ts</location>
+      <location>manda-app/__tests__/lib/types/qa.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test QATable renders items grouped by category with collapsible sections</idea>
+      <idea ac="AC1">Test category accordion expands/collapses on click</idea>
+      <idea ac="AC2">Test QAInlineEdit enters edit mode on click, saves on blur</idea>
+      <idea ac="AC2">Test Enter key saves, Escape key cancels inline edit</idea>
+      <idea ac="AC3">Test PriorityBadge renders correct colors for each priority level</idea>
+      <idea ac="AC4">Test 409 response triggers ConflictResolutionModal with both versions</idea>
+      <idea ac="AC5">Test "Keep Mine" forces update, "Keep Theirs" reloads server data</idea>
+      <idea ac="AC5">Test "Merge" opens merge view for manual reconciliation</idea>
+      <idea ac="AC6">Test Refresh button calls refetch and shows loading spinner</idea>
+      <idea ac="AC7">Test status badge shows "Pending" when date_answered is null</idea>
+      <idea ac="AC7">Test status badge shows "Answered" when date_answered has value</idea>
+      <idea ac="AC8">Test "Last edited by" displays relative time (e.g., "2 minutes ago")</idea>
+      <idea ac="integration">Test full conflict resolution flow: user A edits, user B edits, user A saves, conflict modal appears</idea>
+    </ideas>
+  </tests>
+</story-context>
