@@ -3,6 +3,7 @@
  * Container for displaying findings as cards in a responsive grid
  * Story: E4.4 - Build Card View Alternative for Findings (AC: 3, 4, 6, 7)
  * Story: E4.11 - Build Bulk Actions for Finding Management (AC: 2)
+ * Story: E8.5 - Finding → Q&A Quick-Add (AC: #1, #6, #7)
  *
  * Features:
  * - Responsive CSS Grid layout (1 col mobile, 2 col tablet, 3 col desktop)
@@ -11,6 +12,7 @@
  * - Pagination matching table behavior
  * - Virtual scrolling for large datasets (>100 findings)
  * - Selection state for bulk actions (E4.11)
+ * - Q&A quick-add integration (E8.5)
  */
 
 'use client'
@@ -53,6 +55,9 @@ export interface FindingsCardGridProps {
   // Selection props for bulk actions (E4.11)
   selectedIds?: Set<string>
   onSelectionChange?: (id: string, selected: boolean) => void
+  // Q&A Quick-Add props (E8.5)
+  qaItemIdMap?: Record<string, string | null>
+  onAddToQA?: (finding: Finding) => void
 }
 
 /**
@@ -180,6 +185,8 @@ function VirtualCardGrid({
   projectId,
   selectedIds,
   onSelectionChange,
+  qaItemIdMap,
+  onAddToQA,
 }: {
   findings: Finding[] | FindingWithSimilarity[]
   onValidate: (findingId: string, action: 'confirm' | 'reject') => Promise<void>
@@ -192,6 +199,8 @@ function VirtualCardGrid({
   projectId: string
   selectedIds?: Set<string>
   onSelectionChange?: (id: string, selected: boolean) => void
+  qaItemIdMap?: Record<string, string | null>
+  onAddToQA?: (finding: Finding) => void
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
 
@@ -252,6 +261,8 @@ function VirtualCardGrid({
                     projectId={projectId}
                     isSelected={selectedIds?.has(finding.id)}
                     onSelectionChange={onSelectionChange}
+                    qaItemId={qaItemIdMap?.[finding.id]}
+                    onAddToQA={onAddToQA}
                   />
                 ))}
               </div>
@@ -282,6 +293,9 @@ export function FindingsCardGrid({
   // Selection props for bulk actions (E4.11)
   selectedIds,
   onSelectionChange,
+  // Q&A Quick-Add props (E8.5)
+  qaItemIdMap,
+  onAddToQA,
 }: FindingsCardGridProps) {
   // Determine if we should use virtual scrolling
   const useVirtualScroll = findings.length > VIRTUAL_SCROLL_THRESHOLD
@@ -324,6 +338,8 @@ export function FindingsCardGrid({
           projectId={projectId}
           selectedIds={selectedIds}
           onSelectionChange={onSelectionChange}
+          qaItemIdMap={qaItemIdMap}
+          onAddToQA={onAddToQA}
         />
         <Pagination
           page={page}
@@ -357,6 +373,8 @@ export function FindingsCardGrid({
             projectId={projectId}
             isSelected={selectedIds?.has(finding.id)}
             onSelectionChange={onSelectionChange}
+            qaItemId={qaItemIdMap?.[finding.id]}
+            onAddToQA={onAddToQA}
           />
         ))}
       </div>

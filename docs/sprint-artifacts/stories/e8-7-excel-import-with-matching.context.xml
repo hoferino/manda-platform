@@ -1,0 +1,324 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E8</epicId>
+    <storyId>7</storyId>
+    <title>Excel Import with Pattern Matching</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-09</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e8-7-excel-import-with-matching.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>analyst</asA>
+    <iWant>import the client's answered Q&A Excel file and merge their responses</iWant>
+    <soThat>I can update my Q&A list with client answers without manual re-entry</soThat>
+    <tasks>
+      <task id="1" title="Create Q&A Import Service" acs="1,2,3,4">
+        <subtask>1.1 Create lib/services/qa-import.ts with core import logic</subtask>
+        <subtask>1.2 Implement parseQAExcel() to extract rows from Excel using exceljs</subtask>
+        <subtask>1.3 Parse Excel structure: detect category headers, extract Question/Priority/Answer/Date columns</subtask>
+        <subtask>1.4 Handle exported format (category-grouped) and flat format (simple table)</subtask>
+        <subtask>1.5 Create ImportedQARow interface matching parsed Excel data</subtask>
+        <subtask>1.6 Write unit tests for Excel parsing (various formats, edge cases)</subtask>
+      </task>
+      <task id="2" title="Implement Matching Logic" acs="2,3,4">
+        <subtask>2.1 Install fast-levenshtein package for fuzzy string matching</subtask>
+        <subtask>2.2 Implement matchImportedRows() function comparing imported vs existing Q&A items</subtask>
+        <subtask>2.3 Exact match: case-insensitive question text equality</subtask>
+        <subtask>2.4 Fuzzy match: >90% Levenshtein similarity ratio (1 - distance/maxLength)</subtask>
+        <subtask>2.5 New items: imported rows that don't match any existing item</subtask>
+        <subtask>2.6 Return QAImportPreview with exactMatches, fuzzyMatches, newItems arrays</subtask>
+        <subtask>2.7 Write unit tests for matching logic (exact, fuzzy edge cases, no matches)</subtask>
+      </task>
+      <task id="3" title="Create Import Preview API Route" acs="1">
+        <subtask>3.1 Create app/api/projects/[id]/qa/import/route.ts POST endpoint</subtask>
+        <subtask>3.2 Accept FormData with uploaded Excel file</subtask>
+        <subtask>3.3 Validate file: MIME type (xlsx), size limit (10MB)</subtask>
+        <subtask>3.4 Load existing Q&A items for the project using getQAItems()</subtask>
+        <subtask>3.5 Parse uploaded Excel and run matching logic</subtask>
+        <subtask>3.6 Return QAImportPreview JSON response</subtask>
+        <subtask>3.7 Write API route tests</subtask>
+      </task>
+      <task id="4" title="Create Import Confirm API Route" acs="5,6">
+        <subtask>4.1 Create app/api/projects/[id]/qa/import/confirm/route.ts POST endpoint</subtask>
+        <subtask>4.2 Accept ImportConfirmation with decisions for each match type</subtask>
+        <subtask>4.3 Implement confirmImport() service function</subtask>
+        <subtask>4.4 For exact matches: bulk update with answer and date_answered</subtask>
+        <subtask>4.5 For confirmed fuzzy matches: update matching items</subtask>
+        <subtask>4.6 For new items (if approved): bulk create new Q&A items</subtask>
+        <subtask>4.7 Use transaction to ensure atomic operation</subtask>
+        <subtask>4.8 Return updated Q&A items array</subtask>
+        <subtask>4.9 Write API route tests</subtask>
+      </task>
+      <task id="5" title="Add Import Types" acs="1,2,3,4,5">
+        <subtask>5.1 Add ImportedQARow interface to lib/types/qa.ts</subtask>
+        <subtask>5.2 Add QAImportPreview interface with match arrays</subtask>
+        <subtask>5.3 Add QAImportMatch interface for exact/fuzzy match items</subtask>
+        <subtask>5.4 Add ImportConfirmation interface for confirm endpoint</subtask>
+        <subtask>5.5 Add Zod schemas for validation</subtask>
+        <subtask>5.6 Write type tests</subtask>
+      </task>
+      <task id="6" title="Create Import Client API" acs="1,5">
+        <subtask>6.1 Add uploadQAImport() function to lib/api/qa.ts</subtask>
+        <subtask>6.2 Add confirmQAImport() function to lib/api/qa.ts</subtask>
+        <subtask>6.3 Handle file upload via FormData</subtask>
+        <subtask>6.4 Write client API tests</subtask>
+      </task>
+      <task id="7" title="Create Import Preview UI Components" acs="7">
+        <subtask>7.1 Create components/qa/QAImportModal.tsx - main import dialog</subtask>
+        <subtask>7.2 Create components/qa/QAImportDropzone.tsx - file upload area with drag-drop</subtask>
+        <subtask>7.3 Create components/qa/QAImportPreview.tsx - shows match summary stats</subtask>
+        <subtask>7.4 Create components/qa/QAFuzzyMatchReview.tsx - side-by-side comparison</subtask>
+        <subtask>7.5 Create components/qa/QAImportProgress.tsx - progress during import</subtask>
+        <subtask>7.6 Write component tests for each</subtask>
+      </task>
+      <task id="8" title="Implement Fuzzy Match Review UI" acs="3,7">
+        <subtask>8.1 Side-by-side layout: System Question | Imported Question | Similarity %</subtask>
+        <subtask>8.2 Highlight differences using text diff</subtask>
+        <subtask>8.3 "Confirm Match" / "Reject Match" / "Skip" buttons per row</subtask>
+        <subtask>8.4 Batch "Confirm All" / "Reject All" actions</subtask>
+        <subtask>8.5 Show imported answer preview</subtask>
+        <subtask>8.6 Write component tests</subtask>
+      </task>
+      <task id="9" title="Create Import Confirmation Actions" acs="5,8">
+        <subtask>9.1 "Import All Exact Matches" button - auto-confirms all exact matches</subtask>
+        <subtask>9.2 "Review Fuzzy Matches" button - opens fuzzy review panel</subtask>
+        <subtask>9.3 "Import New Items" checkbox/toggle - includes client-added questions</subtask>
+        <subtask>9.4 Final "Confirm Import" button - executes import with selections</subtask>
+        <subtask>9.5 Success toast with summary: "Imported 18 answers, added 2 new items"</subtask>
+        <subtask>9.6 Write integration tests</subtask>
+      </task>
+      <task id="10" title="Integrate Import into Q&A Management UI" acs="7,8">
+        <subtask>10.1 Add "Import Q&A" button to QAPageClient toolbar (next to Export)</subtask>
+        <subtask>10.2 Use Upload icon from lucide-react</subtask>
+        <subtask>10.3 Open QAImportModal on click</subtask>
+        <subtask>10.4 Refresh Q&A list after successful import</subtask>
+        <subtask>10.5 Test integration end-to-end</subtask>
+      </task>
+      <task id="11" title="Verify Build and Run Tests" acs="all">
+        <subtask>11.1 Run npm run build - verify no TypeScript errors</subtask>
+        <subtask>11.2 Run unit tests for import service</subtask>
+        <subtask>11.3 Run component tests for import UI</subtask>
+        <subtask>11.4 Run API route tests</subtask>
+        <subtask>11.5 Manual E2E test: export → modify in Excel → import → verify merge</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">POST /api/projects/[id]/qa/import parses uploaded Excel file and returns import preview</criterion>
+    <criterion id="AC2">Questions with exact text match to existing items are auto-identified as "exact matches"</criterion>
+    <criterion id="AC3">Questions with >90% Levenshtein similarity are flagged as "fuzzy matches" requiring confirmation</criterion>
+    <criterion id="AC4">Questions in Excel not found in system are identified as "new items" (client added questions)</criterion>
+    <criterion id="AC5">POST /api/projects/[id]/qa/import/confirm merges approved items and returns updated Q&A list</criterion>
+    <criterion id="AC6">Merged items have answer populated and date_answered set to import timestamp</criterion>
+    <criterion id="AC7">Import preview UI shows categorized match results with side-by-side comparison for fuzzy matches</criterion>
+    <criterion id="AC8">Bulk actions: "Import All Exact", "Review Fuzzy", "Import New Items" with confirmation</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E8.md</path>
+        <title>Epic 8 Technical Specification</title>
+        <section>E8.7: Excel Import</section>
+        <snippet>Defines import workflow with exact match, fuzzy match (>90% similarity), and new item detection. Two-step flow: POST /import returns QAImportPreview, POST /import/confirm merges approved items.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E8.md</path>
+        <title>Epic 8 Technical Specification</title>
+        <section>TypeScript Types</section>
+        <snippet>Defines QAImportPreview interface with exactMatches, fuzzyMatches, newItems arrays and ImportedQARow interface for parsed Excel data.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E8.md</path>
+        <title>Epic 8 Technical Specification</title>
+        <section>Workflows and Sequencing</section>
+        <snippet>Excel Round-Trip Workflow: Export pending Q&A → Client fills answers → Import with matching → Review fuzzy matches → Confirm import.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture v3.0</title>
+        <section>API Layer</section>
+        <snippet>FastAPI endpoints and Next.js API routes following existing patterns. Q&A routes at /api/projects/{id}/qa/* with Zod validation on frontend.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e8-6-excel-export.md</path>
+        <title>Story E8.6: Excel Export</title>
+        <section>Completion Notes</section>
+        <snippet>Export format uses category-grouped rows with merged header cells. Column structure: Question | Priority | Answer | Date Answered. Blank rows between category sections.</snippet>
+      </doc>
+    </docs>
+
+    <code>
+      <file>
+        <path>manda-app/lib/services/qa-export.ts</path>
+        <kind>service</kind>
+        <symbol>generateQAExcel, groupQAItemsByCategory</symbol>
+        <lines>1-315</lines>
+        <reason>Export format reference - import parser must handle category-grouped format with merged header cells and blank row separators</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/services/qa.ts</path>
+        <kind>service</kind>
+        <symbol>getQAItems, createQAItems, updateQAItem</symbol>
+        <lines>1-417</lines>
+        <reason>Core CRUD operations for Q&A items, bulk create/update patterns for import confirmation</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/types/qa.ts</path>
+        <kind>types</kind>
+        <symbol>QAItem, QACategory, QAPriority, CreateQAItemInput, UpdateQAItemInput</symbol>
+        <lines>1-371</lines>
+        <reason>Existing Q&A types - import types (ImportedQARow, QAImportPreview, ImportConfirmation) will be added here</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/api/qa.ts</path>
+        <kind>client-api</kind>
+        <symbol>getQAItems, createQAItem, updateQAItem, exportQAToExcel</symbol>
+        <lines>1-450</lines>
+        <reason>Client API functions - uploadQAImport() and confirmQAImport() will be added here</reason>
+      </file>
+      <file>
+        <path>manda-app/app/api/projects/[id]/qa/export/route.ts</path>
+        <kind>api-route</kind>
+        <symbol>GET</symbol>
+        <lines>1-119</lines>
+        <reason>Export API route pattern - import routes follow similar structure with FormData handling</reason>
+      </file>
+      <file>
+        <path>manda-app/components/qa/QAPageClient.tsx</path>
+        <kind>component</kind>
+        <symbol>QAPageClient</symbol>
+        <lines>1-262</lines>
+        <reason>Main Q&A page - Import button will be added to toolbar alongside Export button (line 193-197)</reason>
+      </file>
+      <file>
+        <path>manda-app/components/qa/QAExportButton.tsx</path>
+        <kind>component</kind>
+        <symbol>QAExportButton</symbol>
+        <reason>Pattern for toolbar action button with loading state and toast feedback</reason>
+      </file>
+      <file>
+        <path>manda-app/components/qa/ConflictResolutionModal.tsx</path>
+        <kind>component</kind>
+        <symbol>ConflictResolutionModal</symbol>
+        <reason>Pattern for side-by-side comparison modal - fuzzy match review follows similar pattern</reason>
+      </file>
+      <file>
+        <path>manda-app/components/qa/index.ts</path>
+        <kind>barrel</kind>
+        <reason>Component exports - new import components will be added here</reason>
+      </file>
+    </code>
+
+    <dependencies>
+      <package manager="npm">
+        <dependency name="exceljs" version="^4.4.0" note="Already installed - Excel parsing and generation" />
+        <dependency name="fast-levenshtein" version="^3.0.0" note="NEW - Fuzzy string matching for import" />
+        <dependency name="diff" version="^8.0.2" note="Already installed - Text diff for fuzzy match highlighting" />
+        <dependency name="zod" version="^4.1.13" note="Already installed - Input validation schemas" />
+        <dependency name="sonner" version="^2.0.7" note="Already installed - Toast notifications" />
+        <dependency name="lucide-react" version="^0.554.0" note="Already installed - Upload icon for button" />
+      </package>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Service Layer Pattern: Import logic in lib/services/qa-import.ts, separate from CRUD in qa.ts and export in qa-export.ts</constraint>
+    <constraint type="architecture">Two-step API flow: POST /import returns preview, POST /import/confirm executes merge</constraint>
+    <constraint type="validation">File validation: MIME type (xlsx), size limit (10MB)</constraint>
+    <constraint type="validation">Max 500 rows per import matching export limit</constraint>
+    <constraint type="matching">Exact match: case-insensitive, normalized (trim whitespace, normalize unicode)</constraint>
+    <constraint type="matching">Fuzzy match threshold: >90% Levenshtein similarity ratio (1 - distance/maxLength)</constraint>
+    <constraint type="matching">Conflict resolution: If question matches multiple, pick highest similarity</constraint>
+    <constraint type="transaction">Use Supabase transaction for bulk operations; rollback on partial failure</constraint>
+    <constraint type="testing">Follow existing test patterns: 15+ service tests, 10+ component tests, 10+ API route tests</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>POST /api/projects/[id]/qa/import</name>
+      <kind>REST endpoint</kind>
+      <signature>FormData with file field containing .xlsx file</signature>
+      <response>QAImportPreview JSON with exactMatches, fuzzyMatches, newItems, stats</response>
+      <path>manda-app/app/api/projects/[id]/qa/import/route.ts</path>
+    </interface>
+    <interface>
+      <name>POST /api/projects/[id]/qa/import/confirm</name>
+      <kind>REST endpoint</kind>
+      <signature>ImportConfirmation JSON with merge decisions</signature>
+      <response>QAItem[] array of updated/created items</response>
+      <path>manda-app/app/api/projects/[id]/qa/import/confirm/route.ts</path>
+    </interface>
+    <interface>
+      <name>parseQAExcel</name>
+      <kind>function</kind>
+      <signature>(buffer: Buffer) => Promise&lt;ImportedQARow[]&gt;</signature>
+      <path>manda-app/lib/services/qa-import.ts</path>
+    </interface>
+    <interface>
+      <name>matchImportedRows</name>
+      <kind>function</kind>
+      <signature>(imported: ImportedQARow[], existing: QAItem[]) => QAImportPreview</signature>
+      <path>manda-app/lib/services/qa-import.ts</path>
+    </interface>
+    <interface>
+      <name>confirmImport</name>
+      <kind>function</kind>
+      <signature>(supabase: SupabaseClient, dealId: string, confirmation: ImportConfirmation) => Promise&lt;QAItem[]&gt;</signature>
+      <path>manda-app/lib/services/qa-import.ts</path>
+    </interface>
+    <interface>
+      <name>uploadQAImport</name>
+      <kind>function</kind>
+      <signature>(projectId: string, file: File) => Promise&lt;QAImportPreview&gt;</signature>
+      <path>manda-app/lib/api/qa.ts</path>
+    </interface>
+    <interface>
+      <name>confirmQAImport</name>
+      <kind>function</kind>
+      <signature>(projectId: string, confirmation: ImportConfirmation) => Promise&lt;QAItem[]&gt;</signature>
+      <path>manda-app/lib/api/qa.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests with Vitest, component tests with React Testing Library, API route tests with Vitest mock server.
+      Follow existing patterns from E8.6 export story: 15 service tests, 11 component tests, 12 API route tests.
+      Tests should cover: Excel parsing (category-grouped + flat format), matching logic (exact, fuzzy, new items),
+      edge cases (empty file, malformed data, large files), UI interactions (file upload, review, confirm).
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/services/qa-import.test.ts</location>
+      <location>manda-app/__tests__/components/qa/QAImportModal.test.tsx</location>
+      <location>manda-app/__tests__/components/qa/QAFuzzyMatchReview.test.tsx</location>
+      <location>manda-app/__tests__/app/api/projects/qa-import.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test Excel parsing with category-grouped format from export</idea>
+      <idea ac="AC1">Test Excel parsing with flat table format (no categories)</idea>
+      <idea ac="AC1">Test file validation: wrong MIME type returns 400</idea>
+      <idea ac="AC1">Test file validation: oversized file returns 413</idea>
+      <idea ac="AC2">Test exact match with identical question text</idea>
+      <idea ac="AC2">Test exact match case-insensitive ("What is..." vs "what is...")</idea>
+      <idea ac="AC2">Test exact match with whitespace normalization</idea>
+      <idea ac="AC3">Test fuzzy match at 91% similarity flagged</idea>
+      <idea ac="AC3">Test fuzzy match at 89% similarity treated as new item</idea>
+      <idea ac="AC3">Test fuzzy match boundary case at exactly 90%</idea>
+      <idea ac="AC4">Test new items when question not in system</idea>
+      <idea ac="AC4">Test new items includes category and priority from Excel</idea>
+      <idea ac="AC5">Test confirm merges exact matches automatically</idea>
+      <idea ac="AC5">Test confirm with fuzzy match decisions</idea>
+      <idea ac="AC5">Test confirm with new items toggle on/off</idea>
+      <idea ac="AC6">Test merged items have answer populated</idea>
+      <idea ac="AC6">Test merged items have date_answered set to import timestamp</idea>
+      <idea ac="AC7">Test QAImportPreview component renders match stats</idea>
+      <idea ac="AC7">Test QAFuzzyMatchReview shows side-by-side comparison</idea>
+      <idea ac="AC8">Test "Import All Exact" button triggers bulk update</idea>
+      <idea ac="AC8">Test "Import New Items" toggle controls new item creation</idea>
+    </ideas>
+  </tests>
+</story-context>

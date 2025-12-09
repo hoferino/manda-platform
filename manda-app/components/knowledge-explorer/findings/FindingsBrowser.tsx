@@ -8,6 +8,7 @@
  * Story: E4.9 - Implement Finding Detail View with Full Context (AC: #1, #7, #8)
  * Story: E4.10 - Implement Export Findings to CSV/Excel (AC: #1, #4, #5)
  * Story: E4.11 - Build Bulk Actions for Finding Management (AC: #1-11)
+ * Story: E8.5 - Finding → Q&A Quick-Add (AC: #1-7)
  *
  * Combines:
  * - FindingSearch for semantic search
@@ -45,6 +46,9 @@ import { useBulkUndo } from './useBulkUndo'
 import { UndoToast } from './UndoToast'
 import { getFindings, validateFinding, updateFinding, searchFindings, batchValidateFindings } from '@/lib/api/findings'
 import type { ExportFilters, BatchActionResponse } from '@/lib/api/findings'
+// E8.5: Q&A quick-add imports
+import { AddToQAModal } from './AddToQAModal'
+import { checkQAExistenceForFindings } from '@/lib/api/qa'
 import type {
   Finding,
   FindingFilters as FilterType,
@@ -123,6 +127,11 @@ export function FindingsBrowser({ projectId, documents, onRegisterRefresh }: Fin
 
   // E4.12: Export modal state
   const [exportModalOpen, setExportModalOpen] = useState(false)
+
+  // E8.5: Q&A quick-add state
+  const [qaModalOpen, setQaModalOpen] = useState(false)
+  const [qaModalFinding, setQaModalFinding] = useState<Finding | null>(null)
+  const [qaItemIdMap, setQaItemIdMap] = useState<Record<string, string | null>>({}) // findingId -> qaItemId
 
   // Memoize export filters to avoid recreating object on each render
   const exportFilters: ExportFilters = useMemo(() => ({
@@ -310,6 +319,34 @@ export function FindingsBrowser({ projectId, documents, onRegisterRefresh }: Fin
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // E8.5: Handle Add to Q&A button click
+  const handleAddToQA = useCallback((finding: Finding) => {
+    setQaModalFinding(finding)
+    setQaModalOpen(true)
+  }, [])
+
+  // E8.5: Handle Q&A item created successfully
+  const handleQACreated = useCallback(
+    (qaItemId: string) => {
+      if (qaModalFinding) {
+        // Update the map to show indicator instead of button
+        setQaItemIdMap((prev) => ({
+          ...prev,
+          [qaModalFinding.id]: qaItemId,
+        }))
+      }
+      setQaModalOpen(false)
+      setQaModalFinding(null)
+    },
+    [qaModalFinding]
+  )
+
+  // E8.5: Handle Q&A modal close
+  const handleQAModalClose = useCallback(() => {
+    setQaModalOpen(false)
+    setQaModalFinding(null)
   }, [])
 
   // Handle search query change
@@ -725,6 +762,31 @@ export function FindingsBrowser({ projectId, documents, onRegisterRefresh }: Fin
 
   const displayTotal = isSearchMode ? searchResults?.total || 0 : data?.total || 0
 
+  // E8.5: Fetch Q&A existence for current findings when data changes
+  // Get array of finding IDs for comparison
+  const displayFindingIds = useMemo(
+    () => displayFindings.map((f) => f.id),
+    [displayFindings]
+  )
+
+  useEffect(() => {
+    if (displayFindingIds.length === 0) {
+      setQaItemIdMap({})
+      return
+    }
+
+    // Batch check Q&A existence
+    checkQAExistenceForFindings(projectId, displayFindingIds)
+      .then((response) => {
+        setQaItemIdMap(response.results)
+      })
+      .catch((error) => {
+        console.error('[FindingsBrowser] Error checking Q&A existence:', error)
+        // On error, assume no Q&A items exist
+        setQaItemIdMap({})
+      })
+  }, [projectId, displayFindingIds])
+
   // E4.11: Calculate if all/some on page are selected
   const pageIds = displayFindings.map((f) => f.id)
   const isAllOnPageSelected = areAllSelected(pageIds)
@@ -846,6 +908,9 @@ export function FindingsBrowser({ projectId, documents, onRegisterRefresh }: Fin
               onSelectAll={handleSelectAllOnPage}
               isAllSelected={isAllOnPageSelected}
               isSomeSelected={isSomeOnPageSelected}
+              // E8.5: Q&A quick-add props
+              qaItemIdMap={qaItemIdMap}
+              onAddToQA={handleAddToQA}
             />
           ) : (
             <FindingsCardGrid
@@ -866,6 +931,9 @@ export function FindingsBrowser({ projectId, documents, onRegisterRefresh }: Fin
               // E4.11: Selection props
               selectedIds={selectedIds}
               onSelectionChange={handleSelectionChange}
+              // E8.5: Q&A quick-add props
+              qaItemIdMap={qaItemIdMap}
+              onAddToQA={handleAddToQA}
             />
           )}
         </>
@@ -922,6 +990,17 @@ export function FindingsBrowser({ projectId, documents, onRegisterRefresh }: Fin
         selectedIds={selectedIds}
         searchQuery={isSearchMode ? searchQuery : undefined}
       />
+
+      {/* E8.5: Add to Q&A Modal */}
+      {qaModalFinding && (
+        <AddToQAModal
+          finding={qaModalFinding}
+          projectId={projectId}
+          isOpen={qaModalOpen}
+          onClose={handleQAModalClose}
+          onSuccess={handleQACreated}
+        />
+      )}
     </div>
   )
 }

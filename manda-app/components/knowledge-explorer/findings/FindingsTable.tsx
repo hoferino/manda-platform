@@ -4,6 +4,7 @@
  * Story: E4.1 - Build Knowledge Explorer UI Main Interface (AC: #2, #3, #7)
  * Story: E4.5 - Implement Source Attribution Links (AC: 7)
  * Story: E4.11 - Build Bulk Actions for Finding Management (AC: 1, 10)
+ * Story: E8.5 - Finding → Q&A Quick-Add (AC: #1, #6, #7)
  *
  * Features:
  * - Sortable columns (Confidence, Domain, Created Date)
@@ -15,6 +16,7 @@
  * - Actions column (placeholder for E4.3)
  * - Responsive design
  * - Checkbox selection for bulk actions (E4.11)
+ * - Add to Q&A button for creating Q&A items from findings (E8.5)
  */
 
 'use client'
@@ -55,10 +57,12 @@ import {
   Check,
   X,
   Pencil,
+  MessageSquarePlus,
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ConfidenceBadge, DomainTag, StatusBadge, SourceAttributionLink } from '../shared'
 import { NeedsReviewBadge } from '@/components/feedback'
+import { QAExistsIndicator } from './QAExistsIndicator'
 import type { Finding, FindingWithSimilarity } from '@/lib/types/findings'
 import { cn } from '@/lib/utils'
 
@@ -83,6 +87,9 @@ interface FindingsTableProps {
   onSelectAll?: (ids: string[]) => void
   isAllSelected?: boolean
   isSomeSelected?: boolean
+  // Q&A Quick-Add props (E8.5)
+  qaItemIdMap?: Record<string, string | null> // Maps findingId to qaItemId (or null if none)
+  onAddToQA?: (finding: Finding) => void
 }
 
 /**
@@ -201,6 +208,9 @@ export function FindingsTable({
   onSelectAll,
   isAllSelected = false,
   isSomeSelected = false,
+  // Q&A Quick-Add props (E8.5)
+  qaItemIdMap,
+  onAddToQA,
 }: FindingsTableProps) {
   // Check if selection is enabled
   const selectionEnabled = selectedIds !== undefined && onSelectionChange !== undefined
@@ -419,62 +429,90 @@ export function FindingsTable({
     {
       id: 'actions',
       header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onValidate?.(row.original.id, 'confirm')}
-                  disabled={row.original.status === 'validated'}
-                  aria-label="Validate finding"
-                >
-                  <Check className="h-4 w-4 text-green-600" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Validate</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+      cell: ({ row }) => {
+        const findingId = row.original.id
+        const qaItemId = qaItemIdMap?.[findingId]
+        const hasQAItem = qaItemId != null
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onValidate?.(row.original.id, 'reject')}
-                  disabled={row.original.status === 'rejected'}
-                  aria-label="Reject finding"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Reject</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        return (
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {/* E8.5: Q&A indicator or Add to Q&A button */}
+            {hasQAItem ? (
+              <QAExistsIndicator qaItemId={qaItemId} projectId={projectId} size="sm" />
+            ) : onAddToQA ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                      onClick={() => onAddToQA(row.original)}
+                      aria-label="Add to Q&A list"
+                    >
+                      <MessageSquarePlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add to Q&A</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onEdit?.(row.original)}
-                  aria-label="Edit finding"
-                >
-                  <Pencil className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Edit</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      ),
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onValidate?.(row.original.id, 'confirm')}
+                    disabled={row.original.status === 'validated'}
+                    aria-label="Validate finding"
+                  >
+                    <Check className="h-4 w-4 text-green-600" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Validate</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onValidate?.(row.original.id, 'reject')}
+                    disabled={row.original.status === 'rejected'}
+                    aria-label="Reject finding"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reject</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onEdit?.(row.original)}
+                    aria-label="Edit finding"
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )
+      },
     },
   ]
 

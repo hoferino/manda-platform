@@ -4,12 +4,16 @@
  * Q&A Page Client Component
  * Main client-side wrapper for Q&A management with collaborative editing
  * Story: E8.2 - Q&A Management UI with Collaborative Editing (AC: all)
+ * Story: E8.6 - Excel Export (AC: #4)
+ * Story: E8.7 - Excel Import with Pattern Matching (AC: all)
  *
  * Features:
  * - Table with category grouping and collapsible sections
  * - Inline editing with optimistic updates
  * - Conflict resolution for concurrent edits
  * - Filter controls with URL state persistence
+ * - Excel export with filter support
+ * - Excel import with pattern matching
  */
 
 import { useState, useCallback } from 'react'
@@ -19,6 +23,9 @@ import { toast } from 'sonner'
 import { useQAItems } from '@/lib/hooks/useQAItems'
 import { QATable } from './QATable'
 import { QAFilterBar } from './QAFilterBar'
+import { QAExportButton } from './QAExportButton'
+import { QAImportButton } from './QAImportButton'
+import { QAImportModal } from './QAImportModal'
 import { ConflictResolutionModal } from './ConflictResolutionModal'
 import { QAItem, QAConflictError, QAFilters, isQAConflictError } from '@/lib/types/qa'
 import { updateQAItem as apiUpdateQAItem } from '@/lib/api/qa'
@@ -37,6 +44,10 @@ export function QAPageClient({ projectId }: QAPageClientProps) {
     pendingChanges: Partial<QAItem>
     itemId: string
   } | null>(null)
+
+  // Import modal state - E8.7
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   // Data fetching hook
   const {
@@ -175,6 +186,18 @@ export function QAPageClient({ projectId }: QAPageClientProps) {
     setConflictData(null)
   }, [])
 
+  // Handle import file selection - E8.7
+  const handleImportFileSelect = useCallback((file: File) => {
+    setImportFile(file)
+    setImportModalOpen(true)
+  }, [])
+
+  // Handle import complete - refresh list
+  const handleImportComplete = useCallback(async () => {
+    await refresh()
+    setImportFile(null)
+  }, [refresh])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -186,6 +209,17 @@ export function QAPageClient({ projectId }: QAPageClientProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* E8.7 - Import button in toolbar */}
+          <QAImportButton
+            disabled={isLoading}
+            onFileSelect={handleImportFileSelect}
+          />
+          {/* Task 5.1 - Export button in toolbar, Task 5.2 - Pass current filters */}
+          <QAExportButton
+            projectId={projectId}
+            filters={filters}
+            disabled={isLoading || items.length === 0}
+          />
           <Button
             variant="outline"
             size="sm"
@@ -247,6 +281,15 @@ export function QAPageClient({ projectId }: QAPageClientProps) {
           onMerge={handleMerge}
         />
       )}
+
+      {/* Import Modal - E8.7 */}
+      <QAImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        projectId={projectId}
+        file={importFile}
+        onImportComplete={handleImportComplete}
+      />
     </div>
   )
 }

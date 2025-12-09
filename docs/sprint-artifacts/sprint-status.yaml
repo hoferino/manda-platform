@@ -1441,14 +1441,55 @@ development_status:
     - 190 agent-related tests passing (28 prompt tests, 63 category tests, 35 question tests)
     - E2E test specifications in e2e/qa-suggestion-flow.spec.ts
     - Build verified successful
-  e8-5-finding-to-qa-quickadd: ready-for-dev
+  e8-5-finding-to-qa-quickadd: done
   e8-5-drafted: 2025-12-09
   e8-5-context-ready: 2025-12-09
+  e8-5-completed: 2025-12-09
   e8-5-description: "One-click Q&A creation from inconsistency findings"
-  e8-6-excel-export: backlog
+  e8-5-notes: |
+    All 11 tasks completed. Key deliverables:
+    - lib/utils/finding-qa-mapping.ts with domain→category mapping and question drafting
+    - AddToQAModal component with pre-populated question and category
+    - QAExistsIndicator badge with link to Q&A page
+    - API endpoints: /qa/by-finding/[findingId], /qa/check-findings (batch)
+    - FindingCard and FindingsTable integration with Add to Q&A button
+    - FindingsBrowser state management for modal and Q&A existence
+    - 35 unit tests for mapping utilities
+    - Build verified successful
+  e8-6-excel-export: done
+  e8-6-drafted: 2025-12-09
+  e8-6-context-ready: 2025-12-09
+  e8-6-completed: 2025-12-09
   e8-6-description: "Export Q&A list (Question|Priority|Answer|Date Answered)"
-  e8-7-excel-import-with-matching: backlog
+  e8-6-notes: >
+    All 8 tasks completed. Key deliverables:
+    - lib/services/qa-export.ts with generateQAExcel() and groupQAItemsByCategory()
+    - GET /api/projects/[id]/qa/export endpoint with filter support
+    - QAExportButton component with loading state, success/error toasts
+    - Export integrated into QAPageClient toolbar with filter passthrough
+    - Category grouping in fixed order with item counts and blank row separators
+    - Priority color coding (High=red, Medium=yellow, Low=green)
+    - Empty Answer/Date Answered for pending items with gray background
+    - 38 unit tests (15 service + 11 component + 12 API route)
+    - Build verified successful
+  e8-7-excel-import-with-matching: done
+  e8-7-drafted: 2025-12-09
+  e8-7-context-ready: 2025-12-09
+  e8-7-completed: 2025-12-09
   e8-7-description: "Import answers with pattern matching (exact → fuzzy → new items)"
+  e8-7-notes: |
+    All 11 tasks completed. Key deliverables:
+    - lib/services/qa-import.ts with parseQAExcel(), matchImportedRows(), confirmImport()
+    - API routes: /qa/import/preview (POST), /qa/import/confirm (POST)
+    - Matching: exact (case-insensitive) + fuzzy (>90% Levenshtein) + new items
+    - lib/types/qa.ts extended with import types (ImportedQARow, QAImportPreview, etc.)
+    - lib/api/qa.ts extended with uploadQAImportFile(), confirmQAImport()
+    - QAImportButton and QAImportModal UI components
+    - Tabbed preview with exact/fuzzy/new sections
+    - Fuzzy match review with Accept/Skip per row
+    - "Import New Items" checkbox for client-added questions
+    - Integration into QAPageClient toolbar next to Export
+    - 2094 tests pass, build successful
   epic-8-retrospective: optional
 
   # Epic 9: CIM Company Overview Creation (CIM v3 Workflow) (9 stories)

@@ -369,3 +369,129 @@ export function calculateQASummary(items: QAItem[]): QASummary {
 
   return summary
 }
+
+// ============================================================================
+// Import Types
+// Story: E8.7 - Excel Import with Pattern Matching
+// ============================================================================
+
+/**
+ * A row parsed from an imported Excel file
+ * Used during import process to match against existing Q&A items
+ */
+export interface ImportedQARow {
+  question: string
+  priority: QAPriority | null
+  answer: string | null
+  dateAnswered: string | null
+  category: QACategory | null
+  rowNumber: number // Original row number in Excel for error reporting
+}
+
+/**
+ * Match result for an exact match (case-insensitive question text equality)
+ * AC: #2 - Questions with exact text match are auto-identified
+ */
+export interface QAExactMatch {
+  existing: QAItem
+  imported: ImportedQARow
+}
+
+/**
+ * Match result for a fuzzy match (>90% Levenshtein similarity)
+ * AC: #3 - Questions with >90% similarity flagged for confirmation
+ */
+export interface QAFuzzyMatch {
+  existing: QAItem
+  imported: ImportedQARow
+  similarity: number // 0.90 - 0.99
+}
+
+/**
+ * Preview of import results before confirmation
+ * AC: #1 - Import preview with categorized match results
+ */
+export interface QAImportPreview {
+  exactMatches: QAExactMatch[]
+  fuzzyMatches: QAFuzzyMatch[]
+  newItems: ImportedQARow[]
+  stats: {
+    totalImported: number
+    exactCount: number
+    fuzzyCount: number
+    newCount: number
+  }
+}
+
+/**
+ * Decision for a single fuzzy match
+ */
+export type FuzzyMatchDecision = 'accept' | 'reject' | 'skip'
+
+/**
+ * Confirmation request for import
+ * AC: #5 - POST /import/confirm merges approved items
+ */
+export interface ImportConfirmation {
+  /** IDs of exact matches to import (default: all) */
+  exactMatchIds: string[]
+  /** Decisions for fuzzy matches: { existingItemId: decision } */
+  fuzzyMatchDecisions: Record<string, FuzzyMatchDecision>
+  /** Whether to create new items from unmatched rows */
+  importNewItems: boolean
+  /** New items to import (when importNewItems is true) */
+  newItemsToImport?: ImportedQARow[]
+  /** Project ID for the import */
+  projectId: string
+}
+
+/**
+ * Result of import confirmation
+ */
+export interface ImportConfirmationResult {
+  updatedItems: QAItem[]
+  createdItems: QAItem[]
+  stats: {
+    exactUpdated: number
+    fuzzyUpdated: number
+    newCreated: number
+    skipped: number
+    total: number
+  }
+}
+
+// ============================================================================
+// Import Zod Schemas
+// ============================================================================
+
+/**
+ * Schema for imported row validation
+ * Note: dateAnswered uses transform to coerce undefined to null for type compatibility
+ */
+export const ImportedQARowSchema = z.object({
+  question: z.string().min(1, 'Question is required'),
+  priority: QAPrioritySchema.nullable(),
+  answer: z.string().nullable(),
+  dateAnswered: z.preprocess(
+    (val) => (val === undefined ? null : val),
+    z.string().datetime().nullable()
+  ),
+  category: QACategorySchema.nullable(),
+  rowNumber: z.number().int().min(1),
+})
+
+/**
+ * Schema for fuzzy match decision
+ */
+export const FuzzyMatchDecisionSchema = z.enum(['accept', 'reject', 'skip'])
+
+/**
+ * Schema for import confirmation request
+ */
+export const ImportConfirmationSchema = z.object({
+  exactMatchIds: z.array(z.string().uuid()),
+  fuzzyMatchDecisions: z.record(z.string().uuid(), FuzzyMatchDecisionSchema),
+  importNewItems: z.boolean(),
+  newItemsToImport: z.array(ImportedQARowSchema).optional(),
+  projectId: z.string().uuid(),
+})

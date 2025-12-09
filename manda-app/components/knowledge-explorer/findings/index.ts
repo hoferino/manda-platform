@@ -37,3 +37,6 @@ export {
 // E7.2: Validation Feedback Components
 export { FindingValidationButtons, type FindingValidationButtonsProps } from './FindingValidationButtons'
 export { RejectionReasonDialog, type RejectionReasonDialogProps } from './RejectionReasonDialog'
+// E8.5: Q&A Quick-Add Components
+export { AddToQAModal, type AddToQAModalProps } from './AddToQAModal'
+export { QAExistsIndicator, type QAExistsIndicatorProps } from './QAExistsIndicator'

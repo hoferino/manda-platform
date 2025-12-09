@@ -4,6 +4,7 @@
  * Story: E4.4 - Build Card View Alternative for Findings (AC: 1, 4, 5)
  * Story: E4.5 - Implement Source Attribution Links (AC: 7)
  * Story: E4.11 - Build Bulk Actions for Finding Management (AC: 2, 10)
+ * Story: E8.5 - Finding → Q&A Quick-Add (AC: #1, #6, #7)
  *
  * Features:
  * - Card layout with finding text, domain, confidence, status, source
@@ -15,6 +16,7 @@
  * - ARIA labels and screen reader support
  * - Clickable source attribution links with preview modal
  * - Checkbox selection for bulk actions (E4.11)
+ * - Add to Q&A button for creating Q&A items from findings (E8.5)
  */
 
 'use client'
@@ -24,11 +26,18 @@ import { formatDistanceToNow } from 'date-fns'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { ConfidenceBadge, DomainTag, StatusBadge, SourceAttributionLink } from '../shared'
 import { FindingActions } from './FindingActions'
 import { InlineEdit } from './InlineEdit'
 import { NeedsReviewBadge } from '@/components/feedback'
-import { ChevronDown, ChevronUp, FileText, Calendar } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, Calendar, MessageSquarePlus } from 'lucide-react'
+import { QAExistsIndicator } from './QAExistsIndicator'
 import type { Finding, FindingWithSimilarity } from '@/lib/types/findings'
 import { cn } from '@/lib/utils'
 
@@ -48,6 +57,9 @@ export interface FindingCardProps {
   // Selection props for bulk actions (E4.11)
   isSelected?: boolean
   onSelectionChange?: (id: string, selected: boolean) => void
+  // Q&A Quick-Add props (E8.5)
+  qaItemId?: string | null // If set, a Q&A item exists for this finding
+  onAddToQA?: (finding: Finding) => void
 }
 
 /**
@@ -134,6 +146,9 @@ export function FindingCard({
   // Selection props for bulk actions (E4.11)
   isSelected = false,
   onSelectionChange,
+  // Q&A Quick-Add props (E8.5)
+  qaItemId,
+  onAddToQA,
 }: FindingCardProps) {
   // Check if selection is enabled
   const selectionEnabled = onSelectionChange !== undefined
@@ -209,6 +224,17 @@ export function FindingCard({
   const handleEditClick = useCallback(() => {
     onEdit(finding)
   }, [finding, onEdit])
+
+  // E8.5: Handle Add to Q&A click
+  const handleAddToQA = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (onAddToQA && !qaItemId) {
+        onAddToQA(finding)
+      }
+    },
+    [finding, onAddToQA, qaItemId]
+  )
 
   // Truncated text for ARIA label
   const truncatedText = finding.text.slice(0, 50) + (finding.text.length > 50 ? '...' : '')
@@ -331,21 +357,47 @@ export function FindingCard({
 
       {/* Footer with metadata and actions */}
       <CardFooter className="px-4 py-3 border-t flex items-center justify-between">
-        {/* Date */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3" aria-hidden="true" />
-          <time dateTime={finding.createdAt} title={new Date(finding.createdAt).toLocaleString()}>
-            {relativeDate}
-          </time>
+        {/* Date and Q&A indicator */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" aria-hidden="true" />
+            <time dateTime={finding.createdAt} title={new Date(finding.createdAt).toLocaleString()}>
+              {relativeDate}
+            </time>
+          </div>
+          {/* E8.5: Show Q&A indicator if Q&A item exists */}
+          {qaItemId && (
+            <QAExistsIndicator qaItemId={qaItemId} projectId={projectId} size="sm" />
+          )}
         </div>
 
         {/* Actions - always visible on mobile, hover on desktop */}
         <div
           className={cn(
+            'flex items-center gap-1',
             'transition-opacity duration-200',
             'md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'
           )}
         >
+          {/* E8.5: Add to Q&A button (only if no Q&A item exists and handler provided) */}
+          {onAddToQA && !qaItemId && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                    onClick={handleAddToQA}
+                    aria-label="Add to Q&A list"
+                  >
+                    <MessageSquarePlus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add to Q&A</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           <FindingActions
             findingId={finding.id}
             status={finding.status}
