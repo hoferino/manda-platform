@@ -237,8 +237,9 @@ describe('QATable', () => {
       const user = userEvent.setup()
       render(<QATable {...defaultProps} />)
 
-      const answerCell = screen.getAllByText('No answer yet')[0]
-      await user.click(answerCell)
+      const answerCells = screen.getAllByText('No answer yet')
+      expect(answerCells.length).toBeGreaterThan(0)
+      await user.click(answerCells[0]!)
 
       await waitFor(() => {
         expect(screen.getByRole('textbox')).toBeInTheDocument()
@@ -311,8 +312,9 @@ describe('QATable', () => {
       render(<QATable {...defaultProps} onSave={onSave} />)
 
       // Click to edit answer
-      const answerCell = screen.getAllByText('No answer yet')[0]
-      await user.click(answerCell)
+      const answerCells = screen.getAllByText('No answer yet')
+      expect(answerCells.length).toBeGreaterThan(0)
+      await user.click(answerCells[0]!)
 
       const textarea = screen.getByRole('textbox')
       await user.type(textarea, 'New answer provided')

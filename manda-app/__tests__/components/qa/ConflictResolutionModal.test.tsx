@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ConflictResolutionModal } from '@/components/qa/ConflictResolutionModal'
 import { QAItem } from '@/lib/types/qa'
@@ -167,8 +167,9 @@ describe('ConflictResolutionModal', () => {
 
       await user.click(screen.getByRole('tab', { name: /merge manually/i }))
 
-      const useMineButton = screen.getAllByText('Use Mine')[0]
-      await user.click(useMineButton)
+      const useMineButtons = screen.getAllByText('Use Mine')
+      expect(useMineButtons.length).toBeGreaterThan(0)
+      await user.click(useMineButtons[0]!)
 
       // Check textarea value - first textarea should have your version
       const questionTextarea = screen.getByLabelText(/question/i)
@@ -181,8 +182,9 @@ describe('ConflictResolutionModal', () => {
 
       await user.click(screen.getByRole('tab', { name: /merge manually/i }))
 
-      const useTheirsButton = screen.getAllByText('Use Theirs')[0]
-      await user.click(useTheirsButton)
+      const useTheirsButtons = screen.getAllByText('Use Theirs')
+      expect(useTheirsButtons.length).toBeGreaterThan(0)
+      await user.click(useTheirsButtons[0]!)
 
       const questionTextarea = screen.getByLabelText(/question/i)
       expect(questionTextarea).toHaveValue('Their question version')

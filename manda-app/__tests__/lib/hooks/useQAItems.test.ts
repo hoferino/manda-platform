@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useQAItems } from '@/lib/hooks/useQAItems'
+import type { QAItem } from '@/lib/types/qa'
 import * as qaApi from '@/lib/api/qa'
 
 // Mock the API module
@@ -13,36 +14,37 @@ vi.mock('@/lib/api/qa', () => ({
   getQAItems: vi.fn(),
 }))
 
-const mockItems = [
-  {
-    id: 'qa-1',
-    dealId: 'deal-1',
-    question: 'What is the revenue?',
-    answer: null,
-    comment: null,
-    category: 'Financials' as const,
-    priority: 'high' as const,
-    sourceFindingId: null,
-    createdBy: 'user-1',
-    dateAdded: '2025-01-01T00:00:00Z',
-    dateAnswered: null,
-    updatedAt: '2025-01-01T00:00:00Z',
-  },
-  {
-    id: 'qa-2',
-    dealId: 'deal-1',
-    question: 'Are there any pending lawsuits?',
-    answer: 'No pending lawsuits',
-    comment: 'Verified by legal team',
-    category: 'Legal' as const,
-    priority: 'medium' as const,
-    sourceFindingId: null,
-    createdBy: 'user-1',
-    dateAdded: '2025-01-01T00:00:00Z',
-    dateAnswered: '2025-01-02T00:00:00Z',
-    updatedAt: '2025-01-02T00:00:00Z',
-  },
-]
+const mockItem1: QAItem = {
+  id: 'qa-1',
+  dealId: 'deal-1',
+  question: 'What is the revenue?',
+  answer: null,
+  comment: null,
+  category: 'Financials',
+  priority: 'high',
+  sourceFindingId: null,
+  createdBy: 'user-1',
+  dateAdded: '2025-01-01T00:00:00Z',
+  dateAnswered: null,
+  updatedAt: '2025-01-01T00:00:00Z',
+}
+
+const mockItem2: QAItem = {
+  id: 'qa-2',
+  dealId: 'deal-1',
+  question: 'Are there any pending lawsuits?',
+  answer: 'No pending lawsuits',
+  comment: 'Verified by legal team',
+  category: 'Legal',
+  priority: 'medium',
+  sourceFindingId: null,
+  createdBy: 'user-1',
+  dateAdded: '2025-01-01T00:00:00Z',
+  dateAnswered: '2025-01-02T00:00:00Z',
+  updatedAt: '2025-01-02T00:00:00Z',
+}
+
+const mockItems: QAItem[] = [mockItem1, mockItem2]
 
 describe('useQAItems', () => {
   beforeEach(() => {
@@ -80,7 +82,7 @@ describe('useQAItems', () => {
     it('should pass filters to API', async () => {
       const mockGetQAItems = vi.mocked(qaApi.getQAItems)
       mockGetQAItems.mockResolvedValue({
-        items: [mockItems[0]],
+        items: [mockItems[0]!],
         total: 1,
         limit: 50,
         offset: 0,
@@ -131,7 +133,7 @@ describe('useQAItems', () => {
       // Clear mock to track refresh call
       mockGetQAItems.mockClear()
       mockGetQAItems.mockResolvedValue({
-        items: [...mockItems, { ...mockItems[0], id: 'qa-3' }],
+        items: [...mockItems, { ...mockItem1, id: 'qa-3' }],
         total: 3,
         limit: 50,
         offset: 0,
@@ -149,7 +151,8 @@ describe('useQAItems', () => {
     it('should set isRefreshing during refresh', async () => {
       const mockGetQAItems = vi.mocked(qaApi.getQAItems)
 
-      let resolveRefresh: (value: unknown) => void
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let resolveRefresh: (value: any) => void
       mockGetQAItems
         .mockResolvedValueOnce({
           items: mockItems,
@@ -183,7 +186,7 @@ describe('useQAItems', () => {
 
       // Complete refresh
       act(() => {
-        resolveRefresh!({
+        resolveRefresh({
           items: mockItems,
           total: 2,
           limit: 50,
@@ -218,8 +221,8 @@ describe('useQAItems', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      const updatedItem = {
-        ...mockItems[0],
+      const updatedItem: QAItem = {
+        ...mockItem1,
         answer: 'New answer',
         updatedAt: '2025-01-03T00:00:00Z',
       }
@@ -228,8 +231,8 @@ describe('useQAItems', () => {
         result.current.updateItem(updatedItem)
       })
 
-      expect(result.current.items[0].answer).toBe('New answer')
-      expect(result.current.items[1]).toEqual(mockItems[1])
+      expect(result.current.items[0]!.answer).toBe('New answer')
+      expect(result.current.items[1]).toEqual(mockItem2)
     })
   })
 
@@ -254,7 +257,7 @@ describe('useQAItems', () => {
         result.current.optimisticUpdate('qa-1', { answer: 'Optimistic answer' })
       })
 
-      expect(result.current.items[0].answer).toBe('Optimistic answer')
+      expect(result.current.items[0]!.answer).toBe('Optimistic answer')
     })
 
     it('should rollback on error', async () => {
@@ -278,14 +281,14 @@ describe('useQAItems', () => {
         result.current.optimisticUpdate('qa-1', { answer: 'Failed answer' })
       })
 
-      expect(result.current.items[0].answer).toBe('Failed answer')
+      expect(result.current.items[0]!.answer).toBe('Failed answer')
 
       // Rollback
       act(() => {
         result.current.rollbackUpdate('qa-1')
       })
 
-      expect(result.current.items[0].answer).toBe(null) // Original value
+      expect(result.current.items[0]!.answer).toBe(null) // Original value
     })
 
     it('should preserve original for multiple updates to same item', async () => {
@@ -314,14 +317,14 @@ describe('useQAItems', () => {
         result.current.optimisticUpdate('qa-1', { answer: 'Second update' })
       })
 
-      expect(result.current.items[0].answer).toBe('Second update')
+      expect(result.current.items[0]!.answer).toBe('Second update')
 
       // Rollback should restore original, not first update
       act(() => {
         result.current.rollbackUpdate('qa-1')
       })
 
-      expect(result.current.items[0].answer).toBe(null) // Original value
+      expect(result.current.items[0]!.answer).toBe(null) // Original value
     })
   })
 
@@ -336,9 +339,10 @@ describe('useQAItems', () => {
         hasMore: false,
       })
 
+      type FilterProps = { filters?: { category: 'Financials' | 'Legal' } }
       const { result, rerender } = renderHook(
-        ({ filters }) => useQAItems('project-1', filters),
-        { initialProps: { filters: undefined } }
+        ({ filters }: FilterProps) => useQAItems('project-1', filters),
+        { initialProps: { filters: undefined } as FilterProps }
       )
 
       await waitFor(() => {
@@ -348,14 +352,14 @@ describe('useQAItems', () => {
       // Change filters
       mockGetQAItems.mockClear()
       mockGetQAItems.mockResolvedValue({
-        items: [mockItems[0]],
+        items: [mockItem1],
         total: 1,
         limit: 50,
         offset: 0,
         hasMore: false,
       })
 
-      rerender({ filters: { category: 'Financials' as const } })
+      rerender({ filters: { category: 'Financials' } })
 
       await waitFor(() => {
         expect(mockGetQAItems).toHaveBeenCalledWith('project-1', {

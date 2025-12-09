@@ -189,11 +189,12 @@ describe('irl-export service', () => {
     })
 
     it('should handle IRL with various priorities (AC4)', async () => {
+      const baseItems = createMockIRL().items
       const irl = createMockIRL({
         items: [
-          { ...createMockIRL().items[0], priority: 'high' },
-          { ...createMockIRL().items[1], priority: 'medium' },
-          { ...createMockIRL().items[2], priority: 'low' },
+          { ...baseItems[0]!, priority: 'high' },
+          { ...baseItems[1]!, priority: 'medium' },
+          { ...baseItems[2]!, priority: 'low' },
         ],
       })
 
@@ -202,11 +203,12 @@ describe('irl-export service', () => {
     })
 
     it('should handle items with and without notes (AC6)', async () => {
+      const baseItems = createMockIRL().items
       const irl = createMockIRL({
         items: [
-          { ...createMockIRL().items[0], notes: 'Important note' },
-          { ...createMockIRL().items[1], notes: undefined },
-          { ...createMockIRL().items[2], notes: '' },
+          { ...baseItems[0]!, notes: 'Important note' },
+          { ...baseItems[1]!, notes: undefined },
+          { ...baseItems[2]!, notes: '' },
         ],
       })
 
@@ -215,10 +217,11 @@ describe('irl-export service', () => {
     })
 
     it('should handle fulfilled and unfulfilled items (AC7)', async () => {
+      const baseItems = createMockIRL().items
       const irl = createMockIRL({
         items: [
-          { ...createMockIRL().items[0], fulfilled: true },
-          { ...createMockIRL().items[1], fulfilled: false },
+          { ...baseItems[0]!, fulfilled: true },
+          { ...baseItems[1]!, fulfilled: false },
         ],
       })
 
@@ -297,10 +300,11 @@ describe('irl-export service', () => {
   describe('priority formatting (AC4)', () => {
     it('should handle all priority levels', async () => {
       const priorities: Array<'high' | 'medium' | 'low'> = ['high', 'medium', 'low']
+      const baseItems = createMockIRL().items
 
       for (const priority of priorities) {
         const irl = createMockIRL({
-          items: [{ ...createMockIRL().items[0], priority }],
+          items: [{ ...baseItems[0]!, priority }],
         })
 
         const pdfResult = await generateIRLPdf(irl, 'Test')
@@ -314,11 +318,12 @@ describe('irl-export service', () => {
 
   describe('category grouping', () => {
     it('should group items by category correctly', async () => {
+      const baseItems = createMockIRL().items
       const irl = createMockIRL({
         items: [
-          { ...createMockIRL().items[0], category: 'A' },
-          { ...createMockIRL().items[1], category: 'B' },
-          { ...createMockIRL().items[2], category: 'A' },
+          { ...baseItems[0]!, category: 'A' },
+          { ...baseItems[1]!, category: 'B' },
+          { ...baseItems[2]!, category: 'A' },
         ],
       })
 
@@ -327,11 +332,12 @@ describe('irl-export service', () => {
     })
 
     it('should maintain sort order within categories', async () => {
+      const baseItems = createMockIRL().items
       const irl = createMockIRL({
         items: [
-          { ...createMockIRL().items[0], category: 'A', sortOrder: 2 },
-          { ...createMockIRL().items[1], category: 'A', sortOrder: 0 },
-          { ...createMockIRL().items[2], category: 'A', sortOrder: 1 },
+          { ...baseItems[0]!, category: 'A', sortOrder: 2 },
+          { ...baseItems[1]!, category: 'A', sortOrder: 0 },
+          { ...baseItems[2]!, category: 'A', sortOrder: 1 },
         ],
       })
 

@@ -3,6 +3,7 @@
  * Story: E7.5 - Maintain Comprehensive Audit Trail
  */
 
+import { describe, it, expect } from 'vitest'
 import {
   AuditQueryParams,
   AuditEntry,
