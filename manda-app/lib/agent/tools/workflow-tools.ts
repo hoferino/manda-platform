@@ -128,6 +128,11 @@ Use this when the user needs help identifying what questions to ask the target c
 /**
  * add_to_qa
  *
+ * @deprecated Use add_qa_item from qa-tools.ts instead.
+ * This legacy tool stores Q&A pairs (question + answer).
+ * The new add_qa_item tool creates questions for the CLIENT to answer
+ * (matching the qa_items table schema from Epic 8).
+ *
  * Stores a Q&A item with question, answer, sources, and priority.
  *
  * AC: #8 - Stores Q&A item with sources and priority

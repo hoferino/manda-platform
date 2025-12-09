@@ -1,0 +1,283 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E8</epicId>
+    <storyId>E8.3</storyId>
+    <title>Agent Tool - add_qa_item()</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-09</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e8-3-agent-tool-add-qa-item.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>analyst</asA>
+    <iWant>to add Q&A items through chat</iWant>
+    <soThat>I can quickly capture questions during document analysis without switching to the Q&A management UI</soThat>
+    <tasks>
+      <task id="1" title="Create AddQAItemInput Schema">
+        <subtasks>
+          <subtask>1.1 Add AddQAItemInputSchema to lib/agent/schemas.ts using existing QACategorySchema and QAPrioritySchema</subtask>
+          <subtask>1.2 Include validation: question (min 10, max 2000 chars), category (enum), priority (enum, default medium), sourceFindingId (optional uuid)</subtask>
+          <subtask>1.3 Export AddQAItemInput type</subtask>
+          <subtask>1.4 Write unit tests for schema validation</subtask>
+        </subtasks>
+        <ac>AC#1, AC#2, AC#6</ac>
+      </task>
+      <task id="2" title="Create qa-tools.ts with add_qa_item Tool">
+        <subtasks>
+          <subtask>2.1 Create lib/agent/tools/qa-tools.ts file</subtask>
+          <subtask>2.2 Import createQAItem from lib/services/qa.ts</subtask>
+          <subtask>2.3 Import AddQAItemInputSchema from ../schemas</subtask>
+          <subtask>2.4 Implement addQAItemTool using LangChain tool() function</subtask>
+          <subtask>2.5 Authenticate user via Supabase and extract dealId from context</subtask>
+          <subtask>2.6 Call createQAItem service with mapped input</subtask>
+          <subtask>2.7 Return lightweight response: "Added Q&A item #{id} to {category} ({priority} priority)"</subtask>
+          <subtask>2.8 Handle errors using handleToolError from utils</subtask>
+        </subtasks>
+        <ac>AC#1, AC#3, AC#4, AC#5</ac>
+      </task>
+      <task id="3" title="Validate Source Finding Link">
+        <subtasks>
+          <subtask>3.1 When sourceFindingId is provided, verify the finding exists via Supabase query</subtask>
+          <subtask>3.2 If finding doesn't exist, return error message without creating Q&A item</subtask>
+          <subtask>3.3 Pass sourceFindingId to createQAItem service</subtask>
+        </subtasks>
+        <ac>AC#3</ac>
+      </task>
+      <task id="4" title="Register Tool in all-tools.ts">
+        <subtasks>
+          <subtask>4.1 Import addQAItemTool from ./qa-tools</subtask>
+          <subtask>4.2 Add to allChatTools array in workflow tools section</subtask>
+          <subtask>4.3 Update TOOL_CATEGORIES.workflow to include add_qa_item</subtask>
+          <subtask>4.4 Update tool count constant and validation</subtask>
+        </subtasks>
+        <ac>AC#1</ac>
+      </task>
+      <task id="5" title="Update index.ts Barrel Export">
+        <subtasks>
+          <subtask>5.1 Export addQAItemTool from ./qa-tools</subtask>
+          <subtask>5.2 Update module documentation comments</subtask>
+        </subtasks>
+        <ac>AC#1</ac>
+      </task>
+      <task id="6" title="Deprecate Old addToQATool">
+        <subtasks>
+          <subtask>6.1 Add deprecation notice to existing addToQATool in workflow-tools.ts</subtask>
+          <subtask>6.2 Keep old tool for backward compatibility but log deprecation warning</subtask>
+          <subtask>6.3 Add comment referencing E8.3 for cleanup</subtask>
+        </subtasks>
+        <ac>AC#5</ac>
+      </task>
+      <task id="7" title="Write Unit Tests">
+        <subtasks>
+          <subtask>7.1 Create __tests__/lib/agent/tools/qa-tools.test.ts</subtask>
+          <subtask>7.2 Test successful Q&A item creation with all parameters</subtask>
+          <subtask>7.3 Test with optional sourceFindingId provided and linked</subtask>
+          <subtask>7.4 Test invalid category returns error</subtask>
+          <subtask>7.5 Test invalid priority returns error</subtask>
+          <subtask>7.6 Test question too short returns error</subtask>
+          <subtask>7.7 Test authentication required error</subtask>
+          <subtask>7.8 Test invalid sourceFindingId returns error</subtask>
+          <subtask>7.9 Mock Supabase client and qa service</subtask>
+        </subtasks>
+        <ac>All ACs</ac>
+      </task>
+      <task id="8" title="Integration Test">
+        <subtasks>
+          <subtask>8.1 Verify tool appears in agent tool list</subtask>
+          <subtask>8.2 Test tool invocation via agent executor (if integration test setup exists)</subtask>
+          <subtask>8.3 Verify Q&A item created in database with correct fields</subtask>
+        </subtasks>
+        <ac>All ACs</ac>
+      </task>
+      <task id="9" title="Verify Build and Types">
+        <subtasks>
+          <subtask>9.1 Run npm run type-check to verify no TypeScript errors</subtask>
+          <subtask>9.2 Run npm run test to verify all tests pass</subtask>
+          <subtask>9.3 Run npm run build to verify build succeeds</subtask>
+        </subtasks>
+        <ac>All ACs</ac>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Agent can call add_qa_item() tool with valid parameters (question, category, priority, sourceFindingId)</criterion>
+    <criterion id="AC2">Invalid category or priority values return a clear error message and no item is created</criterion>
+    <criterion id="AC3">When sourceFindingId is provided, the Q&A item is correctly linked to the source finding</criterion>
+    <criterion id="AC4">Tool returns lightweight confirmation message including item ID and category (e.g., "Added Q&A item #42 to Financials (High priority)")</criterion>
+    <criterion id="AC5">Tool uses the new qa_items table (not the old qa_lists table)</criterion>
+    <criterion id="AC6">Tool validates question length (minimum 10 characters)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E8.md</path>
+        <title>Epic 8 Technical Specification</title>
+        <section>E8.3: Agent Tool - add_qa_item()</section>
+        <snippet>Tool invocation requirements, validation rules, response format, and Pydantic model definitions for AddQAItemInput/Output.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E8.md</path>
+        <title>Epic 8: Q&A Co-Creation Workflow</title>
+        <section>Stories E8.1-E8.7</section>
+        <snippet>Epic context for Q&A workflow - agents assist analysts to build Q&A lists with items representing questions for the CLIENT to answer.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture v3.0</title>
+        <section>Agent Layer - Tools</section>
+        <snippet>Agent layer architecture with 19 chat tools (7 Q&A tools planned). Tools use Zod schemas on TypeScript side, formatToolResponse/handleToolError utilities.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>manda-app/lib/types/qa.ts</path>
+        <kind>types</kind>
+        <symbol>QACategorySchema, QAPrioritySchema, CreateQAItemInput, QAItem, mapDbRowToQAItem</symbol>
+        <lines>1-371</lines>
+        <reason>Existing Q&A types and Zod schemas to import for tool input validation. Reuse QACategorySchema and QAPrioritySchema.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/services/qa.ts</path>
+        <kind>service</kind>
+        <symbol>createQAItem, getQAItem</symbol>
+        <lines>42-66, 71-95</lines>
+        <reason>Service functions to call from tool. createQAItem handles database insertion with RLS.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/schemas.ts</path>
+        <kind>schemas</kind>
+        <symbol>AddToQAInputSchema, SourceCitationSchema, ToolSchemas</symbol>
+        <lines>239-263, 473-503</lines>
+        <reason>Existing schema patterns to follow. Add new AddQAItemInputSchema here.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/tools/irl-tools.ts</path>
+        <kind>reference</kind>
+        <symbol>addToIRLTool, generateIRLSuggestionsTool</symbol>
+        <lines>462-546</lines>
+        <reason>Reference implementation pattern for new tool. Shows auth, validation, service call, formatToolResponse patterns.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/tools/workflow-tools.ts</path>
+        <kind>tool</kind>
+        <symbol>addToQATool, suggestQuestionsTool</symbol>
+        <lines>135-188</lines>
+        <reason>OLD tool to deprecate. Uses qa_lists table (wrong schema), expects answer field. New tool replaces this.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/tools/all-tools.ts</path>
+        <kind>registry</kind>
+        <symbol>allChatTools, TOOL_CATEGORIES, TOOL_COUNT</symbol>
+        <lines>71-148</lines>
+        <reason>Tool registration array. Add new addQAItemTool here, update TOOL_COUNT from 16 to 17.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/tools/index.ts</path>
+        <kind>barrel</kind>
+        <symbol>exports</symbol>
+        <lines>1-60</lines>
+        <reason>Barrel export file. Add export for new addQAItemTool from ./qa-tools.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/tools/utils.ts</path>
+        <kind>utility</kind>
+        <symbol>formatToolResponse, handleToolError, isValidUUID</symbol>
+        <lines>19-78, 217-219</lines>
+        <reason>Response formatting utilities. Use formatToolResponse(true, {...}) for success, handleToolError for errors.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/supabase/server.ts</path>
+        <kind>client</kind>
+        <symbol>createClient</symbol>
+        <reason>Server-side Supabase client factory for authentication and database operations.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <npm>
+        <package name="@langchain/core" version="^0.3.x">LangChain core with tool() function for creating agent tools</package>
+        <package name="zod" version="^3.x">Schema validation library for input validation</package>
+        <package name="@supabase/supabase-js" version="^2.x">Supabase client for database operations</package>
+      </npm>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Follow existing tool patterns from irl-tools.ts and workflow-tools.ts</constraint>
+    <constraint type="service">Use createQAItem from lib/services/qa.ts - DO NOT interact with database directly</constraint>
+    <constraint type="schema">Use Zod schemas in lib/agent/schemas.ts with LLM-friendly error messages</constraint>
+    <constraint type="auth">Use createClient() from @/lib/supabase/server for server-side auth</constraint>
+    <constraint type="response">Use formatToolResponse() and handleToolError() from ./utils for consistent responses</constraint>
+    <constraint type="table">Use new qa_items table (migration 00038), NOT old qa_lists table</constraint>
+    <constraint type="backward">Keep old addToQATool in workflow-tools.ts with deprecation warning for backward compatibility</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>createQAItem</name>
+      <kind>function</kind>
+      <signature>async function createQAItem(supabase: SupabaseClient, dealId: string, input: CreateQAItemInput, userId?: string): Promise&lt;QAItem&gt;</signature>
+      <path>manda-app/lib/services/qa.ts</path>
+    </interface>
+    <interface>
+      <name>tool</name>
+      <kind>function</kind>
+      <signature>tool(fn: (input) => Promise&lt;string&gt;, { name: string, description: string, schema: ZodSchema })</signature>
+      <path>@langchain/core/tools</path>
+    </interface>
+    <interface>
+      <name>formatToolResponse</name>
+      <kind>function</kind>
+      <signature>formatToolResponse(success: boolean, dataOrError: T | string): string</signature>
+      <path>manda-app/lib/agent/tools/utils.ts</path>
+    </interface>
+    <interface>
+      <name>handleToolError</name>
+      <kind>function</kind>
+      <signature>handleToolError(error: unknown, toolName: string): string</signature>
+      <path>manda-app/lib/agent/tools/utils.ts</path>
+    </interface>
+    <interface>
+      <name>CreateQAItemInput</name>
+      <kind>interface</kind>
+      <signature>{ question: string, category: QACategory, priority?: QAPriority, sourceFindingId?: string, comment?: string }</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+    </interface>
+    <interface>
+      <name>QACategory</name>
+      <kind>type</kind>
+      <signature>'Financials' | 'Legal' | 'Operations' | 'Market' | 'Technology' | 'HR'</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+    </interface>
+    <interface>
+      <name>QAPriority</name>
+      <kind>type</kind>
+      <signature>'high' | 'medium' | 'low'</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Vitest with React Testing Library for component tests. Agent tools tested via unit tests mocking Supabase client and service functions. Follow patterns from __tests__/lib/agent/tools/ if exists, or create new test file. Test files colocated in __tests__ directories with .test.ts extension.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/agent/tools/qa-tools.test.ts (create new)</location>
+      <location>manda-app/__tests__/lib/agent/schemas.test.ts (existing, add schema tests)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test tool invocation with valid parameters returns success response</idea>
+      <idea ac="AC2">Test invalid category enum value returns error without creating item</idea>
+      <idea ac="AC2">Test invalid priority enum value returns error without creating item</idea>
+      <idea ac="AC3">Test valid sourceFindingId links Q&A item to finding</idea>
+      <idea ac="AC3">Test non-existent sourceFindingId returns error</idea>
+      <idea ac="AC4">Test response format matches "Added Q&A item #{id} to {category} ({priority} priority)"</idea>
+      <idea ac="AC5">Test tool calls createQAItem service (qa_items table), not qa_lists</idea>
+      <idea ac="AC6">Test question shorter than 10 chars returns validation error</idea>
+      <idea>Test unauthenticated request returns "Authentication required"</idea>
+      <idea>Test tool appears in allChatTools array after registration</idea>
+    </ideas>
+  </tests>
+</story-context>

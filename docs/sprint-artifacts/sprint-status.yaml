@@ -1414,11 +1414,36 @@ development_status:
     - useQAItems hook with optimistic updates and rollback
     - 94 component tests passing (PriorityBadge, QAInlineEdit, QATable, QAFilterBar, ConflictResolutionModal, useQAItems)
     - Build verified successful
-  e8-3-agent-tool-add-qa-item: backlog
+  e8-3-agent-tool-add-qa-item: done
+  e8-3-drafted: 2025-12-09
+  e8-3-context-ready: 2025-12-09
+  e8-3-completed: 2025-12-09
   e8-3-description: "add_qa_item() tool for single Q&A item creation"
-  e8-4-conversational-qa-flow: backlog
+  e8-3-notes: |
+    add_qa_item agent tool implemented. Key deliverables:
+    - AddQAItemInputSchema with validation (question 10-2000 chars, category, priority, sourceFindingId)
+    - lib/agent/tools/qa-tools.ts with addQAItemTool using createQAItem service
+    - Source finding validation (AC #3) - returns error if finding not found
+    - Tool registration as 17th tool, new qa category in TOOL_CATEGORIES
+    - Deprecated old addToQATool in workflow-tools.ts
+    - 22 unit tests passing (schema validation, tool registration, tool count)
+    - Build verified successful
+  e8-4-conversational-qa-flow: done
+  e8-4-drafted: 2025-12-09
+  e8-4-context-ready: 2025-12-09
+  e8-4-completed: 2025-12-09
   e8-4-description: "AI discusses issues → suggests Q&A when KB can't resolve"
-  e8-5-finding-to-qa-quickadd: backlog
+  e8-4-notes: |
+    - Enhanced AGENT_SYSTEM_PROMPT with Q&A Suggestion Flow section (triggers, drafting guidelines, examples)
+    - Updated TOOL_USAGE_PROMPT with add_qa_item vs suggest_questions guidance
+    - Created lib/agent/utils/qa-category.ts with inferQACategoryFromQuery (100+ keyword mappings)
+    - Created lib/agent/utils/qa-question.ts with draftQAQuestion (templates for common M&A topics)
+    - 190 agent-related tests passing (28 prompt tests, 63 category tests, 35 question tests)
+    - E2E test specifications in e2e/qa-suggestion-flow.spec.ts
+    - Build verified successful
+  e8-5-finding-to-qa-quickadd: ready-for-dev
+  e8-5-drafted: 2025-12-09
+  e8-5-context-ready: 2025-12-09
   e8-5-description: "One-click Q&A creation from inconsistency findings"
   e8-6-excel-export: backlog
   e8-6-description: "Export Q&A list (Question|Priority|Answer|Date Answered)"

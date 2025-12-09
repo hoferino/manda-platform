@@ -11,6 +11,7 @@
  */
 
 import { z } from 'zod'
+import { QACategorySchema, QAPrioritySchema } from '@/lib/types/qa'
 
 // =============================================================================
 // Common Schemas
@@ -262,6 +263,40 @@ export const CreateIRLInputSchema = z.object({
 
 export type CreateIRLInput = z.infer<typeof CreateIRLInputSchema>
 
+// =============================================================================
+// Q&A Tools Input Schemas (Story E8.3)
+// =============================================================================
+
+/**
+ * add_qa_item - Add a Q&A item for client to answer
+ * Story: E8.3 - Agent Tool - add_qa_item()
+ * AC: #1 - Agent can call tool with valid parameters
+ * AC: #2 - Invalid category/priority returns clear error
+ * AC: #6 - Validates question length (minimum 10 characters)
+ *
+ * NOTE: This creates Q&A items as questions for the CLIENT to answer,
+ * NOT as AI-generated Q&A pairs. Status is derived from date_answered.
+ */
+export const AddQAItemInputSchema = z.object({
+  dealId: z.string().uuid().describe('Project/deal ID to add the Q&A item to'),
+  question: z
+    .string()
+    .min(10, 'Question must be at least 10 characters')
+    .max(2000, 'Question must be 2000 characters or less')
+    .describe('Question for the client to answer'),
+  category: QACategorySchema.describe(
+    'Question category (Financials, Legal, Operations, Market, Technology, HR)'
+  ),
+  priority: QAPrioritySchema.default('medium').describe('Priority level (high, medium, low)'),
+  sourceFindingId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe('Optional: ID of the finding that triggered this question'),
+})
+
+export type AddQAItemInput = z.infer<typeof AddQAItemInputSchema>
+
 /**
  * generate_irl_suggestions - Generate IRL item suggestions based on deal context
  * Story: E6.3 - Implement AI-Assisted IRL Auto-Generation from Documents
@@ -485,6 +520,8 @@ export const ToolSchemas = {
   SuggestQuestionsInput: SuggestQuestionsInputSchema,
   AddToQAInput: AddToQAInputSchema,
   CreateIRLInput: CreateIRLInputSchema,
+  // Q&A tools (E8.3)
+  AddQAItemInput: AddQAItemInputSchema,
   GenerateIRLSuggestionsInput: GenerateIRLSuggestionsInputSchema,
   AddToIRLInput: AddToIRLInputSchema,
   // Correction tools (E7.1)

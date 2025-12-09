@@ -1,0 +1,245 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E8</epicId>
+    <storyId>5</storyId>
+    <title>Finding to QA Quick-Add</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-09</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e8-5-finding-to-qa-quickadd.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>analyst</asA>
+    <iWant>to quickly add inconsistency findings to my Q&A list</iWant>
+    <soThat>I can ask the client to clarify contradictions directly from the Knowledge Explorer</soThat>
+    <tasks>
+      <task id="1" title="Create Domain-to-Category Mapping Utility" ac="3">
+        <subtask>1.1 Create lib/utils/finding-qa-mapping.ts with mapDomainToQACategory() function</subtask>
+        <subtask>1.2 Map: financial→Financials, operational→Operations, market→Market, legal→Legal, technical→Technology</subtask>
+        <subtask>1.3 Default to 'Operations' for null/unknown domains</subtask>
+        <subtask>1.4 Write unit tests for mapping function</subtask>
+      </task>
+      <task id="2" title="Create Question Drafting Utility" ac="2">
+        <subtask>2.1 Create generateQuestionFromFinding() function in same utility file</subtask>
+        <subtask>2.2 Draft question based on finding text</subtask>
+        <subtask>2.3 For contradiction-type findings, use specific phrasing</subtask>
+        <subtask>2.4 Truncate very long finding text (>500 chars) with "..."</subtask>
+        <subtask>2.5 Write unit tests for question generation</subtask>
+      </task>
+      <task id="3" title="Create AddToQAModal Component" ac="2,3,4">
+        <subtask>3.1 Create components/knowledge-explorer/findings/AddToQAModal.tsx</subtask>
+        <subtask>3.2 Accept finding and onClose, onSuccess props</subtask>
+        <subtask>3.3 Pre-populate question field using generateQuestionFromFinding()</subtask>
+        <subtask>3.4 Pre-select category using mapDomainToQACategory()</subtask>
+        <subtask>3.5 Add priority dropdown (default: medium)</subtask>
+        <subtask>3.6 Add editable textarea for question with 10-2000 char validation</subtask>
+        <subtask>3.7 Add submit button with loading state</subtask>
+        <subtask>3.8 Call createQAItem() API on submit with sourceFindingId</subtask>
+        <subtask>3.9 Show success toast on completion</subtask>
+        <subtask>3.10 Write component tests</subtask>
+      </task>
+      <task id="4" title="Create QAExistsIndicator Component" ac="6,7">
+        <subtask>4.1 Create components/knowledge-explorer/findings/QAExistsIndicator.tsx</subtask>
+        <subtask>4.2 Accept qaItemId prop, display as badge with link icon</subtask>
+        <subtask>4.3 On click, navigate to Q&A page with ?itemId query param</subtask>
+        <subtask>4.4 Use Tooltip to show "View Q&A item" on hover</subtask>
+        <subtask>4.5 Style: purple/violet badge matching Q&A color theme</subtask>
+        <subtask>4.6 Write component tests</subtask>
+      </task>
+      <task id="5" title="Add API to Check Q&A Existence for Finding" ac="7">
+        <subtask>5.1 Add GET /api/projects/[id]/qa/by-finding/[findingId] endpoint</subtask>
+        <subtask>5.2 Return { exists: boolean, qaItemId?: string } response</subtask>
+        <subtask>5.3 Query qa_items table with source_finding_id = findingId</subtask>
+        <subtask>5.4 Add getQAItemByFindingId() function to lib/api/qa.ts</subtask>
+        <subtask>5.5 Write API route tests</subtask>
+      </task>
+      <task id="6" title="Integrate Add to QA Button into FindingCard" ac="1,6,7">
+        <subtask>6.1 Add qaItemId?: string | null prop to FindingCard</subtask>
+        <subtask>6.2 Add onAddToQA?: (finding: Finding) => void prop</subtask>
+        <subtask>6.3 Show Add to QA button when no qaItemId</subtask>
+        <subtask>6.4 Show QAExistsIndicator when qaItemId is present</subtask>
+        <subtask>6.5 Add Tooltip on the button</subtask>
+        <subtask>6.6 Update FindingCard tests</subtask>
+      </task>
+      <task id="7" title="Integrate Add to QA Button into FindingsTable" ac="1,6,7">
+        <subtask>7.1 Add Q&A column to FindingsTable after Actions column</subtask>
+        <subtask>7.2 Show Add button or QAExistsIndicator based on qa_item_id</subtask>
+        <subtask>7.3 Handle button click to open AddToQAModal</subtask>
+        <subtask>7.4 Update FindingsTable tests</subtask>
+      </task>
+      <task id="8" title="Update FindingsBrowser to Manage Q&A State" ac="5,6">
+        <subtask>8.1 Add state for modal visibility and selected finding</subtask>
+        <subtask>8.2 Pass onAddToQA callback to FindingCard and FindingsTable</subtask>
+        <subtask>8.3 Render AddToQAModal when open</subtask>
+        <subtask>8.4 On successful Q&A creation, update finding's qaItemId in local state</subtask>
+        <subtask>8.5 Fetch Q&A existence data alongside findings</subtask>
+      </task>
+      <task id="9" title="Batch Q&A Existence Check API" ac="7">
+        <subtask>9.1 Add POST /api/projects/[id]/qa/check-findings endpoint</subtask>
+        <subtask>9.2 Accept { findingIds: string[] } body</subtask>
+        <subtask>9.3 Return { results: Record&lt;string, string | null&gt; }</subtask>
+        <subtask>9.4 Update lib/api/qa.ts with checkQAExistenceForFindings()</subtask>
+        <subtask>9.5 Call this API when loading findings in FindingsBrowser</subtask>
+      </task>
+      <task id="10" title="Write Integration and E2E Tests" ac="all">
+        <subtask>10.1 Write integration test: Finding with no Q&A shows Add to Q&A button</subtask>
+        <subtask>10.2 Write integration test: Clicking button opens modal with pre-drafted question</subtask>
+        <subtask>10.3 Write integration test: Submitting creates Q&A item with sourceFindingId</subtask>
+        <subtask>10.4 Write integration test: Finding with existing Q&A shows indicator</subtask>
+        <subtask>10.5 Create E2E test scenario in Playwright</subtask>
+      </task>
+      <task id="11" title="Verify Build and Types" ac="all">
+        <subtask>11.1 Run npm run type-check - no errors</subtask>
+        <subtask>11.2 Run unit tests for new components and utilities</subtask>
+        <subtask>11.3 Run build to ensure no compilation errors</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1">Inconsistency findings in the Knowledge Explorer (both FindingCard and FindingsTable) display an "Add to Q&A" button</criterion>
+    <criterion id="AC2">Clicking "Add to Q&A" opens a modal with a pre-drafted question based on the finding text and context</criterion>
+    <criterion id="AC3">The modal pre-selects the Q&A category based on the finding's domain (financial→Financials, legal→Legal, operational→Operations, market→Market, technical→Technology)</criterion>
+    <criterion id="AC4">The user can edit the question, select a different category, and set priority before submitting</criterion>
+    <criterion id="AC5">Submitting the modal calls createQAItem() API with sourceFindingId set to the finding ID</criterion>
+    <criterion id="AC6">After successful creation, the finding card/row shows a "Q&A exists" indicator with a link to view the Q&A item</criterion>
+    <criterion id="AC7">If a Q&A item already exists for this finding (checked via sourceFindingId), show "Q&A item exists" indicator instead of "Add to Q&A" button</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E8.md" title="Epic 8 Tech Spec" section="E8.5: Finding-to-Q&A Quick-Add">
+        Q&A items are questions sent to CLIENT to answer (not AI-generated). AC-8.5.1 through AC-8.5.5 define acceptance criteria. Database schema uses qa_items table with source_finding_id FK to findings.
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e8-4-conversational-qa-flow.md" title="E8.4 Story Reference" section="Completion Notes">
+        inferQACategoryFromQuery() exists in lib/agent/utils/qa-category.ts (100+ keywords). draftQAQuestion() in lib/agent/utils/qa-question.ts for agent use. createQAItem API at POST /api/projects/[id]/qa with sourceFindingId optional field.
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Architecture v3.0" section="Q&A Items Schema">
+        Q&A data model: qa_items table with deal_id, question, category, priority, answer, source_finding_id, date_answered. Status derived from date_answered (NULL=pending).
+      </doc>
+    </docs>
+
+    <code>
+      <file path="manda-app/lib/types/qa.ts" kind="types" symbol="QACategory, QAPriority, QAItem, CreateQAItemInput" reason="Core Q&A types - use QACategory for domain mapping target">
+        QACategory = 'Financials' | 'Legal' | 'Operations' | 'Market' | 'Technology' | 'HR'. CreateQAItemInput includes question (10-2000 chars), category, priority, sourceFindingId?.
+      </file>
+      <file path="manda-app/lib/api/qa.ts" kind="api-client" symbol="createQAItem, getQAItems" reason="Use createQAItem() for submitting new Q&A items with sourceFindingId">
+        Existing API functions for Q&A CRUD. Add getQAItemByFindingId() and checkQAExistenceForFindings() functions.
+      </file>
+      <file path="manda-app/lib/types/findings.ts" kind="types" symbol="Finding, FindingDomain, FindingType" reason="Source types for domain mapping - FindingDomain is lowercase (financial, operational, etc.)">
+        FindingDomain = 'financial' | 'operational' | 'market' | 'legal' | 'technical'. Note lowercase vs QACategory PascalCase.
+      </file>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingCard.tsx" kind="component" symbol="FindingCard, FindingCardProps" lines="36-51" reason="Add qaItemId prop and onAddToQA callback, integrate QAExistsIndicator in footer">
+        Currently has onValidate, onEdit, onSaveEdit, onCancelEdit, onCardClick, projectId, isSelected, onSelectionChange props. Footer has FindingActions. Add Q&A button near actions.
+      </file>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingsTable.tsx" kind="component" symbol="FindingsTable, FindingsTableProps" lines="65-86" reason="Add Q&A column after Actions column, pass qaItemId map and onAddToQA callback">
+        Uses @tanstack/react-table with column definitions. Add new column def for Q&A. Has Actions column at end - add Q&A column there.
+      </file>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingsBrowser.tsx" kind="component" symbol="FindingsBrowser" lines="56-62" reason="Container managing state - add Q&A modal state, fetch Q&A existence alongside findings">
+        Manages filters, data, editing, detail panel state. Add qaItemIdMap state, modal open state, handleAddToQA callback.
+      </file>
+      <file path="manda-app/components/knowledge-explorer/findings/FindingActions.tsx" kind="component" symbol="FindingActions" reason="Reference for action button pattern - validate/reject/edit buttons with tooltips">
+        Pattern to follow for Add to Q&A button styling and tooltip usage.
+      </file>
+      <file path="manda-app/lib/agent/utils/qa-category.ts" kind="utility" symbol="inferQACategoryFromQuery" reason="Reference for category inference patterns, but domain mapping is simpler">
+        Existing 100+ keyword mappings for agent use. Finding domain→QACategory is direct enum mapping, not keyword inference.
+      </file>
+    </code>
+
+    <dependencies>
+      <node>
+        <package name="lucide-react" version="^0.554.0" usage="MessageSquarePlus icon for Add to Q&A button"/>
+        <package name="@radix-ui/react-dialog" version="^1.1.15" usage="Dialog component for AddToQAModal"/>
+        <package name="@radix-ui/react-tooltip" version="^1.2.8" usage="Tooltip for button and indicator hover"/>
+        <package name="@radix-ui/react-select" version="^2.2.6" usage="Select for category/priority dropdowns"/>
+        <package name="sonner" version="^2.0.7" usage="Toast notifications for success/error"/>
+        <package name="zod" version="^4.1.13" usage="Validation schemas for form input"/>
+        <package name="next" version="16.0.4" usage="App router API routes at /api/projects/[id]/qa/*"/>
+        <package name="@supabase/supabase-js" version="^2.84.0" usage="Database queries for qa_items table"/>
+      </node>
+      <testing>
+        <package name="vitest" version="^4.0.14" usage="Unit and integration tests"/>
+        <package name="@testing-library/react" version="^16.3.0" usage="Component tests"/>
+        <package name="@playwright/test" version="^1.57.0" usage="E2E tests"/>
+      </testing>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Dev Notes">Component Location: New components go in components/knowledge-explorer/findings/ to match existing patterns</constraint>
+    <constraint source="Dev Notes">API Pattern: Follow existing Next.js API routes pattern in app/api/projects/[id]/qa/</constraint>
+    <constraint source="Dev Notes">Service Layer: Use createQAItem() from lib/api/qa.ts - do not interact with database directly from components</constraint>
+    <constraint source="Dev Notes">Modal Pattern: Use Dialog component from shadcn/ui following existing modal patterns (AddFindingModal in GapActions)</constraint>
+    <constraint source="Tech Spec">Question length: 10-2000 characters (enforced by CreateQAItemInputSchema)</constraint>
+    <constraint source="Tech Spec">Domain to Category mapping: lowercase finding domain → PascalCase QA category (financial→Financials)</constraint>
+    <constraint source="Architecture">Q&A item status derived from date_answered (NULL=pending, NOT NULL=answered) - no status field</constraint>
+    <constraint source="Architecture">source_finding_id FK links Q&A item to originating finding for traceability</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="createQAItem" kind="API function">
+      <signature>createQAItem(projectId: string, input: CreateQAItemInput): Promise&lt;QAItem&gt;</signature>
+      <path>manda-app/lib/api/qa.ts</path>
+      <note>Use for submitting new Q&A items. Set sourceFindingId to link to finding.</note>
+    </interface>
+    <interface name="POST /api/projects/[id]/qa" kind="REST endpoint">
+      <signature>POST body: CreateQAItemInput → 201: { item: QAItem }</signature>
+      <path>manda-app/app/api/projects/[id]/qa/route.ts</path>
+      <note>Existing endpoint - already supports sourceFindingId field</note>
+    </interface>
+    <interface name="GET /api/projects/[id]/qa/by-finding/[findingId]" kind="REST endpoint">
+      <signature>GET → { exists: boolean, qaItemId?: string }</signature>
+      <path>manda-app/app/api/projects/[id]/qa/by-finding/[findingId]/route.ts</path>
+      <note>NEW - Check if Q&A exists for a finding</note>
+    </interface>
+    <interface name="POST /api/projects/[id]/qa/check-findings" kind="REST endpoint">
+      <signature>POST body: { findingIds: string[] } → { results: Record&lt;string, string | null&gt; }</signature>
+      <path>manda-app/app/api/projects/[id]/qa/check-findings/route.ts</path>
+      <note>NEW - Batch check Q&A existence for multiple findings</note>
+    </interface>
+    <interface name="FindingCardProps" kind="TypeScript interface">
+      <signature>{ finding: Finding, qaItemId?: string | null, onAddToQA?: (finding: Finding) => void, ... }</signature>
+      <path>manda-app/components/knowledge-explorer/findings/FindingCard.tsx</path>
+      <note>Extend existing interface with qaItemId and onAddToQA props</note>
+    </interface>
+    <interface name="QACategory" kind="TypeScript type">
+      <signature>'Financials' | 'Legal' | 'Operations' | 'Market' | 'Technology' | 'HR'</signature>
+      <path>manda-app/lib/types/qa.ts</path>
+      <note>Target type for domain mapping</note>
+    </interface>
+    <interface name="FindingDomain" kind="TypeScript type">
+      <signature>'financial' | 'operational' | 'market' | 'legal' | 'technical'</signature>
+      <path>manda-app/lib/types/findings.ts</path>
+      <note>Source type for domain mapping (lowercase)</note>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Vitest for unit and integration tests with React Testing Library for components. Playwright for E2E tests. Test files colocated in __tests__/ directories or alongside source files with .test.ts(x) extension. Use vi.mock() for API mocking. Follow existing test patterns in __tests__/components/knowledge-explorer/findings/*.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/knowledge-explorer/findings/</location>
+      <location>manda-app/__tests__/lib/utils/</location>
+      <location>manda-app/__tests__/api/projects/qa/</location>
+      <location>manda-app/e2e/</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test FindingCard renders "Add to Q&A" button when qaItemId is null/undefined</idea>
+      <idea ac="AC1">Test FindingsTable Q&A column renders button for findings without Q&A</idea>
+      <idea ac="AC2">Test AddToQAModal opens with pre-drafted question from finding text</idea>
+      <idea ac="AC2">Test generateQuestionFromFinding() produces correct question format</idea>
+      <idea ac="AC3">Test mapDomainToQACategory() maps all domains correctly (financial→Financials, etc.)</idea>
+      <idea ac="AC3">Test mapDomainToQACategory() defaults to 'Operations' for null/unknown</idea>
+      <idea ac="AC4">Test AddToQAModal allows editing question, category, and priority</idea>
+      <idea ac="AC4">Test AddToQAModal validates question length (10-2000 chars)</idea>
+      <idea ac="AC5">Test AddToQAModal submit calls createQAItem with correct sourceFindingId</idea>
+      <idea ac="AC6">Test FindingCard shows QAExistsIndicator when qaItemId is present</idea>
+      <idea ac="AC6">Test QAExistsIndicator navigates to Q&A page on click</idea>
+      <idea ac="AC7">Test batch check API returns correct findingId→qaItemId mapping</idea>
+      <idea ac="AC7">Test FindingsBrowser fetches Q&A existence data on load</idea>
+      <idea ac="E2E">E2E: Navigate to Knowledge Explorer, click Add to Q&A on finding, submit modal, verify indicator appears</idea>
+    </ideas>
+  </tests>
+</story-context>

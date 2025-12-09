@@ -339,9 +339,9 @@ describe('IRL Tools - Schema Validation', () => {
 })
 
 describe('IRL Tools - Tool Count Integration', () => {
-  it('should have exactly 13 tools (updated from 11)', () => {
-    expect(TOOL_COUNT).toBe(13)
-    expect(allChatTools.length).toBe(13)
+  it('should have exactly 17 tools (updated from 13 after Q&A tools added)', () => {
+    expect(TOOL_COUNT).toBe(17)
+    expect(allChatTools.length).toBe(17)
   })
 
   it('should pass tool count validation', () => {
