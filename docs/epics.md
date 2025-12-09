@@ -2,9 +2,9 @@
 
 **Document Status:** Complete (MVP Epics E1-E9)
 **Created:** 2025-11-19
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-12-09
 **Owner:** Max
-**Version:** 2.2 (Infrastructure decisions: Supabase retained for MVP, Epic 3 uses Docling + Vertex AI RAG Engine hybrid, Cloud Run deployment target, future GCP migration path documented)
+**Version:** 2.3 (Epic 9 redesigned to CIM Builder based on Party Mode findings — full CIM framework with 3-panel UI, 15 stories)
 
 ---
 
@@ -39,9 +39,9 @@ This document breaks down the Manda M&A Intelligence Platform into epics and sto
 | E6 | IRL Management & Auto-Generation | Users can create IRLs and auto-generate Data Room folder structures | 8 | P0 |
 | E7 | Learning Loop | System learns from analyst corrections and feedback to improve over time | 6 | P0 |
 | E8 | Q&A Co-Creation Workflow | Users can collaboratively build Q&A lists with AI assistance | 8 | P1 |
-| E9 | CIM Company Overview Creation (CIM v3 Workflow) | Users can create Company Overview chapters through 14-phase deeply interactive workflow | 9 | P1 |
+| E9 | CIM Builder | Users can create complete CIMs through agent-guided workflow with 3-panel UI | 15 | P1 |
 
-**Total Stories (MVP):** 80
+**Total Stories (MVP):** 86
 
 ### Phase 2: Enhancement Epics (Platform Enhancement)
 
@@ -4886,653 +4886,103 @@ Then the agent calls import_qa_excel() and summarizes results
 
 ---
 
-## Epic 9: CIM Company Overview Creation (CIM v3 Workflow)
+## Epic 9: CIM Builder
 
-**User Value:** Users can create professional-grade Company Overview chapters through structured interactive workflow with comprehensive AI guidance and live preview
+> **⚠️ MAJOR REDESIGN (2025-12-09):** This epic was redesigned based on Party Mode multi-agent analysis. See [epic-E9-party-mode-findings.md](./sprint-artifacts/epic-E9-party-mode-findings.md) for the full design session output.
 
-**Description:** Implements the proven CIM v3 workflow from POC into the full platform. Enables analysts to create Company Overview chapters through a deeply conversational, iterative process (typically ~14 phases, adaptable based on complexity) in a dedicated CIM Builder UI at `/projects/[id]/cim-builder` with **live preview capability** for visual concepts. The workflow:
-1. Discovers buyer context and narrative approach organically (not template-driven)
-2. Builds investment thesis collaboratively (3-part: Asset, Timing, Opportunity)
-3. Creates narrative outline with logical flow reasoning
-4. Builds slides one at a time (content-first, then visual concepts with **live preview**)
-5. Validates narrative coherence continuously with balance checks after each section
-6. Provides extreme visual precision (position, format, styling for EVERY element)
-7. Supports non-linear workflow (jump between sections, go back, reorder)
-8. Exports comprehensive outputs (content markdown, slide blueprints, guide, LLM prompt template)
+**User Value:** Users can create complete CIMs through an agent-guided, iterative workflow with a NotebookLM-inspired 3-panel UI
 
-**Note on Phase Structure:** The workflow is designed with ~14 phases as the established structure, but can adapt based on complexity and user needs. The critical aspect is **comprehensive guidance** through buyer persona discovery, narrative development, content creation, and visual design—not a fixed phase count.
+**Description:** Flexible framework for creating complete CIMs (not just Company Overview). Features a three-panel interface: Sources (left), Conversation (center), Preview (right). Users define their own CIM structure collaboratively with the agent—supporting buyer personas, custom outlines, and multiple CIMs per deal for different buyer types. The workflow provides RAG-powered content suggestions, click-to-reference editing, and exports to PowerPoint and LLM prompt formats.
 
-**Scope:** Company Overview chapter ONLY (other CIM chapters in Phase 2/E13)
+**Key Design Decisions (from Party Mode):**
+1. **NotebookLM-inspired UI** - Three-panel layout for sources, conversation, and preview
+2. **User-defined structure** - No fixed 14-phase workflow; users build their CIM outline collaboratively
+3. **Multiple CIMs per deal** - Support different buyer types (strategic vs financial)
+4. **Wireframe preview** - Real-time visual preview without pixel-perfect styling (MVP scope)
+5. **Click-to-reference editing** - Click any element in preview to discuss/edit in conversation
+6. **RAG/GraphRAG integration** - Content suggestions grounded in knowledge base
+
+**Scope:** Complete CIM creation framework. Users define their own CIM structure collaboratively with the agent — not limited to Company Overview. Supports multiple CIMs per deal for different buyer types.
 
 **Functional Requirements Covered:**
-- FR-CIM-001: CIM Builder UI and Workflow Interface (with live preview)
-- FR-CIM-002: Structured Interactive Workflow (adaptive phase count)
-- FR-CIM-003: Agent Intelligence and Tools
-- FR-CIM-004: Workflow State Management
-- FR-CIM-005: Special Commands
-- FR-CIM-006: Version Control and Iteration
+- FR-CIM-001: CIM Builder UI and Workflow Interface (3-panel layout)
+- FR-CIM-002: Agent-Guided Workflow (user-defined structure)
+- FR-CIM-003: Agent Intelligence and Tools (RAG/GraphRAG integration)
+- FR-CIM-004: Workflow State Management (LangGraph with checkpointing)
+- FR-CIM-005: Special Commands (partially covered - click-to-reference)
+- FR-CIM-006: Version Control (dependency tracking for slide coherence)
 
 **Technical Foundation:**
-- **Frontend:** Dedicated CIM Builder UI with:
-  - Left Sidebar: Visual workflow progress (14 phases)
-  - Main Area: Conversational interaction with AI
-  - Right Panel: Context (buyer persona, thesis, section info)
-- **Backend:** LangGraph workflow with 14 nodes and human-in-the-loop interrupts at each phase
-- **State Management:** `cim_workflow_states` and `cim_slides` tables for persistence and resume capability
-- **RAG Integration:** `query_knowledge_base()` for semantic search (pgvector) throughout workflow
-- **Agent Tools:** 3 CIM-specific tools:
-  - `suggest_narrative_outline(buyer_persona, context)`
-  - `validate_idea_coherence(narrative, proposed_idea)`
-  - `generate_slide_blueprint(slide_topic, narrative_context, content_elements)`
-- **Buyer Persona System:** Strategic Buyer, Financial Buyer, Custom
-- **Multi-Format Export:** Content markdown, slide blueprints markdown, guide, LLM prompt template
+- **Frontend:** NotebookLM-inspired 3-panel UI at `/projects/[id]/cim-builder`:
+  - Left Panel: Sources (findings, documents, knowledge base items)
+  - Center Panel: Conversation (AI-guided workflow interaction)
+  - Right Panel: Preview (wireframe slide preview, click-to-reference)
+- **Backend:** LangGraph workflow with human-in-the-loop checkpoints
+- **State Management:** `cims` and `cim_slides` tables for persistence and resume
+- **RAG Integration:** Semantic search for content suggestions throughout workflow
+- **Agent Orchestration:** Multi-tool agent for buyer persona, outline, content creation
+- **Preview System:** Wireframe renderer (Phase 1), styled output research spike (Phase 2)
+- **Export:** PowerPoint (.pptx) and LLM prompt template formats
 
 **Acceptance Criteria (Epic Level):**
-- ✅ User completes 14-phase workflow for Company Overview chapter
-- ✅ Buyer persona drives narrative tailoring through conversational discovery
-- ✅ Investment thesis (3-part) established before content creation
-- ✅ Narrative outline built collaboratively with flow reasoning
-- ✅ Slides built one-at-a-time with two-step process (content approval → visual approval)
-- ✅ Visual concepts include extreme precision (positioning, styling, icons for ALL elements)
-- ✅ Continuous balance checks after each section completion
-- ✅ Non-linear workflow (can jump between sections, go back, reorder)
-- ✅ Phase 12 coherence validation from buyer's perspective
-- ✅ Phase 13 deck optimization with improvement suggestions
-- ✅ Multi-format export (content, slides, guide, LLM prompt) with RAG source citations
+- ✅ User can create, list, and manage multiple CIMs per deal
+- ✅ 3-panel UI (Sources, Conversation, Preview) is functional
+- ✅ Buyer persona selection drives narrative tailoring
+- ✅ User can define custom CIM outline collaboratively with agent
+- ✅ RAG-powered content suggestions with source citations
+- ✅ Wireframe preview renders slides in real-time
+- ✅ Click-to-reference: click any element in preview to discuss/edit
+- ✅ Dependency tracking maintains slide coherence
+- ✅ Non-linear navigation (jump between slides, reorder)
+- ✅ Visual generation with positioning and layout specs
+- ✅ Export to PowerPoint format
+- ✅ Export to LLM prompt template for external generation
 - ✅ Resume capability from any checkpoint
-- ✅ Version control tracks iterations
-- ✅ Special commands work throughout (undo, history, explain, balance check, etc.)
 
 ### Stories
 
-#### Story E9.1: CIM Workflow Database Schema and State Management
-
-**As a** developer
-**I want** a CIM workflow state database schema
-**So that** the system can persist workflow progress and support resume capability
-
-**Technical Details:**
-- Tables: `cim_workflow_states`, `cim_slides`
-- `cim_workflow_states`: Stores current phase, completed phases, buyer persona (JSONB), investment thesis (JSONB), sections (JSONB[]), conversation history
-- `cim_slides`: Stores slide content_elements (JSONB[]) with source citations, visual_concept (JSONB) with extreme precision specs, approval flags
-- Buyer persona templates: Strategic Buyer (growth focus), Financial Buyer (returns focus), Custom
-- Version control: Full workflow state snapshots with timestamps
-- Resume capability: Load workflow state by deal_id + user_id
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I start a CIM workflow
-Then a cim_workflow_states record is created
-And current_phase is set to 1
-And workflow state is persisted continuously
-
-Given I select "Strategic Buyer" persona
-Then buyer_persona JSON is stored with {type, motivations, concerns, story_hero}
-And persona drives narrative tailoring throughout workflow
-
-Given I create 3 slides in "Company History" section
-Then 3 cim_slides records are created
-And each has content_elements[] with source_finding_id references
-And each has visual_concept{} with positioned_elements[] specs
-
-Given I close browser mid-workflow
-When I return and resume
-Then workflow loads from saved state
-And I continue from exact checkpoint
-```
-
-**Related FR:** FR-CIM-001, FR-CIM-004, FR-CIM-006
-
-**Definition of Done:**
-- [ ] `cim_workflow_states` table created with JSONB columns
-- [ ] `cim_slides` table created with approval flags
-- [ ] Buyer persona templates seeded (Strategic, Financial, Custom)
-- [ ] Version control implemented (snapshot on save)
-- [ ] Resume capability tested
-
----
-
-#### Story E9.2: CIM Builder UI with Workflow Progress Visualization
-
-**As an** analyst
-**I want** a dedicated CIM Builder interface with visual workflow progress
-**So that** I can clearly see my progress through the 14 phases
-
-**Technical Details:**
-- New route: `/projects/[id]/cim-builder`
-- **Layout Structure:**
-  - Left Sidebar (25%): Workflow progress with 14 phase indicators
-    - Current phase highlighted
-    - Completed phases marked with checkmarks
-    - Pending phases greyed out
-    - Narrative structure tree view (sections + slides)
-    - Navigation controls
-  - Main Content Area (50%): Conversational interaction
-    - AI messages with options/suggestions
-    - User input field
-    - Content previews
-    - Visual concept previews
-  - Right Panel (25%): Context
-    - Buyer persona summary
-    - Investment thesis display
-    - Current section info
-    - Quick action buttons (undo, history, explain, balance check)
-- Auto-save workflow state continuously
-- WebSocket connection for real-time AI responses
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I navigate to /projects/[deal_id]/cim-builder
-Then I see the CIM Builder interface with 3-panel layout
-And left sidebar shows "Phase 1/14: Understand Buyer Context" as current
-And all 14 phases are listed
-And main area shows welcome message from AI
-
-Given I'm on Phase 5 (building slides)
-Then left sidebar shows Phases 1-4 with checkmarks
-And Phase 5 is highlighted as current
-And Phases 6-14 are greyed out
-And narrative structure tree shows sections I've created
-
-Given I complete a slide
-Then the narrative tree updates in real-time
-And I see the slide under its section
-And workflow state auto-saves
-
-Given AI is generating a response
-Then I see streaming text in main content area
-And responses appear token-by-token
-```
-
-**Related FR:** FR-CIM-001
-
-**Definition of Done:**
-- [ ] `/projects/[id]/cim-builder` route implemented
-- [ ] 3-panel layout responsive and functional
-- [ ] Workflow progress indicator shows all 14 phases
-- [ ] Narrative structure tree view works
-- [ ] Main content area handles conversational interaction
-- [ ] Right panel shows context dynamically
-- [ ] Auto-save implemented
-- [ ] WebSocket streaming responses work
-
----
-
-#### Story E9.3: Agent Tool - suggest_narrative_outline()
-
-**As an** analyst
-**I want** the AI to suggest a narrative outline for my CIM
-**So that** I can establish a coherent story arc before defining slides
-
-**Technical Details:**
-- New agent tool: `suggest_narrative_outline(buyer_persona, company_context, key_findings)`
-- Queries Neo4j for key findings from knowledge base
-- Suggests story arc: Hook → Context → Value → Proof → Vision → Call to Action
-- Tailors messaging to buyer persona (strategic vs financial priorities)
-- Returns outline with recommended narrative flow
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I request narrative outline for "Strategic Buyer"
-When suggest_narrative_outline() executes with knowledge base context
-Then it returns story arc emphasizing growth potential, synergies, market position
-And each arc section has clear narrative purpose
-
-Given I request narrative outline for "Financial Buyer"
-When suggest_narrative_outline() executes with knowledge base context
-Then it returns story arc emphasizing ROI, cash flow, exit multiples
-And each arc section has clear financial value proposition
-```
-
-**Related FR:** FR-CIM-002
-
-**Definition of Done:**
-- [ ] suggest_narrative_outline() tool implemented
-- [ ] Queries knowledge base for grounding
-- [ ] Strategic buyer narrative logic works
-- [ ] Financial buyer narrative logic works
-- [ ] Story arc structure returned
-
----
-
-#### Story E9.4: LangGraph CIM v3 Workflow Implementation (14 Phases)
-
-**As a** developer
-**I want** the 14-phase CIM v3 workflow implemented in LangGraph
-**So that** analysts can create Company Overview chapters through the proven interactive process
-
-**Description:**
-Implement the complete 14-phase workflow from CIM v3 POC as a LangGraph workflow with human-in-the-loop interrupts at each major decision point.
-
-**Technical Details:**
-- LangGraph workflow definition with 14 nodes (one per phase)
-- Human checkpoints:
-  - Phase 1: Buyer persona confirmation
-  - Phase 2: Investment thesis approval
-  - Phase 3: Narrative outline confirmation
-  - Phases 4-11: Content approval → Visual approval (per slide)
-  - Phase 12: Coherence improvements acceptance
-  - Phase 13: Optimization approval
-  - Phase 14: Export format selection
-- Workflow state stored in `cim_workflow_states` table
-- Resume capability from any checkpoint
-- Conditional routing (user can go back, skip, reorder sections)
-- Non-linear section building (user chooses which section to build next)
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I start the CIM workflow
-When I progress through Phase 1 (Buyer Context)
-Then the system pauses for my persona confirmation
-And I can describe buyer type conversationally
-
-Given I confirm buyer persona
-When Phase 2 begins
-Then the system proposes 3 investment thesis options based on RAG queries
-And pauses for my approval or modifications
-
-Given I approve investment thesis
-When Phase 3 begins
-Then the system suggests narrative outline with flow reasoning
-And I can reorder, add, or remove sections
-And I confirm when ready to proceed
-
-Given I'm in Phase 5 (Building Company History section)
-When I approve slide content
-Then the system generates visual concept
-And pauses for my visual approval
-And I can request modifications
-
-Given I interrupt the workflow
-When I return later
-Then I can resume from the exact checkpoint
-And all my previous decisions are preserved
-```
-
-**Related FR:** FR-CIM-002, FR-CIM-004, FR-CIM-005
-
-**Definition of Done:**
-- [ ] LangGraph workflow with 14 nodes implemented
-- [ ] All human checkpoints functional
-- [ ] State persistence working
-- [ ] Resume capability tested
-- [ ] Conditional routing (back/skip/reorder) works
-- [ ] Integration with RAG knowledge queries
-- [ ] Non-linear section selection works
-- [ ] Error handling and validation
-
----
-
-#### Story E9.5: Content-First, Then Visual Workflow
-
-**As an** analyst
-**I want** to approve slide content before visual design
-**So that** I can focus on message first, then presentation
-
-**Description:**
-Implement the two-step slide creation process within Phases 4-11: (1) content elements with sources from RAG, (2) visual concept design with extreme precision. Each step requires separate approval.
-
-**Technical Details:**
-- **Content Phase** (for each slide):
-  - Query knowledge base via `query_knowledge_base(slide_topic, filters)`
-  - Present 3 content options with specific data points and sources
-  - User selects, modifies, or suggests alternative
-  - Content locked after approval
-- **Visual Phase** (only after content approved):
-  - Call `generate_slide_blueprint(slide_topic, narrative_context, content_elements)`
-  - Generate visual concept with extreme precision:
-    - Type, layout description, main visual element
-    - ALL content elements positioned (position, format, styling, icon)
-    - Data viz details, color scheme, visual hierarchy
-    - Graphics/icons specs, designer guidance
-  - User approves or requests modifications
-  - Visual concept regenerated if modifications requested
-  - Slide locked after both approvals
-- Validation: Check ALL content elements have positioning specs
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I'm building a slide about "Founding Story"
-When the content phase begins
-Then the system queries RAG for relevant findings
-And presents 3 content options:
-  - Option A: Chronological narrative (founders, date, pivots)
-  - Option B: Problem-solution framing
-  - Option C: Credibility-first approach
-And each option has 3-5 specific data points with sources
-
-Given I select Option A and approve content
-When the visual phase begins
-Then the system generates visual concept:
-  - Type: Timeline infographic
-  - Layout: Horizontal timeline with milestone markers
-  - ALL 5 content elements positioned precisely
-  - Color scheme: Brand colors specified
-  - Visual hierarchy: What viewer sees 1st, 2nd, 3rd
-And I can approve or request changes
-
-Given I request "add a rocket graphic to show momentum"
-When I submit the modification
-Then the system regenerates visual concept
-And incorporates rocket with specs (size, position, style, purpose)
-And I see updated visual concept for approval
-
-Given visual concept is missing positioning for 1 content element
-When validation runs
-Then an error is raised
-And I'm told which element is missing specs
-```
-
-**Related FR:** FR-CIM-002, FR-CIM-003
-
-**Definition of Done:**
-- [ ] Two-step approval workflow per slide
-- [ ] Content phase queries RAG knowledge base
-- [ ] 3 content options presented with sources
-- [ ] Visual phase generates extreme precision specs
-- [ ] ALL content elements positioning validated
-- [ ] User modifications incorporated immediately
-- [ ] Both approvals required before locking slide
-
----
-
-#### Story E9.6: Extreme Visual Precision Generation and Validation
-
-**As an** analyst
-**I want** visual concepts with extreme precision
-**So that** designers have complete specifications without ambiguity
-
-**Description:**
-Implement visual concept generation that specifies position, format, styling, and icons for EVERY content element on each slide with validation to ensure nothing is missed.
-
-**Technical Details:**
-- LLM prompt engineering for extreme visual precision
-- Required specifications for each slide visual concept:
-  - **Type**: Chart/infographic/timeline/diagram
-  - **Layout Description**: What goes where on slide
-  - **Main Visual Element**: Chart description, dimensions, dominance
-  - **ALL Content Elements Positioned**: For EVERY data point:
-    - Position (top left, center, bottom right, etc.)
-    - Format (callout box, text annotation, chart label)
-    - Styling (font size, color, background)
-    - Icon/graphic (if applicable with specs)
-  - **Data Visualization Details** (if chart): Type, axes, data points, scale, comparisons
-  - **Color Scheme**: Primary, secondary, accent, text colors with usage
-  - **Visual Hierarchy**: 1st, 2nd, 3rd what viewer sees
-  - **Graphics/Icons/Images**: Each with placement, size, style, purpose
-  - **Designer Guidance**: Spacing, alignment, emphasis notes
-- Examples embedded in prompt (good vs bad visual concepts)
-- Validation: Count content elements vs positioned elements (must match)
-
-**Acceptance Criteria:**
-
-```gherkin
-Given a slide has 5 content elements
-When the visual concept is generated
-Then ALL 5 elements have positioning specified
-And NONE are missing from visual concept
-
-Given content includes "LTV $1.3M" and "CAC $80K"
-When visual concept is bar chart
-Then the specification includes:
-  - Chart type: Vertical bar chart
-  - Y-axis: Dollar values (scale 0-$1.5M)
-  - Bars: Left bar (CAC, gray, 1 unit), Right bar (LTV, green gradient, 16 units)
-  - Labels: "$80K CAC" above left bar, "$1.3M LTV" above right bar
-  - Position: Each label center-aligned above respective bar
-  - Format: Bold, medium size
-  - Color: Dark gray for CAC, dark green for LTV
-
-Given user requests "add a rocket graphic"
-When visual concept regenerates
-Then rocket specifications include:
-  - Position: Top of LTV bar, angled 45° upward-right
-  - Size: ~20% of slide height
-  - Style: Flat design, brand colors, with motion trail
-  - Purpose: Symbolizes fast growth trajectory
-And ALL other elements remain positioned
-
-Given visual concept generator misses 1 element
-When validation runs
-Then error raised: "Missing positioning for element 'growth_rate'"
-And generation retries automatically
-```
-
-**Related FR:** FR-CIM-002, FR-CIM-003
-
-**Definition of Done:**
-- [ ] Visual concept prompt generates extreme precision
-- [ ] All content elements positioned (validation check)
-- [ ] Chart specifications complete (type, axes, scale, data)
-- [ ] Color scheme specified
-- [ ] Visual hierarchy defined
-- [ ] Graphics/icons specified with full details
-- [ ] Designer guidance included
-- [ ] Validation prevents incomplete visual concepts
-- [ ] Examples in prompt prevent vague outputs
-
----
-
-#### Story E9.7: Continuous Balance Checks and Coherence Validation
-
-**As an** analyst
-**I want** continuous narrative balance checks
-**So that** I can ensure the story remains coherent and well-proportioned
-
-**Description:**
-Implement balance checks after each section completion (Phases 4-11) and comprehensive coherence validation from buyer's perspective in Phase 12.
-
-**Technical Details:**
-- **After each section (Phases 4-11):**
-  - Calculate section size (number of slides)
-  - Compare emphasis across completed sections
-  - Evaluate against buyer persona priorities
-  - Present balance assessment to user
-  - Allow retroactive adjustments
-- **Phase 12 (Coherence & Risk Assessment):**
-  - Agent adopts buyer POV
-  - Reviews investment thesis delivery
-  - Checks storytelling arc (setup → climax → resolution)
-  - Assesses risk transparency
-  - Validates growth driver clarity
-  - Provides honest assessment + suggestions
-  - User can accept or address issues
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I complete "Company History" section (3 slides)
-When the balance check runs
-Then the system shows:
-  - ✅ Company History: 3 slides
-  - ⏳ Corporate Structure: pending
-And asks: "We've emphasized [founding story] heavily - does that feel right for your [Strategic] buyer?"
-
-Given all sections completed
-When Phase 12 coherence review begins
-Then the agent reviews from buyer's perspective:
-  - Investment thesis validation
-  - Storytelling arc assessment
-  - Risk transparency check
-  - Growth driver clarity
-  - Overall impression
-And provides specific suggestions for improvement
-And I can choose to address or proceed
-
-Given the agent flags "Missing: employee retention story"
-When I accept the suggestion
-Then the system offers to add a slide
-And I can build it or decline
-
-Given emphasis is heavily on history (40% of slides)
-When balance check runs
-Then system asks: "History is 40% of deck - rebalance toward [business model] for strategic buyer?"
-```
-
-**Related FR:** FR-CIM-002, FR-CIM-005
-
-**Definition of Done:**
-- [ ] Balance checks after each section
-- [ ] Emphasis comparison across sections
-- [ ] Buyer persona alignment validation
-- [ ] Phase 12 buyer POV review implemented
-- [ ] Investment thesis delivery check
-- [ ] Storytelling arc assessment
-- [ ] Risk transparency validation
-- [ ] Retroactive adjustment capability
-
----
-
-#### Story E9.8: Non-Linear Workflow and Special Commands
-
-**As an** analyst
-**I want** to navigate the workflow non-linearly and use special commands
-**So that** I have flexibility to build the CIM my way
-
-**Description:**
-Implement non-linear workflow navigation (jump between sections, go back, reorder) and special commands (undo, history, save version, explain, etc.) available throughout the workflow.
-
-**Technical Details:**
-- **Non-Linear Navigation:**
-  - Section selection menu (user chooses which section to build next)
-  - Go back capability (return to previous phase)
-  - Reorder slides within sections (drag-and-drop or command)
-- **Special Commands** (available anytime during workflow):
-  - **Navigation**: `undo`, `restart [step/section]`, `history`, `save version [name]`, `show structure`
-  - **Analysis**: `explain [topic]`, `why [decision]`, `alternatives`, `data score`, `balance check`
-  - **Content**: `add finding`, `correct [detail]`, `questions for seller`, `strengthen [section]`
-- Workflow state tracks: current phase, completed phases, pending sections, user decisions
-- Command parser in chat interface (frontend + backend)
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I've completed "Company History" section
-When I'm asked "Which section should we tackle next?"
-Then I see a list of pending sections:
-  - Corporate Structure
-  - Management Team
-  - Geographic Footprint
-  - Business Model
-And I can choose any section (non-sequential)
-
-Given I'm in "Management Team" section
-When I type "/go back to Company History"
-Then the workflow navigates back
-And I can edit previous slides
-
-Given I type "/show structure"
-When the command executes
-Then I see the current organization:
-  - ✅ Company History (3 slides)
-  - 🔄 Management Team (in progress, 1 slide)
-  - ⏳ Corporate Structure (pending)
-  - ⏳ Geographic Footprint (pending)
-  - ⏳ Business Model (pending)
-
-Given I type "/explain LTV"
-When the educational moment triggers
-Then the system explains:
-  - Definition: Lifetime Value
-  - Formula: Average revenue per customer × customer lifetime
-  - Benchmarks: SaaS typically 3-5x CAC
-  - Context: Why it matters for this buyer type
-
-Given I'm satisfied with current state
-When I type "/save version Pitch to Acme Ventures"
-Then the workflow state is saved with that name
-And I can restore it later
-```
-
-**Related FR:** FR-CIM-005
-
-**Definition of Done:**
-- [ ] Non-linear section selection works
-- [ ] Go back navigation works
-- [ ] Slide reordering works
-- [ ] All special navigation commands implemented
-- [ ] All analysis commands implemented
-- [ ] All content commands implemented
-- [ ] Command parser functional (frontend + backend)
-- [ ] Workflow state tracks all context
-
----
-
-#### Story E9.9: Multi-Format Export with RAG Source Citations
-
-**As an** analyst
-**I want** to export the CIM in multiple formats with RAG-sourced citations
-**So that** I can use it as a guide, LLM prompt, or presentation base
-
-**Description:**
-Implement Phase 14 export functionality for 4 formats: (1) Content Markdown, (2) Slide Blueprints Markdown, (3) Guide Markdown, (4) LLM Prompt Template. All exports include source citations from RAG knowledge base.
-
-**Technical Details:**
-- **Export formats:**
-  1. **company-overview-content.md**: Full narrative text for all sections with source citations throughout
-  2. **company-overview-slides.md**: Slide blueprints (title, purpose, content elements, visual concepts, designer guidance)
-  3. **company-overview-guide.md**: How to use blueprints, design tips, implementation workflow
-  4. **company-overview-prompt.txt**: LLM prompt template (includes buyer persona, narrative arc, slide specs, knowledge base context)
-- Source citations link to PostgreSQL findings (via RAG queries during workflow)
-- Save to project's CIM output folder: `/projects/[id]/cim-outputs/`
-- Version control: Track iterations with timestamps
-
-**Acceptance Criteria:**
-
-```gherkin
-Given I complete the workflow
-When I reach Phase 14 (Export)
-Then I see export format options:
-  - Content Markdown
-  - Slide Blueprints Markdown
-  - Guide Markdown
-  - LLM Prompt Template
-  - All formats (recommended)
-
-Given I select "All formats"
-When export completes
-Then 4 files are created in `/projects/[deal_id]/cim-outputs/`:
-  - company-overview-content.md
-  - company-overview-slides.md
-  - company-overview-guide.md
-  - company-overview-prompt.txt
-And each file includes source citations from knowledge base
-
-Given I open company-overview-slides.md
-Then I see for each slide:
-  - **Slide N: [Action Title]**
-  - Purpose: [What this slide accomplishes]
-  - Content Elements: [Specific data points with sources]
-  - Visual Concept: [Extreme precision specifications]
-  - Source: [PostgreSQL findings with IDs and citations]
-
-Given I open company-overview-prompt.txt
-Then I see a comprehensive prompt that includes:
-  - Buyer persona and priorities
-  - Investment thesis (Asset, Timing, Opportunity)
-  - Narrative arc
-  - Each slide's purpose and requirements
-  - Knowledge base context (relevant findings)
-  - Formatting and tone expectations
-And I can paste this into Claude/GPT to generate actual CIM content
-```
-
-**Related FR:** FR-CIM-003, FR-CIM-006
-
-**Definition of Done:**
-- [ ] Content markdown export works
-- [ ] Slide blueprints markdown export works
-- [ ] Guide markdown export works
-- [ ] LLM prompt template export works
-- [ ] All exports include RAG source citations
-- [ ] Files saved to project output folder
-- [ ] Version control implemented (timestamp + version name)
-- [ ] Export summary shown to user
+> **📋 Detailed Story Specifications:** See [epic-E9.md](./sprint-artifacts/epics/epic-E9.md) for complete acceptance criteria and technical details for each story.
+
+**Foundation (4 stories — 13 pts)**
+| Story | Title | Points |
+|-------|-------|--------|
+| E9.1 | CIM Database Schema & Deal Integration | 3 |
+| E9.2 | CIM List & Entry UI | 2 |
+| E9.3 | CIM Builder 3-Panel Layout | 5 |
+| E9.4 | Agent Orchestration Core | 3 |
+
+**Workflow (3 stories — 16 pts)**
+| Story | Title | Points |
+|-------|-------|--------|
+| E9.5 | Buyer Persona & Investment Thesis Phase | 5 |
+| E9.6 | Agenda/Outline Collaborative Definition | 5 |
+| E9.7 | Slide Content Creation (RAG-powered) | 6 |
+
+**Preview & Interaction (3 stories — 16 pts)**
+| Story | Title | Points |
+|-------|-------|--------|
+| E9.8 | Wireframe Preview Renderer | 5 |
+| E9.9 | Click-to-Reference in Chat | 5 |
+| E9.10 | Visual Concept Generation | 6 |
+
+**Intelligence (2 stories — 8 pts)**
+| Story | Title | Points |
+|-------|-------|--------|
+| E9.11 | Dependency Tracking & Consistency Alerts | 5 |
+| E9.12 | Non-Linear Navigation with Context | 3 |
+
+**Export (2 stories — 7 pts)**
+| Story | Title | Points |
+|-------|-------|--------|
+| E9.13 | Wireframe PowerPoint Export | 5 |
+| E9.14 | LLM Prompt Export | 2 |
+
+**Spike (1 — 3 pts)**
+| Story | Title | Points |
+|-------|-------|--------|
+| E9.S1 | Phase 2 Styled Output Research | 3 |
+
+**Total: 14 stories + 1 spike = 63 story points**
 
 ---
 

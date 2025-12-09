@@ -1506,15 +1506,49 @@ development_status:
     - Create E9 tech spec before implementation
     - Set up cloud storage and vector DB infrastructure
 
-  # Epic 9: CIM Company Overview Creation (CIM v3 Workflow) (9 stories)
+  # Epic 9: CIM Builder (15 stories = 14 stories + 1 spike) - REWRITTEN 2025-12-09
+  # MAJOR SCOPE CHANGE: Full CIM framework (not Company Overview only)
+  # KEY DESIGN: NotebookLM-inspired 3-panel UI, user-defined CIM structure, RAG-powered
+  # Multiple CIMs per deal, click-to-reference editing, dependency tracking
+  # Reference: docs/sprint-artifacts/epic-E9-party-mode-findings.md
   epic-9: backlog
-  e9-1-cim-workflow-database-schema-and-state-management: backlog
-  e9-2-cim-builder-ui-with-workflow-progress-visualization-and-live-preview: backlog
-  e9-3-agent-tool-suggest-narrative-outline: backlog
-  e9-4-langgraph-cim-v3-workflow-implementation-14-phases: backlog
-  e9-5-content-first-then-visual-workflow: backlog
-  e9-6-extreme-visual-precision-generation-and-validation: backlog
-  e9-7-continuous-balance-checks-and-coherence-validation: backlog
-  e9-8-non-linear-workflow-and-special-commands: backlog
-  e9-9-multi-format-export-with-rag-source-citations: backlog
+  epic-9-rewritten: 2025-12-09
+  epic-9-party-mode-findings: docs/sprint-artifacts/epic-E9-party-mode-findings.md
+  # Foundation (4 stories)
+  e9-1-cim-database-schema-and-deal-integration: backlog
+  e9-1-points: 3
+  e9-2-cim-list-and-entry-ui: backlog
+  e9-2-points: 2
+  e9-3-cim-builder-3-panel-layout: backlog
+  e9-3-points: 5
+  e9-4-agent-orchestration-core: backlog
+  e9-4-points: 8
+  # Workflow (3 stories)
+  e9-5-buyer-persona-and-investment-thesis-phase: backlog
+  e9-5-points: 3
+  e9-6-agenda-outline-collaborative-definition: backlog
+  e9-6-points: 5
+  e9-7-slide-content-creation-rag-powered: backlog
+  e9-7-points: 8
+  # Preview & Interaction (3 stories)
+  e9-8-wireframe-preview-renderer: backlog
+  e9-8-points: 5
+  e9-9-click-to-reference-in-chat: backlog
+  e9-9-points: 3
+  e9-10-visual-concept-generation: backlog
+  e9-10-points: 5
+  # Intelligence (2 stories)
+  e9-11-dependency-tracking-and-consistency-alerts: backlog
+  e9-11-points: 5
+  e9-12-non-linear-navigation-with-context: backlog
+  e9-12-points: 3
+  # Export (2 stories)
+  e9-13-wireframe-powerpoint-export: backlog
+  e9-13-points: 5
+  e9-14-llm-prompt-export: backlog
+  e9-14-points: 3
+  # Spike (1)
+  e9-s1-phase-2-styled-output-research: backlog
+  e9-s1-points: 5
+  e9-s1-type: spike
   epic-9-retrospective: optional

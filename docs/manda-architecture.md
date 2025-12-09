@@ -6,7 +6,7 @@
 **Last Updated:** 2025-12-09
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 3.0 (Q&A Co-Creation redesign; expanded agent tools)
+**Version:** 3.1 (Epic 9 CIM Builder redesigned per Party Mode findings — 3-panel UI, user-defined structure, full CIM framework)
 
 ---
 
@@ -616,14 +616,14 @@ gs://manda-documents-{env}/
 │                                                               │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │         LangGraph Workflows (Orchestration)          │  │
-│  │  - CIM v3 Workflow (14 phases)                      │  │
+│  │  - CIM Builder Workflow (user-defined stages)       │  │
 │  │  - Q&A Co-Creation Workflow                         │  │
 │  │  - Document Analysis Workflow                       │  │
 │  │  - Human-in-the-loop interrupts                     │  │
 │  │  - State management & checkpoints                   │  │
 │  └────────────┬─────────────────────────────────────────┘  │
 │               │                                              │
-│  ┌────────────▼─────────────────────────────────────────┐  │
+│  ┌─��──────────▼─────────────────────────────────────────┐  │
 │  │      Agent Tools (Type-Safe with Pydantic)          │  │
 │  │  - query_knowledge_base() → KnowledgeQueryInput     │  │
 │  │  - suggest_narrative_outline() → NarrativeRequest   │  │
@@ -859,9 +859,9 @@ async def suggest_narrative_outline(
 # ============================================================
 
 class CIMWorkflowState(TypedDict):
-    """State for CIM v3 workflow (14 phases)"""
+    """State for CIM Builder workflow (user-defined stages)"""
     deal_id: str
-    current_phase: int
+    cim_id: str
     buyer_persona: str | None
     investment_thesis: dict | None
     narrative_outline: NarrativeOutlineOutput | None
@@ -994,7 +994,7 @@ async def resume_workflow(deal_id: str, user_id: str, human_input: str):
 - Structured LLM outputs prevent hallucination drift
 
 **2. Workflow Orchestration:**
-- LangGraph manages complex 14-phase CIM workflow
+- LangGraph manages CIM Builder workflow with user-defined stages
 - State persistence enables resume from any checkpoint
 - Human-in-the-loop interrupts for collaborative creation
 - Conditional branching based on user decisions
@@ -1471,81 +1471,71 @@ llm = FallbackLLM(llms=[llm_primary, llm_fallback])
 
 ### Overview
 
-**What:** Structured interactive workflow (typically ~14 phases) for creating Company Overview CIM chapters with comprehensive analyst guidance
+**What:** Flexible framework for creating complete CIMs through agent-guided, iterative workflow with NotebookLM-inspired three-panel interface
 **Where:** Dedicated CIM Builder UI at `/projects/[id]/cim-builder`
-**How:** LangGraph workflow with human-in-the-loop interrupts + RAG knowledge integration + live preview capability
-**Scope:** Company Overview chapter ONLY in MVP (other chapters in Phase 2)
+**How:** LangGraph workflow with human-in-the-loop + RAG/GraphRAG knowledge integration + wireframe preview
+**Scope:** Complete CIM creation framework. Users define their own CIM structure collaboratively with the agent — not limited to Company Overview. Supports multiple CIMs per deal for different buyer types.
 
-**Note on Phase Structure:** The workflow is designed with ~14 phases as the established structure, but can adapt based on complexity and user needs. The critical aspect is **comprehensive guidance** through buyer persona discovery, narrative development, content creation, and visual design—not a fixed phase count.
+**Design Philosophy:** Users define their own CIM structure collaboratively with the agent. No fixed phase count — the workflow adapts to user needs while providing comprehensive guidance through buyer persona discovery, outline definition, content creation, and visual design.
 
 ### Architecture Components
 
-**Frontend (CIM Builder UI):**
+**Frontend (CIM Builder UI — NotebookLM-inspired):**
 ```
 /projects/[id]/cim-builder
-├── Left Sidebar: Workflow Progress (adaptive phase count)
-│   ├── Phase indicator (current, completed, pending)
-│   ├── Narrative structure tree view
-│   └── Navigation controls (jump, back, special commands)
-├── Main Content Area: Conversational Interaction
-│   ├── AI messages with options/suggestions
+├── Left Panel: Sources
+│   ├── Documents (from deal data room)
+│   ├── Findings (validated knowledge)
+│   ├── Q&A items
+│   └── CIM Structure sidebar (outline with progress)
+├── Center Panel: Conversation
+│   ├── Agent-guided workflow messages
 │   ├── User input and decisions
-│   ├── Content preview (slides being built)
-│   └── Visual concept previews
-└── Right Panel: Live Preview & Context
-    ├── **Live slide preview** (real-time visual concept rendering)
-    ├── Buyer persona summary
-    ├── Investment thesis
-    ├── Current section info
-    └── Quick actions
+│   └── Click-to-reference integration
+└── Right Panel: Preview
+    ├── Wireframe slide preview
+    ├── Click any element to discuss/edit
+    ├── Navigation: Prev/Next + slide counter
+    └── Slide status indicators
 ```
 
-**Live Preview Feature (High-Value Add):**
-- Real-time rendering of visual concepts as analyst makes decisions
-- Preview updates dynamically during visual phase
-- Shows layout, positioning, color scheme, graphics
-- Enables immediate visual feedback before approval
-- Technical implementation: React component library + CSS-in-JS for slide rendering
+**Click-to-Reference Feature:**
+- Click any source in left panel → adds reference to conversation
+- Click any element in preview → opens editing context in chat
+- Agent understands clicked context automatically
+- No slash commands needed — natural conversation flow
 
 **Backend (LangGraph Workflow):**
 ```python
 # Workflow structure
-class CIMv3Workflow:
-    nodes: 14 phases
-    checkpoints: Human approval at each phase
-    state: Persisted in cim_workflow_states table
-    tools: 3 CIM-specific + 12 platform tools
+class CIMBuilderWorkflow:
+    checkpoints: Human-in-the-loop at key decisions
+    state: Persisted in cims table (JSONB)
+    tools: CIM-specific + platform tools
+    features: Dependency tracking, non-linear navigation
 ```
 
-### 14-Phase Structure
+### Workflow Stages (User-Defined)
 
-**Phase 1: Understand Buyer Context**
+**Stage: Buyer Persona & Investment Thesis**
 - **Type:** Conversational discovery
-- **Checkpoint:** Buyer persona confirmation
-- **State Stored:** buyer_type, motivations, concerns, story_hero
-- **Tools Used:** None (pure conversation)
-
-**Phase 2: Investment Thesis Development**
-- **Type:** AI proposes 3 options based on RAG queries
-- **Checkpoint:** Thesis selection/modification approval
-- **State Stored:** investment_thesis (Asset, Timing, Opportunity)
+- **Checkpoint:** Persona and thesis confirmation
+- **State Stored:** buyer_persona{}, investment_thesis{}
 - **Tools Used:** `query_knowledge_base()` for thesis grounding
 
-**Phase 3: Discover Structure Together**
-- **Type:** AI suggests section structure with flow reasoning
-- **Checkpoint:** Section order confirmation
-- **State Stored:** sections[] (name, purpose, order)
+**Stage: Agenda/Outline Definition**
+- **Type:** Collaborative outline building
+- **Checkpoint:** Outline confirmation
+- **State Stored:** outline[] (sections with order)
 - **Tools Used:** `suggest_narrative_outline(buyer_persona, context)`
 
-**Phases 4-11: Build Sections (Iterative)**
-- **Type:** Two-step per slide (content → visual)
-- **Checkpoints:**
-  1. Content approval (before visual phase)
-  2. Visual concept approval (before locking slide)
+**Stage: Slide Content Creation (Iterative)**
+- **Type:** Non-linear slide-by-slide content
+- **Checkpoints:** Content approval per slide
 - **State Stored:**
-  - slides[] per section
-  - content_elements[] with sources
-  - visual_concept{} with extreme precision specs
+  - slides[] with content_elements
+  - source_citations[]
+  - dependency_refs[]
 - **Tools Used:**
   - `query_knowledge_base()` - Get relevant findings for slide content
   - `validate_idea_coherence()` - Check content fits narrative
@@ -1614,40 +1604,34 @@ def balance_check(completed_sections):
     )
 ```
 
-**Phase 12: Coherence & Risk Assessment**
-- **Type:** AI reviews from buyer's POV
-- **Checkpoint:** Accept suggestions or proceed
-- **State Stored:** coherence_assessment{}, suggested_improvements[]
-- **Tools Used:**
-  - `validate_idea_coherence()` - Check full narrative
-  - `detect_contradictions()` - Find issues
-  - `find_gaps()` - Identify missing elements
+**Stage: Visual Concept Generation**
+- **Type:** Layout and positioning specs per slide
+- **Checkpoint:** Visual concept approval
+- **State Stored:** visual_concept{} per slide
+- **Tools Used:** `generate_slide_blueprint()`
+- **Preview:** Wireframe renders in right panel (click-to-edit)
 
-**Phase 13: Deck Optimization**
-- **Type:** AI analyzes complete deck structure
-- **Checkpoint:** Optimization approval
-- **State Stored:** optimization_suggestions[]
-- **Tools Used:** None (analyzes existing state)
-
-**Phase 14: Export**
+**Stage: Export**
 - **Type:** Multi-format generation
 - **Checkpoint:** Format selection
-- **State Stored:** export_metadata{formats, timestamp, version}
-- **Output:** 4 files to `/projects/[id]/cim-outputs/`
+- **Output Formats:**
+  - PowerPoint (.pptx) with wireframe slides
+  - LLM prompt template for styled content generation
+- **Output Location:** `/projects/[id]/cim-outputs/`
 
 ### RAG Integration
 
 **Knowledge Base Queries Throughout Workflow:**
 
 ```python
-# Phase 2: Investment Thesis Development
+# Investment Thesis Development
 findings = query_knowledge_base(
     query="key value drivers, competitive advantages, growth potential",
     filters={deal_id: current_deal},
     limit=20
 )
 
-# Phases 4-11: Slide Content Building
+# Slide Content Building (iterative)
 findings = query_knowledge_base(
     query=slide_topic,  # e.g., "founding story", "management team"
     filters={
@@ -1679,108 +1663,116 @@ for element in slide.content_elements:
 **Database Schema:**
 
 ```sql
-CREATE TABLE cim_workflow_states (
-    id UUID PRIMARY KEY,
-    deal_id UUID REFERENCES deals(id),
-    user_id UUID REFERENCES users(id),
-    current_phase INT NOT NULL,  -- 1-14
-    completed_phases INT[],
-    buyer_persona JSONB,  -- {type, motivations, concerns, story_hero}
-    investment_thesis JSONB,  -- {asset, timing, opportunity}
-    sections JSONB[],  -- [{name, purpose, order, slides[]}]
-    conversation_history JSONB[],
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    version INT DEFAULT 1
+-- Single table approach with JSONB for flexibility
+CREATE TABLE cims (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    deal_id UUID REFERENCES deals(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    workflow_state JSONB DEFAULT '{}',  -- buyer_persona, investment_thesis, outline
+    slides JSONB DEFAULT '[]',  -- array of slide objects with content + visual
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE cim_slides (
-    id UUID PRIMARY KEY,
-    workflow_state_id UUID REFERENCES cim_workflow_states(id),
-    section_name TEXT,
-    slide_number INT,
-    topic TEXT,
-    content_elements JSONB[],  -- [{text, source_finding_id, position}]
-    visual_concept JSONB,  -- {type, layout, positioned_elements[], colors, hierarchy}
-    content_approved BOOLEAN DEFAULT FALSE,
-    visual_approved BOOLEAN DEFAULT FALSE,
-    locked BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW()
-);
+-- workflow_state structure:
+-- {
+--   buyer_persona: {type, motivations, concerns},
+--   investment_thesis: {asset, timing, opportunity},
+--   outline: [{section_name, order}],
+--   conversation_context: {},
+--   current_slide_index: 0
+-- }
+
+-- slides array structure:
+-- [{
+--   id: uuid,
+--   section: "Company History",
+--   content_elements: [{text, source_id}],
+--   visual_concept: {type, layout, elements[]},
+--   dependencies: [slide_ids],
+--   status: "draft" | "approved"
+-- }]
 ```
 
 **Resume Capability:**
 ```python
-def resume_workflow(deal_id, user_id):
-    state = load_workflow_state(deal_id, user_id)
+def resume_workflow(cim_id):
+    cim = load_cim(cim_id)
 
-    if state:
-        workflow.restore_state(state)
-        return f"Resuming from Phase {state.current_phase}"
+    if cim:
+        workflow.restore_state(cim.workflow_state, cim.slides)
+        return f"Resuming CIM: {cim.name}"
     else:
-        return "Starting new CIM workflow"
+        return "CIM not found"
 ```
 
-### Special Commands Implementation
+### Click-to-Reference Implementation
 
-**Command Parser in UI:**
+**Frontend Click Handler:**
 ```typescript
-// Frontend command handler
-function handleCommand(input: string) {
-    if (input.startsWith('/')) {
-        const [cmd, ...args] = input.slice(1).split(' ')
+// No slash commands - natural conversation flow
+function handleSourceClick(source: Source) {
+    // Add reference to conversation context
+    addToConversation({
+        type: 'reference',
+        source: source,
+        message: `I want to use this: ${source.title}`
+    })
+}
 
-        switch(cmd) {
-            case 'undo': return workflow.undo()
-            case 'history': return workflow.showHistory()
-            case 'explain': return workflow.explain(args[0])
-            case 'balance-check': return workflow.balanceCheck()
-            // ... etc
-        }
-    }
+function handlePreviewElementClick(element: SlideElement) {
+    // Open editing context in chat
+    addToConversation({
+        type: 'edit_request',
+        element: element,
+        slide_id: currentSlide.id,
+        message: `Let's edit: ${element.content}`
+    })
 }
 ```
 
-**Backend Command Execution:**
+**Backend Reference Handler:**
 ```python
-def execute_command(command: str, args: list, workflow_state: CIMWorkflowState):
-    commands = {
-        "undo": lambda: workflow_state.revert_last_change(),
-        "restart": lambda section: workflow_state.jump_to_phase(section),
-        "history": lambda: workflow_state.get_decision_history(),
-        "save_version": lambda name: workflow_state.save_version(name),
-        "show_structure": lambda: workflow_state.get_structure_tree(),
-        "explain": lambda topic: educational_moment(topic),
-        "balance_check": lambda: evaluate_balance(workflow_state),
-        # ... etc
-    }
+def handle_reference(reference_type: str, reference_data: dict, cim_state: CIMState):
+    """Handles click-to-reference from frontend"""
+    if reference_type == 'source':
+        # Add source to conversation context
+        cim_state.add_context(reference_data)
+        return agent.respond_with_context(reference_data)
 
-    return commands[command](*args)
+    elif reference_type == 'edit_request':
+        # Handle slide element editing
+        slide = cim_state.get_slide(reference_data['slide_id'])
+        element = slide.get_element(reference_data['element_id'])
+        return agent.start_edit_conversation(element)
 ```
 
-### Visual Precision Validation
+### Dependency Tracking
 
-**Ensures ALL content elements are positioned:**
+**Maintains consistency across slides:**
 
 ```python
-def validate_visual_concept(visual_concept, content_elements):
-    """Validates extreme precision requirement"""
-    positioned = set(visual_concept.positioned_elements.keys())
-    required = set([e.id for e in content_elements])
+def track_dependencies(slide: Slide, cim_state: CIMState):
+    """Track which slides depend on this one"""
+    # Investment thesis affects all content slides
+    if slide.is_thesis_slide:
+        for content_slide in cim_state.content_slides:
+            content_slide.add_dependency(slide.id)
 
-    missing = required - positioned
-    if missing:
-        raise ValidationError(
-            f"Visual concept missing positioning for: {missing}\n"
-            f"ALL {len(required)} content elements must be positioned."
-        )
+    # Content slides may reference earlier slides
+    for reference in slide.content_references:
+        if reference.slide_id:
+            slide.add_dependency(reference.slide_id)
 
-    # Validate each positioned element has required specs
-    for element_id, specs in visual_concept.positioned_elements.items():
-        assert 'position' in specs  # e.g., "top left"
-        assert 'format' in specs    # e.g., "callout box"
-        assert 'styling' in specs   # e.g., "bold, 18pt, #333"
-        # icon/graphic optional but validated if present
+def check_consistency_on_change(slide_id: str, cim_state: CIMState):
+    """Alert when changes may affect dependent slides"""
+    dependents = cim_state.get_dependents(slide_id)
+    if dependents:
+        return {
+            'alert': True,
+            'message': f'This change may affect {len(dependents)} other slides',
+            'affected_slides': dependents
+        }
 ```
 
 ### Cross-Domain Patterns (Phase 3)
@@ -2464,16 +2456,18 @@ npm install
   - FinancialModelExtractor service for parsing Excel models with formula preservation
   - Integration with knowledge base and Neo4j for cross-validation
   - Agent tool support for financial metric queries
-- **CIM Workflow Phase Flexibility:**
-  - Updated from rigid "14-phase" to "typically ~14 phases" with adaptive structure
-  - Emphasized comprehensive guidance over fixed phase count
-  - Added note on workflow adaptability based on complexity
-  - Maintains quality while allowing flexibility
-- **Live Preview Feature Added:**
-  - Updated CIM Builder UI with live preview panel
-  - Real-time visual concept rendering during visual design phase
-  - Technical implementation notes (React components + CSS-in-JS)
-  - Identified as high-value feature for immediate visual feedback
+- **CIM Builder Redesigned (Party Mode 2025-12-09):**
+  - Complete redesign based on multi-agent Party Mode session
+  - NotebookLM-inspired 3-panel UI (Sources, Conversation, Preview)
+  - User-defined CIM structure (no fixed phases)
+  - Full CIM framework scope (not Company Overview only)
+  - Click-to-reference editing pattern
+  - Dependency tracking for slide coherence
+  - Multiple CIMs per deal support
+- **Preview Panel:**
+  - Wireframe slide preview in right panel
+  - Click any element to discuss/edit in conversation
+  - Navigation controls (Prev/Next, slide counter)
 
 **Why This Matters:**
 - Aligns architecture with user feedback and strategic priorities

@@ -3,10 +3,10 @@
 
 **Document Status:** In Development
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-07
+**Last Updated:** 2025-12-09
 **Owner:** Max
 **Contributors:** PM John
-**Version:** 1.7 (Epic E1-E6 complete, E7 contexted. Learning Loop tech spec includes source validation flow and feature flags for safe rollout.)
+**Version:** 1.8 (Epic 9 redesigned to CIM Builder per Party Mode findings — full CIM framework with 3-panel UI, user-defined structure)
 
 ---
 
@@ -22,7 +22,7 @@
 | **E6: IRL Management & Auto-Generation** | ✅ Complete | 7/7 | 2025-12-03 |
 | E7: Learning Loop | Contexted | 0/6 | - |
 | E8: Q&A Co-Creation Workflow | Backlog | 0/8 | - |
-| E9: CIM Company Overview Creation | Backlog | 0/9 | - |
+| E9: CIM Builder | Backlog | 0/15 | - |
 
 ### Architecture Decisions Made
 1. **Document Storage:** Google Cloud Storage (GCS) - selected for better cost model with large files and native Gemini/Vertex AI integration
@@ -721,114 +721,70 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 - Import preview showing: exact matches (auto-merge), fuzzy matches (confirm), new items, missing items
 - Merge client answers and update date_answered
 
-### 5.6 CIM Company Overview Creation (Platform Service + Agent)
+### 5.6 CIM Builder (Platform Service + Agent)
 
-**Scope:** Company Overview chapter ONLY in MVP (other CIM chapters in Phase 2)
+**Scope:** Complete CIM creation framework. Users define their own CIM structure collaboratively with the agent — not limited to Company Overview. Supports multiple CIMs per deal for different buyer types.
 
 **FR-CIM-001: CIM Builder UI and Workflow Interface (Platform Service)**
 - Dedicated CIM Builder interface at `/projects/[id]/cim-builder`
-- Visual workflow progress indicator showing current phase structure (typically 14 phases, but flexible)
-- Current phase highlighted with completion status
-- Sidebar showing narrative structure being built
-- Main content area for conversational interaction
+- **NotebookLM-inspired 3-panel layout:**
+  - Left Panel: Sources (documents, findings, Q&A from the deal)
+  - Center Panel: Conversation (agent-guided workflow interaction)
+  - Right Panel: Preview (wireframe slide preview with click-to-reference)
+- Structure sidebar showing CIM outline with progress indicators
 - Buyer persona selection (Strategic Buyer, Financial Buyer, Custom)
-- Drag-and-drop slide reordering within sections
-- Non-linear navigation (jump to any phase, go back, reorder)
-- **Live preview capability** for visual concepts being designed
+- Drag-and-drop slide reordering
+- Non-linear navigation (jump between slides, go back, reorder)
 - Auto-save workflow state continuously
 - Resume capability from any checkpoint
+- Multiple CIMs per deal support
 
-**FR-CIM-002: Structured Interactive Workflow (Agent + Platform)**
+**FR-CIM-002: Agent-Guided Workflow (Agent + Platform)**
 
-**Note on Phase Count**: The workflow is designed with ~14 phases as the established structure, but the system can adapt the phase count based on complexity and user preference. The key is **comprehensive guidance** through the narrative building process, not a fixed phase count. The agent guides the analyst through all critical steps regardless of how phases are organized.
+**User-Defined Structure**: Unlike a fixed-phase workflow, users define their own CIM agenda/outline collaboratively with the agent. The agent guides through buyer persona, investment thesis, and outline definition, then helps create slides iteratively with RAG-powered content suggestions.
 
-**Phase 1: Understand Buyer Context**
+**Workflow Stages (User-Defined Order)**
+
+The workflow consists of flexible stages that users progress through conversationally:
+
+**Stage: Buyer Persona & Investment Thesis**
 - Conversational buyer persona discovery (not template selection)
 - AI asks about buyer type, motivations, and concerns
-- Discovers the "hero" of the story through dialogue
-- Stores buyer context for narrative tailoring
-
-**Phase 2: Investment Thesis Development**
-- AI proposes 3-part investment thesis options based on knowledge base findings:
+- AI proposes 3-part investment thesis based on knowledge base findings:
   - The Asset: What makes this company valuable
   - The Timing: Why now
   - The Opportunity: What's the upside
-- User selects or modifies thesis
 - Thesis becomes north star for all content
 
-**Phase 3: Discover Structure Together**
-- AI suggests Company Overview section structure with logical flow reasoning
-- Explains why each section matters for buyer type
+**Stage: Agenda/Outline Definition**
+- User defines CIM structure collaboratively with agent
+- AI suggests sections with logical flow reasoning
 - User can add, remove, or reorder sections
-- Narrative continuity validation during reordering
+- No fixed structure — supports custom CIM types for different buyer audiences
 
-**Phases 4-11: Build Sections (One Slide at a Time)**
-- **Content-First Approach:**
-  - User selects which section to build next (non-linear)
-  - AI queries knowledge base (RAG) for relevant findings
-  - AI presents 3 content options with specific data points from knowledge base
-  - User selects option or suggests alternative
-  - AI generates slide content with source citations
-  - User approves, edits, or requests different angle
-  - Content must be approved before visual phase
+**Stage: Slide Content Creation (Iterative)**
+- User selects which slide to build next (non-linear)
+- AI queries knowledge base (RAG) for relevant findings
+- Click-to-reference: click any source to add to conversation
+- AI presents content options with specific data points
+- Content approved before visual concept phase
+- Dependency tracking: changes to early slides can propagate to later ones
 
-- **Visual Concept Design (After Content Approval):**
-  - AI generates visual concept with extreme precision:
-    - Type of visual (chart, infographic, timeline, diagram)
-    - Layout description (what goes where on slide)
-    - Main visual element specifications
-    - ALL content elements positioned individually:
-      - Position (top left, center, bottom right, etc.)
-      - Format (callout box, text annotation, chart label)
-      - Styling (font size, color, background)
-      - Icon/graphic (if applicable with specifications)
-    - Data visualization details (if chart: type, axes, data points, scale, comparisons)
-    - Color scheme (primary, secondary, accent, text colors with usage)
-    - Visual hierarchy (what viewer sees 1st, 2nd, 3rd)
-    - Graphics/icons/images (each with placement, size, style, purpose)
-    - Designer guidance (spacing, alignment, emphasis notes)
-  - User can request modifications (e.g., "add a rocket graphic")
-  - AI regenerates visual concept with modifications
-  - User approves visual concept
-  - Slide locked after both content and visual approvals
+**Stage: Visual Concept Generation**
+- AI generates visual concept with positioning and layout specs:
+  - Type of visual (chart, infographic, timeline, diagram)
+  - Layout description and element positioning
+  - Data visualization details
+  - Color scheme and visual hierarchy
+  - Designer guidance notes
+- User can request modifications via conversation
+- Wireframe preview renders in right panel (click-to-reference for editing)
 
-- **Balance Checks After Each Section:**
-  - System shows completed vs pending sections
-  - Evaluates emphasis across sections
-  - Asks: "We've emphasized [X] heavily - does that feel right for your [buyer type]?"
-  - User can make retroactive adjustments
-
-**Phase 12: Coherence & Risk Assessment**
-- AI adopts buyer's perspective and reviews complete narrative
-- Investment thesis validation (does narrative deliver on 3-part thesis?)
-- Storytelling arc assessment (setup → climax → resolution)
-- Risk transparency check (what risks addressed vs missing?)
-- Growth driver clarity validation
-- Overall impression with honest feedback
-- Specific improvement suggestions
-- User accepts suggestions or proceeds as-is
-
-**Phase 13: Deck Optimization**
-- AI presents complete slide deck structure
-- Flow assessment (logical progression?)
-- Density check (any slides too packed or too light?)
-- Gap identification (anything critical missing?)
-- Redundancy detection (any overlap?)
-- Optimization suggestions:
-  - Slides to split (too dense)
-  - Slides to combine (overlap)
-  - Reordering recommendations
-- User accepts or makes adjustments
-
-**Phase 14: Export**
-- Multi-format export options (all include RAG source citations):
-  1. **company-overview-content.md**: Full narrative text with sources
-  2. **company-overview-slides.md**: Slide blueprints (titles, purposes, content elements, visual concepts, designer guidance)
-  3. **company-overview-guide.md**: How to use blueprints, design tips, implementation workflow
-  4. **company-overview-prompt.txt**: LLM prompt template (includes buyer persona, narrative arc, slide specs, knowledge base context for Claude/GPT content generation)
+**Stage: Export**
+- PowerPoint (.pptx) export with wireframe slides
+- LLM prompt export (comprehensive prompt for Claude/GPT to generate styled content)
 - Files saved to project's CIM output folder
 - Version automatically saved with timestamp
-- Summary of what was created shown to user
 
 **FR-CIM-003: Agent Intelligence and Tools**
 - Agent queries knowledge base (RAG via pgvector semantic search) throughout workflow
@@ -841,46 +797,28 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
   - `generate_slide_blueprint(slide_topic, narrative_context, content_elements)` - Create slide guidance with visual concepts
 
 **FR-CIM-004: Workflow State Management**
-- LangGraph workflow with 14 nodes (one per phase)
-- Human-in-the-loop checkpoints at each phase
-- Workflow state stored in `cim_workflow_states` table:
-  - Current phase
-  - Completed phases
-  - User decisions (buyer persona, thesis, sections, slides)
-  - Pending sections
-  - Slide content and visual approvals
+- LangGraph workflow with human-in-the-loop checkpoints
+- Workflow state stored in `cims` table (JSONB workflow_state and slides columns)
+- State includes:
+  - Buyer persona and investment thesis
+  - CIM outline/agenda
+  - Slides with content and visual concepts
+  - Conversation context
 - Resume capability from any checkpoint
-- Conversation history preserved
 - State persists across sessions
+- Multiple CIMs per deal supported
 
-**FR-CIM-005: Special Commands (Available Anytime)**
+**FR-CIM-005: Click-to-Reference Interaction**
+- Click any source in left panel to reference in conversation
+- Click any element in preview to discuss/edit
+- Agent understands context from clicked references
+- Natural conversation flow (no slash commands required)
 
-**Navigation Commands:**
-- `undo` - Revert last change
-- `restart [step/section]` - Go back to specific point
-- `history` - Show all decisions made
-- `save version [name]` - Save current state
-- `show structure` - Display current section/slide organization
-
-**Analysis Commands:**
-- `explain [topic]` - Deep dive on concept (educational moments)
-- `why [decision]` - Explain reasoning
-- `alternatives` - Show other options
-- `data score` - Re-calculate knowledge base sufficiency
-- `balance check` - Evaluate emphasis across sections
-
-**Content Commands:**
-- `add finding` - Manually add data not in knowledge base
-- `correct [detail]` - Fix specific information
-- `questions for seller` - Generate info gap questions
-- `strengthen [section]` - Ideas to enhance specific area
-
-**FR-CIM-006: Version Control and Iteration**
-- Save drafts and versions throughout workflow
-- Compare versions to see narrative evolution
-- Track changes to narrative outline and slide blueprints over time
-- Restore previous versions
-- Version metadata (timestamp, phase completed, user notes)
+**FR-CIM-006: Dependency Tracking**
+- Track dependencies between slides (e.g., thesis → all content slides)
+- Alert when changes to early slides may affect later ones
+- Consistency validation across CIM
+- Non-linear navigation with context preservation
 
 ### 5.7 Learning Loop (Platform Service + Agent)
 
