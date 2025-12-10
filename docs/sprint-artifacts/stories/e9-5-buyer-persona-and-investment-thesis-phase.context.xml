@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context: E9.5 - Buyer Persona & Investment Thesis Phase
+  Generated: 2025-12-10
+  Purpose: Provides comprehensive context for implementing the conversational flow
+           for buyer persona and investment thesis definition in the CIM Builder.
+-->
+<story-context story-id="e9-5" epic="E9">
+  <metadata>
+    <title>Buyer Persona &amp; Investment Thesis Phase</title>
+    <points>3</points>
+    <status>drafted</status>
+    <generated>2025-12-10</generated>
+    <depends-on>
+      <story id="e9-4">Agent Orchestration Core (DONE)</story>
+    </depends-on>
+  </metadata>
+
+  <!-- ========================================================================
+       STORY SUMMARY
+       ======================================================================== -->
+  <story-summary>
+    <description>
+      Implement the conversational flow to define the target buyer and investment thesis
+      at the start of CIM creation. This is the first phase in the CIM Builder workflow
+      where the agent guides users through defining WHO will read the CIM and WHY
+      they should be interested in acquiring the company.
+    </description>
+
+    <user-value>
+      Users can define a clear target buyer persona and craft a compelling investment
+      thesis through natural conversation with the agent, ensuring the CIM is tailored
+      to the right audience from the start.
+    </user-value>
+
+    <acceptance-criteria>
+      <criterion id="AC1">Agent initiates with "Who is your target buyer?"</criterion>
+      <criterion id="AC2">Capture buyer type: Strategic, Financial, Management, etc.</criterion>
+      <criterion id="AC3">Agent probes for buyer priorities and concerns</criterion>
+      <criterion id="AC4">Investment thesis co-creation: What's the compelling story?</criterion>
+      <criterion id="AC5">Agent suggests thesis angles based on deal findings (RAG)</criterion>
+      <criterion id="AC6">User approves or refines thesis before proceeding</criterion>
+      <criterion id="AC7">Persona and thesis stored in workflow_state</criterion>
+    </acceptance-criteria>
+  </story-summary>
+
+  <!-- ========================================================================
+       TECHNICAL CONTEXT
+       ======================================================================== -->
+  <technical-context>
+    <architecture-decisions>
+      <decision area="Framework">
+        LangChain 1.0 + LangGraph 1.0 for workflow orchestration with human-in-the-loop
+      </decision>
+      <decision area="State Management">
+        CIM workflow state persisted to Supabase `cims.workflow_state` JSONB field
+      </decision>
+      <decision area="RAG Integration">
+        Use pgvector semantic search via `match_findings` RPC for thesis angle suggestions
+      </decision>
+      <decision area="Model">
+        Configurable conversation model (default: Claude Sonnet 4.5 or Gemini 2.5 Pro)
+      </decision>
+    </architecture-decisions>
+
+    <workflow-phases>
+      <phase name="persona" order="1" current="true">
+        Define target buyer - type, priorities, concerns, key metrics
+      </phase>
+      <phase name="thesis" order="2">
+        Co-create investment thesis - compelling story, value drivers
+      </phase>
+      <phase name="outline" order="3">Building CIM structure</phase>
+      <phase name="content_creation" order="4">RAG-powered slide content</phase>
+      <phase name="visual_concepts" order="5">Layout and chart recommendations</phase>
+      <phase name="review" order="6">Final review</phase>
+      <phase name="complete" order="7">Done</phase>
+    </workflow-phases>
+  </technical-context>
+
+  <!-- ========================================================================
+       EXISTING CODE CONTEXT
+       ======================================================================== -->
+  <existing-code>
+    <file path="manda-app/lib/types/cim.ts" purpose="Type definitions">
+      <key-types>
+        <type name="CIMPhase">
+          Union type: 'persona' | 'thesis' | 'outline' | 'content_creation' | 'visual_concepts' | 'review' | 'complete'
+        </type>
+        <type name="BuyerType">
+          Union type: 'strategic' | 'financial' | 'management' | 'other'
+        </type>
+        <type name="BuyerPersona">
+          Interface with fields: buyer_type, buyer_description, priorities[], concerns[], key_metrics[]
+        </type>
+        <type name="WorkflowState">
+          Interface tracking: current_phase, current_section_index, current_slide_index, completed_phases[], is_complete
+        </type>
+      </key-types>
+    </file>
+
+    <file path="manda-app/lib/agent/cim/state.ts" purpose="LangGraph state schema">
+      <exports>
+        <export name="CIMAgentState">Annotation.Root defining LangGraph state with phases, persona, thesis, etc.</export>
+        <export name="createInitialState">Creates initial state for new CIM workflow</export>
+        <export name="serializeState">Serializes state for database storage</export>
+        <export name="deserializeState">Deserializes state from database</export>
+      </exports>
+      <state-fields>
+        <field name="currentPhase" type="CIMPhase">Current workflow phase</field>
+        <field name="buyerPersona" type="BuyerPersona | null">Captured buyer persona</field>
+        <field name="investmentThesis" type="string | null">Finalized thesis</field>
+        <field name="completedPhases" type="CIMPhase[]">Phases completed</field>
+        <field name="pendingApproval" type="PendingApproval | null">Human-in-the-loop checkpoint</field>
+      </state-fields>
+    </file>
+
+    <file path="manda-app/lib/agent/cim/prompts.ts" purpose="Phase-specific prompts">
+      <key-functions>
+        <function name="getCIMSystemPrompt(phase, dealName)">
+          Returns complete system prompt for given phase including base prompt + phase guidance + tool usage
+        </function>
+        <function name="getPhaseIntroduction(phase)">
+          Returns brief intro message for phase (e.g., "Let's start by understanding who will be reading this CIM...")
+        </function>
+        <function name="getTransitionGuidance(fromPhase, toPhase)">
+          Returns transition message when moving between phases
+        </function>
+      </key-functions>
+      <existing-prompts>
+        <prompt phase="persona">
+          Defines questions to explore: buyer type, industry background, key priorities, concerns, preferred metrics.
+          Approach: ask clarifying questions, summarize, propose persona, get confirmation, use save_buyer_persona tool.
+          Transition criteria: buyer type identified, 2-3 priorities clear, key metrics understood.
+        </prompt>
+        <prompt phase="thesis">
+          Defines good thesis criteria: captures WHY company is attractive, highlights value drivers, specific not generic.
+          Approach: review persona, search deal docs, identify value drivers, draft collaboratively, use save_investment_thesis tool.
+          Transition criteria: thesis is 2-3 sentences, user approved, core drivers captured.
+        </prompt>
+      </existing-prompts>
+    </file>
+
+    <file path="manda-app/lib/agent/cim/tools/cim-tools.ts" purpose="CIM-specific tools">
+      <existing-tools>
+        <tool name="save_buyer_persona">
+          Schema: cimId (uuid), buyerType (enum), buyerDescription (string min 10),
+                  priorities (string[] min 1), concerns (string[] optional), keyMetrics (string[] optional)
+          Action: Updates cims table with buyer_persona JSONB
+        </tool>
+        <tool name="save_investment_thesis">
+          Schema: cimId (uuid), thesis (string min 50, max 500)
+          Action: Updates cims table with investment_thesis
+        </tool>
+        <tool name="transition_phase">
+          Schema: cimId (uuid), targetPhase (enum optional)
+          Action: Moves workflow to next phase, updates completed_phases
+        </tool>
+      </existing-tools>
+      <tools-to-add note="This story may need">
+        <tool name="search_deal_documents">For RAG-based thesis angle suggestions (AC5)</tool>
+        <tool name="query_findings">To pull deal findings for thesis suggestions (AC5)</tool>
+      </tools-to-add>
+    </file>
+
+    <file path="manda-app/lib/agent/cim/workflow.ts" purpose="LangGraph workflow">
+      <key-components>
+        <component name="createAgentNode">Creates agent node with phase-aware prompts and tools</component>
+        <component name="welcomeNode">Sends initial phase introduction message</component>
+        <component name="routerNode">Determines next step based on state</component>
+        <component name="phaseTransitionNode">Handles moving between phases</component>
+        <component name="errorHandlerNode">Handles errors with retry logic</component>
+      </key-components>
+      <workflow-structure>
+        START -> welcome -> router -> agent -> router -> (repeat or END)
+        Error handling: agent -> error_handler -> (retry agent or router)
+      </workflow-structure>
+      <tools-included>
+        cimTools (all CIM tools) + queryKnowledgeBaseTool (for RAG)
+      </tools-included>
+    </file>
+
+    <file path="manda-app/lib/agent/cim/executor.ts" purpose="High-level execution API">
+      <exports>
+        <export name="executeCIMChat">Non-streaming chat execution</export>
+        <export name="streamCIMChat">SSE streaming chat execution</export>
+        <export name="getCIMWorkflowState">Get current workflow state</export>
+        <export name="resetCIMWorkflow">Reset workflow to initial state</export>
+      </exports>
+    </file>
+
+    <file path="manda-app/lib/agent/tools/knowledge-tools.ts" purpose="RAG tools">
+      <relevant-tool name="queryKnowledgeBaseTool">
+        Performs semantic search on findings using pgvector.
+        Input: query, filters (dealId, documentId, domains, statuses, confidenceMin/Max), limit
+        Output: findings with source citations, similarity scores
+        Use for: AC5 - suggesting thesis angles based on deal findings
+      </relevant-tool>
+    </file>
+
+    <file path="manda-app/lib/services/embeddings.ts" purpose="Embedding generation">
+      <function name="generateEmbedding(text)">
+        Generates OpenAI text-embedding-3-large embeddings (3072 dims).
+        Has LRU cache for recent queries.
+      </function>
+    </file>
+
+    <file path="manda-app/app/api/projects/[id]/cims/[cimId]/chat/route.ts" purpose="Chat API">
+      <endpoints>
+        <endpoint method="POST">Send message to CIM agent (streaming or non-streaming)</endpoint>
+        <endpoint method="GET">Get conversation history and workflow state</endpoint>
+        <endpoint method="DELETE">Reset conversation and workflow</endpoint>
+      </endpoints>
+    </file>
+
+    <file path="manda-app/lib/services/cim.ts" purpose="CIM database operations">
+      <functions>
+        <function name="getCIM">Fetch CIM by ID with all fields</function>
+        <function name="updateCIM">Update CIM fields including workflow_state, buyer_persona, investment_thesis</function>
+      </functions>
+    </file>
+  </existing-code>
+
+  <!-- ========================================================================
+       IMPLEMENTATION GUIDANCE
+       ======================================================================== -->
+  <implementation-guidance>
+    <task id="T1" ac="AC1,AC2,AC3">
+      <title>Enhance Persona Phase Conversational Flow</title>
+      <description>
+        The existing prompts.ts has basic persona phase guidance. Enhance to ensure:
+        1. Agent always starts with a welcoming "Who is your target buyer?" question
+        2. Follow-up questions probe systematically for each BuyerPersona field
+        3. Agent summarizes captured info before asking to confirm
+      </description>
+      <files>
+        <file>manda-app/lib/agent/cim/prompts.ts</file>
+      </files>
+      <approach>
+        Update PHASE_PROMPTS.persona to include:
+        - Explicit conversation flow script
+        - Example dialogue patterns
+        - Required fields checklist before transition
+        - Confirmation template before saving
+      </approach>
+    </task>
+
+    <task id="T2" ac="AC4,AC5">
+      <title>Implement Thesis Co-Creation with RAG</title>
+      <description>
+        Enhance thesis phase to use RAG for suggesting thesis angles:
+        1. Query deal findings for strengths, differentiators, market position
+        2. Present 2-3 thesis angle options based on findings
+        3. Allow user to select, modify, or request alternatives
+      </description>
+      <files>
+        <file>manda-app/lib/agent/cim/prompts.ts</file>
+        <file>manda-app/lib/agent/cim/workflow.ts</file>
+      </files>
+      <approach>
+        1. Ensure queryKnowledgeBaseTool is available to agent (already included)
+        2. Update PHASE_PROMPTS.thesis to instruct agent to:
+           - Search for "key strengths" and "competitive advantages"
+           - Search for financial metrics (growth, margins)
+           - Search for market position findings
+        3. Add example thesis templates that incorporate findings
+      </approach>
+      <example-rag-queries>
+        <query>company strengths competitive advantages</query>
+        <query>revenue growth EBITDA margins financial performance</query>
+        <query>market position market share industry leadership</query>
+        <query>unique value proposition differentiation</query>
+      </example-rag-queries>
+    </task>
+
+    <task id="T3" ac="AC6">
+      <title>Implement User Approval Flow</title>
+      <description>
+        Ensure user explicitly approves thesis before phase transition:
+        1. Agent presents final thesis
+        2. Asks for explicit approval
+        3. Only transitions to outline phase after approval
+      </description>
+      <files>
+        <file>manda-app/lib/agent/cim/prompts.ts</file>
+        <file>manda-app/lib/agent/cim/tools/cim-tools.ts</file>
+      </files>
+      <approach>
+        The existing prompts already mention "get user confirmation" but need to be more explicit:
+        1. Add approval template: "Here's our investment thesis: [thesis]. Do you approve this? (yes/refine)"
+        2. Agent should NOT call transition_phase until user says yes/approve
+        3. Consider adding pendingApproval state for human-in-the-loop checkpoint
+      </approach>
+    </task>
+
+    <task id="T4" ac="AC7">
+      <title>Verify State Persistence</title>
+      <description>
+        Ensure buyer persona and thesis are correctly persisted to database.
+      </description>
+      <files>
+        <file>manda-app/lib/agent/cim/tools/cim-tools.ts</file>
+        <file>manda-app/lib/services/cim.ts</file>
+      </files>
+      <approach>
+        1. saveBuyerPersonaTool and saveInvestmentThesisTool already exist
+        2. Verify they update the correct JSONB fields in cims table
+        3. Add logging to confirm state updates
+        4. Write integration test to verify persistence round-trip
+      </approach>
+    </task>
+  </implementation-guidance>
+
+  <!-- ========================================================================
+       TESTING STRATEGY
+       ======================================================================== -->
+  <testing-strategy>
+    <unit-tests>
+      <test file="__tests__/lib/agent/cim/prompts.test.ts">
+        <case>getCIMSystemPrompt returns persona-specific guidance for persona phase</case>
+        <case>getCIMSystemPrompt returns thesis-specific guidance for thesis phase</case>
+        <case>getPhaseIntroduction returns correct intro for each phase</case>
+      </test>
+      <test file="__tests__/lib/agent/cim/tools/cim-tools.test.ts">
+        <case>saveBuyerPersonaTool validates required fields</case>
+        <case>saveBuyerPersonaTool rejects invalid buyer types</case>
+        <case>saveInvestmentThesisTool enforces min/max length</case>
+        <case>transitionPhaseTool correctly updates completed_phases</case>
+      </test>
+    </unit-tests>
+
+    <integration-tests>
+      <test file="__tests__/lib/agent/cim/workflow.integration.test.ts">
+        <case>Full persona phase conversation flow saves correct BuyerPersona</case>
+        <case>Thesis phase RAG query returns relevant findings</case>
+        <case>Phase transition from persona to thesis works correctly</case>
+        <case>Phase transition from thesis to outline works correctly</case>
+        <case>State persists correctly across workflow resume</case>
+      </test>
+    </integration-tests>
+
+    <e2e-tests>
+      <test file="e2e/cim-builder.spec.ts">
+        <case>User can complete persona phase via chat</case>
+        <case>User can co-create thesis via chat</case>
+        <case>Workflow state persists after browser refresh</case>
+      </test>
+    </e2e-tests>
+
+    <manual-testing>
+      <scenario name="Happy Path">
+        1. Create new CIM in CIM Builder UI
+        2. Respond to "Who is your target buyer?" with "Strategic acquirer in the tech industry"
+        3. Answer follow-up questions about priorities, concerns, metrics
+        4. Confirm buyer persona summary
+        5. Review thesis angle suggestions from agent
+        6. Refine thesis until satisfied
+        7. Approve thesis and verify transition to outline phase
+        8. Verify persona and thesis saved in database
+      </scenario>
+      <scenario name="Resume Flow">
+        1. Start CIM creation, define buyer type
+        2. Close browser/tab
+        3. Return to CIM Builder
+        4. Verify agent remembers buyer type and continues where left off
+      </scenario>
+    </manual-testing>
+  </testing-strategy>
+
+  <!-- ========================================================================
+       DEPENDENCIES & NOTES
+       ======================================================================== -->
+  <dependencies>
+    <internal>
+      <dep>E9.4 Agent Orchestration Core - DONE (provides workflow infrastructure)</dep>
+      <dep>E9.1 CIM Database Schema - DONE (provides cims table with JSONB fields)</dep>
+      <dep>E9.3 CIM Builder 3-Panel Layout - DONE (provides chat UI)</dep>
+    </internal>
+    <external>
+      <dep>@langchain/langgraph - LangGraph workflow engine</dep>
+      <dep>@langchain/core - LangChain core tools and messages</dep>
+      <dep>OpenAI API - For embeddings (text-embedding-3-large)</dep>
+    </external>
+  </dependencies>
+
+  <key-files>
+    <file priority="high">manda-app/lib/agent/cim/prompts.ts</file>
+    <file priority="high">manda-app/lib/agent/cim/tools/cim-tools.ts</file>
+    <file priority="medium">manda-app/lib/agent/cim/workflow.ts</file>
+    <file priority="medium">manda-app/lib/agent/cim/state.ts</file>
+    <file priority="low">manda-app/lib/types/cim.ts</file>
+    <file priority="low">manda-app/lib/agent/tools/knowledge-tools.ts</file>
+  </key-files>
+
+  <notes>
+    <note type="important">
+      The existing E9.4 implementation already has save_buyer_persona and save_investment_thesis tools.
+      This story is primarily about enhancing the PROMPTS to guide better conversational flow
+      and ensuring RAG is used effectively for thesis suggestions.
+    </note>
+    <note type="tech-debt">
+      Consider adding a "suggestThesisAngles" tool that encapsulates the RAG query logic
+      for thesis suggestions, rather than relying on agent to call queryKnowledgeBaseTool correctly.
+    </note>
+    <note type="ux">
+      The agent should feel like a collaborative partner, not a form to fill out.
+      Use natural language transitions like "That's helpful. Now, what are their main priorities?"
+      rather than robotic "Enter buyer priorities:".
+    </note>
+  </notes>
+</story-context>

@@ -19,6 +19,7 @@ interface UseCIMChatOptions {
   cimId: string
   initialMessages?: ConversationMessage[]
   onMessageComplete?: (message: ConversationMessage) => void
+  onCIMStateChanged?: () => void // Callback to refresh CIM state after tool updates
 }
 
 interface UseCIMChatReturn {
@@ -36,6 +37,7 @@ export function useCIMChat({
   cimId,
   initialMessages = [],
   onMessageComplete,
+  onCIMStateChanged,
 }: UseCIMChatOptions): UseCIMChatReturn {
   const [messages, setMessages] = useState<ConversationMessage[]>(initialMessages)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -94,6 +96,10 @@ export function useCIMChat({
 
         setMessages((prev) => [...prev, assistantMessage])
         onMessageComplete?.(assistantMessage)
+
+        // Trigger CIM state refresh to sync outline and other tool-updated data
+        // This ensures the StructureTree and other components reflect tool changes
+        onCIMStateChanged?.()
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
         setError(errorMessage)

@@ -26,6 +26,7 @@ interface ConversationPanelProps {
   sourceRef: string
   onSourceRefClear: () => void
   onMessageSent: (message: ConversationMessage) => void
+  onCIMStateChanged?: () => void // Callback to refresh CIM state after tool updates (AC #7)
 }
 
 export function ConversationPanel({
@@ -35,6 +36,7 @@ export function ConversationPanel({
   sourceRef,
   onSourceRefClear,
   onMessageSent,
+  onCIMStateChanged,
 }: ConversationPanelProps) {
   const {
     messages,
@@ -46,6 +48,7 @@ export function ConversationPanel({
     cimId,
     initialMessages: conversationHistory,
     onMessageComplete: onMessageSent,
+    onCIMStateChanged,
   })
 
   // Handle sending message with source reference

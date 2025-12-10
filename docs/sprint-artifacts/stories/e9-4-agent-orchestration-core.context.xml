@@ -1,0 +1,221 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>4</storyId>
+    <title>Agent Orchestration Core</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-4-agent-orchestration-core.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>a conversational AI agent that guides me through CIM creation phases in sequence with state persistence</iWant>
+    <soThat>I can pause and resume CIM creation at any point, and have the agent remember my prior decisions to inform subsequent suggestions</soThat>
+    <tasks>
+      <task id="1" title="Create CIM Agent infrastructure">
+        <subtask id="1.1">Create lib/agent/cim/ directory structure with workflow.ts, state.ts, checkpointer.ts</subtask>
+        <subtask id="1.2">Define CIM agent state schema in state.ts extending existing CIM types</subtask>
+        <subtask id="1.3">Create CIMWorkflowState type with phase tracking, accumulated context, interrupt points</subtask>
+        <subtask id="1.4">Implement CIMCheckpointer adapter using Supabase (save state to cims.workflow_state)</subtask>
+        <subtask id="1.5">Unit tests for state serialization/deserialization</subtask>
+      </task>
+      <task id="2" title="Implement LangGraph workflow definition">
+        <subtask id="2.1">Create workflow.ts with LangGraph StateGraph definition</subtask>
+        <subtask id="2.2">Define workflow nodes: personaNode, thesisNode, outlineNode, contentNode, visualNode, reviewNode</subtask>
+        <subtask id="2.3">Define conditional edges for phase transitions (on user approval)</subtask>
+        <subtask id="2.4">Implement shouldContinue function for human-in-the-loop interrupts</subtask>
+        <subtask id="2.5">Add __interrupt__ points for user approval steps</subtask>
+        <subtask id="2.6">Unit tests for workflow graph structure and edge conditions</subtask>
+      </task>
+      <task id="3" title="Implement agent nodes - Foundation">
+        <subtask id="3.1">Create nodes/index.ts barrel export</subtask>
+        <subtask id="3.2">Create nodes/persona.ts - initiates buyer persona elicitation</subtask>
+        <subtask id="3.3">Create nodes/thesis.ts - co-creates investment thesis using RAG</subtask>
+        <subtask id="3.4">Create nodes/outline.ts - suggests and refines CIM outline</subtask>
+        <subtask id="3.5">Each node: accept prior context, generate response, update state</subtask>
+        <subtask id="3.6">Unit tests for each node with mocked LLM responses</subtask>
+      </task>
+      <task id="4" title="Implement agent nodes - Content creation">
+        <subtask id="4.1">Create nodes/content.ts - slide content creation with RAG</subtask>
+        <subtask id="4.2">Create nodes/visual.ts - visual concept generation</subtask>
+        <subtask id="4.3">Create nodes/review.ts - coherence check and final review</subtask>
+        <subtask id="4.4">Content node: query documents/findings/Q&A, present options, capture selection</subtask>
+        <subtask id="4.5">Unit tests for content and visual nodes</subtask>
+      </task>
+      <task id="5" title="Implement CIM-specific agent tools">
+        <subtask id="5.1">Create tools/index.ts barrel export for CIM tools</subtask>
+        <subtask id="5.2">Create tools/rag-query.ts - query deal documents for relevant content</subtask>
+        <subtask id="5.3">Create tools/findings.ts - search findings for the deal</subtask>
+        <subtask id="5.4">Create tools/qa-lookup.ts - look up Q&A items for the deal</subtask>
+        <subtask id="5.5">Create tools/slide-update.ts - update slide content/components</subtask>
+        <subtask id="5.6">Create tools/dependency.ts - track cross-slide dependencies</subtask>
+        <subtask id="5.7">Register tools with the CIM agent</subtask>
+        <subtask id="5.8">Unit tests for each tool</subtask>
+      </task>
+      <task id="6" title="Implement state persistence and resume">
+        <subtask id="6.1">Implement saveState function - serialize workflow state to JSONB</subtask>
+        <subtask id="6.2">Implement loadState function - hydrate LangGraph from stored state</subtask>
+        <subtask id="6.3">Add updated_at timestamp update on every save</subtask>
+        <subtask id="6.4">Implement conversation history append (add new messages, preserve old)</subtask>
+        <subtask id="6.5">Integration tests for save → close → resume flow</subtask>
+      </task>
+      <task id="7" title="Implement error handling and retry">
+        <subtask id="7.1">Create error-handler.ts with exponential backoff retry logic</subtask>
+        <subtask id="7.2">Classify errors: retryable (network, rate limit) vs non-retryable (validation)</subtask>
+        <subtask id="7.3">Add retry wrapper for LLM calls (max 3 retries, 1s → 2s → 4s backoff)</subtask>
+        <subtask id="7.4">Graceful error messages to user on non-recoverable errors</subtask>
+        <subtask id="7.5">Unit tests for retry logic with simulated failures</subtask>
+      </task>
+      <task id="8" title="Integrate with chat API route">
+        <subtask id="8.1">Update /api/projects/[id]/cims/[cimId]/chat/route.ts to use CIM agent</subtask>
+        <subtask id="8.2">On request: load CIM, hydrate workflow state, execute agent step</subtask>
+        <subtask id="8.3">Stream response with SSE (reuse existing streaming infrastructure)</subtask>
+        <subtask id="8.4">After response: save updated state to database</subtask>
+        <subtask id="8.5">Handle component_ref parameter for click-to-reference editing context</subtask>
+        <subtask id="8.6">Integration tests for chat API with agent</subtask>
+      </task>
+      <task id="9" title="Implement agent system prompt">
+        <subtask id="9.1">Create prompts.ts with CIM-specific system prompt</subtask>
+        <subtask id="9.2">Include phase-specific instructions (what to do in each phase)</subtask>
+        <subtask id="9.3">Include context formatting (how to use buyer persona, thesis, outline)</subtask>
+        <subtask id="9.4">Include approval request patterns</subtask>
+        <subtask id="9.5">Unit tests for prompt generation with different contexts</subtask>
+      </task>
+      <task id="10" title="Testing and verification">
+        <subtask id="10.1">Unit tests for all new modules (target: 80% coverage)</subtask>
+        <subtask id="10.2">Integration test: full workflow from persona to review (mocked LLM)</subtask>
+        <subtask id="10.3">Integration test: resume from each phase (save, reload, verify state)</subtask>
+        <subtask id="10.4">TypeScript type-check verification (npm run type-check)</subtask>
+        <subtask id="10.5">Build verification (npm run build)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Sequential Phase Execution">LangGraph workflow executes CIM phases in sequence (persona → thesis → outline → content_creation → visual_concepts → review → complete). Verification: Log phase transitions.</criterion>
+    <criterion id="AC2" title="State Persistence">State persisted to cims.workflow_state JSONB on every interaction. Verification: Query DB after message.</criterion>
+    <criterion id="AC3" title="Resume Capability">User can close browser, reopen, and continue from last state exactly where they left off. Verification: Integration test.</criterion>
+    <criterion id="AC4" title="Context Accumulation">Prior decisions (buyer persona, investment thesis, completed slides) inform current agent suggestions. Verification: Observe suggestions reference prior context.</criterion>
+    <criterion id="AC5" title="Human-in-the-Loop">Agent proposes, user approves; workflow pauses at decision points until user confirmation. Verification: Workflow pauses for approval.</criterion>
+    <criterion id="AC6" title="Error Recovery">Failed LLM calls retry gracefully with exponential backoff. Verification: Simulate failure, observe retry.</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Tech Spec" section="CIM Builder Specification">
+        Comprehensive spec for CIM Builder including LangGraph workflow (persona → thesis → outline → content → visual → review → complete), state persistence via JSONB, and click-to-reference editing.
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e9-4-agent-orchestration-core.md" title="Story E9.4" section="Full Story Definition">
+        Complete story definition with 10 tasks, 6 ACs covering sequential phases, state persistence, resume, context accumulation, human-in-the-loop, and error recovery.
+      </doc>
+      <doc path="docs/manda-prd.md" title="Manda PRD" section="CIM Builder Requirements">
+        Product requirements for CIM creation workflow, agent-guided approach, and export formats.
+      </doc>
+    </docs>
+    <code>
+      <file path="lib/types/cim.ts" kind="types" symbol="CIM, WorkflowState, ConversationMessage, Slide, BuyerPersona, OutlineSection">
+        Comprehensive CIM types including CIMPhase enum (7 phases), WorkflowState tracking, Zod schemas, and helper functions (getNextPhase, isPhaseCompleted, calculateCIMProgress).
+      </file>
+      <file path="lib/services/cim.ts" kind="service" symbol="createCIM, getCIM, updateCIM, updateCIMWorkflowState, advanceCIMPhase">
+        CIM CRUD service with Supabase integration. Includes state management functions for workflow phase transitions.
+      </file>
+      <file path="lib/agent/executor.ts" kind="agent" symbol="createChatAgent, executeChat, streamChat, ConversationContext">
+        Existing LangGraph agent using createReactAgent. Pattern to follow: HumanMessage/AIMessage conversion, streamEvents for SSE, ConversationContext class.
+      </file>
+      <file path="lib/agent/streaming.ts" kind="utility" symbol="createSSEStream, AgentStreamHandler, SSEEvent types">
+        SSE streaming infrastructure. AgentStreamHandler manages token streaming, tool events, and confidence extraction.
+      </file>
+      <file path="lib/agent/tools/knowledge-tools.ts" kind="tools" symbol="queryKnowledgeBaseTool, updateKnowledgeBaseTool, validateFindingTool">
+        Pattern for tool implementation: use tool() from @langchain/core/tools, Zod schema, formatToolResponse helper.
+      </file>
+      <file path="app/api/projects/[id]/cims/[cimId]/chat/route.ts" kind="api" symbol="POST" lines="1-211">
+        Placeholder chat route to replace. Currently returns mock responses. E9.4 will integrate actual LangGraph agent.
+      </file>
+      <file path="lib/hooks/useCIMChat.ts" kind="hook" symbol="useCIMChat">
+        Client hook expecting: messages array, isStreaming, error, sendMessage(). E9.4 must provide SSE streaming support.
+      </file>
+    </code>
+    <dependencies>
+      <node>
+        <pkg name="@langchain/langgraph" version="^0.2.0">LangGraph for StateGraph workflow definition</pkg>
+        <pkg name="@langchain/core" version="^1.1.0">Core messages and tool definitions</pkg>
+        <pkg name="@langchain/anthropic" version="^1.1.3">Claude LLM provider</pkg>
+        <pkg name="zod" version="^4.1.13">Schema validation for inputs/outputs</pkg>
+        <pkg name="@supabase/supabase-js" version="^2.84.0">Database for state persistence</pkg>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec">LangGraph workflow must execute phases in exact sequence: persona → thesis → outline → content_creation → visual_concepts → review → complete</constraint>
+    <constraint source="tech-spec">State MUST persist to cims.workflow_state JSONB on EVERY interaction</constraint>
+    <constraint source="tech-spec">Human-in-the-loop: agent proposes, user approves at each phase transition</constraint>
+    <constraint source="tech-spec">Error recovery: max 3 retries with exponential backoff (1s → 2s → 4s)</constraint>
+    <constraint source="architecture">Reuse existing streaming infrastructure from lib/agent/streaming.ts</constraint>
+    <constraint source="architecture">CIM agent tools separate from chat tools (lib/agent/cim/tools/)</constraint>
+    <constraint source="story">Resume capability: user must continue from exact last state after browser close</constraint>
+    <constraint source="story">Context accumulation: prior decisions must inform current suggestions</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="CIMWorkflowState" kind="type" path="lib/types/cim.ts">
+      <signature>
+        interface CIMWorkflowState {
+          currentPhase: CIMPhase
+          currentSectionIndex: number | null
+          currentSlideIndex: number | null
+          completedPhases: CIMPhase[]
+          pendingApproval: { type: 'phase_complete' | 'outline_change' | 'content_approval'; data: unknown } | null
+          isComplete: boolean
+        }
+      </signature>
+    </interface>
+    <interface name="CIM Agent Chat API" kind="REST" path="app/api/projects/[id]/cims/[cimId]/chat/route.ts">
+      <signature>
+        POST /api/projects/[id]/cims/[cimId]/chat
+        Request: { message: string; component_ref?: string }
+        Response: SSE stream with events: token, tool_start, tool_end, slide_update, phase_transition, done
+      </signature>
+    </interface>
+    <interface name="createReactAgent" kind="function" path="@langchain/langgraph/prebuilt">
+      <signature>
+        createReactAgent({ llm, tools, messageModifier }) => ReactAgentType
+        agent.streamEvents({ messages }, { version: 'v2' }) => AsyncIterable
+      </signature>
+    </interface>
+    <interface name="LangGraph StateGraph" kind="class" path="@langchain/langgraph">
+      <signature>
+        new StateGraph({ channels }) => graph
+        graph.addNode(name, fn)
+        graph.addEdge(from, to)
+        graph.addConditionalEdges(from, routingFn, routes)
+        graph.compile({ checkpointer })
+      </signature>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Use Vitest for unit and integration tests. Mock LLM responses in unit tests. Target 80% coverage for new modules. Integration tests use actual Supabase but mocked LLM. Follow existing patterns in __tests__/ directory. Use createMockSupabaseClient from __tests__/utils/supabase-mock.ts.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/agent/cim/</location>
+      <location>manda-app/__tests__/api/projects/[id]/cims/[cimId]/chat/</location>
+    </locations>
+    <ideas>
+      <test ac="1">Unit test: workflow graph structure validates phase sequence (persona → thesis → ... → complete)</test>
+      <test ac="1">Unit test: each node function produces correct state updates</test>
+      <test ac="2">Integration test: state serializes/deserializes correctly to JSONB</test>
+      <test ac="2">Integration test: state saved after each message exchange</test>
+      <test ac="3">Integration test: save state, call getCIM, verify exact state restoration</test>
+      <test ac="3">Integration test: resume from each phase (persona, thesis, outline, etc.)</test>
+      <test ac="4">Unit test: thesis node receives buyerPersona in context</test>
+      <test ac="4">Unit test: content node receives outline and prior slides</test>
+      <test ac="5">Unit test: shouldContinue returns interrupt when pendingApproval set</test>
+      <test ac="5">Integration test: workflow pauses at phase completion until approval message</test>
+      <test ac="6">Unit test: retry wrapper retries on network error, skips on validation error</test>
+      <test ac="6">Unit test: exponential backoff delays are 1s, 2s, 4s</test>
+      <test ac="6">Integration test: simulate LLM failure, verify retry and graceful error message</test>
+    </ideas>
+  </tests>
+</story-context>

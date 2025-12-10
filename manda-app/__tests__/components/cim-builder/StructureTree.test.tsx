@@ -66,10 +66,10 @@ describe('StructureTree', () => {
     })
 
     it('should sort sections by order', () => {
-      const unorderedOutline = [
-        { ...mockOutline[2], order: 2 },
-        { ...mockOutline[0], order: 0 },
-        { ...mockOutline[1], order: 1 },
+      const unorderedOutline: OutlineSection[] = [
+        { ...mockOutline[2]!, order: 2 },
+        { ...mockOutline[0]!, order: 0 },
+        { ...mockOutline[1]!, order: 1 },
       ]
       render(<StructureTree {...defaultProps} outline={unorderedOutline} />)
 

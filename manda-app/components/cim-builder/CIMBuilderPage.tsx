@@ -141,6 +141,7 @@ export function CIMBuilderPage({
               sourceRef={sourceRef}
               onSourceRefClear={() => setSourceRef('')}
               onMessageSent={addMessage}
+              onCIMStateChanged={refresh} // Refresh CIM state after tool updates (AC #7)
             />
           }
           previewPanel={

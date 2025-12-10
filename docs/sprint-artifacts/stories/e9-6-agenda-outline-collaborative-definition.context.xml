@@ -1,0 +1,362 @@
+<story-context id="e9-6-agenda-outline-collaborative-definition" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>6</storyId>
+    <title>Agenda/Outline Collaborative Definition</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-6-agenda-outline-collaborative-definition.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>the CIM agent to collaboratively help me define my CIM's section structure and outline</iWant>
+    <soThat>I can customize the CIM to my specific needs rather than being constrained to a fixed template, while benefiting from the agent's expertise in suggesting effective M&A presentation structures</soThat>
+    <tasks>
+      <task id="1" acs="1,5">Enhance OUTLINE Phase Prompt
+        <subtask>1.1: Update prompts.ts OUTLINE phase prompt to include initial outline suggestion based on buyer persona and thesis</subtask>
+        <subtask>1.2: Add section purpose explanations for standard CIM sections</subtask>
+        <subtask>1.3: Add buyer-type-specific outline templates</subtask>
+        <subtask>1.4: Update getPhaseIntroduction('outline') to include initial outline proposal</subtask>
+        <subtask>1.5: Write unit tests for outline prompts</subtask>
+      </task>
+      <task id="2" acs="3">Implement Delete Section Tool
+        <subtask>2.1: Create deleteOutlineSectionTool in cim-tools.ts with sectionId parameter</subtask>
+        <subtask>2.2: Ensure deletion updates section order (re-index remaining sections)</subtask>
+        <subtask>2.3: Handle edge cases: delete last section, delete section with slides</subtask>
+        <subtask>2.4: Write unit tests for delete tool</subtask>
+      </task>
+      <task id="3" acs="4">Implement Reorder Sections Tool
+        <subtask>3.1: Create reorderOutlineSectionsTool in cim-tools.ts</subtask>
+        <subtask>3.2: Accept array of section IDs in new order OR single move command</subtask>
+        <subtask>3.3: Update all section.order values atomically</subtask>
+        <subtask>3.4: Write unit tests for reorder tool</subtask>
+      </task>
+      <task id="4" acs="2,3,4">Update Prompt for Conversational Operations
+        <subtask>4.1: Add natural language parsing guidance to OUTLINE phase prompt</subtask>
+        <subtask>4.2: Add example phrases agent should recognize</subtask>
+        <subtask>4.3: Add confirmation dialogue patterns after each operation</subtask>
+        <subtask>4.4: Test conversational flow manually</subtask>
+      </task>
+      <task id="5" acs="6">Ensure State Persistence
+        <subtask>5.1: Verify createOutlineSectionTool persists to cims.outline correctly</subtask>
+        <subtask>5.2: Verify updateOutlineSectionTool works for title/description updates</subtask>
+        <subtask>5.3: Add integration tests for outline CRUD round-trip</subtask>
+      </task>
+      <task id="6" acs="7">Verify Structure Panel Sync
+        <subtask>6.1: Verify StructureTree.tsx re-renders when outline changes</subtask>
+        <subtask>6.2: Verify progress icons update correctly</subtask>
+        <subtask>6.3: Verify click-to-jump navigation still works after section reorder</subtask>
+        <subtask>6.4: Add component tests for StructureTree outline updates</subtask>
+      </task>
+      <task id="7" acs="1-7">Update Tool Registration and Testing
+        <subtask>7.1: Register deleteOutlineSectionTool and reorderOutlineSectionsTool in cimTools array</subtask>
+        <subtask>7.2: Update CIM_TOOL_USAGE_PROMPT to include new tools</subtask>
+        <subtask>7.3: Run full test suite and fix any regressions</subtask>
+        <subtask>7.4: TypeScript type-check passes</subtask>
+        <subtask>7.5: Build verification</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" test="Outline proposed">Initial Outline Suggestion - Agent suggests an initial outline based on the buyer persona and investment thesis captured in previous phases</ac>
+    <ac id="2" test="Add action works">Add Sections - User can add new sections via natural conversation and agent confirms the addition</ac>
+    <ac id="3" test="Remove action works">Remove Sections - User can remove sections via natural conversation and agent confirms the removal</ac>
+    <ac id="4" test="Reorder action works">Reorder Sections - User can reorder sections via natural conversation and agent confirms the reorder</ac>
+    <ac id="5" test="Explanations present">Section Purpose Explanation - Agent explains the purpose and typical content of each suggested section</ac>
+    <ac id="6" test="DB check">Outline Persistence - Outline is stored in cims.outline JSONB column via createOutlineSectionTool and updateOutlineSectionTool</ac>
+    <ac id="7" test="UI updates">Structure Panel Sync - The Structure panel in the UI updates to reflect the defined outline with section progress indicators</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" relevance="high">
+        <summary>Epic E9 Technical Specification - CIM Builder comprehensive specification including data models, APIs, workflow design</summary>
+        <keyPoints>
+          <point>AC-9.6.1-AC-9.6.7 define this story's acceptance criteria</point>
+          <point>OutlineSection interface: id, title, description, order, status, slide_ids</point>
+          <point>OUTLINE phase in workflow follows THESIS phase</point>
+          <point>Standard CIM sections: Executive Summary, Company Overview, Products/Services, Market Opportunity, Customer Base, Financial Performance, Growth Strategy, Investment Highlights, Appendix</point>
+          <point>User can add/remove/reorder sections via conversation</point>
+        </keyPoints>
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E9.md" relevance="medium">
+        <summary>Epic E9 definition with story breakdown for CIM Builder</summary>
+        <keyPoints>
+          <point>E9.6 is 5 story points</point>
+          <point>Depends on E9.4 (Agent Core) and E9.5 (Persona/Thesis)</point>
+          <point>Precedes E9.7 (Content Creation)</point>
+        </keyPoints>
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e9-5-buyer-persona-and-investment-thesis-phase.md" relevance="high">
+        <summary>Previous story with patterns to follow for prompt enhancement</summary>
+        <keyPoints>
+          <point>Used CRITICAL sections in prompts to enforce required behaviors</point>
+          <point>4-step conversation flow pattern</point>
+          <point>27 prompt tests + 15 tool tests in separate files</point>
+          <point>Transition criteria pattern before phase changes</point>
+          <point>Code review APPROVED - all patterns verified working</point>
+        </keyPoints>
+      </doc>
+    </docs>
+
+    <code>
+      <file path="manda-app/lib/agent/cim/prompts.ts" relevance="high" action="modify">
+        <summary>CIM Agent prompts including OUTLINE phase prompt (lines 254-285)</summary>
+        <keyFunctions>
+          <function name="PHASE_PROMPTS.outline" lines="254-285">Current OUTLINE phase prompt - needs significant enhancement</function>
+          <function name="getPhaseIntroduction" lines="482-500">Phase introduction messages - outline needs initial proposal</function>
+          <function name="getCIMSystemPrompt" lines="462-477">Assembles full system prompt for phase</function>
+          <function name="CIM_TOOL_USAGE_PROMPT" lines="428-457">Tool usage documentation - needs new tools added</function>
+        </keyFunctions>
+        <patterns>
+          <pattern>CRITICAL sections in phase prompts enforce required behaviors (see persona phase)</pattern>
+          <pattern>Step-by-step conversation flow with explicit transitions</pattern>
+          <pattern>Transition criteria defined at end of phase prompt</pattern>
+        </patterns>
+        <currentOutlinePrompt>
+## Current Phase: CIM Outline Definition
+
+You are in the OUTLINE phase. Your goal is to collaboratively define the CIM structure.
+
+### Standard CIM Sections (can be customized)
+
+1. **Executive Summary** - High-level overview and investment highlights
+2. **Company Overview** - History, mission, culture, leadership
+3. **Products/Services** - Offerings, value proposition, differentiation
+4. **Market Opportunity** - Industry size, trends, competitive landscape
+5. **Customer Base** - Segments, concentration, relationships
+6. **Financial Performance** - Historical and projected financials
+7. **Growth Strategy** - Expansion plans, initiatives, opportunities
+8. **Investment Highlights** - Summary of key reasons to invest
+9. **Appendix** - Additional data, detailed financials
+
+### Your Approach
+
+1. Propose an initial outline based on buyer persona and thesis
+2. Discuss each section's purpose and expected content
+3. Allow user to add, remove, or reorder sections
+4. Define 2-4 slides per section
+5. Get approval before finalizing
+6. Use create_outline_section and update_outline tools
+
+### Transition Criteria
+
+Move to CONTENT_CREATION phase when:
+- All sections are defined with titles and descriptions
+- User has approved the complete outline
+- Section order is finalized
+        </currentOutlinePrompt>
+      </file>
+
+      <file path="manda-app/lib/agent/cim/tools/cim-tools.ts" relevance="high" action="modify">
+        <summary>CIM agent tools - has create/update, needs delete/reorder tools</summary>
+        <keyFunctions>
+          <function name="createOutlineSectionTool" lines="166-218">Creates new outline section - ALREADY IMPLEMENTED</function>
+          <function name="updateOutlineSectionTool" lines="221-286">Updates existing section - ALREADY IMPLEMENTED</function>
+          <function name="cimTools" lines="671-680">Array of all CIM tools - needs new tools added</function>
+          <function name="formatSuccess/formatError" lines="46-55">Response formatting helpers</function>
+        </keyFunctions>
+        <missingTools>
+          <tool name="deleteOutlineSectionTool">Delete section by ID, re-index remaining sections, warn if section has slides</tool>
+          <tool name="reorderOutlineSectionsTool">Accept new order array or move command, update section.order values atomically</tool>
+        </missingTools>
+        <patterns>
+          <pattern>All tools use Zod schema validation</pattern>
+          <pattern>All tools return formatSuccess/formatError JSON</pattern>
+          <pattern>Tools check auth via supabase.auth.getUser()</pattern>
+          <pattern>Tools load CIM via getCIM, update via updateCIM</pattern>
+        </patterns>
+      </file>
+
+      <file path="manda-app/components/cim-builder/SourcesPanel/StructureTree.tsx" relevance="medium" action="verify">
+        <summary>UI component displaying outline with progress icons</summary>
+        <keyFunctions>
+          <function name="StructureTree" lines="37-95">Renders outline sections with click-to-jump</function>
+        </keyFunctions>
+        <features>
+          <feature>Sorts outline by order property</feature>
+          <feature>Shows progress icons: complete (Check), in_progress (Loader2), pending (Circle)</feature>
+          <feature>onSectionClick callback for navigation</feature>
+          <feature>Empty state when no outline</feature>
+        </features>
+        <note>No changes expected - should re-render automatically when outline prop changes</note>
+      </file>
+
+      <file path="manda-app/lib/types/cim.ts" relevance="medium" action="reference">
+        <summary>CIM type definitions</summary>
+        <keyTypes>
+          <type name="OutlineSection" lines="116-123">id, title, description, order, status, slide_ids</type>
+          <type name="SectionStatus" lines="84-85">'pending' | 'in_progress' | 'complete'</type>
+          <type name="CIMPhase" lines="20-29">Workflow phases including 'outline'</type>
+        </keyTypes>
+      </file>
+
+      <file path="manda-app/__tests__/lib/agent/cim/prompts.test.ts" relevance="high" action="modify">
+        <summary>Existing prompt tests - add outline phase tests</summary>
+        <note>27 existing tests for persona and thesis prompts</note>
+      </file>
+
+      <file path="manda-app/__tests__/lib/agent/cim/tools.test.ts" relevance="high" action="modify">
+        <summary>Existing tool tests - add delete/reorder tool tests</summary>
+        <note>15 existing tests for persona and thesis tools</note>
+      </file>
+    </code>
+
+    <dependencies>
+      <internal>
+        <dep path="lib/supabase/server" usage="createClient()">Supabase client for auth and DB</dep>
+        <dep path="lib/services/cim" usage="getCIM, updateCIM">CIM service for CRUD operations</dep>
+        <dep path="@langchain/core/tools" usage="tool()">Tool definition helper from LangChain</dep>
+        <dep path="zod" usage="z.object(), z.string(), etc.">Schema validation</dep>
+      </internal>
+      <external>
+        <dep name="@langchain/core" version="^1.1.0">LangGraph runtime</dep>
+        <dep name="zod" version="^4.1.13">Schema validation</dep>
+      </external>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Tools must use existing formatSuccess/formatError helpers for consistent responses</constraint>
+    <constraint type="architecture">All tools must check authentication via supabase.auth.getUser()</constraint>
+    <constraint type="architecture">Outline sections must maintain unique order values (0, 1, 2...)</constraint>
+    <constraint type="ux">Agent must confirm each operation before moving on (human-in-the-loop)</constraint>
+    <constraint type="ux">Delete tool should warn if section has slides associated</constraint>
+    <constraint type="data">Outline is stored in cims.outline JSONB column</constraint>
+    <constraint type="testing">Follow existing test patterns: separate prompt tests and tool tests</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="deleteOutlineSectionTool">
+      <input>
+        <param name="cimId" type="string" required="true">UUID of the CIM</param>
+        <param name="sectionId" type="string" required="true">UUID of section to delete</param>
+      </input>
+      <output>
+        <field name="success" type="boolean">Operation result</field>
+        <field name="message" type="string">Human-readable message</field>
+        <field name="warning" type="string" optional="true">Warning if section had slides</field>
+        <field name="deletedSectionId" type="string">ID of deleted section</field>
+        <field name="reorderedSections" type="number">Count of re-indexed sections</field>
+      </output>
+    </interface>
+    <interface name="reorderOutlineSectionsTool">
+      <input>
+        <param name="cimId" type="string" required="true">UUID of the CIM</param>
+        <param name="sectionIds" type="string[]" required="true">Array of section IDs in new order</param>
+      </input>
+      <output>
+        <field name="success" type="boolean">Operation result</field>
+        <field name="message" type="string">Human-readable message</field>
+        <field name="newOrder" type="OutlineSection[]">Sections in new order</field>
+      </output>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <standard>Use Vitest for unit and integration tests</standard>
+      <standard>Mock Supabase client for tool tests</standard>
+      <standard>Test both success and error paths</standard>
+      <standard>Follow existing test patterns in prompts.test.ts and tools.test.ts</standard>
+    </standards>
+    <locations>
+      <location path="manda-app/__tests__/lib/agent/cim/prompts.test.ts">Outline prompt tests</location>
+      <location path="manda-app/__tests__/lib/agent/cim/tools.test.ts">Delete and reorder tool tests</location>
+      <location path="manda-app/__tests__/components/cim-builder/StructureTree.test.tsx">StructureTree component tests</location>
+    </locations>
+    <ideas>
+      <testCase ac="1">Test OUTLINE phase prompt contains initial suggestion logic based on buyer type</testCase>
+      <testCase ac="1">Test getPhaseIntroduction('outline') returns proposal with section list</testCase>
+      <testCase ac="2">Test createOutlineSectionTool already works (verify existing)</testCase>
+      <testCase ac="3">Test deleteOutlineSectionTool deletes section and re-indexes remaining</testCase>
+      <testCase ac="3">Test deleteOutlineSectionTool warns when section has slides</testCase>
+      <testCase ac="3">Test deleteOutlineSectionTool handles section not found</testCase>
+      <testCase ac="4">Test reorderOutlineSectionsTool updates order values correctly</testCase>
+      <testCase ac="4">Test reorderOutlineSectionsTool handles invalid section IDs</testCase>
+      <testCase ac="4">Test reorderOutlineSectionsTool handles mismatched array length</testCase>
+      <testCase ac="5">Test OUTLINE prompt contains section purpose explanations</testCase>
+      <testCase ac="5">Test OUTLINE prompt has buyer-type-specific templates</testCase>
+      <testCase ac="6">Integration test: create -> update -> delete -> verify DB state</testCase>
+      <testCase ac="7">Test StructureTree re-renders when outline prop changes</testCase>
+      <testCase ac="7">Test StructureTree sorts by order property</testCase>
+    </ideas>
+  </tests>
+
+  <buyerTypeTemplates>
+    <template type="strategic">
+      <section order="1">Executive Summary - Investment highlights and synergy potential</section>
+      <section order="2">Company Overview - History, culture, unique capabilities</section>
+      <section order="3">Products/Services - Technology, IP, integration points</section>
+      <section order="4">Strategic Fit - Synergy analysis, market expansion</section>
+      <section order="5">Market Opportunity - Competitive landscape, combined market position</section>
+      <section order="6">Customer Base - Cross-sell potential, key accounts</section>
+      <section order="7">Financial Performance - Historical with synergy projections</section>
+      <section order="8">Team and Leadership - Retention strategy, key talent</section>
+      <section order="9">Investment Highlights - Summary of strategic value</section>
+    </template>
+    <template type="financial">
+      <section order="1">Executive Summary - Returns thesis and exit potential</section>
+      <section order="2">Company Overview - Platform vs. add-on positioning</section>
+      <section order="3">Products/Services - Recurring revenue, unit economics</section>
+      <section order="4">Market Opportunity - TAM/SAM/SOM, market growth</section>
+      <section order="5">Value Creation Levers - Margin expansion, growth initiatives</section>
+      <section order="6">Customer Base - Retention, concentration risk</section>
+      <section order="7">Financial Performance - EBITDA bridge, projections</section>
+      <section order="8">Team and Leadership - Management incentivization</section>
+      <section order="9">Investment Highlights - IRR drivers, exit scenarios</section>
+    </template>
+    <template type="management">
+      <section order="1">Executive Summary - Ownership opportunity and value creation</section>
+      <section order="2">Company Overview - Culture, operational strengths</section>
+      <section order="3">Products/Services - Core competencies, market position</section>
+      <section order="4">Market Opportunity - Growth potential, competitive moat</section>
+      <section order="5">Operational Excellence - Efficiency opportunities, improvements</section>
+      <section order="6">Customer Base - Relationships, loyalty, expansion potential</section>
+      <section order="7">Financial Performance - Cash flow focus, debt capacity</section>
+      <section order="8">Team and Leadership - Management depth, continuity</section>
+      <section order="9">Investment Highlights - MBO value drivers</section>
+    </template>
+  </buyerTypeTemplates>
+
+  <conversationalPatterns>
+    <pattern name="add_section">
+      <userPhrases>
+        <phrase>Add a section for Team</phrase>
+        <phrase>I want to include a section about the management team</phrase>
+        <phrase>Let's add Team and Leadership</phrase>
+        <phrase>Include a new section for market analysis</phrase>
+      </userPhrases>
+      <agentResponse>I'll add a "{sectionTitle}" section to your outline. [Uses create_outline_section tool] Done! Here's your updated outline with the new section at position {order}. Would you like to adjust its position or add another section?</agentResponse>
+    </pattern>
+    <pattern name="remove_section">
+      <userPhrases>
+        <phrase>Remove the Appendix section</phrase>
+        <phrase>I don't need the appendix</phrase>
+        <phrase>Let's drop the competitive landscape section</phrase>
+        <phrase>Delete section 5</phrase>
+      </userPhrases>
+      <agentResponse>I'll remove the "{sectionTitle}" section. [Uses delete_outline_section tool] Done! The remaining sections have been reordered. Here's your updated outline. Any other changes?</agentResponse>
+    </pattern>
+    <pattern name="reorder_section">
+      <userPhrases>
+        <phrase>Move Market Analysis before Company Overview</phrase>
+        <phrase>Put Financial Performance at position 3</phrase>
+        <phrase>Swap the order of sections 2 and 4</phrase>
+        <phrase>I want Team section to come after Financial</phrase>
+      </userPhrases>
+      <agentResponse>I'll move "{sectionTitle}" to position {newPosition}. [Uses reorder_outline_sections tool] Done! Here's your updated outline with the new order. Does this flow work for your target buyer?</agentResponse>
+    </pattern>
+    <pattern name="explain_section">
+      <userPhrases>
+        <phrase>What should go in the Executive Summary?</phrase>
+        <phrase>Tell me more about the Market Opportunity section</phrase>
+        <phrase>What's typically included in Investment Highlights?</phrase>
+      </userPhrases>
+      <agentResponse>The {sectionTitle} section typically includes: [explanation of purpose and typical content]. For your target {buyerType} buyer focused on {priorities}, I'd recommend emphasizing {specific_angles}. Would you like me to add this section?</agentResponse>
+    </pattern>
+  </conversationalPatterns>
+</story-context>
