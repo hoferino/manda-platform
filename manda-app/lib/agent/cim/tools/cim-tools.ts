@@ -30,6 +30,7 @@ import {
   CIM_PHASES,
   COMPONENT_TYPES,
   LAYOUT_TYPES,
+  LayoutType,
   CHART_TYPES,
   ChartType,
   SOURCE_TYPES,
@@ -926,6 +927,389 @@ export const updateSlideTool = tool(
 // ============================================================================
 
 /**
+ * Generate visual concept for a slide based on content and buyer persona
+ * Story: E9.10 - Visual Concept Generation
+ * AC #1: Visual Concept Trigger - After slide content is approved, generate visual blueprint
+ * AC #3: Narrative Rationale - Explain WHY visuals support the buyer persona narrative
+ */
+export const generateVisualConceptTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      const slide = cim.slides.find(s => s.id === input.slideId)
+      if (!slide) {
+        return formatError('Slide not found')
+      }
+
+      // Build context for visual concept generation
+      const buyerPersona = cim.buyerPersona
+
+      // Analyze slide components to determine content type
+      const componentTypes = slide.components.map(c => c.type)
+      const hasChart = componentTypes.includes('chart')
+      const contentTexts = slide.components.filter(c => c.type === 'text' || c.type === 'bullet').map(c => c.content).join(' ')
+
+      // Determine recommended layout based on content
+      let recommendedLayout: LayoutType = 'content'
+      if (slide.title?.toLowerCase().includes('executive summary') ||
+          slide.title?.toLowerCase().includes('overview')) {
+        recommendedLayout = 'title_slide'
+      } else if (hasChart || contentTexts.toLowerCase().includes('chart') ||
+                 contentTexts.toLowerCase().includes('graph') ||
+                 contentTexts.toLowerCase().includes('%') ||
+                 contentTexts.toLowerCase().includes('$')) {
+        recommendedLayout = 'chart_focus'
+      } else if (contentTexts.toLowerCase().includes('compare') ||
+                 contentTexts.toLowerCase().includes('versus') ||
+                 contentTexts.toLowerCase().includes(' vs ')) {
+        recommendedLayout = 'two_column'
+      } else if (contentTexts.toLowerCase().includes('team') ||
+                 contentTexts.toLowerCase().includes('photo') ||
+                 contentTexts.toLowerCase().includes('logo')) {
+        recommendedLayout = 'image_focus'
+      }
+
+      // Generate chart recommendations based on content analysis
+      const chartRecommendations: { type: ChartType; data_description: string; purpose: string }[] = []
+
+      // Look for data patterns in content
+      if (contentTexts.toLowerCase().includes('growth') ||
+          contentTexts.toLowerCase().includes('trend') ||
+          contentTexts.toLowerCase().includes('over time')) {
+        chartRecommendations.push({
+          type: 'line',
+          data_description: 'Trend data showing growth trajectory',
+          purpose: 'Line charts effectively show progress over time, demonstrating momentum',
+        })
+      }
+
+      if (contentTexts.toLowerCase().includes('compare') ||
+          contentTexts.toLowerCase().includes('versus') ||
+          contentTexts.toLowerCase().includes('ltv') ||
+          contentTexts.toLowerCase().includes('cac')) {
+        chartRecommendations.push({
+          type: 'bar',
+          data_description: 'Comparative metrics side by side',
+          purpose: 'Bar charts make comparisons visually striking, highlighting advantages',
+        })
+      }
+
+      if (contentTexts.toLowerCase().includes('breakdown') ||
+          contentTexts.toLowerCase().includes('distribution') ||
+          contentTexts.toLowerCase().includes('share') ||
+          contentTexts.toLowerCase().includes('segment')) {
+        chartRecommendations.push({
+          type: 'pie',
+          data_description: 'Distribution or composition breakdown',
+          purpose: 'Pie charts show proportional relationships at a glance',
+        })
+      }
+
+      // Generate image suggestions
+      const imageSuggestions: string[] = []
+      if (contentTexts.toLowerCase().includes('team') ||
+          contentTexts.toLowerCase().includes('leadership')) {
+        imageSuggestions.push('Leadership team headshots with titles')
+      }
+      if (contentTexts.toLowerCase().includes('office') ||
+          contentTexts.toLowerCase().includes('facility') ||
+          contentTexts.toLowerCase().includes('location')) {
+        imageSuggestions.push('Office/facility photography')
+      }
+      if (contentTexts.toLowerCase().includes('product') ||
+          contentTexts.toLowerCase().includes('technology') ||
+          contentTexts.toLowerCase().includes('platform')) {
+        imageSuggestions.push('Product screenshot or technology diagram')
+      }
+      if (contentTexts.toLowerCase().includes('customer') ||
+          contentTexts.toLowerCase().includes('client') ||
+          contentTexts.toLowerCase().includes('logo')) {
+        imageSuggestions.push('Customer/client logo grid')
+      }
+
+      // Build buyer-persona-aware rationale (AC #3)
+      let rationale = ''
+      if (buyerPersona) {
+        const buyerType = buyerPersona.buyer_type
+        const priorities = buyerPersona.priorities.slice(0, 2).join(' and ')
+        const metrics = buyerPersona.key_metrics.slice(0, 2).join(' and ')
+
+        rationale = `**Why this works for your ${buyerType} buyer:**\n`
+
+        if (recommendedLayout === 'chart_focus') {
+          rationale += `- ${buyerType === 'financial' ? 'Financial sponsors' : buyerType === 'strategic' ? 'Strategic buyers' : 'This buyer type'} prioritize data-driven decisions. A chart-focused layout puts the numbers front and center.\n`
+          rationale += `- Visual representation of ${metrics || 'key metrics'} helps ${priorities ? `address their focus on ${priorities}` : 'reinforce your value proposition'}.\n`
+        } else if (recommendedLayout === 'two_column') {
+          rationale += `- Side-by-side comparisons help ${buyerType} buyers quickly assess competitive advantages.\n`
+          rationale += `- This layout efficiently addresses ${priorities || 'key priorities'} by showing contrasts clearly.\n`
+        } else if (recommendedLayout === 'title_slide') {
+          rationale += `- A clean title slide establishes credibility and sets the right tone for ${buyerType} buyers.\n`
+          rationale += `- First impressions matter - this layout signals professionalism.\n`
+        } else {
+          rationale += `- A content-focused layout ensures ${buyerType} buyers can quickly scan key points.\n`
+          rationale += `- Clear bullet structure helps address ${priorities || 'their key priorities'} systematically.\n`
+        }
+
+        if (chartRecommendations.length > 0) {
+          rationale += `\n**Chart rationale:**\n`
+          for (const chart of chartRecommendations) {
+            rationale += `- ${chart.type.charAt(0).toUpperCase() + chart.type.slice(1)} chart: ${chart.purpose}\n`
+          }
+        }
+      } else {
+        rationale = `**Layout recommendation:** ${recommendedLayout} layout based on slide content type.`
+        if (chartRecommendations.length > 0) {
+          rationale += `\n\n**Chart suggestions:** ${chartRecommendations.map(c => c.type).join(', ')} to visualize the data effectively.`
+        }
+      }
+
+      // Build designer notes
+      const notes = `Layout: ${recommendedLayout}. ${chartRecommendations.length > 0 ? `Charts: ${chartRecommendations.map(c => c.type).join(', ')}. ` : ''}${imageSuggestions.length > 0 ? `Images: ${imageSuggestions.join('; ')}. ` : ''}Based on ${slide.title} slide content analysis.`
+
+      return formatSuccess({
+        message: 'Visual concept generated',
+        slideId: input.slideId,
+        slideTitle: slide.title,
+        slideStatus: slide.status,
+        visualConcept: {
+          layout_type: recommendedLayout,
+          chart_recommendations: chartRecommendations.map(c => ({
+            type: c.type,
+            data_description: c.data_description,
+            purpose: c.purpose,
+          })),
+          image_suggestions: imageSuggestions,
+          notes,
+        },
+        rationale,
+        buyerContext: buyerPersona ? {
+          buyer_type: buyerPersona.buyer_type,
+          priorities: buyerPersona.priorities,
+          key_metrics: buyerPersona.key_metrics,
+        } : null,
+      })
+    } catch (err) {
+      console.error('[generate_visual_concept] Error:', err)
+      return formatError('Failed to generate visual concept')
+    }
+  },
+  {
+    name: 'generate_visual_concept',
+    description: `Generate a visual concept blueprint for an approved slide based on its content and the buyer persona.
+
+**Features:**
+- Analyzes slide content to recommend optimal layout type
+- Suggests appropriate chart types based on data patterns
+- Provides image suggestions where relevant
+- Explains WHY each visual choice supports the buyer persona narrative
+
+**Use this tool when:**
+1. A slide's content has been approved (status = 'approved')
+2. The slide doesn't have a visual_concept yet
+3. User asks to generate visuals for a slide
+
+**Output includes:**
+- layout_type: title_slide, content, two_column, chart_focus, or image_focus
+- chart_recommendations: Array of {type, data_description, purpose}
+- image_suggestions: Array of image descriptions
+- rationale: Explanation of why these visuals support the narrative`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      slideId: z.string().uuid().describe('The slide ID to generate visual concept for'),
+    }),
+  }
+)
+
+/**
+ * Regenerate visual concept with user modifications
+ * Story: E9.10 - Visual Concept Generation
+ * AC #4: Alternative Requests - User can request alternative visual concepts
+ */
+export const regenerateVisualConceptTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      const slide = cim.slides.find(s => s.id === input.slideId)
+      if (!slide) {
+        return formatError('Slide not found')
+      }
+
+      const buyerPersona = cim.buyerPersona
+      const contentTexts = slide.components.filter(c => c.type === 'text' || c.type === 'bullet').map(c => c.content).join(' ')
+
+      // Apply user preferences to layout selection
+      let recommendedLayout: LayoutType = 'content'
+      const preference = input.preference?.toLowerCase() || ''
+
+      // Parse user preference to determine layout
+      if (preference.includes('chart') || preference.includes('data') || preference.includes('metric')) {
+        recommendedLayout = 'chart_focus'
+      } else if (preference.includes('compare') || preference.includes('column') || preference.includes('side')) {
+        recommendedLayout = 'two_column'
+      } else if (preference.includes('image') || preference.includes('photo') || preference.includes('visual')) {
+        recommendedLayout = 'image_focus'
+      } else if (preference.includes('title') || preference.includes('simple') || preference.includes('clean')) {
+        recommendedLayout = 'title_slide'
+      } else if (preference.includes('text') || preference.includes('content') || preference.includes('bullet')) {
+        recommendedLayout = 'content'
+      } else if (input.preferredLayout) {
+        recommendedLayout = input.preferredLayout as LayoutType
+      }
+
+      // Generate chart recommendations based on preference
+      const chartRecommendations: { type: ChartType; data_description: string; purpose: string }[] = []
+
+      // Apply preferred chart type if specified
+      if (input.preferredChartType) {
+        chartRecommendations.push({
+          type: input.preferredChartType as ChartType,
+          data_description: 'User-specified chart type',
+          purpose: `User requested ${input.preferredChartType} chart for this data`,
+        })
+      } else {
+        // Parse chart preference from text
+        if (preference.includes('bar')) {
+          chartRecommendations.push({
+            type: 'bar',
+            data_description: 'Comparative data',
+            purpose: 'Bar charts effectively show comparisons',
+          })
+        }
+        if (preference.includes('pie')) {
+          chartRecommendations.push({
+            type: 'pie',
+            data_description: 'Distribution breakdown',
+            purpose: 'Pie charts show proportions at a glance',
+          })
+        }
+        if (preference.includes('line') || preference.includes('trend')) {
+          chartRecommendations.push({
+            type: 'line',
+            data_description: 'Trend over time',
+            purpose: 'Line charts show progression and momentum',
+          })
+        }
+        if (preference.includes('area')) {
+          chartRecommendations.push({
+            type: 'area',
+            data_description: 'Cumulative data',
+            purpose: 'Area charts emphasize volume over time',
+          })
+        }
+        if (preference.includes('table')) {
+          chartRecommendations.push({
+            type: 'table',
+            data_description: 'Detailed data',
+            purpose: 'Tables allow precise data comparison',
+          })
+        }
+      }
+
+      // Generate image suggestions if image-focused
+      const imageSuggestions: string[] = []
+      if (recommendedLayout === 'image_focus' || preference.includes('image')) {
+        if (contentTexts.toLowerCase().includes('team')) {
+          imageSuggestions.push('Leadership team photos')
+        }
+        if (contentTexts.toLowerCase().includes('product')) {
+          imageSuggestions.push('Product screenshots')
+        }
+        if (contentTexts.toLowerCase().includes('customer')) {
+          imageSuggestions.push('Customer logos')
+        }
+        if (imageSuggestions.length === 0) {
+          imageSuggestions.push('Relevant visual to support the content')
+        }
+      }
+
+      // Build rationale
+      let rationale = `**Modified visual concept based on your request: "${input.preference}"**\n\n`
+      rationale += `**Layout:** ${recommendedLayout}\n`
+
+      if (buyerPersona) {
+        rationale += `\n**Buyer alignment:**\n`
+        rationale += `- Tailored for your ${buyerPersona.buyer_type} buyer\n`
+        if (buyerPersona.priorities.length > 0) {
+          rationale += `- Supports their focus on ${buyerPersona.priorities.slice(0, 2).join(' and ')}\n`
+        }
+      }
+
+      if (chartRecommendations.length > 0) {
+        rationale += `\n**Charts:**\n`
+        for (const chart of chartRecommendations) {
+          rationale += `- ${chart.type}: ${chart.purpose}\n`
+        }
+      }
+
+      const notes = `Layout: ${recommendedLayout}. Modified per user request: "${input.preference}". ${chartRecommendations.length > 0 ? `Charts: ${chartRecommendations.map(c => c.type).join(', ')}. ` : ''}`
+
+      return formatSuccess({
+        message: 'Visual concept regenerated with your preferences',
+        slideId: input.slideId,
+        slideTitle: slide.title,
+        userPreference: input.preference,
+        visualConcept: {
+          layout_type: recommendedLayout,
+          chart_recommendations: chartRecommendations,
+          image_suggestions: imageSuggestions,
+          notes,
+        },
+        rationale,
+      })
+    } catch (err) {
+      console.error('[regenerate_visual_concept] Error:', err)
+      return formatError('Failed to regenerate visual concept')
+    }
+  },
+  {
+    name: 'regenerate_visual_concept',
+    description: `Regenerate a visual concept with user modifications or preferences.
+
+**Use this tool when user requests:**
+- "try a different layout"
+- "use a pie chart instead"
+- "more data-focused"
+- "simpler layout"
+- "show as comparison"
+- "use two columns"
+
+**Parameters:**
+- preference: User's modification request (e.g., "use bar chart", "more visual")
+- preferredLayout: Specific layout type if user mentioned one
+- preferredChartType: Specific chart type if user requested one`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      slideId: z.string().uuid().describe('The slide ID to regenerate visual concept for'),
+      preference: z.string().describe('User preference/modification request (e.g., "use pie chart", "simpler layout")'),
+      preferredLayout: z.enum(LAYOUT_TYPES).optional().describe('Specific layout type if requested'),
+      preferredChartType: z.enum(CHART_TYPES).optional().describe('Specific chart type if requested'),
+    }),
+  }
+)
+
+/**
  * Set visual concept for a slide
  */
 export const setVisualConceptTool = tool(
@@ -1101,8 +1485,10 @@ export const cimTools = [
   selectContentOptionTool,  // AC #5: Content Selection
   approveSlideContentTool,  // AC #6: Content Approval
   updateSlideTool,
-  // Visual concept tools
-  setVisualConceptTool,
+  // Visual concept tools (E9.10)
+  generateVisualConceptTool,  // AC #1, #3: Visual Concept Generation
+  regenerateVisualConceptTool,  // AC #4: Alternative Visual Concept Requests
+  setVisualConceptTool,  // AC #5: Visual Concept Persistence
   // Workflow tools
   transitionPhaseTool,
 ]

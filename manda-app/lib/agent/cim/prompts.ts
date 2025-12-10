@@ -518,39 +518,115 @@ Move to VISUAL_CONCEPTS phase ONLY when ALL of these are met:
 
   visual_concepts: `
 ## Current Phase: Visual Concepts
+## Story: E9.10 - Visual Concept Generation
 
-You are in the VISUAL_CONCEPTS phase. Your goal is to suggest visual layouts and charts.
+You are in the VISUAL_CONCEPTS phase. Your goal is to generate detailed visual blueprints for each slide that help designers understand exactly how to lay out the content.
 
-### Visual Recommendation Types
+### CRITICAL: Automatic Visual Concept Generation (AC #1)
 
-1. **Layout Types**:
-   - title_slide: Full-page title with tagline
-   - content: Text-focused layout
-   - two_column: Split layout for comparisons
-   - chart_focus: Chart with supporting text
-   - image_focus: Large image with caption
+**When a slide is approved (status = 'approved') and has no visual_concept:**
+1. IMMEDIATELY use the generate_visual_concept tool to create a visual blueprint
+2. Present the generated concept to the user with full rationale
+3. Wait for user approval or modification request before saving
 
-2. **Chart Types**:
-   - bar: Comparisons, rankings
-   - line: Trends over time
-   - pie: Composition/breakdown
-   - area: Cumulative trends
-   - table: Detailed data
+### Visual Blueprint Components (AC #2)
 
-### Your Approach
+Every visual blueprint MUST include:
+1. **layout_type**: How content should be arranged
+   - title_slide: Full-page title with tagline (for executive summary, section openers)
+   - content: Text-focused bullet layout (for detailed information)
+   - two_column: Split layout for comparisons (before/after, us vs them)
+   - chart_focus: Chart takes 60%+ of slide area (for financial data, metrics)
+   - image_focus: Large image with caption (for team, facility, product)
 
-1. Review each slide's content
-2. Suggest appropriate layout based on content type
-3. Recommend charts where data visualization would help
-4. Note image opportunities (logos, team photos, etc.)
-5. Get user approval for visual direction
-6. Use set_visual_concept tool
+2. **chart_recommendations**: Array of suggested charts
+   - type: bar, line, pie, area, or table
+   - data_description: What data the chart visualizes
+   - purpose: WHY this chart supports the narrative
+
+3. **image_suggestions**: Descriptions of images to include
+   - Team headshots, product screenshots, logo grids, etc.
+
+4. **notes**: Designer guidance for execution
+
+### Narrative Rationale (AC #3) - CRITICAL
+
+**You MUST explain WHY each visual choice supports the buyer persona narrative.**
+
+Example response format:
+\`\`\`
+Based on your slide about unit economics, I recommend:
+
+**Layout:** Chart Focus
+- Primary visual: Bar chart comparing LTV ($1.3M) vs CAC ($80K)
+- This layout emphasizes the 16:1 ratio which is your strongest metric
+
+**Why this works for your financial buyer:**
+- Financial sponsors prioritize unit economics and payback periods
+- A bar chart with stark height difference visually reinforces the competitive advantage
+- The 16:1 ratio tells a compelling story at a glance
+
+**Additional suggestions:**
+- Add a trend line overlay showing LTV/CAC improvement over time
+- Include benchmark comparison (industry avg 3:1) to highlight outperformance
+
+Would you like me to try a different layout, or shall we lock this visual concept?
+\`\`\`
+
+### Alternative Visual Concept Requests (AC #4)
+
+When user requests modifications, recognize these patterns:
+- "try a different layout" → regenerate with different layout_type focus
+- "use a pie chart instead" → regenerate with specific chart constraint
+- "more data-focused" → shift to chart_focus layout
+- "simpler" → reduce chart recommendations, use content layout
+- "show comparison" → use two_column layout
+
+Use generate_visual_concept tool with context of user preference, then present new options.
+
+### Visual Concept Approval and Persistence (AC #5)
+
+When user approves a visual concept:
+1. Use set_visual_concept tool to persist to slide.visual_concept
+2. Confirm: "✅ Visual concept locked for **[Slide Title]**"
+3. Move to next slide without visual_concept
+
+### Preview Rendering Note (AC #6)
+
+After saving visual_concept, the preview panel will:
+- Render slide with layout_type-driven arrangement
+- Show chart wireframes based on chart_recommendations.type
+- Display image placeholders with suggested descriptions
+
+### Slide Processing Flow
+
+**For each approved slide without visual_concept:**
+
+1. **Generate**: Call generate_visual_concept tool
+2. **Present**: Show the generated blueprint with buyer-persona-aware rationale
+3. **Discuss**: Handle user questions or modification requests
+4. **Save**: Use set_visual_concept to persist (only after user approval)
+5. **Progress**: Move to next slide
+
+### Available Tools
+
+- **generate_visual_concept** - Generate visual blueprint based on slide content and buyer persona
+- **set_visual_concept** - Save approved visual concept to slide
+
+### Your Approach (Step by Step)
+
+1. Review the list of approved slides
+2. Identify slides without visual_concept
+3. For each: generate → present rationale → get approval → save
+4. Track progress: "Visual concepts: 3/8 slides complete"
+5. When all slides have visual_concepts, transition to REVIEW phase
 
 ### Transition Criteria
 
-Move to REVIEW phase when:
-- All slides have visual concepts assigned
-- User has approved the visual direction`,
+Move to REVIEW phase ONLY when:
+- ALL approved slides have visual_concept assigned
+- User has approved each visual direction
+- No pending modification requests`,
 
   review: `
 ## Current Phase: Final Review
@@ -634,8 +710,10 @@ export const CIM_TOOL_USAGE_PROMPT = `
 - **update_slide** - Modify slide content or components
 - **add_slide_component** - Add component to existing slide
 
-### Visual Tools
-- **set_visual_concept** - Assign layout and chart recommendations
+### Visual Tools (E9.10)
+- **generate_visual_concept** - Generate visual blueprint based on slide content and buyer persona
+- **regenerate_visual_concept** - Regenerate visual concept with user modifications/preferences
+- **set_visual_concept** - Save approved visual concept to slide
 
 ### Workflow Tools
 - **transition_phase** - Move to the next workflow phase
@@ -692,7 +770,14 @@ For each section, I'll:
 4. Get your selection and approval before moving on
 
 Let me review your buyer persona and investment thesis, then we'll start with the first section. Which section would you like to begin with?`,
-    visual_concepts: "Now let's think about visuals. I'll suggest layouts and charts for each slide.",
+    visual_concepts: `Now let's create visual blueprints for your slides. For each approved slide, I'll:
+
+1. Analyze the content and recommend the optimal **layout** (title, content, two-column, chart-focus, or image-focus)
+2. Suggest **chart types** that best represent your data
+3. Identify **image opportunities** where visuals would strengthen the message
+4. Explain **WHY** each choice works for your target buyer
+
+Let me check which slides need visual concepts and we'll work through them together.`,
     review: "Final review time. Let's make sure everything is complete and consistent.",
     complete: 'The CIM is complete! Would you like to export it or make any final changes?',
   }

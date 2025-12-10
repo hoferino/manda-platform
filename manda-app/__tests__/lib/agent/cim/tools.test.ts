@@ -4,6 +4,7 @@
  * Story: E9.5 - Buyer Persona & Investment Thesis Phase
  * Story: E9.6 - Agenda/Outline Collaborative Definition
  * Story: E9.7 - Slide Content Creation (RAG-powered)
+ * Story: E9.10 - Visual Concept Generation
  *
  * Tests verify the tool schemas and structure for:
  * - save_buyer_persona tool (AC #6)
@@ -18,6 +19,10 @@
  * - generate_slide_content tool (AC #2, #3, #4)
  * - select_content_option tool (AC #5)
  * - approve_slide_content tool (AC #6)
+ *
+ * E9.10 Tools:
+ * - generate_visual_concept tool (AC #1, #3)
+ * - regenerate_visual_concept tool (AC #4)
  */
 
 import { describe, it, expect } from 'vitest'
@@ -32,6 +37,8 @@ import {
   generateSlideContentTool,
   selectContentOptionTool,
   approveSlideContentTool,
+  generateVisualConceptTool,
+  regenerateVisualConceptTool,
   cimTools,
   CIM_TOOL_COUNT,
 } from '@/lib/agent/cim/tools'
@@ -225,9 +232,10 @@ describe('E9.6 - CIM Tools for Outline Definition', () => {
       expect(toolNames).toContain('reorder_outline_sections')
     })
 
-    it('should have correct tool count (12 total with E9.7)', () => {
-      expect(CIM_TOOL_COUNT).toBe(12)
-      expect(cimTools.length).toBe(12)
+    it('should have correct tool count (14 total with E9.7 and E9.10)', () => {
+      // Count includes E9.10 visual concept tools
+      expect(CIM_TOOL_COUNT).toBe(14)
+      expect(cimTools.length).toBe(14)
     })
   })
 })
@@ -334,9 +342,89 @@ describe('E9.7 - CIM Tools for Slide Content Creation', () => {
       expect(toolNames).toContain('approve_slide_content')
     })
 
-    it('should have correct tool count (12 total)', () => {
-      expect(CIM_TOOL_COUNT).toBe(12)
-      expect(cimTools.length).toBe(12)
+    it('should have correct tool count (14 total including E9.10 visual concept tools)', () => {
+      // 12 base tools + 2 new E9.10 visual concept tools (generateVisualConceptTool, regenerateVisualConceptTool)
+      expect(CIM_TOOL_COUNT).toBe(14)
+      expect(cimTools.length).toBe(14)
+    })
+
+    it('should include E9.10 visual concept tools in array', () => {
+      const toolNames = cimTools.map(t => t.name)
+
+      expect(toolNames).toContain('generate_visual_concept')
+      expect(toolNames).toContain('regenerate_visual_concept')
+    })
+  })
+})
+
+// =============================================================================
+// E9.10 - Visual Concept Generation Tools
+// =============================================================================
+
+describe('E9.10 - CIM Tools for Visual Concept Generation', () => {
+  describe('generateVisualConceptTool (AC #1, #3)', () => {
+    it('should be exported and named correctly', () => {
+      expect(generateVisualConceptTool).toBeDefined()
+      expect(generateVisualConceptTool.name).toBe('generate_visual_concept')
+    })
+
+    it('should have proper schema with required fields', () => {
+      const schema = generateVisualConceptTool.schema
+      expect(schema).toBeDefined()
+
+      // Schema should require cimId and slideId
+      const description = generateVisualConceptTool.description
+      expect(description).toContain('Generate')
+      expect(description).toContain('visual concept')
+    })
+
+    it('should have description mentioning buyer persona rationale (AC #3)', () => {
+      const description = generateVisualConceptTool.description
+      expect(description.toLowerCase()).toContain('buyer persona')
+      expect(description.toLowerCase()).toContain('narrative')
+    })
+
+    it('should have description mentioning layout types (AC #2)', () => {
+      const description = generateVisualConceptTool.description
+      expect(description).toContain('layout_type')
+      expect(description).toContain('chart_recommendations')
+    })
+
+    it('should be included in cimTools array', () => {
+      const toolNames = cimTools.map(t => t.name)
+      expect(toolNames).toContain('generate_visual_concept')
+    })
+  })
+
+  describe('regenerateVisualConceptTool (AC #4)', () => {
+    it('should be exported and named correctly', () => {
+      expect(regenerateVisualConceptTool).toBeDefined()
+      expect(regenerateVisualConceptTool.name).toBe('regenerate_visual_concept')
+    })
+
+    it('should have proper schema with preference field', () => {
+      const schema = regenerateVisualConceptTool.schema
+      expect(schema).toBeDefined()
+
+      const description = regenerateVisualConceptTool.description
+      expect(description).toContain('preference')
+    })
+
+    it('should have description mentioning alternative requests (AC #4)', () => {
+      const description = regenerateVisualConceptTool.description
+      expect(description.toLowerCase()).toContain('different layout')
+      expect(description.toLowerCase()).toContain('pie chart')
+    })
+
+    it('should support preferredLayout and preferredChartType options', () => {
+      const description = regenerateVisualConceptTool.description
+      expect(description).toContain('preferredLayout')
+      expect(description).toContain('preferredChartType')
+    })
+
+    it('should be included in cimTools array', () => {
+      const toolNames = cimTools.map(t => t.name)
+      expect(toolNames).toContain('regenerate_visual_concept')
     })
   })
 })

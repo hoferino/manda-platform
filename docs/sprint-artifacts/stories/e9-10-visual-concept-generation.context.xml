@@ -1,0 +1,239 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>10</storyId>
+    <title>Visual Concept Generation</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-11</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-10-visual-concept-generation.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>the agent to generate detailed visual blueprints for each slide after I approve the content</iWant>
+    <soThat>designers have clear specifications for layout, charts, and visual elements that support the narrative without ambiguity</soThat>
+    <tasks>
+      <task id="1" ac="1,3">Implement Visual Concept Generation Agent Flow
+        <subtask id="1.1">Create generateVisualConceptTool in lib/agent/cim/tools/cim-tools.ts</subtask>
+        <subtask id="1.2">Add visual concept generation prompts to lib/agent/cim/prompts.ts</subtask>
+        <subtask id="1.3">Update agent workflow to detect approved slides without visual_concept</subtask>
+        <subtask id="1.4">Ensure rationale is included in agent response</subtask>
+      </task>
+      <task id="2" ac="2,5">Implement Visual Concept Tool Schema and Validation
+        <subtask id="2.1">Enhance setVisualConceptTool input schema</subtask>
+        <subtask id="2.2">Add validation for chart_recommendations array structure</subtask>
+        <subtask id="2.3">Ensure visual_concept persists to database</subtask>
+        <subtask id="2.4">Add unit tests for schema validation</subtask>
+      </task>
+      <task id="3" ac="4">Implement Alternative Visual Concept Requests
+        <subtask id="3.1">Add regenerateVisualConceptTool or extend existing tool</subtask>
+        <subtask id="3.2">Parse user modification requests</subtask>
+        <subtask id="3.3">Generate new visual concept with user feedback</subtask>
+        <subtask id="3.4">Test alternative request flow</subtask>
+      </task>
+      <task id="4" ac="6">Update Preview Panel for Visual Concept Rendering
+        <subtask id="4.1">Update ComponentRenderer.tsx for layout_type rendering</subtask>
+        <subtask id="4.2">Enhance chart component rendering with chart_recommendations</subtask>
+        <subtask id="4.3">Add visual indicators for image_suggestions</subtask>
+        <subtask id="4.4">Test preview with different visual_concept configurations</subtask>
+      </task>
+      <task id="5" ac="1-6">Write Tests
+        <subtask id="5.1">Unit tests for generateVisualConceptTool</subtask>
+        <subtask id="5.2">Unit tests for schema validation</subtask>
+        <subtask id="5.3">Integration tests for content approval trigger flow</subtask>
+        <subtask id="5.4">Integration tests for alternative request handling</subtask>
+        <subtask id="5.5">Component tests for preview rendering</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Visual Concept Trigger">After slide content is approved (status = 'approved'), the agent proactively proposes a visual concept for that slide</criterion>
+    <criterion id="AC2" title="Visual Blueprint Components">Visual blueprint includes: layout_type recommendation, chart_recommendations with type/data_description/purpose, image_suggestions, and designer notes</criterion>
+    <criterion id="AC3" title="Narrative Rationale">Agent explains WHY specific visuals support the buyer persona narrative</criterion>
+    <criterion id="AC4" title="Alternative Requests">User can request alternative visual concepts and agent regenerates with new recommendations</criterion>
+    <criterion id="AC5" title="Visual Spec Persistence">Approved visual concept is stored in slide.visual_concept field and persists across sessions</criterion>
+    <criterion id="AC6" title="Preview Updates">Preview panel renders slide based on visual spec (layout_type drives component arrangement)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-E9.md</path>
+        <title>Epic E9 Technical Specification</title>
+        <section>E9.10: Visual Concept Generation (AC-9.10.1 through AC-9.10.6)</section>
+        <snippet>After content approval, agent proposes visual concept. Visual blueprint includes layout type recommendations. Agent explains WHY specific visuals support narrative. Preview renders based on visual spec.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/epics/epic-E9.md</path>
+        <title>Epic E9: CIM Builder</title>
+        <section>E9.10: Visual Concept Generation</section>
+        <snippet>Agent generates detailed visual blueprints for each slide, describing layout, chart types, and visual elements. User can request alternatives or modifications.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-E9.md#L309-L346</path>
+        <title>VisualConcept Type Definition</title>
+        <section>TypeScript Types - VisualConcept Interface</section>
+        <snippet>VisualConcept includes layout_type (title_slide, content, two_column, chart_focus, image_focus), chart_recommendations array, image_suggestions array, and notes string.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/tech-spec-epic-E9.md#L576-L597</path>
+        <title>Visual Node in Workflow</title>
+        <section>CIM Creation Workflow (LangGraph)</section>
+        <snippet>VISUAL NODE generates visual concept, suggests layout/charts, user approves/modifies, stores visual_concept on slide. Occurs after CONTENT NODE within each section loop.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/sprint-artifacts/stories/e9-9-click-to-reference-in-chat.md</path>
+        <title>Previous Story: E9.9 Click-to-Reference</title>
+        <section>Dev Agent Record - Learnings</section>
+        <snippet>Reference Utils pattern in lib/cim/reference-utils.ts. Agent context enrichment via prepareComponentContext() in executor.ts. 50 new tests added with comprehensive coverage.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/types/cim.ts</path>
+        <kind>types</kind>
+        <symbol>VisualConcept, ChartRecommendation, LayoutType, ChartType, Slide</symbol>
+        <lines>147-177</lines>
+        <reason>Core type definitions for visual concepts. VisualConcept interface defines layout_type, chart_recommendations, image_suggestions, and notes fields. Zod schemas exist for validation.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/agent/cim/tools/cim-tools.ts</path>
+        <kind>tool</kind>
+        <symbol>setVisualConceptTool</symbol>
+        <lines>931-1011</lines>
+        <reason>Existing tool for setting visual concepts. Needs enhancement to support generation logic and buyer persona context for AC #1, #2, #3.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/agent/cim/prompts.ts</path>
+        <kind>prompts</kind>
+        <symbol>PHASE_PROMPTS.visual_concepts, CIM_TOOL_USAGE_PROMPT</symbol>
+        <lines>519-553, 614-644</lines>
+        <reason>Current visual_concepts phase prompt is basic (30 lines). Needs expansion with buyer persona-aware rationale generation patterns similar to content_creation phase.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/agent/cim/executor.ts</path>
+        <kind>executor</kind>
+        <symbol>executeCIMChat, streamCIMChat, prepareComponentContext</symbol>
+        <lines>162-291, 90-126</lines>
+        <reason>Main execution entry point. prepareComponentContext pattern from E9.9 can be extended for visual concept context enrichment.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/cim-builder/PreviewPanel/ComponentRenderer.tsx</path>
+        <kind>component</kind>
+        <symbol>ComponentRenderer, ChartWireframe</symbol>
+        <lines>1-417</lines>
+        <reason>Renders slide components. ChartWireframe handles bar, line, pie, area, table visualizations. Needs layout_type-aware arrangement for AC #6.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/cim-builder/PreviewPanel/SlidePreview.tsx</path>
+        <kind>component</kind>
+        <symbol>SlidePreview</symbol>
+        <reason>Slide preview container. Needs to pass visual_concept to ComponentRenderer and adjust layout based on layout_type.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/cim/reference-utils.ts</path>
+        <kind>utils</kind>
+        <symbol>formatComponentReference, parseComponentReference</symbol>
+        <lines>1-37</lines>
+        <reason>Pattern reference from E9.9. New visual concept utilities could follow similar utility file structure.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="Node.js">
+        <package name="@langchain/anthropic" version="^1.1.3" purpose="Claude API for agent (visual concept generation)" />
+        <package name="@langchain/core" version="^1.1.0" purpose="LangGraph runtime for workflow phases" />
+        <package name="langchain" version="^1.1.1" purpose="Agent tools and chains" />
+        <package name="zod" version="^4.1.13" purpose="Schema validation for visual concept input" />
+        <package name="zustand" version="^5.0.8" purpose="UI state management for preview" />
+        <package name="lucide-react" version="^0.554.0" purpose="Icons for chart/image placeholders" />
+        <package name="react" version="19.2.0" purpose="UI components" />
+        <package name="next" version="16.0.4" purpose="Framework" />
+      </ecosystem>
+      <ecosystem name="DevDependencies">
+        <package name="vitest" version="^4.0.14" purpose="Unit testing framework" />
+        <package name="@testing-library/react" version="^16.3.0" purpose="React component testing" />
+        <package name="@playwright/test" version="^1.57.0" purpose="E2E testing" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="architecture">Visual concept generation occurs AFTER content approval (slide.status = 'approved') as part of two-step workflow: content first, then visuals.</constraint>
+    <constraint source="dev-notes">Follow reference-utils.ts pattern from E9.9 for new visual concept utilities.</constraint>
+    <constraint source="architecture">Agent context enrichment via prepareComponentContext() pattern - apply similar approach for visual concept generation context.</constraint>
+    <constraint source="tech-spec">Visual concepts stored in slide.visual_concept JSONB field with proper Zod validation.</constraint>
+    <constraint source="dev-notes">Maintain comprehensive test coverage (E9.9 added 50 tests) - target similar coverage for visual concept features.</constraint>
+    <constraint source="tech-spec">Preview must render different layouts based on layout_type: title_slide, content, two_column, chart_focus, image_focus.</constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>setVisualConceptTool</name>
+      <kind>LangChain Tool</kind>
+      <signature>tool({ cimId: uuid, slideId: uuid, layoutType: LayoutType, chartRecommendations?: ChartRecommendation[], imageSuggestions?: string[], notes?: string })</signature>
+      <path>manda-app/lib/agent/cim/tools/cim-tools.ts:931-1011</path>
+    </interface>
+    <interface>
+      <name>VisualConcept</name>
+      <kind>TypeScript Interface</kind>
+      <signature>interface VisualConcept { layout_type: LayoutType; chart_recommendations?: ChartRecommendation[]; image_suggestions?: string[]; notes: string; }</signature>
+      <path>manda-app/lib/types/cim.ts:147-152</path>
+    </interface>
+    <interface>
+      <name>ChartRecommendation</name>
+      <kind>TypeScript Interface</kind>
+      <signature>interface ChartRecommendation { type: ChartType; data_description: string; purpose: string; }</signature>
+      <path>manda-app/lib/types/cim.ts:138-142</path>
+    </interface>
+    <interface>
+      <name>LayoutType</name>
+      <kind>Type Union</kind>
+      <signature>'title_slide' | 'content' | 'two_column' | 'chart_focus' | 'image_focus'</signature>
+      <path>manda-app/lib/types/cim.ts:54-61</path>
+    </interface>
+    <interface>
+      <name>Slide.visual_concept</name>
+      <kind>Field</kind>
+      <signature>visual_concept: VisualConcept | null</signature>
+      <path>manda-app/lib/types/cim.ts:173</path>
+    </interface>
+    <interface>
+      <name>ComponentRenderer.onClick</name>
+      <kind>Callback</kind>
+      <signature>onClick?: (componentId: string, content: string) => void</signature>
+      <path>manda-app/components/cim-builder/PreviewPanel/ComponentRenderer.tsx:31</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Use Vitest for unit/integration tests with @testing-library/react for components. Follow existing test patterns in __tests__/lib/cim/reference-utils.test.ts - use describe blocks organized by AC numbers, clear test names, edge case coverage. Run with 'npm run test:run'. E2E tests use Playwright. Target comprehensive coverage similar to E9.9 (50 tests). Always verify build passes with 'npm run type-check' and 'npm run build'.
+    </standards>
+    <locations>
+      <location path="manda-app/__tests__/lib/agent/cim/" purpose="CIM agent tool tests" />
+      <location path="manda-app/__tests__/lib/cim/" purpose="CIM utility function tests (reference-utils pattern)" />
+      <location path="manda-app/__tests__/components/cim-builder/" purpose="CIM Builder component tests" />
+      <location path="manda-app/__tests__/hooks/" purpose="Custom hook tests" />
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test generateVisualConceptTool triggers after slide status changes to 'approved'</idea>
+      <idea ac="AC1">Test agent detects slides without visual_concept and initiates generation</idea>
+      <idea ac="AC2">Test visual blueprint schema validation (layout_type enum, chartRecommendations structure)</idea>
+      <idea ac="AC2">Test ChartRecommendation has required fields: type, data_description, purpose</idea>
+      <idea ac="AC3">Test agent response includes rationale explaining WHY visuals support narrative</idea>
+      <idea ac="AC3">Test rationale references buyer persona priorities when available</idea>
+      <idea ac="AC4">Test user modification requests trigger regeneration with constraints</idea>
+      <idea ac="AC4">Test "different layout" request produces new layout_type</idea>
+      <idea ac="AC4">Test "use pie chart" request updates chart_recommendations</idea>
+      <idea ac="AC5">Test visual_concept persists to database via setVisualConceptTool</idea>
+      <idea ac="AC5">Test resume session loads visual_concept from slide data</idea>
+      <idea ac="AC6">Test ComponentRenderer adjusts arrangement based on layout_type</idea>
+      <idea ac="AC6">Test chart_focus layout shows chart prominently</idea>
+      <idea ac="AC6">Test two_column layout renders split view</idea>
+      <idea ac="AC6">Test image_suggestions render as placeholders with descriptions</idea>
+      <idea edge="true">Test visual concept with empty chart_recommendations array</idea>
+      <idea edge="true">Test visual concept with missing optional fields</idea>
+      <idea edge="true">Test layout_type invalid enum value rejected by Zod</idea>
+    </ideas>
+  </tests>
+</story-context>

@@ -5,6 +5,7 @@
  * Story: E9.4 - Agent Orchestration Core
  * Story: E9.6 - Agenda/Outline Collaborative Definition
  * Story: E9.7 - Slide Content Creation (RAG-powered)
+ * Story: E9.10 - Visual Concept Generation
  */
 
 export {
@@ -22,7 +23,9 @@ export {
   selectContentOptionTool,
   approveSlideContentTool,
   updateSlideTool,
-  // Visual concept tools
+  // Visual concept tools (E9.10)
+  generateVisualConceptTool,
+  regenerateVisualConceptTool,
   setVisualConceptTool,
   // Workflow tools
   transitionPhaseTool,

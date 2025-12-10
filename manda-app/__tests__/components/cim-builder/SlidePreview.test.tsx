@@ -1,6 +1,7 @@
 /**
  * SlidePreview Component Tests
  * Story: E9.8 - Wireframe Preview Renderer
+ * Story: E9.10 - Visual Concept Generation (AC #6: Preview Rendering)
  * Tests: AC #1 (Component Rendering), AC #2 (Stable IDs), AC #3 (Wireframe Styling),
  *        AC #5 (Reactive Updates), AC #6 (Slide Navigation integration)
  */
@@ -8,7 +9,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { SlidePreview } from '@/components/cim-builder/PreviewPanel/SlidePreview'
-import type { Slide, SlideComponent } from '@/lib/types/cim'
+import type { Slide, SlideComponent, VisualConcept } from '@/lib/types/cim'
 
 // ============================================================================
 // Test Fixtures
@@ -42,6 +43,18 @@ function createComponent(
     content,
     metadata: type === 'chart' ? { chartType: 'bar' } : undefined,
     source_refs: [],
+  }
+}
+
+function createVisualConcept(
+  overrides: Partial<VisualConcept> = {}
+): VisualConcept {
+  return {
+    layout_type: 'content',
+    chart_recommendations: [],
+    image_suggestions: [],
+    notes: 'Test visual concept notes',
+    ...overrides,
   }
 }
 
@@ -253,6 +266,190 @@ describe('SlidePreview', () => {
       render(<SlidePreview slide={null} className="custom-empty" />)
 
       expect(screen.getByTestId('slide-preview-empty')).toHaveClass('custom-empty')
+    })
+  })
+
+  // ==========================================================================
+  // E9.10 Visual Concept Rendering Tests (AC #6)
+  // ==========================================================================
+
+  describe('visual concept rendering (E9.10 AC #6)', () => {
+    it('should show layout badge when visual_concept is set', () => {
+      const slide = createSlide({
+        visual_concept: createVisualConcept({ layout_type: 'chart_focus' }),
+      })
+      render(<SlidePreview slide={slide} />)
+
+      expect(screen.getByTestId('layout-badge')).toBeInTheDocument()
+      expect(screen.getByText('Chart')).toBeInTheDocument()
+    })
+
+    it('should not show layout badge when visual_concept is null', () => {
+      const slide = createSlide({ visual_concept: null })
+      render(<SlidePreview slide={slide} />)
+
+      expect(screen.queryByTestId('layout-badge')).not.toBeInTheDocument()
+    })
+
+    it('should show visual concept indicator in footer', () => {
+      const slide = createSlide({
+        visual_concept: createVisualConcept(),
+      })
+      render(<SlidePreview slide={slide} />)
+
+      expect(screen.getByTestId('visual-concept-indicator')).toBeInTheDocument()
+      expect(screen.getByText('Visual ✓')).toBeInTheDocument()
+    })
+
+    it('should set data-layout-type attribute when visual_concept is set', () => {
+      const slide = createSlide({
+        visual_concept: createVisualConcept({ layout_type: 'two_column' }),
+      })
+      render(<SlidePreview slide={slide} />)
+
+      expect(screen.getByTestId('slide-preview')).toHaveAttribute('data-layout-type', 'two_column')
+    })
+
+    it('should apply blue border when visual_concept is set', () => {
+      const slide = createSlide({
+        visual_concept: createVisualConcept(),
+      })
+      render(<SlidePreview slide={slide} />)
+
+      const preview = screen.getByTestId('slide-preview')
+      expect(preview).toHaveClass('border-blue-300')
+    })
+
+    describe('layout type badges', () => {
+      const layoutTests = [
+        { layout: 'title_slide', label: 'Title' },
+        { layout: 'content', label: 'Content' },
+        { layout: 'two_column', label: '2-Col' },
+        { layout: 'chart_focus', label: 'Chart' },
+        { layout: 'image_focus', label: 'Image' },
+      ] as const
+
+      layoutTests.forEach(({ layout, label }) => {
+        it(`should show "${label}" badge for ${layout} layout`, () => {
+          const slide = createSlide({
+            visual_concept: createVisualConcept({ layout_type: layout }),
+          })
+          render(<SlidePreview slide={slide} />)
+
+          expect(screen.getByText(label)).toBeInTheDocument()
+        })
+      })
+    })
+
+    describe('chart recommendations display', () => {
+      it('should show chart recommendations when present', () => {
+        const slide = createSlide({
+          visual_concept: createVisualConcept({
+            chart_recommendations: [
+              { type: 'bar', data_description: 'Revenue data', purpose: 'Show comparison' },
+              { type: 'line', data_description: 'Growth trend', purpose: 'Show progression' },
+            ],
+          }),
+        })
+        render(<SlidePreview slide={slide} />)
+
+        expect(screen.getByTestId('chart-recommendations')).toBeInTheDocument()
+        expect(screen.getByText('bar')).toBeInTheDocument()
+        expect(screen.getByText('line')).toBeInTheDocument()
+      })
+
+      it('should not show chart recommendations section when empty', () => {
+        const slide = createSlide({
+          visual_concept: createVisualConcept({ chart_recommendations: [] }),
+        })
+        render(<SlidePreview slide={slide} />)
+
+        expect(screen.queryByTestId('chart-recommendations')).not.toBeInTheDocument()
+      })
+
+      it('should show chart purpose as title attribute', () => {
+        const slide = createSlide({
+          visual_concept: createVisualConcept({
+            chart_recommendations: [
+              { type: 'pie', data_description: 'Market share', purpose: 'Highlight distribution' },
+            ],
+          }),
+        })
+        render(<SlidePreview slide={slide} />)
+
+        const chartBadge = screen.getByText('pie').closest('span')
+        expect(chartBadge).toHaveAttribute('title', 'Highlight distribution')
+      })
+    })
+
+    describe('image suggestions display', () => {
+      it('should show image suggestions when present', () => {
+        const slide = createSlide({
+          visual_concept: createVisualConcept({
+            image_suggestions: ['Team headshots', 'Product screenshot'],
+          }),
+        })
+        render(<SlidePreview slide={slide} />)
+
+        expect(screen.getByText(/Team headshots, Product screenshot/)).toBeInTheDocument()
+      })
+
+      it('should not show image suggestions section when empty', () => {
+        const slide = createSlide({
+          visual_concept: createVisualConcept({ image_suggestions: [] }),
+        })
+        render(<SlidePreview slide={slide} />)
+
+        // Should not find the image suggestions text
+        expect(screen.queryByText(/headshots|screenshot/i)).not.toBeInTheDocument()
+      })
+    })
+
+    describe('layout-specific content classes', () => {
+      it('should apply grid class for two_column layout', () => {
+        const components = [createComponent('text', 'Test content')]
+        const slide = createSlide({
+          visual_concept: createVisualConcept({ layout_type: 'two_column' }),
+        }, components)
+        render(<SlidePreview slide={slide} />)
+
+        // The content area should have grid class
+        const contentArea = screen.getByText('Test content').closest('.flex-1')
+        expect(contentArea).toHaveClass('grid')
+        expect(contentArea).toHaveClass('grid-cols-2')
+      })
+    })
+
+    describe('visual concept updates', () => {
+      it('should update when visual_concept changes', () => {
+        const slideWithoutConcept = createSlide({ visual_concept: null })
+        const slideWithConcept = createSlide({
+          visual_concept: createVisualConcept({ layout_type: 'chart_focus' }),
+        })
+
+        const { rerender } = render(<SlidePreview slide={slideWithoutConcept} />)
+        expect(screen.queryByTestId('layout-badge')).not.toBeInTheDocument()
+
+        rerender(<SlidePreview slide={slideWithConcept} />)
+        expect(screen.getByTestId('layout-badge')).toBeInTheDocument()
+        expect(screen.getByText('Chart')).toBeInTheDocument()
+      })
+
+      it('should update layout badge when layout_type changes', () => {
+        const chartSlide = createSlide({
+          visual_concept: createVisualConcept({ layout_type: 'chart_focus' }),
+        })
+        const twoColSlide = createSlide({
+          visual_concept: createVisualConcept({ layout_type: 'two_column' }),
+        })
+
+        const { rerender } = render(<SlidePreview slide={chartSlide} />)
+        expect(screen.getByText('Chart')).toBeInTheDocument()
+
+        rerender(<SlidePreview slide={twoColSlide} />)
+        expect(screen.queryByText('Chart')).not.toBeInTheDocument()
+        expect(screen.getByText('2-Col')).toBeInTheDocument()
+      })
     })
   })
 })
