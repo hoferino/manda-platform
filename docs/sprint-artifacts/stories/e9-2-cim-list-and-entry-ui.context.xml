@@ -1,0 +1,171 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>2</storyId>
+    <title>CIM List & Entry UI</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-2-cim-list-and-entry-ui.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>a CIM list view showing all CIMs for a deal with ability to create, open, and delete CIMs</iWant>
+    <soThat>I can manage multiple CIM versions and quickly access the CIM Builder for any deal</soThat>
+    <tasks>
+      <task id="1" ac="1">Create CIM List page route
+        <subtask id="1.1">Create app/projects/[id]/cim-builder/page.tsx page component</subtask>
+        <subtask id="1.2">Add server-side authentication check (redirect to login if unauthenticated)</subtask>
+        <subtask id="1.3">Verify route renders correctly at /projects/[id]/cim-builder</subtask>
+      </task>
+      <task id="2" ac="2">Build CIM list client components
+        <subtask id="2.1">Create components/cim-builder/CIMListPage.tsx client component</subtask>
+        <subtask id="2.2">Create components/cim-builder/CIMCard.tsx with name, updated timestamp, progress</subtask>
+        <subtask id="2.3">Implement CIMProgressIndicator showing workflow phase progress</subtask>
+        <subtask id="2.4">Create useCIMs hook in lib/hooks/useCIMs.ts for data fetching</subtask>
+        <subtask id="2.5">Integrate with existing project workspace layout</subtask>
+      </task>
+      <task id="3" ac="3">Implement Create CIM flow
+        <subtask id="3.1">Create CreateCIMDialog.tsx with name input field</subtask>
+        <subtask id="3.2">Add Zod validation for CIM name (3-100 characters, required)</subtask>
+        <subtask id="3.3">Connect to POST /api/projects/[id]/cims endpoint</subtask>
+        <subtask id="3.4">Handle loading and error states with toast notifications</subtask>
+        <subtask id="3.5">Refresh CIM list after successful creation</subtask>
+      </task>
+      <task id="4" ac="4">Implement CIM card navigation
+        <subtask id="4.1">Add click handler to CIMCard that navigates to /projects/[id]/cim-builder/[cimId]</subtask>
+        <subtask id="4.2">Create placeholder app/projects/[id]/cim-builder/[cimId]/page.tsx for E9.3</subtask>
+        <subtask id="4.3">Use Next.js router for client-side navigation</subtask>
+      </task>
+      <task id="5" ac="5">Implement Delete CIM flow
+        <subtask id="5.1">Create DeleteCIMDialog.tsx confirmation dialog</subtask>
+        <subtask id="5.2">Add delete button (trash icon) to CIMCard with kebab menu</subtask>
+        <subtask id="5.3">Connect to DELETE /api/projects/[id]/cims/[cimId] endpoint</subtask>
+        <subtask id="5.4">Handle optimistic UI update with rollback on error</subtask>
+        <subtask id="5.5">Show success/error toast notifications</subtask>
+      </task>
+      <task id="6" ac="6">Implement empty state
+        <subtask id="6.1">Create CIMEmptyState.tsx component with illustration placeholder</subtask>
+        <subtask id="6.2">Display message: "No CIMs yet" with description text</subtask>
+        <subtask id="6.3">Include "Create your first CIM" button that opens CreateCIMDialog</subtask>
+      </task>
+      <task id="7" ac="1">Add sidebar navigation entry
+        <subtask id="7.1">Add "CIM Builder" link to project workspace sidebar</subtask>
+        <subtask id="7.2">Use appropriate icon (e.g., FileText or Presentation)</subtask>
+        <subtask id="7.3">Highlight active state when on /projects/[id]/cim-builder/* routes</subtask>
+      </task>
+      <task id="8" ac="1-6">Testing
+        <subtask id="8.1">Unit tests for CIMCard component</subtask>
+        <subtask id="8.2">Unit tests for CreateCIMDialog</subtask>
+        <subtask id="8.3">Unit tests for DeleteCIMDialog</subtask>
+        <subtask id="8.4">Unit tests for CIMEmptyState</subtask>
+        <subtask id="8.5">Unit tests for useCIMs hook</subtask>
+        <subtask id="8.6">Build verification (TypeScript type-check passes)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" verifyMethod="Navigate to URL">CIM List Route - CIM list view accessible at /projects/[id]/cim-builder</criterion>
+    <criterion id="AC2" verifyMethod="Visual inspection">CIM Card Display - CIM cards display: name, last updated timestamp, and progress indicator</criterion>
+    <criterion id="AC3" verifyMethod="Click button, see dialog">Create CIM Flow - "Create New CIM" button opens name input dialog</criterion>
+    <criterion id="AC4" verifyMethod="Click card, see builder">CIM Navigation - Click CIM card navigates to builder with CIM loaded at /projects/[id]/cim-builder/[cimId]</criterion>
+    <criterion id="AC5" verifyMethod="Delete, confirm gone">Delete CIM Flow - Delete CIM shows confirmation dialog, removes from list after confirmation</criterion>
+    <criterion id="AC6" verifyMethod="View empty deal">Empty State - Empty state displays when no CIMs exist for deal with helpful messaging</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Tech Spec" section="CIM Builder Overview">
+        Defines 3-panel NotebookLM-inspired UI, CIM CRUD operations, and agent-guided workflow for creating CIMs. Story E9.2 specifically covers CIM List and Entry UI with acceptance criteria AC-9.2.1 through AC-9.2.6.
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e9-1-cim-database-schema-and-deal-integration.md" title="Story E9.1 Completion" section="Dev Agent Record">
+        Completed story establishing database schema and CRUD APIs. Key learnings: CIM service in lib/services/cim.ts with getCIMsForDeal(), createCIM(), deleteCIM() methods. TypeScript types in lib/types/cim.ts with calculateCIMProgress() helper.
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Manda Architecture" section="CIM v3 Workflow">
+        Architecture v3.1 describes CIM Builder at /projects/[id]/cim-builder with 3-panel layout. Uses existing shadcn/ui components, zustand for state, Next.js API routes pattern.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="manda-app/lib/types/cim.ts" kind="type-definitions" reason="CIM, CIMListItem, WorkflowState types and helper functions like calculateCIMProgress(), getWorkflowStateDescription()" />
+      <artifact path="manda-app/lib/services/cim.ts" kind="service" reason="CRUD operations: getCIMsForDeal(), createCIM(), deleteCIM(), getCIM() - use these in useCIMs hook" />
+      <artifact path="manda-app/app/api/projects/[id]/cims/route.ts" kind="api-route" reason="GET/POST endpoints for CIM list and creation - already implemented in E9.1" />
+      <artifact path="manda-app/app/api/projects/[id]/cims/[cimId]/route.ts" kind="api-route" reason="GET/PUT/DELETE endpoints for single CIM - already implemented in E9.1" />
+      <artifact path="manda-app/lib/workspace-navigation.ts" kind="config" reason="WORKSPACE_NAV_ITEMS array - add CIM Builder entry here (Task 7)" />
+      <artifact path="manda-app/components/workspace/Sidebar.tsx" kind="component" reason="Reference for sidebar navigation pattern - maps WORKSPACE_NAV_ITEMS to links" />
+      <artifact path="manda-app/app/projects/[id]/deliverables/page.tsx" kind="page" reason="Reference for server component pattern with Suspense and loading state" />
+      <artifact path="manda-app/lib/hooks/useQAItems.ts" kind="hook" reason="Reference pattern for useCIMs hook - optimistic updates, refresh, error handling" />
+      <artifact path="manda-app/__tests__/components/qa/" kind="test-directory" reason="Reference test patterns for component testing with vitest and @testing-library/react" />
+    </code>
+    <dependencies>
+      <package name="@radix-ui/react-dialog" version="^1.1.15" purpose="Dialog component for CreateCIMDialog" />
+      <package name="@radix-ui/react-alert-dialog" version="^1.1.15" purpose="AlertDialog for DeleteCIMDialog confirmation" />
+      <package name="@radix-ui/react-dropdown-menu" version="^2.1.16" purpose="Dropdown menu for CIM card kebab menu" />
+      <package name="@radix-ui/react-progress" version="^1.1.8" purpose="Progress component for CIMProgressIndicator" />
+      <package name="lucide-react" version="^0.554.0" purpose="Icons - FileText, Presentation, Trash2, MoreVertical, Plus" />
+      <package name="date-fns" version="^4.1.0" purpose="Format updated timestamps (formatDistanceToNow)" />
+      <package name="sonner" version="^2.0.7" purpose="Toast notifications for success/error feedback" />
+      <package name="zod" version="^4.1.13" purpose="Schema validation for CIM name input (3-100 chars)" />
+      <package name="zustand" version="^5.0.8" purpose="State management if needed for CIM list state" />
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Tech Spec">Page route must be at /projects/[id]/cim-builder following existing project workspace pattern</constraint>
+    <constraint source="Architecture">Use server component for page.tsx (auth check) + client component for interactivity</constraint>
+    <constraint source="Dev Notes">CIM name validation: 3-100 characters using CreateCIMInputSchema from lib/types/cim.ts</constraint>
+    <constraint source="Dev Notes">Progress indicator uses calculateCIMProgress() from lib/types/cim.ts - returns 0-100%</constraint>
+    <constraint source="Dev Notes">Delete requires AlertDialog confirmation before calling API</constraint>
+    <constraint source="Architecture">Follow existing shadcn/ui patterns - Dialog, AlertDialog, Card, Button components</constraint>
+    <constraint source="Dev Notes">useCIMs hook should follow useQAItems pattern - optimistic updates, refresh, error handling</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="GET /api/projects/[id]/cims" kind="REST endpoint" path="manda-app/app/api/projects/[id]/cims/route.ts">
+      Returns { items: CIMListItem[], total: number, limit: number, offset: number, hasMore: boolean }
+    </interface>
+    <interface name="POST /api/projects/[id]/cims" kind="REST endpoint" path="manda-app/app/api/projects/[id]/cims/route.ts">
+      Request: { title: string }, Response: { cim: CIM }, Status: 201 Created
+    </interface>
+    <interface name="DELETE /api/projects/[id]/cims/[cimId]" kind="REST endpoint" path="manda-app/app/api/projects/[id]/cims/[cimId]/route.ts">
+      Returns 204 No Content on success
+    </interface>
+    <interface name="CIMListItem" kind="TypeScript interface" path="manda-app/lib/types/cim.ts">
+      { id, dealId, title, workflowState: WorkflowState, slideCount, createdAt, updatedAt }
+    </interface>
+    <interface name="calculateCIMProgress" kind="helper function" path="manda-app/lib/types/cim.ts">
+      (workflowState: WorkflowState) => number (0-100 percentage based on completed phases)
+    </interface>
+    <interface name="getWorkflowStateDescription" kind="helper function" path="manda-app/lib/types/cim.ts">
+      (workflowState: WorkflowState) => string (e.g., "Defining Buyer Persona", "Creating Content")
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Vitest with @testing-library/react for component tests. Follow existing patterns in __tests__/components/qa/*.test.tsx. Mock Supabase client responses. Test component rendering, user interactions (clicks, keyboard), loading states, error states, and accessibility (ARIA labels, keyboard navigation).
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/cim-builder/CIMCard.test.tsx</location>
+      <location>manda-app/__tests__/components/cim-builder/CreateCIMDialog.test.tsx</location>
+      <location>manda-app/__tests__/components/cim-builder/DeleteCIMDialog.test.tsx</location>
+      <location>manda-app/__tests__/components/cim-builder/CIMEmptyState.test.tsx</location>
+      <location>manda-app/__tests__/hooks/useCIMs.test.ts</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test CIMListPage renders correctly with projectId prop</idea>
+      <idea ac="AC2">Test CIMCard displays title, formatted timestamp (formatDistanceToNow), and progress indicator</idea>
+      <idea ac="AC2">Test CIMProgressIndicator shows correct percentage and phase description</idea>
+      <idea ac="AC3">Test CreateCIMDialog opens on button click, validates name length (3-100 chars), submits successfully</idea>
+      <idea ac="AC3">Test CreateCIMDialog shows error toast on API failure, disables submit during loading</idea>
+      <idea ac="AC4">Test CIMCard click navigates to /projects/[id]/cim-builder/[cimId]</idea>
+      <idea ac="AC5">Test DeleteCIMDialog opens from kebab menu, shows confirmation message with CIM name</idea>
+      <idea ac="AC5">Test delete confirmation calls API and removes card from list (optimistic update)</idea>
+      <idea ac="AC5">Test delete error rolls back UI and shows error toast</idea>
+      <idea ac="AC6">Test CIMEmptyState displays when items array is empty</idea>
+      <idea ac="AC6">Test CIMEmptyState button opens CreateCIMDialog</idea>
+      <idea ac="hooks">Test useCIMs fetches items on mount, handles refresh, implements optimistic delete</idea>
+    </ideas>
+  </tests>
+</story-context>

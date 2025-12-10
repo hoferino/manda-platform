@@ -4,7 +4,7 @@
  * Story: E1.6 - Build Project Workspace Shell with Navigation
  */
 
-import { Home, Folder, Brain, MessageSquare, FileText, HelpCircle, type LucideIcon } from 'lucide-react'
+import { Home, Folder, Brain, MessageSquare, FileText, HelpCircle, Presentation, type LucideIcon } from 'lucide-react'
 
 export interface WorkspaceNavItem {
   id: string
@@ -57,11 +57,19 @@ export const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
     epic: 8,
   },
   {
+    id: 'cim-builder',
+    label: 'CIM Builder',
+    icon: Presentation,
+    path: 'cim-builder',
+    description: 'Create and manage Confidential Information Memorandums',
+    epic: 9,
+  },
+  {
     id: 'deliverables',
     label: 'Deliverables',
     icon: FileText,
     path: 'deliverables',
-    description: 'CIM and IRL outputs',
-    epic: 9,
+    description: 'IRL management and outputs',
+    epic: 6,
   },
 ]

@@ -1,0 +1,205 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>1</storyId>
+    <title>CIM Database Schema & Deal Integration</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/e9-1-cim-database-schema-and-deal-integration.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>a database schema for CIM entities with full CRUD API endpoints</iWant>
+    <soThat>CIMs can be created, stored, and retrieved for the CIM Builder feature</soThat>
+    <tasks>
+      <task id="1" title="Create database migration for cims table schema extension" ac="1">
+        <subtask id="1.1">Add JSONB columns: slides, buyer_persona, outline, dependency_graph, conversation_history</subtask>
+        <subtask id="1.2">Add TEXT column: investment_thesis</subtask>
+        <subtask id="1.3">Create indexes for deal_id and workflow_state (GIN index for JSONB)</subtask>
+        <subtask id="1.4">Verify migration applies successfully to Supabase</subtask>
+      </task>
+      <task id="2" title="Implement foreign key and RLS policies" ac="2,3">
+        <subtask id="2.1">Verify foreign key constraint from cims.deal_id to deals.id</subtask>
+        <subtask id="2.2">Create RLS policy for SELECT (users can only read CIMs for their deals)</subtask>
+        <subtask id="2.3">Create RLS policy for INSERT (users can only create CIMs for their deals)</subtask>
+        <subtask id="2.4">Create RLS policy for UPDATE (users can only update their CIMs)</subtask>
+        <subtask id="2.5">Create RLS policy for DELETE (users can only delete their CIMs)</subtask>
+        <subtask id="2.6">Test RLS isolation (User A cannot access User B's CIMs)</subtask>
+      </task>
+      <task id="3" title="Generate TypeScript types" ac="4">
+        <subtask id="3.1">Run npm run db:types to regenerate Supabase types</subtask>
+        <subtask id="3.2">Create lib/types/cim.ts with CIM, WorkflowState, BuyerPersona, OutlineSection, Slide, SlideComponent, SourceReference, VisualConcept, DependencyGraph, ConversationMessage types</subtask>
+        <subtask id="3.3">Add Zod schemas for validation in lib/agent/cim/schemas.ts</subtask>
+        <subtask id="3.4">Verify types compile without errors</subtask>
+      </task>
+      <task id="4" title="Create CIM service" ac="5">
+        <subtask id="4.1">Create lib/services/cim-service.ts with CRUD methods</subtask>
+        <subtask id="4.2">Implement createCIM(dealId, name): Promise&lt;CIM&gt;</subtask>
+        <subtask id="4.3">Implement getCIM(cimId): Promise&lt;CIM&gt;</subtask>
+        <subtask id="4.4">Implement getCIMsForDeal(dealId): Promise&lt;CIM[]&gt;</subtask>
+        <subtask id="4.5">Implement updateCIM(cimId, updates): Promise&lt;CIM&gt;</subtask>
+        <subtask id="4.6">Implement deleteCIM(cimId): Promise&lt;void&gt;</subtask>
+      </task>
+      <task id="5" title="Create API route handlers" ac="5">
+        <subtask id="5.1">Create app/api/deals/[dealId]/cims/route.ts with GET (list) and POST (create)</subtask>
+        <subtask id="5.2">Create app/api/cims/[cimId]/route.ts with GET, PUT, DELETE</subtask>
+        <subtask id="5.3">Add Zod request validation for all endpoints</subtask>
+        <subtask id="5.4">Add proper error handling (400, 401, 404, 500)</subtask>
+      </task>
+      <task id="6" title="Testing" ac="1-5">
+        <subtask id="6.1">Unit tests for TypeScript types and Zod schemas</subtask>
+        <subtask id="6.2">Unit tests for CIM service methods</subtask>
+        <subtask id="6.3">API route tests for CRUD operations</subtask>
+        <subtask id="6.4">RLS policy tests (user isolation)</subtask>
+        <subtask id="6.5">Verify build passes with no TypeScript errors</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" title="Schema Exists">
+      cims table exists with columns: id, deal_id, title, user_id, version, workflow_state (JSONB), buyer_persona (JSONB), investment_thesis (TEXT), outline (JSONB), slides (JSONB), dependency_graph (JSONB), conversation_history (JSONB), export_formats (TEXT[]), created_at, updated_at
+    </criterion>
+    <criterion id="2" title="Foreign Key">
+      Foreign key relationship to deals table enforced (insert CIM with invalid deal_id fails)
+    </criterion>
+    <criterion id="3" title="RLS Policies">
+      RLS policies enforce deal-based access control (User A cannot read User B's CIMs)
+    </criterion>
+    <criterion id="4" title="TypeScript Types">
+      TypeScript types generated from schema and match database schema (type-check passes)
+    </criterion>
+    <criterion id="5" title="CRUD API Endpoints">
+      API endpoints functional: GET /api/deals/[dealId]/cims, POST /api/deals/[dealId]/cims, GET/PUT/DELETE /api/cims/[cimId]
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Technical Specification">
+        <section>Database Schema</section>
+        <snippet>Full CIM schema design with JSONB columns for slides, buyer_persona, outline, dependency_graph, conversation_history. TypeScript types and Zod schemas provided.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Technical Specification">
+        <section>APIs and Interfaces</section>
+        <snippet>REST API endpoints for CIM CRUD: GET/POST /deals/[dealId]/cims, GET/PUT/DELETE /cims/[cimId]. Request/response schemas documented.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Technical Specification">
+        <section>Detailed Design</section>
+        <snippet>CIM Service interface with createCIM, getCIM, getCIMsForDeal, updateCIM, deleteCIM methods. State management for workflow_state, slides, conversation_history.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E9.md" title="Epic 9: CIM Builder">
+        <section>Story Details - E9.1</section>
+        <snippet>Story acceptance criteria: cims table schema, foreign key to deals, RLS policies, TypeScript types, API endpoints.</snippet>
+      </doc>
+      <doc path="docs/manda-architecture.md" title="Manda Architecture">
+        <section>Data Layer</section>
+        <snippet>PostgreSQL via Supabase with RLS policies. Existing pattern: deals table is parent entity for cims (one-to-many).</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file path="supabase/migrations/00009_create_cims_table.sql" kind="migration" reason="Existing cims table - need to extend with new JSONB columns">
+        <symbol>cims table</symbol>
+        <lines>1-42</lines>
+        <note>Current schema: id, deal_id, user_id, version, title, content (jsonb), workflow_state (text), export_formats, created_at, updated_at. Need to add: slides (JSONB), buyer_persona (JSONB), investment_thesis (TEXT), outline (JSONB), dependency_graph (JSONB), conversation_history (JSONB). Change workflow_state from TEXT to JSONB.</note>
+      </file>
+      <file path="supabase/migrations/00002_create_deals_table.sql" kind="migration" reason="Parent table for CIMs - foreign key reference">
+        <symbol>deals table</symbol>
+        <lines>1-40</lines>
+        <note>deals.id is referenced by cims.deal_id. RLS pattern: USING (auth.uid() = user_id).</note>
+      </file>
+      <file path="lib/supabase/database.types.ts" kind="types" reason="Generated Supabase types - will be regenerated after migration">
+        <symbol>cims table types</symbol>
+        <lines>53-99</lines>
+        <note>Current generated types. After migration, run npm run db:types to regenerate with new columns.</note>
+      </file>
+      <file path="lib/types/qa.ts" kind="types" reason="Reference pattern for domain types with Zod schemas">
+        <symbol>QAItem, CreateQAItemInput, UpdateQAItemInput, Zod schemas</symbol>
+        <note>Excellent reference for CIM types: interface design, Zod validation schemas, DB row mapping functions.</note>
+      </file>
+      <file path="lib/services/qa.ts" kind="service" reason="Reference pattern for CRUD service">
+        <symbol>createQAItem, getQAItem, updateQAItem, deleteQAItem</symbol>
+        <note>Service pattern to follow: typed Supabase client, error handling, DB row mapping.</note>
+      </file>
+      <file path="app/api/projects/[id]/qa/route.ts" kind="api-route" reason="Reference pattern for API routes">
+        <symbol>GET, POST handlers</symbol>
+        <note>API route pattern: NextRequest/NextResponse, Zod validation, auth check, project access verification, error handling.</note>
+      </file>
+      <file path="app/api/projects/[id]/qa/[itemId]/route.ts" kind="api-route" reason="Reference pattern for single item routes">
+        <symbol>GET, PUT, DELETE handlers</symbol>
+        <note>Pattern for /api/cims/[cimId]/route.ts - single item CRUD with item existence checks.</note>
+      </file>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@supabase/supabase-js" version="^2.84.0" purpose="Database client with RLS support" />
+        <package name="@supabase/ssr" version="^0.7.0" purpose="Server-side Supabase client creation" />
+        <package name="zod" version="^4.1.13" purpose="Schema validation for API inputs" />
+        <package name="next" version="16.0.4" purpose="API routes framework" />
+        <package name="react" version="19.2.0" purpose="UI components" />
+      </node>
+      <tools>
+        <tool name="npm run db:types" purpose="Regenerate Supabase types after migration" />
+        <tool name="npx supabase db push" purpose="Apply migrations to Supabase" />
+        <tool name="npm run test:run" purpose="Run unit tests with Vitest" />
+        <tool name="npm run build" purpose="TypeScript compilation verification" />
+      </tools>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Architecture">CIM RLS should follow deal-based access pattern - users can only access CIMs for deals they own</constraint>
+    <constraint source="Architecture">workflow_state must change from TEXT (enum) to JSONB (structured object) for rich state tracking</constraint>
+    <constraint source="Dev Notes">Use ALTER TABLE ADD COLUMN IF NOT EXISTS for safe migration on existing cims table</constraint>
+    <constraint source="Dev Notes">Existing cims_isolation_policy uses auth.uid() = user_id - may need adjustment for deal-based access</constraint>
+    <constraint source="Tech Spec">API route paths: /api/deals/[dealId]/cims for list/create, /api/cims/[cimId] for single item operations</constraint>
+    <constraint source="Tech Spec">TypeScript types must be created before service and API route implementation</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="CIM Service" kind="internal-service" path="lib/services/cim-service.ts">
+      <signature>createCIM(dealId: string, title: string, userId: string): Promise&lt;CIM&gt;</signature>
+      <signature>getCIM(cimId: string): Promise&lt;CIM | null&gt;</signature>
+      <signature>getCIMsForDeal(dealId: string): Promise&lt;CIM[]&gt;</signature>
+      <signature>updateCIM(cimId: string, updates: Partial&lt;CIM&gt;): Promise&lt;CIM&gt;</signature>
+      <signature>deleteCIM(cimId: string): Promise&lt;void&gt;</signature>
+    </interface>
+    <interface name="CIM List API" kind="REST" path="/api/deals/[dealId]/cims">
+      <method>GET - List all CIMs for a deal (returns {items: CIM[], total: number})</method>
+      <method>POST - Create new CIM (body: {title: string}, returns {item: CIM})</method>
+    </interface>
+    <interface name="CIM Item API" kind="REST" path="/api/cims/[cimId]">
+      <method>GET - Get single CIM (returns {item: CIM})</method>
+      <method>PUT - Update CIM (body: Partial&lt;CIM&gt;, returns {item: CIM})</method>
+      <method>DELETE - Delete CIM (returns 204)</method>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests with Vitest. Mock Supabase client for service tests. Use Zod schema validation testing for types. API route tests mock request/response and auth context. Build verification with npm run build for TypeScript checks.
+    </standards>
+    <locations>
+      <location>__tests__/lib/types/cim.test.ts - Type and Zod schema tests</location>
+      <location>__tests__/lib/services/cim-service.test.ts - Service CRUD tests</location>
+      <location>__tests__/app/api/deals/[dealId]/cims/route.test.ts - List/Create API tests</location>
+      <location>__tests__/app/api/cims/[cimId]/route.test.ts - Single item API tests</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Verify migration adds all required columns (slides, buyer_persona, outline, etc.)</idea>
+      <idea ac="1">Test workflow_state JSONB structure with sample WorkflowState object</idea>
+      <idea ac="2">Test foreign key: INSERT CIM with non-existent deal_id should fail</idea>
+      <idea ac="3">Test RLS: User A creates CIM, User B should get empty list for same deal_id</idea>
+      <idea ac="4">Test Zod schemas reject invalid inputs (missing required fields, wrong types)</idea>
+      <idea ac="4">Test mapDbRowToCIM correctly transforms snake_case to camelCase</idea>
+      <idea ac="5">Test GET /deals/[id]/cims returns empty array for deal with no CIMs</idea>
+      <idea ac="5">Test POST /deals/[id]/cims creates CIM with initial workflow_state</idea>
+      <idea ac="5">Test PUT /cims/[id] updates fields and returns updated CIM</idea>
+      <idea ac="5">Test DELETE /cims/[id] returns 204 and CIM is gone</idea>
+      <idea ac="5">Test 404 for non-existent CIM on GET/PUT/DELETE</idea>
+      <idea ac="5">Test 401 for unauthenticated requests</idea>
+    </ideas>
+  </tests>
+</story-context>

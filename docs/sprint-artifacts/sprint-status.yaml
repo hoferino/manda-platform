@@ -1511,13 +1511,54 @@ development_status:
   # KEY DESIGN: NotebookLM-inspired 3-panel UI, user-defined CIM structure, RAG-powered
   # Multiple CIMs per deal, click-to-reference editing, dependency tracking
   # Reference: docs/sprint-artifacts/epic-E9-party-mode-findings.md
-  epic-9: backlog
+  # CONTEXTED: 2025-12-10
+  # Tech Spec: docs/sprint-artifacts/tech-spec-epic-E9.md
+  # Key Decisions:
+  # - State Storage: JSONB in Supabase (simple, queryable)
+  # - Agent Framework: LangGraph with Supabase checkpointing
+  # - Export Library: pptxgenjs (client-side, zero server dependencies)
+  # - Preview Rendering: React components (fast iteration)
+  # - RAG Integration: Existing vector search (document_chunks embeddings)
+  # - Dependencies: pptxgenjs ^3.12.0 (NEW)
+  epic-9: contexted
+  epic-9-contexted: 2025-12-10
+  epic-9-tech-spec: docs/sprint-artifacts/tech-spec-epic-E9.md
   epic-9-rewritten: 2025-12-09
   epic-9-party-mode-findings: docs/sprint-artifacts/epic-E9-party-mode-findings.md
   # Foundation (4 stories)
-  e9-1-cim-database-schema-and-deal-integration: backlog
+  e9-1-cim-database-schema-and-deal-integration: done
+  e9-1-drafted: 2025-12-10
+  e9-1-completed: 2025-12-10
   e9-1-points: 3
-  e9-2-cim-list-and-entry-ui: backlog
+  e9-1-notes: |
+    CIM Database Schema & Deal Integration completed. Key deliverables:
+    - Database migration 00039: Extended cims table with JSONB columns (slides, buyer_persona,
+      outline, dependency_graph, conversation_history), TEXT column (investment_thesis),
+      converted workflow_state from TEXT to JSONB
+    - RLS policies: Four granular policies (SELECT, INSERT, UPDATE, DELETE) enforcing
+      deal-based access control via subquery to deals table
+    - lib/types/cim.ts: Comprehensive types (CIM, WorkflowState, BuyerPersona, OutlineSection,
+      Slide, SlideComponent, SourceReference, VisualConcept, DependencyGraph, ConversationMessage)
+      with Zod schemas and helper functions
+    - lib/services/cim.ts: Full CRUD operations (createCIM, getCIM, getCIMsForDeal, updateCIM,
+      deleteCIM) plus workflow state management
+    - API routes: GET/POST /api/projects/[id]/cims, GET/PUT/DELETE /api/projects/[id]/cims/[cimId]
+    - Build verified, all TypeScript checks pass
+  e9-2-cim-list-and-entry-ui: done
+  e9-2-drafted: 2025-12-10
+  e9-2-context-ready: 2025-12-10
+  e9-2-completed: 2025-12-10
+  e9-2-notes: |
+    CIM List & Entry UI completed. Key deliverables:
+    - Page route: app/projects/[id]/cim-builder/page.tsx with server-side auth
+    - Placeholder: app/projects/[id]/cim-builder/[cimId]/page.tsx for E9.3
+    - Components: CIMListPage, CIMCard, CIMProgressIndicator, CIMEmptyState,
+      CreateCIMDialog, DeleteCIMDialog
+    - Hook: useCIMs for data fetching with optimistic updates
+    - Sidebar: Added "CIM Builder" nav entry with Presentation icon
+    - Tests: 67 unit tests passing (CIMCard, CreateCIMDialog, DeleteCIMDialog,
+      CIMEmptyState, useCIMs)
+    - Build verified, TypeScript passes
   e9-2-points: 2
   e9-3-cim-builder-3-panel-layout: backlog
   e9-3-points: 5

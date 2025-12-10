@@ -52,40 +52,58 @@ export type Database = {
       }
       cims: {
         Row: {
+          buyer_persona: Json | null
           content: Json
+          conversation_history: Json | null
           created_at: string
           deal_id: string
+          dependency_graph: Json | null
           export_formats: string[] | null
           id: string
+          investment_thesis: string | null
+          outline: Json | null
+          slides: Json | null
           title: string
           updated_at: string
           user_id: string
           version: number
-          workflow_state: string | null
+          workflow_state: Json | null
         }
         Insert: {
+          buyer_persona?: Json | null
           content?: Json
+          conversation_history?: Json | null
           created_at?: string
           deal_id: string
+          dependency_graph?: Json | null
           export_formats?: string[] | null
           id?: string
+          investment_thesis?: string | null
+          outline?: Json | null
+          slides?: Json | null
           title: string
           updated_at?: string
           user_id: string
           version?: number
-          workflow_state?: string | null
+          workflow_state?: Json | null
         }
         Update: {
+          buyer_persona?: Json | null
           content?: Json
+          conversation_history?: Json | null
           created_at?: string
           deal_id?: string
+          dependency_graph?: Json | null
           export_formats?: string[] | null
           id?: string
+          investment_thesis?: string | null
+          outline?: Json | null
+          slides?: Json | null
           title?: string
           updated_at?: string
           user_id?: string
           version?: number
-          workflow_state?: string | null
+          workflow_state?: Json | null
         }
         Relationships: [
           {
