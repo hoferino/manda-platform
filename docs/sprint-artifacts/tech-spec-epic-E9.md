@@ -959,10 +959,10 @@ E9.S1 (Spike) ──── Can run in parallel
 
 | ID | Criterion | Testable |
 |----|-----------|----------|
-| AC-9.8.1 | Slide components render: title, bullets, charts, images | Visual inspection |
-| AC-9.8.2 | Each component has stable ID (e.g., s3_title, s3_bullet1) | Inspect DOM |
-| AC-9.8.3 | Wireframe styling: boxes, placeholder graphics | Visual inspection |
-| AC-9.8.4 | Components are clickable | Click fires event |
+| AC-9.8.1 | Slide components render with type-appropriate visuals: title (large bold), subtitle (medium semibold), text (paragraph), bullet (list item), chart (visual wireframe of chart type - bar shows bars, pie shows segments, line shows line graph), image (placeholder with icon), table (wireframe grid with rows/columns) | Visual inspection |
+| AC-9.8.2 | Each component has stable ID (e.g., s3_title, s3_bullet1) attached as `data-component-id` | Inspect DOM |
+| AC-9.8.3 | Wireframe styling: muted colors, dashed borders for placeholders, 16:9 aspect ratio, professional schematic appearance | Visual inspection |
+| AC-9.8.4 | Components are clickable with `onComponentClick(componentId, content)` callback | Click fires event |
 | AC-9.8.5 | Preview updates when slide content changes | Modify, see update |
 | AC-9.8.6 | Navigation between slides works (Prev/Next) | Click buttons |
 

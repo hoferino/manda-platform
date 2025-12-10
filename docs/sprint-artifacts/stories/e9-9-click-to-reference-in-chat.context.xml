@@ -1,0 +1,207 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>9</storyId>
+    <title>Click-to-Reference in Chat</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-9-click-to-reference-in-chat.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>to click on any component in the slide preview and have it automatically appear as a reference in my chat input</iWant>
+    <soThat>I can quickly edit specific slide content by telling the agent exactly which element I want to change without manually typing identifiers</soThat>
+    <tasks>
+      <task id="1" title="Implement Click-to-Reference UI Flow" acs="1,2,3">
+        <subtask id="1.1">Add onComponentSelect prop to CIMBuilderPage to handle component clicks from PreviewPanel</subtask>
+        <subtask id="1.2">Create formatComponentReference(componentId: string, content: string): string utility that produces 📍 [{componentId}] "{truncated content}..." - format</subtask>
+        <subtask id="1.3">Wire PreviewPanel's onComponentSelect callback through CIMBuilderPage to populate chat input</subtask>
+        <subtask id="1.4">Update CIMChatInput to accept and display component reference (use existing sourceRef prop mechanism)</subtask>
+        <subtask id="1.5">Ensure cursor is positioned at end of reference for immediate typing</subtask>
+        <subtask id="1.6">Add visual distinction for component reference vs source reference in input badge</subtask>
+      </task>
+      <task id="2" title="Implement Reference Parsing in Agent" acs="4">
+        <subtask id="2.1">Create parseComponentReference(message: string): { componentId: string | null, instruction: string } utility</subtask>
+        <subtask id="2.2">Add reference parsing to CIM agent's message preprocessing in the chat handler</subtask>
+        <subtask id="2.3">When reference detected, set context for agent to understand this is a component edit request</subtask>
+        <subtask id="2.4">Include component's current content in agent context for informed editing</subtask>
+        <subtask id="2.5">Add unit tests for parseComponentReference with various formats</subtask>
+      </task>
+      <task id="3" title="Implement Component Update Flow" acs="5">
+        <subtask id="3.1">Enhance agent prompting to recognize 📍 [componentId] as edit trigger</subtask>
+        <subtask id="3.2">Agent calls updateSlideTool with correct slide_id and component update</subtask>
+        <subtask id="3.3">After tool execution, onCIMStateChanged callback triggers preview refresh</subtask>
+        <subtask id="3.4">Verify component in preview shows updated content</subtask>
+        <subtask id="3.5">Handle error cases: component not found, slide locked, update failed</subtask>
+      </task>
+      <task id="4" title="Write Unit Tests" acs="1,2,3,4,5">
+        <subtask id="4.1">Test formatComponentReference produces correct format with truncation</subtask>
+        <subtask id="4.2">Test parseComponentReference extracts componentId and instruction correctly</subtask>
+        <subtask id="4.3">Test CIMChatInput displays component reference badge</subtask>
+        <subtask id="4.4">Test component click → reference → submit flow end-to-end</subtask>
+        <subtask id="4.5">Test agent receives parsed reference in context</subtask>
+      </task>
+      <task id="5" title="Integration Testing" acs="1,2,3,4,5">
+        <subtask id="5.1">E2E test: click component → type edit → submit → verify update</subtask>
+        <subtask id="5.2">Test edge cases: long content truncation, special characters in content</subtask>
+        <subtask id="5.3">Test clearing component reference with X button</subtask>
+        <subtask id="5.4">Test multiple sequential component edits</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Component Click → Reference in Input">Clicking any rendered component in the preview panel inserts a formatted reference into the chat input: 📍 [s3_bullet1] "content excerpt" - with cursor positioned after the dash for immediate typing (Click component, verify reference appears in input)</ac>
+    <ac id="2" title="Reference Format">Reference follows exact format: 📍 [{componentId}] "{content truncated to 30 chars}..." - where componentId is the stable ID from E9.8 (e.g., s3_bullet1, s5_chart1) (String match verification)</ac>
+    <ac id="3" title="User Can Complete Message">After reference is inserted, user can type their edit instruction (e.g., "change to 22% based on Q3") and submit the complete message with Enter or Send button (Type after reference, submit works)</ac>
+    <ac id="4" title="Agent Parses Reference">Agent receives the message, parses the 📍 [{componentId}] prefix to identify the target component, and understands this as an edit request for that specific component (Agent response correctly identifies component)</ac>
+    <ac id="5" title="Agent Updates Component">Agent uses the updateSlideTool to modify the referenced component's content, and the preview panel re-renders to show the updated content (Component updates in preview after agent response)</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Technical Specification">
+        <section name="E9.9 Acceptance Criteria (AC-9.9.1 to AC-9.9.5)">Click component → reference in chat, reference format 📍 [componentId] "content", user completes message, agent parses reference, agent updates component via updateSlideTool</section>
+        <section name="Click-to-Reference Flow">Detailed sequence: click component → chat input populated → user completes → agent parses reference → update via slide_update tool → preview re-renders</section>
+        <section name="API Contracts">POST /api/cims/[cimId]/chat accepts component_ref parameter; SSE events include slide_update for real-time preview refresh</section>
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E9.md" title="Epic E9: CIM Builder">
+        <section name="E9.9 Story Definition">Click component in preview → reference appears in chat input; format: 📍 [s3_bullet1] "15% CAGR" -; agent parses and updates via updateSlideTool</section>
+        <section name="Example Flow">User clicks bullet → chat populates → user types instruction → agent updates and confirms</section>
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e9-8-wireframe-preview-renderer.md" title="Story E9.8: Wireframe Preview Renderer (DONE)">
+        <section name="Click Handler Contract">onComponentClick(componentId: string, content: string) callback provided by ComponentRenderer; E9.9 consumes this</section>
+        <section name="Stable ID Format">s{slideNum}_{type}{index} format (e.g., s1_title, s3_bullet1, s5_chart1) generated by generateComponentId()</section>
+        <section name="Implementation Evidence">ComponentRenderer.tsx:67-97 has ClickableWrapper; PreviewPanel has onComponentSelect prop wired through</section>
+      </doc>
+    </docs>
+    <code>
+      <file path="manda-app/components/cim-builder/PreviewPanel/ComponentRenderer.tsx" kind="component" reason="Provides click handler via ClickableWrapper and generateComponentId() - E9.9 consumes onComponentClick callback">
+        <symbol name="generateComponentId" lines="49-53">Generates stable IDs: s{slideNum}_{type}{index}</symbol>
+        <symbol name="ClickableWrapper" lines="67-97">Wraps components with onClick(componentId, content) callback</symbol>
+        <symbol name="ComponentRendererProps" lines="27-32">interface with onClick?: (componentId: string, content: string) => void</symbol>
+      </file>
+      <file path="manda-app/components/cim-builder/PreviewPanel/PreviewPanel.tsx" kind="component" reason="Parent component with onComponentSelect prop that passes callback to SlidePreview">
+        <symbol name="PreviewPanelProps" lines="27-33">interface with onComponentSelect?: (componentId: string, content: string) => void</symbol>
+        <symbol name="PreviewPanel" lines="35-91">Passes onComponentSelect to SlidePreview as onComponentClick</symbol>
+      </file>
+      <file path="manda-app/components/cim-builder/PreviewPanel/SlidePreview.tsx" kind="component" reason="Renders slides with ComponentRenderer, passes click callback">
+        <symbol name="SlidePreviewProps" lines="28-32">interface with onComponentClick?: (componentId: string, content: string) => void</symbol>
+      </file>
+      <file path="manda-app/components/cim-builder/CIMBuilderPage.tsx" kind="page" reason="Main orchestration - needs to wire PreviewPanel.onComponentSelect to ConversationPanel.sourceRef">
+        <symbol name="handleSourceClick" lines="51-60">Existing pattern for formatting source references - ADAPT for component refs</symbol>
+        <symbol name="PreviewPanel usage" lines="147-152">Currently missing onComponentSelect prop - ADD this wiring</symbol>
+      </file>
+      <file path="manda-app/components/cim-builder/ConversationPanel/CIMChatInput.tsx" kind="component" reason="Chat input with sourceRef badge - enhance for component refs">
+        <symbol name="CIMChatInputProps" lines="22-30">sourceRef prop displays badge above input</symbol>
+        <symbol name="sourceRef badge" lines="95-112">Badge rendering - ADD visual distinction for component refs (📍 prefix detection)</symbol>
+      </file>
+      <file path="manda-app/components/cim-builder/ConversationPanel/ConversationPanel.tsx" kind="component" reason="Handles message sending with source reference prepending">
+        <symbol name="handleSend" lines="55-63">Prepends sourceRef to message content before sending</symbol>
+      </file>
+      <file path="manda-app/app/api/projects/[id]/cims/[cimId]/chat/route.ts" kind="api" reason="Chat endpoint - ADD component reference parsing in message preprocessing">
+        <symbol name="POST handler" lines="42-109">Receives message, calls executeCIMChat - ADD reference parsing here</symbol>
+      </file>
+      <file path="manda-app/lib/agent/cim/tools/cim-tools.ts" kind="tools" reason="Contains updateSlideTool that E9.9 needs agent to call">
+        <symbol name="updateSlideTool" lines="847-922">Updates slide components - agent calls this when user edits via reference</symbol>
+      </file>
+      <file path="manda-app/lib/types/cim.ts" kind="types" reason="Core CIM types including SlideComponent, ConversationMessage">
+        <symbol name="SlideComponent" lines="157-163">Component with id, type, content fields</symbol>
+        <symbol name="ConversationMessage" lines="192-203">Message with metadata.component_ref field for reference tracking</symbol>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem name="Node.js/Next.js">
+        <dep name="next" version="16.0.4">React framework with App Router</dep>
+        <dep name="react" version="19.2.0">UI library</dep>
+        <dep name="typescript" version="^5">Type safety</dep>
+        <dep name="zod" version="^4.1.13">Schema validation for reference parsing</dep>
+      </ecosystem>
+      <ecosystem name="UI Components">
+        <dep name="lucide-react" version="^0.554.0">Icons (MapPin for component reference badge)</dep>
+        <dep name="@radix-ui/react-*" version="various">Accessible UI primitives</dep>
+        <dep name="tailwind-merge" version="^3.4.0">Class merging with cn() utility</dep>
+        <dep name="class-variance-authority" version="^0.7.1">Component variants</dep>
+      </ecosystem>
+      <ecosystem name="AI/Agent">
+        <dep name="@langchain/anthropic" version="^1.1.3">Claude API for CIM agent</dep>
+        <dep name="@langchain/core" version="^1.1.0">LangChain tools infrastructure</dep>
+        <dep name="langchain" version="^1.1.1">Agent orchestration</dep>
+      </ecosystem>
+      <ecosystem name="Testing">
+        <dep name="vitest" version="^4.0.14">Unit testing framework</dep>
+        <dep name="@testing-library/react" version="^16.3.0">React component testing</dep>
+        <dep name="@testing-library/user-event" version="^14.6.1">User interaction simulation</dep>
+        <dep name="@playwright/test" version="^1.57.0">E2E testing</dep>
+      </ecosystem>
+      <ecosystem name="Database">
+        <dep name="@supabase/supabase-js" version="^2.84.0">Supabase client for CIM persistence</dep>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="Architecture">Component reference format MUST be: 📍 [{componentId}] "{truncated}..." - to differentiate from source references (📄, 💡, ❓ prefixes)</constraint>
+    <constraint source="E9.8">Component IDs are stable format s{slideNum}_{type}{index} - do NOT change this format</constraint>
+    <constraint source="UX">Content excerpt MUST be truncated to 30 chars max with "..." suffix</constraint>
+    <constraint source="E9.8">onComponentClick callback MUST pass both componentId AND content - both needed for reference formatting</constraint>
+    <constraint source="Testing">New utilities (formatComponentReference, parseComponentReference) MUST have unit tests</constraint>
+    <constraint source="Error Handling">Invalid reference format should gracefully degrade to treating message as regular text</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="PreviewPanel.onComponentSelect" kind="callback" path="manda-app/components/cim-builder/PreviewPanel/PreviewPanel.tsx">
+      <signature>(componentId: string, content: string) => void</signature>
+      <note>Already defined in E9.8 - E9.9 just needs to wire it in CIMBuilderPage</note>
+    </interface>
+    <interface name="formatComponentReference" kind="function" path="manda-app/lib/cim/reference-utils.ts (NEW)">
+      <signature>(componentId: string, content: string) => string</signature>
+      <note>Returns: 📍 [{componentId}] "{truncated to 30 chars}..." -</note>
+    </interface>
+    <interface name="parseComponentReference" kind="function" path="manda-app/lib/cim/reference-utils.ts (NEW)">
+      <signature>(message: string) => { componentId: string | null, instruction: string }</signature>
+      <note>Regex: /^📍 \[([^\]]+)\] "[^"]*".*? - (.*)$/; returns null componentId if no match</note>
+    </interface>
+    <interface name="updateSlideTool" kind="agent-tool" path="manda-app/lib/agent/cim/tools/cim-tools.ts">
+      <signature>{ cimId: string, slideId: string, components?: SlideComponent[], title?: string, status?: string }</signature>
+      <note>Agent calls this to update component content after parsing reference</note>
+    </interface>
+    <interface name="CIMChatInput.sourceRef" kind="prop" path="manda-app/components/cim-builder/ConversationPanel/CIMChatInput.tsx">
+      <signature>sourceRef?: string</signature>
+      <note>Reuse this prop for component references; detect 📍 prefix to style differently</note>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Vitest for unit/integration tests, @testing-library/react for component tests, Playwright for E2E.
+      Test files mirror source structure in __tests__/ directory. Use describe/it blocks with clear AC references.
+      Mock external dependencies (Supabase, LangChain). Test fixtures use factory functions like createComponent().
+      Run tests with `npm run test:run` (CI) or `npm run test` (watch mode).
+    </standards>
+    <locations>
+      <location pattern="manda-app/__tests__/lib/cim/reference-utils.test.ts">Unit tests for formatComponentReference, parseComponentReference (NEW)</location>
+      <location pattern="manda-app/__tests__/components/cim-builder/CIMChatInput.test.tsx">Component tests for badge rendering with component refs (ENHANCE)</location>
+      <location pattern="manda-app/__tests__/components/cim-builder/CIMBuilderPage.test.tsx">Integration tests for click-to-reference wiring (NEW)</location>
+      <location pattern="manda-app/__tests__/lib/agent/cim/tools.test.ts">Existing CIM agent tools tests - verify updateSlideTool handles component edits</location>
+      <location pattern="manda-app/e2e/cim-builder-click-reference.spec.ts">E2E test for full click→edit→update flow (NEW)</location>
+    </locations>
+    <ideas>
+      <idea ac="1" desc="formatComponentReference truncation">Test content > 30 chars gets truncated with "..." suffix</idea>
+      <idea ac="1" desc="formatComponentReference special chars">Test content with quotes, brackets, emoji doesn't break format</idea>
+      <idea ac="2" desc="Reference format validation">Regex test ensuring exact format: 📍 [{id}] "{text}..." -</idea>
+      <idea ac="2" desc="Empty content handling">Test empty string content produces valid reference</idea>
+      <idea ac="3" desc="CIMChatInput badge distinction">Test 📍 prefix detection renders MapPin icon vs document/finding/qa icons</idea>
+      <idea ac="3" desc="Submit with reference">Test Enter key and Send button both work with component reference</idea>
+      <idea ac="4" desc="parseComponentReference valid">Test extracts componentId and instruction from valid format</idea>
+      <idea ac="4" desc="parseComponentReference invalid">Test returns null componentId for messages without 📍 prefix</idea>
+      <idea ac="4" desc="parseComponentReference edge cases">Test with very long instructions, special characters, multiline</idea>
+      <idea ac="5" desc="Agent receives context">Integration test verifying agent gets componentId in context</idea>
+      <idea ac="5" desc="updateSlideTool called">Mock test verifying agent calls update_slide tool with correct params</idea>
+      <idea ac="5" desc="Preview refresh">Test onCIMStateChanged callback triggers after tool execution</idea>
+      <idea ac="1-5" desc="E2E full flow">Playwright: click component → type instruction → submit → verify preview updated</idea>
+      <idea ac="1-5" desc="Multiple edits">Test sequential component edits don't interfere with each other</idea>
+      <idea ac="1-5" desc="Clear reference">Test X button clears component reference from input</idea>
+    </ideas>
+  </tests>
+</story-context>

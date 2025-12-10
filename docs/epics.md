@@ -4916,7 +4916,7 @@ Then the agent calls import_qa_excel() and summarizes results
 - **Frontend:** NotebookLM-inspired 3-panel UI at `/projects/[id]/cim-builder`:
   - Left Panel: Sources (findings, documents, knowledge base items)
   - Center Panel: Conversation (AI-guided workflow interaction)
-  - Right Panel: Preview (wireframe slide preview, click-to-reference)
+  - Right Panel: Preview (wireframe slide preview with visual chart/table representations, click-to-reference)
 - **Backend:** LangGraph workflow with human-in-the-loop checkpoints
 - **State Management:** `cims` and `cim_slides` tables for persistence and resume
 - **RAG Integration:** Semantic search for content suggestions throughout workflow
@@ -4930,7 +4930,7 @@ Then the agent calls import_qa_excel() and summarizes results
 - ✅ Buyer persona selection drives narrative tailoring
 - ✅ User can define custom CIM outline collaboratively with agent
 - ✅ RAG-powered content suggestions with source citations
-- ✅ Wireframe preview renders slides in real-time
+- ✅ Wireframe preview renders slides in real-time with visual chart/table representations (bar charts show bars, pie shows segments, etc.)
 - ✅ Click-to-reference: click any element in preview to discuss/edit
 - ✅ Dependency tracking maintains slide coherence
 - ✅ Non-linear navigation (jump between slides, reorder)

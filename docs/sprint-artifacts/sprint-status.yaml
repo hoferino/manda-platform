@@ -1644,10 +1644,15 @@ development_status:
     - 22 new E9.7 prompt tests, 17 new E9.7 tool tests (115 total CIM agent tests)
     - TypeScript type-check and build pass
   # Preview & Interaction (3 stories)
-  e9-8-wireframe-preview-renderer: backlog
+  e9-8-wireframe-preview-renderer: done
+  e9-8-drafted: 2025-12-10
+  e9-8-ready-for-dev: 2025-12-10
   e9-8-points: 5
-  e9-9-click-to-reference-in-chat: backlog
+  e9-9-click-to-reference-in-chat: ready-for-dev
+  e9-9-drafted: 2025-12-10
+  e9-9-ready-for-dev: 2025-12-10
   e9-9-points: 3
+  e9-9-context: docs/sprint-artifacts/stories/e9-9-click-to-reference-in-chat.context.xml
   e9-10-visual-concept-generation: backlog
   e9-10-points: 5
   # Intelligence (2 stories)

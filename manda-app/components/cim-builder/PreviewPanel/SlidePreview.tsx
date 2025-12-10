@@ -1,25 +1,106 @@
 'use client'
 
 /**
- * Slide Preview - Wireframe placeholder for slide content
+ * SlidePreview - Wireframe renderer for slide content
  *
- * Displays a wireframe representation of the slide.
- * Full renderer will be implemented in E9.8.
+ * Displays a wireframe representation of the slide with all component types.
+ * Features:
+ * - Type-specific component rendering via ComponentRenderer
+ * - 16:9 aspect ratio with responsive scaling
+ * - Stable component IDs for click-to-reference (E9.9)
+ * - Visual status indicators (draft/approved/locked)
+ * - Click handler support for component selection
  *
- * Story: E9.3 - CIM Builder 3-Panel Layout
- * AC: #5 - Preview panel shows slide preview area
+ * Story: E9.8 - Wireframe Preview Renderer
+ * AC: #1 (Component Rendering), #2 (Stable IDs), #3 (Wireframe Styling), #5 (Reactive Updates)
  */
 
 import * as React from 'react'
+import { memo, useMemo } from 'react'
 import { cn } from '@/lib/utils'
+import { ComponentRenderer } from './ComponentRenderer'
 import type { Slide, SlideComponent, ComponentType } from '@/lib/types/cim'
 
-interface SlidePreviewProps {
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface SlidePreviewProps {
   slide: Slide | null
   className?: string
+  onComponentClick?: (componentId: string, content: string) => void
 }
 
-export function SlidePreview({ slide, className }: SlidePreviewProps) {
+// ============================================================================
+// Status Badge
+// ============================================================================
+
+interface StatusBadgeProps {
+  status: 'draft' | 'approved' | 'locked'
+}
+
+const statusStyles = {
+  draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  locked: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+}
+
+const statusLabels = {
+  draft: 'Draft',
+  approved: 'Approved',
+  locked: 'Locked',
+}
+
+const StatusBadge = memo(function StatusBadge({ status }: StatusBadgeProps) {
+  return (
+    <span
+      className={cn(
+        'px-2 py-0.5 rounded-full text-xs font-medium',
+        statusStyles[status]
+      )}
+    >
+      {statusLabels[status]}
+    </span>
+  )
+})
+
+// ============================================================================
+// Component Index Tracking
+// ============================================================================
+
+/**
+ * Track component indices by type for stable ID generation
+ * Returns a map of component ID to its type-specific index
+ */
+function buildComponentIndices(components: SlideComponent[]): Map<string, number> {
+  const typeCounters: Partial<Record<ComponentType, number>> = {}
+  const indices = new Map<string, number>()
+
+  for (const component of components) {
+    const currentCount = typeCounters[component.type] || 0
+    indices.set(component.id, currentCount)
+    typeCounters[component.type] = currentCount + 1
+  }
+
+  return indices
+}
+
+// ============================================================================
+// SlidePreview Component
+// ============================================================================
+
+export const SlidePreview = memo(function SlidePreview({
+  slide,
+  className,
+  onComponentClick,
+}: SlidePreviewProps) {
+  // Build component indices for stable ID generation
+  const componentIndices = useMemo(
+    () => (slide ? buildComponentIndices(slide.components) : new Map()),
+    [slide]
+  )
+
+  // Empty state when no slide
   if (!slide) {
     return (
       <div
@@ -28,6 +109,7 @@ export function SlidePreview({ slide, className }: SlidePreviewProps) {
           'flex items-center justify-center',
           className
         )}
+        data-testid="slide-preview-empty"
       >
         <p className="text-sm text-muted-foreground">No slide selected</p>
       </div>
@@ -37,16 +119,26 @@ export function SlidePreview({ slide, className }: SlidePreviewProps) {
   return (
     <div
       className={cn(
-        'aspect-[16/9] bg-white dark:bg-slate-900 rounded-lg border shadow-sm',
+        // 16:9 aspect ratio with responsive scaling
+        'aspect-[16/9] w-full',
+        // Wireframe styling: white/dark background, subtle shadow
+        'bg-white dark:bg-slate-900 rounded-lg border shadow-sm',
+        // Internal layout
         'p-6 flex flex-col overflow-hidden',
         className
       )}
+      data-testid="slide-preview"
+      data-slide-id={slide.id}
     >
-      {/* Slide title */}
-      <h2 className="text-xl font-bold mb-4 text-foreground">{slide.title}</h2>
+      {/* Slide header with title */}
+      <div className="flex-shrink-0 mb-4">
+        <h2 className="text-xl font-bold text-foreground leading-tight">
+          {slide.title || 'Untitled Slide'}
+        </h2>
+      </div>
 
-      {/* Slide components (wireframe representation) */}
-      <div className="flex-1 space-y-3 overflow-auto">
+      {/* Slide components */}
+      <div className="flex-1 space-y-2 overflow-auto min-h-0">
         {slide.components.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <p className="text-sm text-muted-foreground italic">
@@ -54,70 +146,30 @@ export function SlidePreview({ slide, className }: SlidePreviewProps) {
             </p>
           </div>
         ) : (
-          slide.components.map((component) => (
-            <ComponentPreview key={component.id} component={component} />
-          ))
+          slide.components.map((component) => {
+            const index = componentIndices.get(component.id) ?? 0
+            return (
+              <ComponentRenderer
+                key={component.id}
+                component={component}
+                slideId={slide.id}
+                index={index}
+                onClick={onComponentClick}
+              />
+            )
+          })
         )}
       </div>
 
-      {/* Status indicator */}
-      <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground">
-        <span>{slide.status === 'draft' ? 'Draft' : slide.status === 'approved' ? 'Approved' : 'Locked'}</span>
-        <span>{new Date(slide.updated_at).toLocaleDateString()}</span>
+      {/* Footer with status and timestamp */}
+      <div className="flex-shrink-0 mt-4 pt-3 border-t border-muted-foreground/10 flex items-center justify-between">
+        <StatusBadge status={slide.status} />
+        <span className="text-xs text-muted-foreground">
+          {new Date(slide.updated_at).toLocaleDateString()}
+        </span>
       </div>
     </div>
   )
-}
+})
 
-// Component preview sub-component
-interface ComponentPreviewProps {
-  component: SlideComponent
-}
-
-const componentStyles: Record<ComponentType, string> = {
-  title: 'text-lg font-bold',
-  subtitle: 'text-base font-semibold text-muted-foreground',
-  text: 'text-sm',
-  bullet: 'text-sm pl-4 border-l-2 border-primary',
-  chart: 'bg-muted/50 rounded p-4 text-center text-xs text-muted-foreground',
-  image: 'bg-muted/50 rounded p-8 text-center text-xs text-muted-foreground',
-  table: 'bg-muted/50 rounded p-4 text-center text-xs text-muted-foreground',
-}
-
-function ComponentPreview({ component }: ComponentPreviewProps) {
-  const style = componentStyles[component.type] || componentStyles.text
-
-  // Placeholder for visual components
-  if (component.type === 'chart') {
-    return (
-      <div className={style}>
-        <div className="h-24 flex items-center justify-center border border-dashed rounded">
-          [Chart: {component.content || 'Placeholder'}]
-        </div>
-      </div>
-    )
-  }
-
-  if (component.type === 'image') {
-    return (
-      <div className={style}>
-        <div className="h-32 flex items-center justify-center border border-dashed rounded">
-          [Image: {component.content || 'Placeholder'}]
-        </div>
-      </div>
-    )
-  }
-
-  if (component.type === 'table') {
-    return (
-      <div className={style}>
-        <div className="h-24 flex items-center justify-center border border-dashed rounded">
-          [Table: {component.content || 'Placeholder'}]
-        </div>
-      </div>
-    )
-  }
-
-  // Text-based components
-  return <p className={style}>{component.content}</p>
-}
+export default SlidePreview

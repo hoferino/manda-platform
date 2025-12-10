@@ -1,0 +1,209 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>9</epicId>
+    <storyId>8</storyId>
+    <title>Wireframe Preview Renderer</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-8-wireframe-preview-renderer.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>a wireframe preview that renders my CIM slides with all component types (titles, bullets, charts, images, tables) and allows me to click any element to reference it in the conversation</iWant>
+    <soThat>I can visually review the CIM structure and quickly edit specific content through the chat interface without searching for what I want to change</soThat>
+    <tasks>
+      <task id="1" title="Create ComponentRenderer with Type-Specific Renderers" ac="1,2,3">
+        <subtask id="1.1">Create ComponentRenderer.tsx component that dispatches to type-specific renderers</subtask>
+        <subtask id="1.2">Create TitleRenderer - large bold text, wireframe styling, stable ID generation</subtask>
+        <subtask id="1.3">Create SubtitleRenderer - medium semibold text, slightly muted color</subtask>
+        <subtask id="1.4">Create TextRenderer - paragraph text with proper line height</subtask>
+        <subtask id="1.5">Create BulletRenderer - list item with bullet indicator, proper indentation</subtask>
+        <subtask id="1.6">Create ChartRenderer - visual wireframe representation based on metadata.chartType</subtask>
+        <subtask id="1.7">Create ImageRenderer - placeholder box with image icon, shows content as description</subtask>
+        <subtask id="1.8">Create TableRenderer - wireframe grid with rows/columns from metadata</subtask>
+        <subtask id="1.9">Implement stable ID generation: generateComponentId(slideId, type, index)</subtask>
+        <subtask id="1.10">Add data-component-id attribute to all rendered component wrappers</subtask>
+      </task>
+      <task id="2" title="Enhance SlidePreview with Full Renderer" ac="1,2,3,5">
+        <subtask id="2.1">Replace existing basic ComponentPreview with new ComponentRenderer</subtask>
+        <subtask id="2.2">Add 16:9 aspect ratio enforcement with responsive scaling</subtask>
+        <subtask id="2.3">Implement wireframe styling tokens (colors, borders, shadows)</subtask>
+        <subtask id="2.4">Add visual status indicators (draft/approved/locked)</subtask>
+        <subtask id="2.5">Optimize for React re-render performance (memoization)</subtask>
+        <subtask id="2.6">Handle edge cases: empty components, long content, missing metadata</subtask>
+      </task>
+      <task id="3" title="Implement Click-to-Select Interaction" ac="4">
+        <subtask id="3.1">Add onComponentClick prop to SlidePreview</subtask>
+        <subtask id="3.2">Add onComponentClick prop to ComponentRenderer and type renderers</subtask>
+        <subtask id="3.3">Wrap each component in clickable div with hover state</subtask>
+        <subtask id="3.4">Fire callback with component ID and content on click</subtask>
+        <subtask id="3.5">Add visual feedback on click (brief highlight animation)</subtask>
+        <subtask id="3.6">Ensure click targets are large enough (min 32px)</subtask>
+      </task>
+      <task id="4" title="Wire Up PreviewPanel Integration" ac="4,5,6">
+        <subtask id="4.1">Update PreviewPanel to pass onComponentClick callback to SlidePreview</subtask>
+        <subtask id="4.2">Add onComponentSelect prop to PreviewPanel</subtask>
+        <subtask id="4.3">Verify slide navigation continues to work (from E9.3)</subtask>
+        <subtask id="4.4">Verify slide counter updates correctly</subtask>
+        <subtask id="4.5">Ensure empty state still displays correctly</subtask>
+      </task>
+      <task id="5" title="Write Unit Tests" ac="1-6">
+        <subtask id="5.1">Test ComponentRenderer dispatches to correct type renderer</subtask>
+        <subtask id="5.2">Test stable ID generation produces expected format</subtask>
+        <subtask id="5.3">Test each type renderer renders appropriate structure</subtask>
+        <subtask id="5.4">Test click handler fires with correct componentId and content</subtask>
+        <subtask id="5.5">Test SlidePreview re-renders when slide prop changes</subtask>
+        <subtask id="5.6">Test PreviewPanel integration passes callbacks correctly</subtask>
+      </task>
+      <task id="6" title="Manual Visual Verification" ac="1,3">
+        <subtask id="6.1">Visual inspection of all component types in light/dark mode</subtask>
+        <subtask id="6.2">Verify 16:9 aspect ratio maintained at different panel widths</subtask>
+        <subtask id="6.3">Verify wireframe styling is professional and schematic</subtask>
+        <subtask id="6.4">Test responsive behavior when panel is resized</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Component Rendering">Slide components render correctly based on type: title (large bold text), subtitle (medium semibold), text (paragraph), bullet (list item with indicator), chart (visual wireframe representation of chart type - bar chart shows bars, pie shows pie, line shows line graph), image (placeholder with image icon and description), table (wireframe grid showing approximate rows/columns from metadata)</criterion>
+    <criterion id="AC2" title="Stable Component IDs">Each rendered component has a stable ID in format s{slideNum}_{type}{index} (e.g., s3_title, s3_bullet1, s3_bullet2, s3_chart1) that persists across re-renders and is attached as data-component-id attribute</criterion>
+    <criterion id="AC3" title="Wireframe Styling">Visual styling follows wireframe conventions: muted colors, dashed borders for placeholders, clear visual hierarchy, consistent spacing, slide-like aspect ratio (16:9), professional but schematic appearance</criterion>
+    <criterion id="AC4" title="Click-to-Select Components">All rendered components are clickable; clicking fires an onComponentClick(componentId, content) callback that E9.9 will use for chat reference insertion</criterion>
+    <criterion id="AC5" title="Reactive Updates">Preview updates immediately when slide content changes via agent tools or state updates; React re-renders efficiently without visible flicker</criterion>
+    <criterion id="AC6" title="Slide Navigation">Navigation between slides via Prev/Next buttons and slide counter works correctly (existing from E9.3, verify integration)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Technical Specification">
+        <section>E9.8: Wireframe Preview Renderer</section>
+        <snippet>AC-9.8.1 through AC-9.8.6 define component rendering, stable IDs (s{slideNum}_{type}{index}), wireframe styling, click-to-select, reactive updates, and slide navigation requirements.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Component → File Mapping">
+        <section>Traceability Mapping</section>
+        <snippet>Preview Panel maps to components/cim-builder/PreviewPanel/*.tsx for stories E9.8 and E9.9. SlidePreview.tsx and ComponentRenderer.tsx are key files.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="TypeScript Types">
+        <section>Data Models and Contracts</section>
+        <snippet>SlideComponent interface: id, type (7 types), content, metadata, source_refs. ComponentType: title, subtitle, text, bullet, chart, image, table.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Performance Requirements">
+        <section>Non-Functional Requirements</section>
+        <snippet>Slide preview render target: less than 100ms for interactive click-to-reference feel. Use React.memo for slide components.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="E9.9 Integration">
+        <section>Click-to-Reference Flow</section>
+        <snippet>E9.9 depends on E9.8's onComponentClick callback. Reference format: "📍 [s3_bullet1] 'content' -". Stable IDs enable precise component targeting.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file path="manda-app/components/cim-builder/PreviewPanel/SlidePreview.tsx" kind="component" lines="1-124">
+        <symbol>SlidePreview, ComponentPreview</symbol>
+        <reason>Main component to enhance. Current basic implementation has text rendering for text types and placeholder boxes for chart/image/table. No stable IDs, no click handling, limited styling. Replace ComponentPreview with new ComponentRenderer.</reason>
+      </file>
+      <file path="manda-app/components/cim-builder/PreviewPanel/PreviewPanel.tsx" kind="component" lines="1-86">
+        <symbol>PreviewPanel</symbol>
+        <reason>Parent component that passes slides to SlidePreview. Need to add onComponentClick/onComponentSelect callback props and wire through to SlidePreview.</reason>
+      </file>
+      <file path="manda-app/lib/types/cim.ts" kind="types" lines="39-49">
+        <symbol>COMPONENT_TYPES, ComponentType</symbol>
+        <reason>Defines the 7 component types: title, subtitle, text, bullet, chart, image, table. Use for type-specific renderer dispatch.</reason>
+      </file>
+      <file path="manda-app/lib/types/cim.ts" kind="types" lines="157-163">
+        <symbol>SlideComponent</symbol>
+        <reason>Interface for component data: id, type, content, metadata, source_refs. Renderer receives this and displays appropriately based on type.</reason>
+      </file>
+      <file path="manda-app/lib/types/cim.ts" kind="types" lines="168-177">
+        <symbol>Slide</symbol>
+        <reason>Interface for slide data: id, section_id, title, components[], visual_concept, status, timestamps. SlidePreview receives Slide prop.</reason>
+      </file>
+      <file path="manda-app/lib/hooks/useSlideNavigation.ts" kind="hook" lines="1-85">
+        <symbol>useSlideNavigation</symbol>
+        <reason>Existing hook managing slide navigation state. PreviewPanel uses this for Prev/Next. Verify integration continues to work.</reason>
+      </file>
+      <file path="manda-app/lib/agent/cim/tools/cim-tools.ts" kind="service" lines="445-580">
+        <symbol>generateSlideContentTool</symbol>
+        <reason>Tool that creates slides with components. Shows how component IDs are generated (currently random UUIDs). E9.8 needs stable IDs in format s{slideNum}_{type}{index}.</reason>
+      </file>
+      <file path="manda-app/components/cim-builder/PreviewPanel/SlideNavigation.tsx" kind="component">
+        <symbol>SlideNavigation</symbol>
+        <reason>Prev/Next buttons for slide navigation. Existing component from E9.3. Verify integration after SlidePreview changes.</reason>
+      </file>
+      <file path="manda-app/components/cim-builder/PreviewPanel/SlideCounter.tsx" kind="component">
+        <symbol>SlideCounter</symbol>
+        <reason>Displays "Slide X of Y". Existing component from E9.3. Verify continues to work after changes.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <ecosystem name="node" manifest="manda-app/package.json">
+        <package name="react" version="19.2.0" usage="Core UI framework - use React.memo for component memoization"/>
+        <package name="next" version="16.0.4" usage="App framework with Turbopack"/>
+        <package name="tailwindcss" version="^4" usage="Styling - use existing classes and cn() utility"/>
+        <package name="lucide-react" version="^0.554.0" usage="Icons - use Image icon for ImageRenderer placeholder"/>
+        <package name="clsx" version="^2.1.1" usage="Class name utility via cn() in @/lib/utils"/>
+        <package name="tailwind-merge" version="^3.4.0" usage="Class merging via cn() in @/lib/utils"/>
+        <package name="zustand" version="^5.0.8" usage="State management - CIM state updates trigger preview re-renders"/>
+      </ecosystem>
+      <devDependencies>
+        <package name="vitest" version="^4.0.14" usage="Unit testing framework"/>
+        <package name="@testing-library/react" version="^16.3.0" usage="React component testing"/>
+        <package name="@testing-library/user-event" version="^14.6.1" usage="User interaction simulation for click tests"/>
+        <package name="@testing-library/jest-dom" version="^6.9.1" usage="DOM assertion matchers"/>
+        <package name="typescript" version="^5" usage="Type checking"/>
+      </devDependencies>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint category="architecture">Follow existing component patterns in PreviewPanel folder. Use 'use client' directive for client components.</constraint>
+    <constraint category="architecture">TypeScript strict mode - all components must be properly typed.</constraint>
+    <constraint category="performance">Slide preview render target is less than 100ms. Use React.memo for component renderers to prevent unnecessary re-renders.</constraint>
+    <constraint category="styling">Use existing Tailwind CSS classes and cn() utility from @/lib/utils. Follow wireframe styling from Dev Notes: muted colors, dashed borders for placeholders.</constraint>
+    <constraint category="testing">Write unit tests using Vitest in __tests__/components/cim-builder/. Follow existing test patterns from SlideNavigation.test.tsx, SlideCounter.test.tsx.</constraint>
+    <constraint category="integration">E9.9 depends on stable component IDs and onComponentClick callback. ID format must be s{slideNum}_{type}{index}.</constraint>
+    <constraint category="accessibility">Click targets must be minimum 32px for usability.</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="SlidePreview Props (enhanced)" kind="component-props">
+      <signature>interface SlidePreviewProps { slide: Slide | null; className?: string; onComponentClick?: (componentId: string, content: string) => void; }</signature>
+      <path>manda-app/components/cim-builder/PreviewPanel/SlidePreview.tsx</path>
+    </interface>
+    <interface name="ComponentRenderer Props" kind="component-props">
+      <signature>interface ComponentRendererProps { component: SlideComponent; slideId: string; index: number; onClick?: (componentId: string, content: string) => void; }</signature>
+      <path>manda-app/components/cim-builder/PreviewPanel/ComponentRenderer.tsx</path>
+    </interface>
+    <interface name="PreviewPanel Props (enhanced)" kind="component-props">
+      <signature>interface PreviewPanelProps { slides: Slide[]; currentIndex: number; onIndexChange: (index: number) => void; onComponentSelect?: (componentId: string, content: string) => void; }</signature>
+      <path>manda-app/components/cim-builder/PreviewPanel/PreviewPanel.tsx</path>
+    </interface>
+    <interface name="generateComponentId utility" kind="function">
+      <signature>function generateComponentId(slideId: string, type: ComponentType, index: number): string</signature>
+      <path>manda-app/components/cim-builder/PreviewPanel/ComponentRenderer.tsx</path>
+      <note>Returns format: s{slideNum}_{type}{index}. Example: s3_bullet1</note>
+    </interface>
+    <interface name="onComponentClick callback" kind="callback">
+      <signature>(componentId: string, content: string) => void</signature>
+      <note>E9.9 will use this to populate chat input with reference: 📍 [s3_bullet1] "content" -</note>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Use Vitest with @testing-library/react for component tests. Follow existing patterns: group tests with describe(), use vi.fn() for mocks, render with @testing-library/react render(), query with screen.getByRole/getByText, interact with fireEvent.click(). Reference AC IDs in describe blocks (e.g., "describe('rendering (AC #1)')"). Use data-testid for complex queries. Test file naming: ComponentName.test.tsx. Run with "npm run test" or "npm run test:run" for single pass.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/cim-builder/ComponentRenderer.test.tsx</location>
+      <location>manda-app/__tests__/components/cim-builder/SlidePreview.test.tsx</location>
+      <location>manda-app/__tests__/components/cim-builder/PreviewPanel.test.tsx</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test ComponentRenderer dispatches to TitleRenderer for type='title', SubtitleRenderer for type='subtitle', etc. Verify each renderer outputs expected structure (e.g., h1 for title, p for text, svg elements for charts).</idea>
+      <idea ac="AC2">Test generateComponentId('slide-3', 'bullet', 2) returns 's3_bullet2'. Test data-component-id attribute is present on rendered wrapper div. Test ID persists across re-renders with same props.</idea>
+      <idea ac="AC3">Visual tests are manual - verify wireframe styling in Storybook or dev server.</idea>
+      <idea ac="AC4">Test click on component wrapper calls onComponentClick with (componentId, content). Use fireEvent.click() and vi.fn() mock. Verify hover state adds expected class.</idea>
+      <idea ac="AC5">Test SlidePreview re-renders when slide prop changes by passing new slide and verifying updated content. Use React Testing Library rerender().</idea>
+      <idea ac="AC6">Integration test: verify PreviewPanel passes callbacks through to SlidePreview. Verify existing SlideNavigation/SlideCounter tests still pass after changes.</idea>
+    </ideas>
+  </tests>
+</story-context>

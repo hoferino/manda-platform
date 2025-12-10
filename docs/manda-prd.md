@@ -730,7 +730,7 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 - **NotebookLM-inspired 3-panel layout:**
   - Left Panel: Sources (documents, findings, Q&A from the deal)
   - Center Panel: Conversation (agent-guided workflow interaction)
-  - Right Panel: Preview (wireframe slide preview with click-to-reference)
+  - Right Panel: Preview (wireframe slide preview with visual chart/table representations and click-to-reference)
 - Structure sidebar showing CIM outline with progress indicators
 - Buyer persona selection (Strategic Buyer, Financial Buyer, Custom)
 - Drag-and-drop slide reordering
