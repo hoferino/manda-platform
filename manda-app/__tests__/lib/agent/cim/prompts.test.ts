@@ -257,6 +257,212 @@ describe('E9.5 - Buyer Persona & Investment Thesis Phase', () => {
   })
 })
 
+describe('E9.7 - Slide Content Creation (RAG-powered)', () => {
+  describe('AC #1: Section-Based Content Initiation', () => {
+    it('should have CRITICAL section requiring opening message for each section', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt).toContain('CRITICAL')
+      expect(prompt.toLowerCase()).toContain('section')
+      expect(prompt.toLowerCase()).toContain('let\'s create content for')
+    })
+
+    it('should require 4-step flow pattern: Context → Search → Present → Finalize', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('step 1')
+      expect(prompt.toLowerCase()).toContain('context')
+      expect(prompt.toLowerCase()).toContain('step 2')
+      expect(prompt.toLowerCase()).toContain('search')
+      expect(prompt.toLowerCase()).toContain('step 3')
+      expect(prompt.toLowerCase()).toContain('present')
+      expect(prompt.toLowerCase()).toContain('step 4')
+      expect(prompt.toLowerCase()).toContain('finalize')
+    })
+  })
+
+  describe('AC #3: Q&A Priority', () => {
+    it('should mention Q&A priority - Q&A answers first as most recent', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('q&a')
+      expect(prompt.toLowerCase()).toContain('highest priority')
+      expect(prompt.toLowerCase()).toContain('most recent')
+    })
+
+    it('should define content retrieval priority order', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      // Check for priority order: Q&A > Findings > Document Chunks
+      expect(prompt).toContain('Content Retrieval Priority')
+      expect(prompt.toLowerCase()).toContain('q&a answers')
+      expect(prompt.toLowerCase()).toContain('findings')
+      expect(prompt.toLowerCase()).toContain('document chunks')
+    })
+  })
+
+  describe('AC #4: Content Options Presentation', () => {
+    it('should require 2-3 content options presentation', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt).toMatch(/2-3\s+content\s+options/i)
+    })
+
+    it('should enforce source citation format: (qa:), (finding:), (source:)', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt).toContain('(qa:')
+      expect(prompt).toContain('(finding:')
+      expect(prompt).toContain('(source:')
+    })
+
+    it('should include example options with source citations', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt).toContain('Option A')
+      expect(prompt).toContain('Option B')
+    })
+  })
+
+  describe('AC #7: Forward Context Flow', () => {
+    it('should reference buyer persona in context flow', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('buyer persona')
+      expect(prompt.toLowerCase()).toContain('reference the buyer persona')
+    })
+
+    it('should reference investment thesis in context flow', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('investment thesis')
+      expect(prompt.toLowerCase()).toContain('connect to investment thesis')
+    })
+
+    it('should mention prior slides context', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('prior slides')
+      expect(prompt.toLowerCase()).toContain('reference prior slides')
+    })
+
+    it('should include example of forward context flow', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      // Check for example text
+      expect(prompt.toLowerCase()).toContain('given your target')
+      expect(prompt.toLowerCase()).toContain('building on our thesis')
+    })
+  })
+
+  describe('AC #8: Contradiction Awareness', () => {
+    it('should include contradiction handling guidance', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt).toContain('Contradiction Handling')
+      expect(prompt).toContain('CONTRADICTS')
+    })
+
+    it('should alert user before including conflicting data', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('alert the user')
+      expect(prompt.toLowerCase()).toContain('conflicting')
+    })
+
+    it('should require presenting both sides of contradiction', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('present both sides')
+    })
+
+    it('should let user decide on contradictions', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('let user decide')
+    })
+  })
+
+  describe('Content Selection Flow (AC #5 related)', () => {
+    it('should include content selection flow patterns', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt).toContain('Content Selection Flow')
+    })
+
+    it('should handle option selection phrases', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('option a')
+      expect(prompt.toLowerCase()).toContain('i like a')
+    })
+
+    it('should handle modification requests', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('change the bullet')
+      expect(prompt.toLowerCase()).toContain('modify')
+    })
+
+    it('should handle alternative requests', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('more options')
+      expect(prompt.toLowerCase()).toContain('different angle')
+    })
+  })
+
+  describe('Content Approval Flow (AC #6 related)', () => {
+    it('should include content approval flow', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt).toContain('Content Approval Flow')
+    })
+
+    it('should recognize approval phrases', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('looks good')
+      expect(prompt.toLowerCase()).toContain('approve')
+      expect(prompt.toLowerCase()).toContain('that works')
+    })
+
+    it('should update status to approved when user approves', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('status')
+      expect(prompt.toLowerCase()).toContain('approved')
+    })
+  })
+
+  describe('Phase Introduction', () => {
+    it('should have content_creation introduction mentioning options', () => {
+      const intro = getPhaseIntroduction('content_creation')
+
+      expect(intro.toLowerCase()).toContain('options')
+      expect(intro.toLowerCase()).toContain('source')
+    })
+
+    it('should mention Q&A, findings, and documents in introduction', () => {
+      const intro = getPhaseIntroduction('content_creation')
+
+      expect(intro.toLowerCase()).toContain('q&a')
+      expect(intro.toLowerCase()).toContain('findings')
+      expect(intro.toLowerCase()).toContain('documents')
+    })
+  })
+
+  describe('Transition Criteria', () => {
+    it('should define clear transition criteria for content_creation phase', () => {
+      const prompt = PHASE_PROMPTS.content_creation
+
+      expect(prompt.toLowerCase()).toContain('transition criteria')
+      expect(prompt.toLowerCase()).toContain('approved')
+      expect(prompt.toLowerCase()).toContain('contradictions')
+    })
+  })
+})
+
 describe('E9.6 - Agenda/Outline Collaborative Definition', () => {
   describe('AC #1: Initial Outline Suggestion', () => {
     it('should have CRITICAL section in outline prompt requiring initial proposal', () => {

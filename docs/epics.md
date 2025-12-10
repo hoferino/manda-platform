@@ -4951,12 +4951,12 @@ Then the agent calls import_qa_excel() and summarizes results
 | E9.3 | CIM Builder 3-Panel Layout | 5 |
 | E9.4 | Agent Orchestration Core | 3 |
 
-**Workflow (3 stories — 16 pts)**
+**Workflow (3 stories — 18 pts)**
 | Story | Title | Points |
 |-------|-------|--------|
 | E9.5 | Buyer Persona & Investment Thesis Phase | 5 |
 | E9.6 | Agenda/Outline Collaborative Definition | 5 |
-| E9.7 | Slide Content Creation (RAG-powered) | 6 |
+| E9.7 | Slide Content Creation (Hybrid RAG: pgvector + Neo4j) | 8 |
 
 **Preview & Interaction (3 stories — 16 pts)**
 | Story | Title | Points |
@@ -4982,7 +4982,7 @@ Then the agent calls import_qa_excel() and summarizes results
 |-------|-------|--------|
 | E9.S1 | Phase 2 Styled Output Research | 3 |
 
-**Total: 14 stories + 1 spike = 63 story points**
+**Total: 14 stories + 1 spike = 65 story points**
 
 ---
 

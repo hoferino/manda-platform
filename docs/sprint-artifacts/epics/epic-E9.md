@@ -223,16 +223,18 @@ Enable users to define their CIM section structure collaboratively with the agen
 **Points:** 8
 
 **Description:**
-Implement iterative slide-by-slide content creation where the agent pulls from deal context via RAG to suggest content.
+Implement iterative slide-by-slide content creation where the agent pulls from deal context via hybrid RAG (pgvector + Neo4j) to suggest content with Q&A priority and contradiction awareness.
 
 **Acceptance Criteria:**
-- [ ] For each section in outline, agent initiates content ideation
-- [ ] RAG queries pull relevant: documents, findings, Q&A answers
-- [ ] Agent presents content options with source citations
-- [ ] User selects, modifies, or requests alternatives
-- [ ] Content approval locks slide content (can revisit later)
-- [ ] Context flows forward: prior slides inform current suggestions
-- [ ] Slide content stored in workflow_state.slides array
+- [ ] For each section, agent initiates content ideation with clear opening message
+- [ ] Hybrid content retrieval uses pgvector semantic search AND Neo4j relationship queries
+- [ ] Q&A answers (most recent client data) prioritized over findings and document chunks
+- [ ] Agent presents 2-3 content options with source citations: `(qa: question)`, `(finding: excerpt)`, `(source: file, page)`
+- [ ] User selects, modifies, or requests alternative content approaches
+- [ ] Content approval changes slide status to 'approved' (reversible via non-linear navigation)
+- [ ] Context flows forward: agent references buyer persona, thesis, prior slides
+- [ ] Agent alerts user when findings have CONTRADICTS relationships in Neo4j
+- [ ] Slide content stored in cims.slides JSONB with section_id, components, source_refs, status
 
 ---
 

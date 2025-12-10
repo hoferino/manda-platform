@@ -35,6 +35,14 @@ import {
   SOURCE_TYPES,
 } from '@/lib/types/cim'
 import { generateEmbedding } from '@/lib/services/embeddings'
+import {
+  retrieveContentForSlide,
+  RankedContentItem,
+} from '@/lib/agent/cim/utils/content-retrieval'
+import {
+  buildContentCreationContext,
+  generateContentOpeningMessage,
+} from '@/lib/agent/cim/utils/context'
 
 // ============================================================================
 // Helper Functions
@@ -424,7 +432,15 @@ export const reorderOutlineSectionsTool = tool(
 // ============================================================================
 
 /**
- * Generate slide content using RAG
+ * Generate slide content using hybrid RAG search
+ * Story: E9.7 - Slide Content Creation (RAG-powered)
+ *
+ * Features:
+ * - Hybrid search: Q&A answers (priority 1) > Findings (priority 2) > Document chunks (priority 3)
+ * - Neo4j enrichment for SUPPORTS/CONTRADICTS relationships
+ * - Context flow: buyer persona, thesis, prior slides
+ * - Contradiction warnings
+ * - Source citations for all content
  */
 export const generateSlideContentTool = tool(
   async (input) => {
@@ -441,31 +457,51 @@ export const generateSlideContentTool = tool(
         return formatError('CIM not found')
       }
 
-      // Find or create section
+      // Find the section
       const section = cim.outline.find(s => s.id === input.sectionId)
       if (!section) {
         return formatError('Section not found')
       }
 
-      // Search for relevant content using embeddings
-      let relevantFindings: Array<{ text: string; source_document: string; confidence: number }> = []
+      // Build context for content creation (AC #7: Forward Context Flow)
+      const context = buildContentCreationContext(
+        cim.buyerPersona,
+        cim.investmentThesis,
+        cim.slides,
+        cim.outline,
+        input.sectionId
+      )
 
-      try {
-        const queryEmbedding = await generateEmbedding(input.topic)
+      // Check if this is the first section
+      const isFirstSection = cim.outline.findIndex(s => s.id === input.sectionId) === 0
 
-        const { data: findings } = await supabase.rpc('match_findings', {
-          query_embedding: JSON.stringify(queryEmbedding),
-          match_threshold: 0.3,
-          match_count: 10,
-          p_deal_id: cim.dealId,
-        })
+      // Generate opening message with context
+      const openingMessage = generateContentOpeningMessage(
+        section.title,
+        section.description,
+        cim.buyerPersona,
+        cim.investmentThesis,
+        isFirstSection
+      )
 
-        if (findings && Array.isArray(findings)) {
-          relevantFindings = findings as Array<{ text: string; source_document: string; confidence: number }>
+      // Perform hybrid content retrieval (AC #2: Q&A > Findings > Documents)
+      const retrievalResult = await retrieveContentForSlide(
+        supabase,
+        cim.dealId,
+        input.topic,
+        {
+          qaLimit: 5,
+          findingsLimit: 10,
+          chunksLimit: 5,
+          confidenceThreshold: 0.3,
+          includeNeo4jEnrichment: true,
         }
-      } catch (embeddingError) {
-        console.warn('[generate_slide_content] Embedding search failed:', embeddingError)
-      }
+      )
+
+      // Separate by source type for structured response
+      const qaItems = retrievalResult.items.filter(i => i.sourceType === 'qa')
+      const findingItems = retrievalResult.items.filter(i => i.sourceType === 'finding')
+      const documentItems = retrievalResult.items.filter(i => i.sourceType === 'document')
 
       // Create slide ID
       const slideId = crypto.randomUUID()
@@ -479,30 +515,28 @@ export const generateSlideContentTool = tool(
         },
       ]
 
+      // Build source references from retrieved content
+      const sourceRefs: SourceReference[] = retrievalResult.items.slice(0, 5).map(item => ({
+        type: item.sourceType === 'qa' ? 'qa' as const : item.sourceType === 'finding' ? 'finding' as const : 'document' as const,
+        id: item.id,
+        title: item.citation,
+        excerpt: item.content.slice(0, 200),
+      }))
+
       // Add content component
       if (input.contentType === 'bullet') {
         components.push({
           id: crypto.randomUUID(),
           type: 'bullet',
           content: input.content || '',
-          source_refs: relevantFindings.slice(0, 3).map(f => ({
-            type: 'finding' as const,
-            id: crypto.randomUUID(),
-            title: f.source_document,
-            excerpt: f.text.slice(0, 200),
-          })),
+          source_refs: sourceRefs,
         })
       } else {
         components.push({
           id: crypto.randomUUID(),
           type: 'text',
           content: input.content || '',
-          source_refs: relevantFindings.slice(0, 3).map(f => ({
-            type: 'finding' as const,
-            id: crypto.randomUUID(),
-            title: f.source_document,
-            excerpt: f.text.slice(0, 200),
-          })),
+          source_refs: sourceRefs,
         })
       }
 
@@ -532,11 +566,39 @@ export const generateSlideContentTool = tool(
         outline: updatedOutline,
       })
 
+      // Format content options with citations for agent to present (AC #4)
+      const contentOptions = retrievalResult.items.slice(0, 10).map(item => ({
+        content: item.content,
+        citation: item.citation,
+        sourceType: item.sourceType,
+        hasContradiction: item.hasContradiction || false,
+        contradictionInfo: item.contradictionInfo,
+      }))
+
       return formatSuccess({
-        message: 'Slide content generated',
+        message: 'Slide content generated with hybrid RAG search',
         slideId,
         slide: newSlide,
-        relevantSourceCount: relevantFindings.length,
+        // Context information for agent (AC #7)
+        context: {
+          openingMessage,
+          sectionIndex: context.currentSectionIndex,
+          totalSections: context.totalSections,
+          buyerPersona: context.buyerPersonaContext,
+          thesis: context.thesisContext,
+          priorSlides: context.priorSlidesContext.length,
+        },
+        // Content retrieval results by source type (AC #2, #3)
+        retrieval: {
+          qaCount: qaItems.length,
+          findingsCount: findingItems.length,
+          documentsCount: documentItems.length,
+          totalItems: retrievalResult.items.length,
+        },
+        // Formatted content options with citations (AC #4)
+        contentOptions,
+        // Contradiction warnings (AC #8)
+        contradictionWarnings: retrievalResult.contradictionWarnings,
       })
     } catch (err) {
       console.error('[generate_slide_content] Error:', err)
@@ -545,14 +607,236 @@ export const generateSlideContentTool = tool(
   },
   {
     name: 'generate_slide_content',
-    description: 'Generate content for a slide using RAG search on deal documents. Creates a new slide in the specified section.',
+    description: `Generate content for a slide using hybrid RAG search on deal documents.
+
+**Features:**
+- Searches Q&A answers (highest priority), findings, and document chunks
+- Returns content options with source citations
+- Includes buyer persona and thesis context for alignment
+- Flags data contradictions from Neo4j relationships
+
+**Use this tool to:**
+1. Search for relevant content for a section
+2. Get formatted content options with citations to present to user
+3. Create draft slides for user selection/approval`,
     schema: z.object({
       cimId: z.string().uuid().describe('The CIM ID'),
       sectionId: z.string().uuid().describe('The section ID to add the slide to'),
       title: z.string().describe('Slide title'),
-      topic: z.string().describe('Topic to search for relevant content'),
-      content: z.string().optional().describe('Initial content (will be enriched with RAG)'),
+      topic: z.string().describe('Topic/keywords to search for relevant content'),
+      content: z.string().optional().describe('Initial content (will be enriched with RAG results)'),
       contentType: z.enum(['text', 'bullet', 'table']).default('bullet').describe('Type of content'),
+    }),
+  }
+)
+
+/**
+ * Select content option and update slide
+ * Story: E9.7 - Slide Content Creation (RAG-powered)
+ * AC #5: Content Selection Flow
+ *
+ * Use this tool when user selects an option (e.g., "Option A", "I like B")
+ */
+export const selectContentOptionTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      const slideIndex = cim.slides.findIndex(s => s.id === input.slideId)
+      if (slideIndex === -1) {
+        return formatError('Slide not found')
+      }
+
+      const existingSlide = cim.slides[slideIndex]
+      if (!existingSlide) {
+        return formatError('Slide not found')
+      }
+
+      // Update the slide's content component with selected option
+      const updatedComponents: SlideComponent[] = existingSlide.components.map(comp => {
+        if (comp.type === 'bullet' || comp.type === 'text') {
+          return {
+            ...comp,
+            content: input.content,
+            source_refs: input.sourceRefs?.map(ref => ({
+              type: ref.sourceType as 'qa' | 'finding' | 'document',
+              id: ref.id,
+              title: ref.citation,
+              excerpt: ref.excerpt,
+            })) || comp.source_refs,
+          }
+        }
+        return comp
+      })
+
+      const updatedSlide: Slide = {
+        ...existingSlide,
+        components: updatedComponents,
+        updated_at: new Date().toISOString(),
+      }
+
+      const updatedSlides = cim.slides.map((s, i) =>
+        i === slideIndex ? updatedSlide : s
+      )
+
+      await updateCIM(supabase, input.cimId, {
+        slides: updatedSlides,
+      })
+
+      return formatSuccess({
+        message: 'Content option selected and slide updated',
+        slideId: input.slideId,
+        slide: updatedSlide,
+      })
+    } catch (err) {
+      console.error('[select_content_option] Error:', err)
+      return formatError('Failed to select content option')
+    }
+  },
+  {
+    name: 'select_content_option',
+    description: `Select a content option and update the slide. Use this when user chooses from presented options (e.g., "Option A", "I like B", "Go with the second one").
+
+**Common triggers:**
+- "Option A" / "I'll go with A"
+- "I like the second one"
+- "Use the growth-focused version"`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      slideId: z.string().uuid().describe('The slide ID to update'),
+      content: z.string().describe('The selected content to use'),
+      sourceRefs: z.array(z.object({
+        id: z.string(),
+        sourceType: z.enum(['qa', 'finding', 'document']),
+        citation: z.string(),
+        excerpt: z.string().optional(),
+      })).optional().describe('Source references for the selected content'),
+    }),
+  }
+)
+
+/**
+ * Approve slide content and move to next section
+ * Story: E9.7 - Slide Content Creation (RAG-powered)
+ * AC #6: Content Approval Flow
+ *
+ * Recognizes approval phrases: "looks good", "approve", "that works", "yes", "perfect"
+ */
+export const approveSlideContentTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      const slideIndex = cim.slides.findIndex(s => s.id === input.slideId)
+      if (slideIndex === -1) {
+        return formatError('Slide not found')
+      }
+
+      const existingSlide = cim.slides[slideIndex]
+      if (!existingSlide) {
+        return formatError('Slide not found')
+      }
+
+      // Update slide status to 'approved'
+      const updatedSlide: Slide = {
+        ...existingSlide,
+        status: 'approved',
+        updated_at: new Date().toISOString(),
+      }
+
+      const updatedSlides = cim.slides.map((s, i) =>
+        i === slideIndex ? updatedSlide : s
+      )
+
+      // Also update section status to 'in_progress' or 'complete'
+      const section = cim.outline.find(s => s.id === existingSlide.section_id)
+      let updatedOutline = cim.outline
+
+      if (section) {
+        const sectionSlides = updatedSlides.filter(s => s.section_id === section.id)
+        const allApproved = sectionSlides.every(s => s.status === 'approved')
+        const sectionStatus = allApproved ? 'complete' : 'in_progress'
+
+        updatedOutline = cim.outline.map(s => {
+          if (s.id === section.id) {
+            return { ...s, status: sectionStatus as OutlineSection['status'] }
+          }
+          return s
+        })
+      }
+
+      await updateCIM(supabase, input.cimId, {
+        slides: updatedSlides,
+        outline: updatedOutline,
+      })
+
+      // Find next section to work on
+      const currentSectionIndex = cim.outline.findIndex(s => s.id === existingSlide.section_id)
+      const nextSection = currentSectionIndex < cim.outline.length - 1
+        ? cim.outline[currentSectionIndex + 1]
+        : null
+
+      // Check if all slides are approved
+      const allSlidesApproved = updatedSlides.every(s => s.status === 'approved')
+
+      return formatSuccess({
+        message: `✅ Slide approved!${nextSection ? ` Moving to "${nextSection.title}" section.` : ' All sections complete!'}`,
+        slideId: input.slideId,
+        slideStatus: 'approved',
+        sectionStatus: section ? updatedOutline.find(s => s.id === section.id)?.status : undefined,
+        nextSection: nextSection ? {
+          id: nextSection.id,
+          title: nextSection.title,
+          description: nextSection.description,
+        } : null,
+        allSlidesApproved,
+        canTransitionToVisualConcepts: allSlidesApproved && cim.outline.every(s =>
+          updatedSlides.filter(sl => sl.section_id === s.id).length > 0
+        ),
+      })
+    } catch (err) {
+      console.error('[approve_slide_content] Error:', err)
+      return formatError('Failed to approve slide content')
+    }
+  },
+  {
+    name: 'approve_slide_content',
+    description: `Approve slide content and update status. Use this when user approves content.
+
+**Common approval triggers:**
+- "Looks good" / "That looks good"
+- "Approve" / "Approved"
+- "That works" / "Works for me"
+- "Yes" / "Perfect" / "Great"
+- "Let's move on"
+
+**After approval:**
+- Slide status set to 'approved'
+- Section status updated if all slides approved
+- Returns next section info for continuation`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      slideId: z.string().uuid().describe('The slide ID to approve'),
     }),
   }
 )
@@ -803,15 +1087,23 @@ export const transitionPhaseTool = tool(
 // ============================================================================
 
 export const cimTools = [
+  // Persona tools
   saveBuyerPersonaTool,
+  // Thesis tools
   saveInvestmentThesisTool,
+  // Outline tools
   createOutlineSectionTool,
   updateOutlineSectionTool,
   deleteOutlineSectionTool,
   reorderOutlineSectionsTool,
+  // Slide content tools (E9.7)
   generateSlideContentTool,
+  selectContentOptionTool,  // AC #5: Content Selection
+  approveSlideContentTool,  // AC #6: Content Approval
   updateSlideTool,
+  // Visual concept tools
   setVisualConceptTool,
+  // Workflow tools
   transitionPhaseTool,
 ]
 

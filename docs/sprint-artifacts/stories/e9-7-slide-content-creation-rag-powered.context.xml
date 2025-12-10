@@ -1,0 +1,288 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>7</storyId>
+    <title>Slide Content Creation (RAG-powered)</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-7-slide-content-creation-rag-powered.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>the CIM agent to help me create slide content by pulling relevant information from deal documents via RAG and presenting me with options to select, modify, or request alternatives</iWant>
+    <soThat>I can efficiently build compelling CIM slides with properly sourced content that supports my investment thesis and resonates with my target buyer</soThat>
+    <tasks>
+      <task id="1" ac="1,3,4,7,8">Enhance CONTENT_CREATION Phase Prompt
+        <subtask id="1.1">Update prompts.ts CONTENT_CREATION phase prompt with structured ideation flow</subtask>
+        <subtask id="1.2">Add CRITICAL section requiring agent to start each section with clear opening</subtask>
+        <subtask id="1.3">Add Q&A priority guidance - present Q&A answers first as most recent</subtask>
+        <subtask id="1.4">Add 2-3 content options with proper source citation format</subtask>
+        <subtask id="1.5">Add context flow guidance - reference buyer persona, thesis, prior slides</subtask>
+        <subtask id="1.6">Add contradiction handling guidance for CONTRADICTS relationships</subtask>
+        <subtask id="1.7">Add example prompts and response patterns</subtask>
+        <subtask id="1.8">Write unit tests for content creation prompts</subtask>
+      </task>
+      <task id="2" ac="2">Implement Hybrid Content Retrieval (pgvector + Neo4j)
+        <subtask id="2.1">Review existing generateSlideContentTool implementation</subtask>
+        <subtask id="2.2">Implement Q&A Search - text search on qa_items (answered only)</subtask>
+        <subtask id="2.3">Verify match_findings RPC, add confidence threshold > 0.3</subtask>
+        <subtask id="2.4">Add/verify match_document_chunks RPC</subtask>
+        <subtask id="2.5">Neo4j relationship enrichment - SUPPORTS/CONTRADICTS/SUPERSEDES</subtask>
+        <subtask id="2.6">Create lib/agent/cim/utils/content-retrieval.ts with hybrid pipeline</subtask>
+        <subtask id="2.7">Implement source citation formatting with type attribution</subtask>
+        <subtask id="2.8">Add contradiction flagging when CONTRADICTS found</subtask>
+        <subtask id="2.9">Write unit tests for search and merge logic</subtask>
+      </task>
+      <task id="3" ac="5">Implement Content Selection Flow
+        <subtask id="3.1">Update prompt for option selection handling</subtask>
+        <subtask id="3.2">Add modification flow for content edits</subtask>
+        <subtask id="3.3">Add alternative request flow for regeneration</subtask>
+        <subtask id="3.4">Ensure updateSlideTool supports component-level updates</subtask>
+        <subtask id="3.5">Write unit tests for selection handling</subtask>
+      </task>
+      <task id="4" ac="6">Implement Content Approval Flow
+        <subtask id="4.1">Add approval detection logic (looks good, approve, etc.)</subtask>
+        <subtask id="4.2">Update updateSlideTool for status transitions: draft → approved</subtask>
+        <subtask id="4.3">Add confirmation message pattern</subtask>
+        <subtask id="4.4">Ensure approved status is reversible</subtask>
+        <subtask id="4.5">Write unit tests for approval flow</subtask>
+      </task>
+      <task id="5" ac="7">Implement Forward Context Flow
+        <subtask id="5.1">Create context summarization utility</subtask>
+        <subtask id="5.2">Add buyer persona reference formatting</subtask>
+        <subtask id="5.3">Add investment thesis reference formatting</subtask>
+        <subtask id="5.4">Update generateSlideContentTool to use prior slide context</subtask>
+        <subtask id="5.5">Add coherence check for narrative alignment</subtask>
+        <subtask id="5.6">Write unit tests for context flow utilities</subtask>
+      </task>
+      <task id="6" ac="9">Verify State Persistence
+        <subtask id="6.1">Verify generateSlideContentTool creates slides with all fields</subtask>
+        <subtask id="6.2">Verify updateSlideTool persists component changes</subtask>
+        <subtask id="6.3">Verify source_refs stored with components</subtask>
+        <subtask id="6.4">Verify section_id linking</subtask>
+        <subtask id="6.5">Add integration test for slide creation round-trip</subtask>
+      </task>
+      <task id="7" ac="1-9">Update Tool Registration and Testing
+        <subtask id="7.1">Update CIM_TOOL_USAGE_PROMPT with content generation guidance</subtask>
+        <subtask id="7.2">Run full test suite and fix regressions</subtask>
+        <subtask id="7.3">TypeScript type-check passes</subtask>
+        <subtask id="7.4">Build verification</subtask>
+        <subtask id="7.5">Manual E2E test of content creation flow</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <ac id="1" title="Section-Based Content Initiation">Agent initiates content ideation with clear opening for each section (e.g., "Let's create content for the [Section Name] section..."). Phase transition must be observable.</ac>
+    <ac id="2" title="Hybrid Content Retrieval">Content retrieval uses both pgvector semantic search AND Neo4j relationship queries to pull Q&A items (priority), findings, and document chunks with relationship context. Source citations must include relationship indicators.</ac>
+    <ac id="3" title="Q&A Priority">Q&A answers (most recent client responses) are prioritized over findings and document chunks when presenting content options. Q&A sources shown first when available.</ac>
+    <ac id="4" title="Content Options Presentation">Agent presents 2-3 content options for each slide with clear source citations in the format (source: filename.ext, page X), (finding: excerpt), or (qa: question). Multiple options shown.</ac>
+    <ac id="5" title="User Content Selection">User can select one of the options, modify content via conversation, or request alternative content approaches. All actions work.</ac>
+    <ac id="6" title="Content Approval Status">When user approves content, slide status changes to 'approved' (but can still be revisited via non-linear navigation). Status changes to 'approved'.</ac>
+    <ac id="7" title="Forward Context Flow">Prior slides inform current suggestions - agent references buyer persona, investment thesis, and earlier slide content when making suggestions. Observe references to prior context.</ac>
+    <ac id="8" title="Contradiction Awareness">When findings have CONTRADICTS relationships in Neo4j, agent alerts user before including potentially inconsistent claims. Contradiction warnings shown.</ac>
+    <ac id="9" title="Slide Persistence">Slide content is stored in cims.slides JSONB array with section_id, components, source_refs, and status. DB check verifies persistence.</ac>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Technical Specification">
+        <section>E9.7: Slide Content Creation (RAG-powered)</section>
+        <snippet>AC-9.7.1-AC-9.7.7: Agent-guided slide content creation with RAG-powered content retrieval, source citations, option presentation, and context flow.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E9.md" title="Epic E9 Definition">
+        <section>E9.7 Story</section>
+        <snippet>8 points. Iterative slide-by-slide content creation where agent pulls from deal context via RAG to suggest content with source citations.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/stories/e9-6-agenda-outline-collaborative-definition.md" title="Previous Story E9.6">
+        <section>Dev Notes - Learnings</section>
+        <snippet>Prompt enhancement patterns (CRITICAL sections, 4-step flow), tool patterns (deleteOutlineSectionTool, reorderOutlineSectionsTool), onCIMStateChanged callback for state sync.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <!-- Primary files to modify -->
+      <file path="manda-app/lib/agent/cim/prompts.ts" kind="agent-prompts" lines="396-440" reason="CONTENT_CREATION phase prompt - needs significant enhancement for structured content ideation, multi-option presentation, source citation format, context flow, contradiction handling">
+        <symbol>PHASE_PROMPTS.content_creation</symbol>
+        <currentState>Basic guidance for content generation - lacks structured conversation flow, multi-option presentation, source citation format enforcement, context flow guidance</currentState>
+      </file>
+      <file path="manda-app/lib/agent/cim/tools/cim-tools.ts" kind="agent-tools" lines="429-558" reason="generateSlideContentTool - needs enhancement for hybrid search (Q&A, findings, document chunks), Neo4j relationship enrichment, multi-source retrieval, context inclusion">
+        <symbol>generateSlideContentTool</symbol>
+        <currentState>Only searches findings via match_findings RPC; does NOT search document_chunks or qa_items; no Neo4j relationships</currentState>
+      </file>
+      <file path="manda-app/lib/agent/cim/tools/cim-tools.ts" kind="agent-tools" lines="563-638" reason="updateSlideTool - verify supports component-level updates and status transitions (draft → approved)">
+        <symbol>updateSlideTool</symbol>
+        <currentState>Basic update functionality exists; verify handles status transitions correctly</currentState>
+      </file>
+      <!-- New files to create -->
+      <file path="manda-app/lib/agent/cim/utils/content-retrieval.ts" kind="utility" reason="CREATE NEW: Hybrid search pipeline combining pgvector + Neo4j">
+        <symbol>searchQAItems, searchFindings, searchDocumentChunks, enrichWithRelationships, mergeAndRankResults</symbol>
+        <currentState>Does not exist - needs implementation</currentState>
+      </file>
+      <file path="manda-app/lib/agent/cim/utils/context.ts" kind="utility" reason="CREATE NEW: Context summarization utilities for forward context flow">
+        <symbol>summarizePriorSlides, formatBuyerPersonaContext, formatThesisContext</symbol>
+        <currentState>Does not exist - needs implementation</currentState>
+      </file>
+      <!-- Existing infrastructure to use -->
+      <file path="manda-app/lib/neo4j/operations.ts" kind="data-layer" reason="Use existing Neo4j operations for relationship queries">
+        <symbol>getRelatedNodes, createContradiction, createSupport, getContradictions</symbol>
+        <currentState>Full CRUD + relationship operations implemented; SUPPORTS, CONTRADICTS, SUPERSEDES relationships defined</currentState>
+      </file>
+      <file path="manda-app/lib/services/embeddings.ts" kind="service" reason="Use existing embedding generation for RAG queries">
+        <symbol>generateEmbedding</symbol>
+        <currentState>OpenAI text-embedding-3-large (3072 dim) implemented</currentState>
+      </file>
+      <file path="manda-app/lib/types/cim.ts" kind="types" reason="Use existing CIM types - Slide, SlideComponent, SourceReference already defined">
+        <symbol>Slide, SlideComponent, SourceReference, SlideStatus, CIMPhase</symbol>
+        <currentState>Complete type definitions exist; slides JSONB structure supports section_id, components, source_refs, status</currentState>
+      </file>
+      <!-- Test files -->
+      <file path="manda-app/__tests__/lib/agent/cim/prompts.test.ts" kind="test" reason="Add tests for CONTENT_CREATION prompt enhancement">
+        <currentState>Existing test file - extend with content creation tests</currentState>
+      </file>
+      <file path="manda-app/__tests__/lib/agent/cim/tools.test.ts" kind="test" reason="Add tests for generateSlideContentTool and updateSlideTool enhancements">
+        <currentState>Existing test file - extend with hybrid search tests</currentState>
+      </file>
+    </code>
+    <dependencies>
+      <!-- All dependencies already installed - no new packages needed -->
+      <dep name="@langchain/anthropic" version="^1.1.3" purpose="Claude API for agent responses"/>
+      <dep name="@langchain/core" version="^1.1.0" purpose="LangGraph runtime and tools"/>
+      <dep name="langchain" version="^1.1.1" purpose="Agent tools and chains"/>
+      <dep name="@supabase/supabase-js" version="^2.84.0" purpose="Database and auth"/>
+      <dep name="neo4j-driver" version="^6.0.1" purpose="Neo4j graph database connectivity"/>
+      <dep name="openai" version="^6.9.1" purpose="Embeddings API (text-embedding-3-large)"/>
+      <dep name="zod" version="^4.1.13" purpose="Schema validation for tool inputs"/>
+      <dep name="vitest" version="^4.0.14" purpose="Unit testing framework"/>
+      <dep name="@playwright/test" version="^1.57.0" purpose="E2E testing framework"/>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Follow existing prompt enhancement patterns from E9.6: CRITICAL sections, 4-step conversation flows (Review → Handle → Confirm → Finalize)</constraint>
+    <constraint type="pattern">Follow existing tool patterns: use formatSuccess/formatError, validate authentication, load CIM, perform operation, update state</constraint>
+    <constraint type="pattern">Use onCIMStateChanged callback for UI sync after tool updates (already available in useCIMChat.ts)</constraint>
+    <constraint type="architecture">Hybrid search must use pgvector (Supabase) for semantic search AND Neo4j for relationship queries</constraint>
+    <constraint type="priority">Q&A answers are HIGHEST priority (most recent client data), then findings, then document chunks</constraint>
+    <constraint type="source-format">Citations must use format: (qa: question), (finding: excerpt), (source: filename.ext, page X)</constraint>
+    <constraint type="testing">All new code must have unit tests; follow existing test organization in __tests__/lib/agent/cim/</constraint>
+    <constraint type="state">All slide changes must persist to cims.slides JSONB; use existing updateCIM service</constraint>
+    <constraint type="status">Slide status must support transitions: draft → approved; approved must be reversible to draft</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="generateSlideContentTool" kind="tool">
+      <input>cimId: UUID, sectionId: UUID, title: string, topic: string, content?: string, contentType: 'text' | 'bullet' | 'table'</input>
+      <output>{ success: boolean, slideId?: UUID, slide?: Slide, relevantSourceCount?: number, error?: string }</output>
+      <enhancement>Add priorSlideContext, buyerPersona, investmentThesis to inform content generation</enhancement>
+    </interface>
+    <interface name="updateSlideTool" kind="tool">
+      <input>cimId: UUID, slideId: UUID, title?: string, status?: 'draft' | 'approved' | 'locked', components?: SlideComponent[]</input>
+      <output>{ success: boolean, slide?: Slide, error?: string }</output>
+      <enhancement>Ensure status transitions work correctly; verify component-level updates</enhancement>
+    </interface>
+    <interface name="searchQAItems" kind="function" location="lib/agent/cim/utils/content-retrieval.ts">
+      <input>dealId: UUID, query: string</input>
+      <output>Array of { question: string, answer: string, date_answered: string }</output>
+      <note>Text search on qa_items table; only return answered Q&As</note>
+    </interface>
+    <interface name="searchFindings" kind="function" location="lib/agent/cim/utils/content-retrieval.ts">
+      <input>dealId: UUID, query: string</input>
+      <output>Array of { id: UUID, text: string, source_document: string, confidence: number }</output>
+      <note>Uses match_findings RPC with embedding; threshold > 0.3</note>
+    </interface>
+    <interface name="searchDocumentChunks" kind="function" location="lib/agent/cim/utils/content-retrieval.ts">
+      <input>dealId: UUID, query: string</input>
+      <output>Array of { id: UUID, content: string, document_id: UUID, page_number?: number }</output>
+      <note>Uses match_document_chunks RPC with embedding; threshold > 0.3</note>
+    </interface>
+    <interface name="enrichWithRelationships" kind="function" location="lib/agent/cim/utils/content-retrieval.ts">
+      <input>findingIds: UUID[]</input>
+      <output>Map of findingId → { supports: Finding[], contradicts: Finding[], supersedes: Finding[] }</output>
+      <note>Query Neo4j for SUPPORTS, CONTRADICTS, SUPERSEDES relationships</note>
+    </interface>
+    <interface name="mergeAndRankResults" kind="function" location="lib/agent/cim/utils/content-retrieval.ts">
+      <input>qa: QAResult[], findings: FindingResult[], chunks: ChunkResult[], relationships: RelationshipMap</input>
+      <output>RankedContent[] with priority: Q&A > Findings > Chunks; boost findings with SUPPORTS; flag CONTRADICTS</output>
+    </interface>
+    <interface name="Supabase RPC: match_findings" kind="database">
+      <input>query_embedding: vector, match_threshold: float, match_count: int, p_deal_id: UUID</input>
+      <output>Array of findings with text, source_document, confidence</output>
+      <status>EXISTS - currently used in generateSlideContentTool</status>
+    </interface>
+    <interface name="Supabase RPC: match_document_chunks" kind="database">
+      <input>query_embedding: vector, match_threshold: float, match_count: int, p_deal_id: UUID</input>
+      <output>Array of document chunks with content, document_id, page_number</output>
+      <status>VERIFY EXISTS - may need to add RPC if missing</status>
+    </interface>
+    <interface name="Neo4j relationships" kind="graph-database">
+      <relationships>SUPPORTS (strength: float), CONTRADICTS (reason: string, resolved: bool), SUPERSEDES (effective_date: string)</relationships>
+      <operations>getRelatedNodes, getContradictions - existing in lib/neo4j/operations.ts</operations>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Unit tests use Vitest (vitest run). Follow existing test patterns in __tests__/lib/agent/cim/.
+      Prompt tests check for required keywords, CRITICAL sections, and conversation flow elements using string matching (toContain, toMatch).
+      Tool tests verify tool exports, names, descriptions, and schema definitions.
+      Integration tests use Supabase test environment for database operations.
+      E2E tests use Playwright (@playwright/test).
+      TypeScript type-check: npm run type-check (tsc --noEmit).
+      Build verification: npm run build.
+    </standards>
+    <locations>
+      <loc>manda-app/__tests__/lib/agent/cim/prompts.test.ts - Prompt unit tests</loc>
+      <loc>manda-app/__tests__/lib/agent/cim/tools.test.ts - Tool unit tests</loc>
+      <loc>manda-app/__tests__/lib/agent/cim/content-retrieval.test.ts - CREATE: Hybrid search tests</loc>
+      <loc>manda-app/__tests__/lib/agent/cim/context.test.ts - CREATE: Context flow tests</loc>
+      <loc>manda-app/e2e/ - E2E tests with Playwright</loc>
+    </locations>
+    <ideas>
+      <!-- CONTENT_CREATION Prompt Tests (AC #1, #3, #4, #7, #8) -->
+      <test ac="1">CONTENT_CREATION prompt has CRITICAL section requiring opening message for each section</test>
+      <test ac="1">CONTENT_CREATION prompt includes 4-step flow pattern: Context → RAG → Present → Approve</test>
+      <test ac="3">CONTENT_CREATION prompt mentions Q&A priority - "Q&A answers first" or "most recent"</test>
+      <test ac="4">CONTENT_CREATION prompt requires 2-3 content options presentation</test>
+      <test ac="4">CONTENT_CREATION prompt enforces source citation format: (qa:), (finding:), (source:)</test>
+      <test ac="7">CONTENT_CREATION prompt references buyer persona and investment thesis</test>
+      <test ac="7">CONTENT_CREATION prompt mentions prior slides context</test>
+      <test ac="8">CONTENT_CREATION prompt includes contradiction handling guidance</test>
+      <!-- generateSlideContentTool Tests (AC #2) -->
+      <test ac="2">generateSlideContentTool searches Q&A items (text search on answered Q&As)</test>
+      <test ac="2">generateSlideContentTool searches findings via match_findings RPC with threshold > 0.3</test>
+      <test ac="2">generateSlideContentTool searches document_chunks via match_document_chunks RPC</test>
+      <test ac="2">generateSlideContentTool enriches findings with Neo4j relationships</test>
+      <test ac="2">generateSlideContentTool merges and ranks results with Q&A priority</test>
+      <test ac="2">generateSlideContentTool flags contradictions from CONTRADICTS relationships</test>
+      <!-- updateSlideTool Tests (AC #5, #6) -->
+      <test ac="5">updateSlideTool supports component-level updates</test>
+      <test ac="6">updateSlideTool handles status transition: draft → approved</test>
+      <test ac="6">updateSlideTool handles status transition: approved → draft (reversible)</test>
+      <!-- Content Retrieval Tests (AC #2) -->
+      <test ac="2">searchQAItems returns only answered Q&As with matching query</test>
+      <test ac="2">searchFindings returns findings above confidence threshold</test>
+      <test ac="2">searchDocumentChunks returns chunks with document/page metadata</test>
+      <test ac="2">enrichWithRelationships returns SUPPORTS, CONTRADICTS, SUPERSEDES for findings</test>
+      <test ac="2">mergeAndRankResults orders: Q&A first, then findings, then chunks</test>
+      <test ac="2">mergeAndRankResults boosts findings with SUPPORTS relationships</test>
+      <test ac="2">mergeAndRankResults flags findings with unresolved CONTRADICTS</test>
+      <!-- Context Flow Tests (AC #7) -->
+      <test ac="7">summarizePriorSlides extracts key points from completed slides</test>
+      <test ac="7">formatBuyerPersonaContext formats persona for prompt injection</test>
+      <test ac="7">formatThesisContext formats thesis for prompt injection</test>
+      <!-- State Persistence Tests (AC #9) -->
+      <test ac="9">generateSlideContentTool creates slide with all required fields in cims.slides</test>
+      <test ac="9">updateSlideTool persists component changes to cims.slides</test>
+      <test ac="9">source_refs are stored correctly with slide components</test>
+      <test ac="9">section_id linking maintains slide-section relationship</test>
+      <!-- Integration Tests -->
+      <test>Slide creation round-trip: create → read → update → approve → verify persistence</test>
+      <test>RAG search returns relevant content from multiple source types</test>
+      <test>Neo4j relationship queries return correct SUPPORTS/CONTRADICTS data</test>
+      <!-- Manual E2E Tests -->
+      <test>Full content creation flow: receive options → select option → modify → approve → next section</test>
+      <test>Context flow: verify second slide references first slide context</test>
+      <test>Contradiction warning: verify warning shown when CONTRADICTS relationship found</test>
+    </ideas>
+  </tests>
+</story-context>

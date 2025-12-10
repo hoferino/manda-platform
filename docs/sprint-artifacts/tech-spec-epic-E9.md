@@ -945,13 +945,15 @@ E9.S1 (Spike) ──── Can run in parallel
 
 | ID | Criterion | Testable |
 |----|-----------|----------|
-| AC-9.7.1 | For each section, agent initiates content ideation | Phase transition |
-| AC-9.7.2 | RAG queries pull relevant documents, findings, Q&A | Source citations present |
-| AC-9.7.3 | Agent presents content options with source citations | Multiple options shown |
-| AC-9.7.4 | User can select, modify, or request alternatives | All actions work |
-| AC-9.7.5 | Content approval locks slide (but can revisit) | Status changes to 'approved' |
-| AC-9.7.6 | Context flows forward: prior slides inform suggestions | Observe references |
-| AC-9.7.7 | Slide content stored in workflow_state.slides | DB check |
+| AC-9.7.1 | For each section, agent initiates content ideation with clear opening | Phase transition observable |
+| AC-9.7.2 | Hybrid content retrieval uses pgvector semantic search AND Neo4j relationship queries | Source citations with relationship indicators |
+| AC-9.7.3 | Q&A answers (most recent) prioritized over findings and document chunks | Q&A sources shown first when available |
+| AC-9.7.4 | Agent presents 2-3 content options with source citations: `(qa: question)`, `(finding: excerpt)`, `(source: file, page)` | Multiple options shown |
+| AC-9.7.5 | User can select, modify, or request alternative content approaches | All actions work |
+| AC-9.7.6 | Content approval changes slide status to 'approved' (reversible via non-linear nav) | Status changes to 'approved' |
+| AC-9.7.7 | Prior slides inform suggestions: agent references buyer persona, thesis, earlier content | Observe references to prior context |
+| AC-9.7.8 | Agent alerts user when findings have CONTRADICTS relationships in Neo4j | Contradiction warnings shown |
+| AC-9.7.9 | Slide content stored in cims.slides JSONB with section_id, components, source_refs, status | DB check verifies persistence |
 
 ### E9.8: Wireframe Preview Renderer
 

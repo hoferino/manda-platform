@@ -3,6 +3,7 @@
  *
  * Story: E9.5 - Buyer Persona & Investment Thesis Phase
  * Story: E9.6 - Agenda/Outline Collaborative Definition
+ * Story: E9.7 - Slide Content Creation (RAG-powered)
  *
  * Tests verify the tool schemas and structure for:
  * - save_buyer_persona tool (AC #6)
@@ -12,6 +13,11 @@
  * E9.6 Tools:
  * - delete_outline_section tool (AC #3)
  * - reorder_outline_sections tool (AC #4)
+ *
+ * E9.7 Tools:
+ * - generate_slide_content tool (AC #2, #3, #4)
+ * - select_content_option tool (AC #5)
+ * - approve_slide_content tool (AC #6)
  */
 
 import { describe, it, expect } from 'vitest'
@@ -23,6 +29,9 @@ import {
   updateOutlineSectionTool,
   deleteOutlineSectionTool,
   reorderOutlineSectionsTool,
+  generateSlideContentTool,
+  selectContentOptionTool,
+  approveSlideContentTool,
   cimTools,
   CIM_TOOL_COUNT,
 } from '@/lib/agent/cim/tools'
@@ -216,9 +225,118 @@ describe('E9.6 - CIM Tools for Outline Definition', () => {
       expect(toolNames).toContain('reorder_outline_sections')
     })
 
-    it('should have correct tool count (10 total)', () => {
-      expect(CIM_TOOL_COUNT).toBe(10)
-      expect(cimTools.length).toBe(10)
+    it('should have correct tool count (12 total with E9.7)', () => {
+      expect(CIM_TOOL_COUNT).toBe(12)
+      expect(cimTools.length).toBe(12)
+    })
+  })
+})
+
+describe('E9.7 - CIM Tools for Slide Content Creation', () => {
+  describe('generateSlideContentTool (AC #2, #3, #4)', () => {
+    it('should be exported and named correctly', () => {
+      expect(generateSlideContentTool).toBeDefined()
+      expect(generateSlideContentTool.name).toBe('generate_slide_content')
+    })
+
+    it('should have description mentioning hybrid RAG search', () => {
+      const description = generateSlideContentTool.description
+      expect(description.toLowerCase()).toContain('rag')
+      expect(description.toLowerCase()).toContain('search')
+    })
+
+    it('should mention Q&A answers as highest priority (AC #3)', () => {
+      const description = generateSlideContentTool.description
+      expect(description.toLowerCase()).toContain('q&a')
+      expect(description.toLowerCase()).toContain('highest priority')
+    })
+
+    it('should mention findings and document chunks (AC #2)', () => {
+      const description = generateSlideContentTool.description
+      expect(description.toLowerCase()).toContain('findings')
+      expect(description.toLowerCase()).toContain('document')
+    })
+
+    it('should mention source citations (AC #4)', () => {
+      const description = generateSlideContentTool.description
+      expect(description.toLowerCase()).toContain('citation')
+    })
+
+    it('should mention contradiction detection (AC #8)', () => {
+      const description = generateSlideContentTool.description
+      expect(description.toLowerCase()).toContain('contradiction')
+    })
+
+    it('should accept topic parameter for search', () => {
+      expect(generateSlideContentTool.schema).toBeDefined()
+    })
+  })
+
+  describe('selectContentOptionTool (AC #5)', () => {
+    it('should be exported and named correctly', () => {
+      expect(selectContentOptionTool).toBeDefined()
+      expect(selectContentOptionTool.name).toBe('select_content_option')
+    })
+
+    it('should have description mentioning option selection', () => {
+      const description = selectContentOptionTool.description
+      expect(description.toLowerCase()).toContain('option')
+      expect(description.toLowerCase()).toContain('select')
+    })
+
+    it('should mention common selection triggers', () => {
+      const description = selectContentOptionTool.description
+      expect(description.toLowerCase()).toContain('option a')
+      expect(description.toLowerCase()).toContain('i like')
+    })
+
+    it('should accept content and sourceRefs parameters', () => {
+      expect(selectContentOptionTool.schema).toBeDefined()
+    })
+  })
+
+  describe('approveSlideContentTool (AC #6)', () => {
+    it('should be exported and named correctly', () => {
+      expect(approveSlideContentTool).toBeDefined()
+      expect(approveSlideContentTool.name).toBe('approve_slide_content')
+    })
+
+    it('should have description mentioning approval', () => {
+      const description = approveSlideContentTool.description
+      expect(description.toLowerCase()).toContain('approve')
+    })
+
+    it('should mention common approval triggers', () => {
+      const description = approveSlideContentTool.description
+      expect(description.toLowerCase()).toContain('looks good')
+      expect(description.toLowerCase()).toContain('that works')
+      expect(description.toLowerCase()).toContain('perfect')
+    })
+
+    it('should mention status update', () => {
+      const description = approveSlideContentTool.description
+      expect(description.toLowerCase()).toContain('status')
+      expect(description.toLowerCase()).toContain('approved')
+    })
+
+    it('should mention next section info', () => {
+      const description = approveSlideContentTool.description
+      expect(description.toLowerCase()).toContain('next section')
+    })
+  })
+
+  describe('cimTools array includes E9.7 tools', () => {
+    it('should include all slide content tools', () => {
+      const toolNames = cimTools.map(t => t.name)
+
+      expect(toolNames).toContain('generate_slide_content')
+      expect(toolNames).toContain('select_content_option')
+      expect(toolNames).toContain('approve_slide_content')
+    })
+
+    it('should have correct tool count (12 total)', () => {
+      expect(CIM_TOOL_COUNT).toBe(12)
+      expect(cimTools.length).toBe(12)
     })
   })
 })

@@ -1530,34 +1530,45 @@ class CIMBuilderWorkflow:
 - **Tools Used:** `suggest_narrative_outline(buyer_persona, context)`
 
 **Stage: Slide Content Creation (Iterative)**
-- **Type:** Non-linear slide-by-slide content
-- **Checkpoints:** Content approval per slide
+- **Type:** Non-linear slide-by-slide content with hybrid RAG
+- **Checkpoints:** Content approval per slide (status: draft → approved, reversible)
 - **State Stored:**
-  - slides[] with content_elements
-  - source_citations[]
+  - slides[] with content_elements, section_id, source_refs, status
+  - source_citations[] with type attribution (qa/finding/document)
   - dependency_refs[]
 - **Tools Used:**
-  - `query_knowledge_base()` - Get relevant findings for slide content
+  - `searchQAItems()` - Text search on answered Q&A (HIGHEST PRIORITY - most recent data)
+  - `searchFindings()` - pgvector semantic search on findings (confidence > 0.3)
+  - `searchDocumentChunks()` - pgvector semantic search on raw document content
+  - `enrichWithRelationships()` - Neo4j queries for SUPPORTS/CONTRADICTS/SUPERSEDES
+  - `mergeAndRankResults()` - Priority merge: Q&A > Findings > Chunks
   - `validate_idea_coherence()` - Check content fits narrative
   - `generate_slide_blueprint()` - Create visual concept
 
 **Content Phase Logic:**
 ```python
 def build_slide_content(section, slide_topic):
-    # 1. Query RAG for relevant findings
-    findings = query_knowledge_base(
-        query=slide_topic,
-        filters={section: section, deal_id: current_deal}
-    )
+    # 1. Hybrid RAG search with Q&A priority
+    qa_results = search_qa_items(deal_id, slide_topic)  # Most recent
+    findings = search_findings(deal_id, slide_topic, threshold=0.3)
+    chunks = search_document_chunks(deal_id, slide_topic, threshold=0.3)
 
-    # 2. Present 3 content options
-    options = generate_content_options(findings, buyer_persona, narrative)
+    # 2. Enrich findings with Neo4j relationships
+    relationships = enrich_with_relationships(finding_ids)
+    # Flag any CONTRADICTS for user attention
 
-    # 3. Human checkpoint
+    # 3. Merge and rank (Q&A > Findings > Chunks)
+    ranked_content = merge_and_rank_results(qa_results, findings, chunks, relationships)
+
+    # 4. Present 2-3 content options with source citations
+    # Format: (qa: question), (finding: excerpt), (source: file, page)
+    options = generate_content_options(ranked_content, buyer_persona, narrative)
+
+    # 5. Human checkpoint
     selected = await human_input("Select option or suggest alternative")
 
-    # 4. Generate slide content with sources
-    content = create_slide_content(selected, findings)
+    # 6. Generate slide content with sources
+    content = create_slide_content(selected, ranked_content)
 
     return content
 ```

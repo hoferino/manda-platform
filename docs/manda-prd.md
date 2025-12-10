@@ -763,11 +763,14 @@ The workflow consists of flexible stages that users progress through conversatio
 - No fixed structure — supports custom CIM types for different buyer audiences
 
 **Stage: Slide Content Creation (Iterative)**
-- User selects which slide to build next (non-linear)
-- AI queries knowledge base (RAG) for relevant findings
-- Click-to-reference: click any source to add to conversation
-- AI presents content options with specific data points
-- Content approved before visual concept phase
+- Agent initiates content ideation with clear opening for each section
+- Hybrid content retrieval: pgvector semantic search + Neo4j relationship queries
+- Q&A answers prioritized (most recent client data) over findings and document chunks
+- AI presents 2-3 content options with source citations: `(qa: question)`, `(finding: excerpt)`, `(source: file, page)`
+- User selects, modifies, or requests alternative content approaches
+- Content approval changes slide status to 'approved' (reversible)
+- Context flows forward: agent references buyer persona, thesis, prior slides
+- Contradiction awareness: agent alerts user when findings have CONTRADICTS relationships
 - Dependency tracking: changes to early slides can propagate to later ones
 
 **Stage: Visual Concept Generation**
