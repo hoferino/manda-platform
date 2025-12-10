@@ -1560,8 +1560,21 @@ development_status:
       CIMEmptyState, useCIMs)
     - Build verified, TypeScript passes
   e9-2-points: 2
-  e9-3-cim-builder-3-panel-layout: backlog
+  e9-3-cim-builder-3-panel-layout: done
+  e9-3-drafted: 2025-12-10
+  e9-3-completed: 2025-12-10
   e9-3-points: 5
+  e9-3-notes: |
+    CIM Builder 3-Panel Layout completed. Key deliverables:
+    - CIMBuilderLayout.tsx with resizable panels (shadcn/ui resizable)
+    - Sources Panel: Documents, Findings, Q&A with click-to-reference
+    - Structure Tree: CIM outline with progress icons (complete/in_progress/pending)
+    - Conversation Panel: CIMMessageList, CIMChatInput with source ref support
+    - Preview Panel: SlidePreview (placeholder), SlideNavigation, SlideCounter
+    - Hooks: useCIMBuilder, useCIMChat, useSlideNavigation
+    - Chat API route (placeholder for E9.4 agent)
+    - 111 unit tests passing (includes new E9.3 tests)
+    - TypeScript type-check passes, build verified
   e9-4-agent-orchestration-core: backlog
   e9-4-points: 8
   # Workflow (3 stories)

@@ -1,0 +1,324 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>E9.3</storyId>
+    <title>CIM Builder 3-Panel Layout</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-10</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-3-cim-builder-3-panel-layout.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&A analyst</asA>
+    <iWant>a three-panel CIM Builder interface with Sources, Conversation, and Preview panels</iWant>
+    <soThat>I can efficiently create CIMs by referencing deal context, conversing with the agent, and previewing slide content simultaneously</soThat>
+    <tasks>
+      <task id="1" status="pending">Create CIM Builder page layout (AC: #1)
+        <subtask id="1.1">Create CIMBuilderLayout.tsx responsive container component</subtask>
+        <subtask id="1.2">Implement resizable panel grid using CSS Grid or flex with minimum widths</subtask>
+        <subtask id="1.3">Create CIMBuilderPage.tsx client component that orchestrates the 3 panels</subtask>
+        <subtask id="1.4">Update app/projects/[id]/cim-builder/[cimId]/page.tsx to load CIM and render layout</subtask>
+        <subtask id="1.5">Add responsive breakpoints (desktop: 3-panel, tablet: stacked, mobile: tabbed)</subtask>
+      </task>
+      <task id="2" status="pending">Build Sources Panel components (AC: #2, #3)
+        <subtask id="2.1">Create SourcesPanel.tsx container component</subtask>
+        <subtask id="2.2">Create DocumentsList.tsx with expandable accordion and deal documents</subtask>
+        <subtask id="2.3">Create FindingsList.tsx with expandable accordion and deal findings</subtask>
+        <subtask id="2.4">Create QAList.tsx with expandable accordion and deal Q&A items</subtask>
+        <subtask id="2.5">Implement click handler to insert source reference into chat input (AC: #3)</subtask>
+        <subtask id="2.6">Create SourceItem.tsx reusable component for list items with click action</subtask>
+        <subtask id="2.7">Add API integration to fetch documents, findings, Q&A for deal</subtask>
+        <subtask id="2.8">Unit tests for SourcesPanel components</subtask>
+      </task>
+      <task id="3" status="pending">Build Structure Sidebar (AC: #6)
+        <subtask id="3.1">Create StructureTree.tsx component showing CIM outline</subtask>
+        <subtask id="3.2">Implement progress icons (checkmark=complete, spinner=in-progress, pending=empty)</subtask>
+        <subtask id="3.3">Add click-to-jump functionality that updates current section</subtask>
+        <subtask id="3.4">Integrate with CIM workflow_state.outline data</subtask>
+        <subtask id="3.5">Unit tests for StructureTree component</subtask>
+      </task>
+      <task id="4" status="pending">Build Conversation Panel (AC: #4)
+        <subtask id="4.1">Create ConversationPanel.tsx container component</subtask>
+        <subtask id="4.2">Create CIMMessageList.tsx adapted from existing chat MessageList</subtask>
+        <subtask id="4.3">Create CIMChatInput.tsx with source reference support</subtask>
+        <subtask id="4.4">Implement auto-scroll on new messages with user scroll detection</subtask>
+        <subtask id="4.5">Add message history loading from cims.conversation_history</subtask>
+        <subtask id="4.6">Style messages with agent/user distinction and source citations</subtask>
+        <subtask id="4.7">Unit tests for ConversationPanel components</subtask>
+      </task>
+      <task id="5" status="pending">Build Preview Panel (AC: #5)
+        <subtask id="5.1">Create PreviewPanel.tsx container component</subtask>
+        <subtask id="5.2">Create SlidePreview.tsx placeholder component (wireframe styling)</subtask>
+        <subtask id="5.3">Create SlideNavigation.tsx with Prev/Next buttons</subtask>
+        <subtask id="5.4">Create SlideCounter.tsx showing "Slide X of Y" format</subtask>
+        <subtask id="5.5">Create useSlideNavigation.ts hook for navigation state</subtask>
+        <subtask id="5.6">Display empty state when no slides exist yet</subtask>
+        <subtask id="5.7">Unit tests for PreviewPanel components</subtask>
+      </task>
+      <task id="6" status="pending">Create CIM Builder state management (AC: #1-6)
+        <subtask id="6.1">Create useCIMBuilder.ts hook for centralized state management</subtask>
+        <subtask id="6.2">Implement CIM loading with workflow_state, slides, outline</subtask>
+        <subtask id="6.3">Create useCIMChat.ts hook for agent communication (extends existing useChat)</subtask>
+        <subtask id="6.4">Implement source reference insertion state</subtask>
+        <subtask id="6.5">Handle real-time updates to conversation_history</subtask>
+        <subtask id="6.6">Unit tests for state management hooks</subtask>
+      </task>
+      <task id="7" status="pending">API and data integration (AC: #2, #4, #5)
+        <subtask id="7.1">Create/extend API route GET /api/projects/[id]/cims/[cimId]/context for sources</subtask>
+        <subtask id="7.2">Ensure existing document/findings/Q&A endpoints work with CIM context</subtask>
+        <subtask id="7.3">Add conversation history to CIM GET response</subtask>
+        <subtask id="7.4">Build initial agent connection (placeholder for E9.4)</subtask>
+      </task>
+      <task id="8" status="pending">Testing (AC: #1-6)
+        <subtask id="8.1">Unit tests for CIMBuilderLayout (panel rendering, responsive behavior)</subtask>
+        <subtask id="8.2">Integration tests for data fetching (sources, CIM state)</subtask>
+        <subtask id="8.3">Accessibility tests (keyboard navigation, ARIA labels)</subtask>
+        <subtask id="8.4">Build verification (TypeScript type-check passes)</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC1" title="Three-Panel Responsive Layout">Three-panel responsive layout renders at /projects/[id]/cim-builder/[cimId] with Sources (left), Conversation (center), and Preview (right) panels (Visual inspection)</criterion>
+    <criterion id="AC2" title="Sources Panel Structure">Sources panel shows expandable sections: Documents, Findings, Q&A that display items from current deal (Expand each section, compare with deal data)</criterion>
+    <criterion id="AC3" title="Sources Panel Click-to-Reference">Clicking an item in Sources panel inserts a reference into the chat input (Click item, see reference in input)</criterion>
+    <criterion id="AC4" title="Conversation Panel">Conversation panel shows chat interface with message history, auto-scroll, and input area at bottom (Send message, see history)</criterion>
+    <criterion id="AC5" title="Preview Panel with Navigation">Preview panel shows slide preview area with Prev/Next navigation buttons and slide counter (Navigate slides, see counter update)</criterion>
+    <criterion id="AC6" title="Structure Sidebar">Structure sidebar within Sources panel shows CIM outline with progress icons and click-to-jump functionality (Click section, navigate to it)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E9.md</path>
+        <title>Epic E9 Technical Specification</title>
+        <section>E9.3 Acceptance Criteria, Detailed Design, UI Components</section>
+        <snippet>Defines 3-panel layout specs: Sources (300px min), Conversation (1fr grows), Preview (400px min). Components in components/cim-builder/ with SourcesPanel, ConversationPanel, PreviewPanel subdirectories.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/epics/epic-E9.md</path>
+        <title>Epic E9: CIM Builder</title>
+        <section>E9.3 Story Definition</section>
+        <snippet>NotebookLM-inspired three-panel layout with Sources, Conversation, and Preview panels. Structure sidebar shows CIM outline with progress icons (checkmark, spinner, pending).</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document v3.1</title>
+        <section>System Architecture, CIM Builder Integration</section>
+        <snippet>CIM Builder aligns with existing architecture: Frontend (Next.js 15), API Layer (Next.js API Routes), Agent Layer (LangGraph), Data Layer (Supabase PostgreSQL). Uses existing chat streaming infrastructure.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-prd.md</path>
+        <title>Manda Product Requirements Document</title>
+        <section>FR-CIM-001, FR-CIM-002</section>
+        <snippet>CIM Builder UI requirements: Agent-guided workflow, user-defined sections, iterative slide creation, RAG-powered content, multiple CIMs per deal.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>manda-app/lib/types/cim.ts</path>
+        <kind>types</kind>
+        <symbol>CIM, WorkflowState, Slide, ConversationMessage, OutlineSection</symbol>
+        <lines>1-641</lines>
+        <reason>Core CIM types including WorkflowState, Slide, ConversationMessage, OutlineSection. Contains Zod schemas and helper functions like calculateCIMProgress().</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/hooks/useCIMs.ts</path>
+        <kind>hook</kind>
+        <symbol>useCIMs</symbol>
+        <lines>1-186</lines>
+        <reason>Existing hook pattern for CIM list with optimistic updates. useCIMBuilder should follow same patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/hooks/useChat.ts</path>
+        <kind>hook</kind>
+        <symbol>useChat</symbol>
+        <lines>1-266</lines>
+        <reason>Existing chat hook with SSE streaming, message management, retry logic. useCIMChat should extend or adapt this pattern.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/app/projects/[id]/cim-builder/[cimId]/page.tsx</path>
+        <kind>page</kind>
+        <symbol>CIMBuilderEditorPage</symbol>
+        <lines>1-105</lines>
+        <reason>Current placeholder page to be replaced with full 3-panel implementation. Contains server-side auth and CIM verification logic to preserve.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/cim-builder/CIMListPage.tsx</path>
+        <kind>component</kind>
+        <symbol>CIMListPage</symbol>
+        <reason>E9.2 component patterns to follow for consistency (grid layout, empty states, dialogs).</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/cim-builder/CIMCard.tsx</path>
+        <kind>component</kind>
+        <symbol>CIMCard</symbol>
+        <reason>E9.2 card component showing progress indicator pattern via CIMProgressIndicator.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/cim-builder/CIMProgressIndicator.tsx</path>
+        <kind>component</kind>
+        <symbol>CIMProgressIndicator</symbol>
+        <reason>Reuse for structure tree progress icons. Has indicatorClassName prop for color customization.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/chat/MessageList.tsx</path>
+        <kind>component</kind>
+        <symbol>MessageList</symbol>
+        <reason>Adapt for CIMMessageList. Contains auto-scroll logic and message rendering patterns.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/chat/ChatInput.tsx</path>
+        <kind>component</kind>
+        <symbol>ChatInput</symbol>
+        <reason>Adapt for CIMChatInput. Contains keyboard shortcuts (Enter/Shift+Enter), loading states.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/chat/MessageItem.tsx</path>
+        <kind>component</kind>
+        <symbol>MessageItem</symbol>
+        <reason>Message rendering with markdown, tool indicators, source citations. Reuse for conversation panel.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/components/chat/SourceCitationLink.tsx</path>
+        <kind>component</kind>
+        <symbol>SourceCitationLink</symbol>
+        <reason>Existing source citation component with DocumentPreviewModal. Reuse in conversation panel.</reason>
+      </artifact>
+      <artifact>
+        <path>manda-app/lib/services/cim.ts</path>
+        <kind>service</kind>
+        <symbol>CIM CRUD operations</symbol>
+        <reason>Existing CIM service with getCIM, updateCIM. Extend with conversation history operations.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package>react</package>
+        <version>^19.2.0</version>
+        <usage>Core UI framework</usage>
+      </node>
+      <node>
+        <package>next</package>
+        <version>^15.0.0</version>
+        <usage>App Router, API routes, Server Components</usage>
+      </node>
+      <node>
+        <package>@supabase/supabase-js</package>
+        <version>^2.84.0</version>
+        <usage>Database operations, auth, realtime subscriptions</usage>
+      </node>
+      <node>
+        <package>zod</package>
+        <version>^4.1.13</version>
+        <usage>Schema validation for CIM types</usage>
+      </node>
+      <node>
+        <package>zustand</package>
+        <version>^5.0.8</version>
+        <usage>UI state management (if needed for complex panel state)</usage>
+      </node>
+      <node>
+        <package>lucide-react</package>
+        <version>latest</version>
+        <usage>Icons for UI (ChevronLeft, ChevronRight, Check, Loader2, Circle)</usage>
+      </node>
+      <node>
+        <package>sonner</package>
+        <version>latest</version>
+        <usage>Toast notifications</usage>
+      </node>
+      <node>
+        <package>@radix-ui/react-accordion</package>
+        <version>latest</version>
+        <usage>Expandable sections in Sources panel (via shadcn/ui)</usage>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="dev-notes">Panel Layout: CSS Grid with flex fallback. Min widths: Sources 300px, Preview 400px, Conversation grows (1fr).</constraint>
+    <constraint source="dev-notes">State Management: Custom hooks + Zustand pattern matching useCIMs, useChat.</constraint>
+    <constraint source="dev-notes">Source Reference Format: 📄 [doc:uuid] "Name", 💡 [finding:uuid] "text...", ❓ [qa:uuid] "question..."</constraint>
+    <constraint source="dev-notes">Preview Placeholder: E9.8 will implement full renderer. Placeholder enables UI testing now.</constraint>
+    <constraint source="dev-notes">Message History: Load from conversation_history JSONB, persists across sessions.</constraint>
+    <constraint source="architecture">Responsive Breakpoints: Desktop (>1200px) 3-panel, Tablet (768-1200px) stacked, Mobile (&lt;768px) tabbed.</constraint>
+    <constraint source="architecture">Desktop-only for MVP: Mobile-responsive CIM Builder out of scope.</constraint>
+    <constraint source="tech-spec">Performance targets: CIM load &lt;2s, agent response TTFB &lt;1s, slide preview render &lt;100ms.</constraint>
+    <constraint source="tech-spec">Error handling: Graceful degradation, retry failed LLM calls 3x with exponential backoff.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>GET /api/projects/[id]/cims/[cimId]</name>
+      <kind>REST endpoint</kind>
+      <signature>GET /api/projects/{projectId}/cims/{cimId} → CIM (with workflowState, slides, outline, conversationHistory)</signature>
+      <path>manda-app/app/api/projects/[id]/cims/[cimId]/route.ts</path>
+    </interface>
+    <interface>
+      <name>GET /api/projects/[id]/cims/[cimId]/context</name>
+      <kind>REST endpoint (new)</kind>
+      <signature>GET /api/projects/{projectId}/cims/{cimId}/context → { documents: Document[], findings: Finding[], qaItems: QAItem[] }</signature>
+      <path>manda-app/app/api/projects/[id]/cims/[cimId]/context/route.ts (to create)</path>
+    </interface>
+    <interface>
+      <name>CIM interface</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface CIM { id, dealId, title, workflowState, buyerPersona, investmentThesis, outline, slides, dependencyGraph, conversationHistory, ... }</signature>
+      <path>manda-app/lib/types/cim.ts</path>
+    </interface>
+    <interface>
+      <name>useCIMBuilder hook</name>
+      <kind>React hook (new)</kind>
+      <signature>useCIMBuilder(projectId, cimId) → { cim, isLoading, error, updateSlides, updateOutline, addMessage, ... }</signature>
+      <path>manda-app/lib/hooks/useCIMBuilder.ts (to create)</path>
+    </interface>
+    <interface>
+      <name>useCIMChat hook</name>
+      <kind>React hook (new)</kind>
+      <signature>useCIMChat(projectId, cimId) → { messages, isStreaming, sendMessage, sourceRef, setSourceRef, ... }</signature>
+      <path>manda-app/lib/hooks/useCIMChat.ts (to create)</path>
+    </interface>
+    <interface>
+      <name>useSlideNavigation hook</name>
+      <kind>React hook (new)</kind>
+      <signature>useSlideNavigation(slides) → { currentIndex, goToSlide, goToPrev, goToNext, currentSlide, totalSlides }</signature>
+      <path>manda-app/lib/hooks/useSlideNavigation.ts (to create)</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing follows established patterns: Vitest for unit tests, React Testing Library for component tests, Playwright for E2E.
+      Unit tests use vi.mock for external dependencies (Supabase, fetch).
+      Component tests verify rendering, user interactions, and accessibility (ARIA labels).
+      Shared test utilities available in __tests__/utils/supabase-mock.ts.
+      Coverage targets: 80% for new code.
+      E2E tests for critical user flows (navigate to CIM, click sources, send message).
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/components/cim-builder/</location>
+      <location>manda-app/__tests__/lib/hooks/useCIMBuilder.test.ts</location>
+      <location>manda-app/__tests__/lib/hooks/useCIMChat.test.ts</location>
+      <location>manda-app/__tests__/lib/hooks/useSlideNavigation.test.ts</location>
+      <location>manda-app/e2e/cim-builder.spec.ts (E2E)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC1">Test CIMBuilderLayout renders 3 panels with correct structure and minimum widths</idea>
+      <idea ac="AC1">Test responsive behavior: 3-panel on desktop, stacked on tablet</idea>
+      <idea ac="AC2">Test SourcesPanel accordion expansion/collapse for Documents, Findings, Q&A sections</idea>
+      <idea ac="AC2">Test data fetching integration: documents/findings/QA displayed correctly</idea>
+      <idea ac="AC3">Test click handler on SourceItem inserts correct reference format into chat input</idea>
+      <idea ac="AC4">Test ConversationPanel displays message history with correct user/assistant styling</idea>
+      <idea ac="AC4">Test auto-scroll behavior when new messages arrive</idea>
+      <idea ac="AC4">Test CIMChatInput submit with Enter key, multiline with Shift+Enter</idea>
+      <idea ac="AC5">Test SlideNavigation Prev/Next buttons update current slide</idea>
+      <idea ac="AC5">Test SlideCounter displays correct "Slide X of Y" format</idea>
+      <idea ac="AC5">Test empty state when no slides exist</idea>
+      <idea ac="AC6">Test StructureTree renders outline sections with correct progress icons</idea>
+      <idea ac="AC6">Test click-to-jump navigates to correct section</idea>
+      <idea ac="AC6">Test progress icons update based on section status (pending/in_progress/complete)</idea>
+    </ideas>
+  </tests>
+</story-context>
