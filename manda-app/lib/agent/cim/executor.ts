@@ -18,7 +18,6 @@ import {
   CIMAgentStateType,
   createInitialState,
   convertToLangChainMessages,
-  convertFromLangChainMessages,
   serializeState,
   deserializeState,
 } from './state'
@@ -31,8 +30,15 @@ import {
   CIMAgentConfig,
 } from './workflow'
 import { getCIMSystemPrompt } from './prompts'
-import { ConversationMessage, CIM, WorkflowState, mapDbRowToCIM, CIMDbRow } from '@/lib/types/cim'
-import { Json } from '@/lib/supabase/database.types'
+import {
+  ConversationMessage,
+  CIM,
+  WorkflowState,
+  mapDbRowToCIM,
+  CIMDbRow,
+  Slide,
+} from '@/lib/types/cim'
+import { parseComponentReference } from '@/lib/cim/reference-utils'
 
 // ============================================================================
 // Types
@@ -46,8 +52,8 @@ export interface CIMChatResult {
   response: string
   metadata: {
     phase: string
-    slideRef?: string
-    componentRef?: string
+    slide_ref?: string
+    component_ref?: string
     sources?: Array<{ type: string; id: string; title: string }>
   }
   workflowState: WorkflowState
@@ -70,6 +76,54 @@ const workflowCache = new Map<string, {
   workflow: CIMWorkflow
   config: CIMAgentConfig
 }>()
+
+function findComponentById(slides: Slide[], componentId: string) {
+  for (const slide of slides) {
+    const component = slide.components.find(c => c.id === componentId)
+    if (component) {
+      return { slide, component }
+    }
+  }
+  return null
+}
+
+function prepareComponentContext(message: string, slides: Slide[]) {
+  const parsed = parseComponentReference(message)
+  if (!parsed.componentId) {
+    return {
+      agentMessage: message,
+      componentRef: null,
+      slideRef: null,
+    }
+  }
+
+  const match = findComponentById(slides, parsed.componentId)
+  if (!match) {
+    return {
+      agentMessage: message,
+      componentRef: parsed.componentId,
+      slideRef: null,
+    }
+  }
+
+  const instruction = parsed.instruction || ''
+  const contextHeader = [
+    'Component edit request:',
+    `- component_id: ${parsed.componentId}`,
+    `- slide_id: ${match.slide.id}`,
+    `- slide_title: ${match.slide.title}`,
+    `- component_type: ${match.component.type}`,
+    `- current_content: "${match.component.content || ''}"`,
+  ].join('\n')
+
+  const agentMessage = `${contextHeader}\n- instruction: ${instruction || '(ask for clarification if unclear)'}\n- required_action: Use update_slide tool to modify this component\n- update_instruction: Keep other components unchanged and write back the full slide with this component updated\n\nOriginal message: ${message}`
+
+  return {
+    agentMessage,
+    componentRef: parsed.componentId,
+    slideRef: match.slide.id,
+  }
+}
 
 /**
  * Get or create a workflow for a CIM
@@ -162,7 +216,8 @@ export async function executeCIMChat(
 
   // Execute workflow
   const threadId = `cim-${cimId}`
-  const result = await executeCIMWorkflow(workflow, message, threadId, initialState)
+  const { agentMessage, componentRef, slideRef } = prepareComponentContext(message, cim.slides)
+  const result = await executeCIMWorkflow(workflow, agentMessage, threadId, initialState)
 
   // Extract assistant response
   const assistantMessages = result.messages.filter(
@@ -175,9 +230,6 @@ export async function executeCIMChat(
 
   // Create message ID
   const messageId = crypto.randomUUID()
-
-  // Convert messages back to storage format
-  const newMessages = convertFromLangChainMessages(result.messages)
 
   // Build updated workflow state
   const updatedWorkflowState: WorkflowState = {
@@ -194,6 +246,7 @@ export async function executeCIMChat(
     role: 'user',
     content: message,
     timestamp: new Date().toISOString(),
+    metadata: componentRef || slideRef ? { component_ref: componentRef || undefined, slide_ref: slideRef || undefined } : undefined,
   }
 
   const assistantMsg: ConversationMessage = {
@@ -203,6 +256,8 @@ export async function executeCIMChat(
     timestamp: new Date().toISOString(),
     metadata: {
       phase: result.state.currentPhase,
+      component_ref: componentRef || undefined,
+      slide_ref: slideRef || undefined,
     },
   }
 
@@ -228,7 +283,8 @@ export async function executeCIMChat(
     response: responseContent,
     metadata: {
       phase: result.state.currentPhase,
-      sources: result.state.sources,
+      component_ref: componentRef || undefined,
+      slide_ref: slideRef || undefined,
     },
     workflowState: updatedWorkflowState,
   }
@@ -295,11 +351,12 @@ export async function* streamCIMChat(
 
   // Stream execution
   const threadId = `cim-${cimId}`
+  const { agentMessage, componentRef, slideRef } = prepareComponentContext(message, cim.slides)
   let fullContent = ''
   let finalState: CIMAgentStateType | null = null
 
   try {
-    for await (const event of streamCIMWorkflow(workflow, message, threadId, initialState)) {
+    for await (const event of streamCIMWorkflow(workflow, agentMessage, threadId, initialState)) {
       if (event.type === 'token') {
         fullContent += event.data as string
         yield { type: 'token', data: event.data }
@@ -321,6 +378,7 @@ export async function* streamCIMChat(
         role: 'user',
         content: message,
         timestamp: new Date().toISOString(),
+        metadata: componentRef || slideRef ? { component_ref: componentRef || undefined, slide_ref: slideRef || undefined } : undefined,
       }
 
       const assistantMsg: ConversationMessage = {
@@ -330,6 +388,8 @@ export async function* streamCIMChat(
         timestamp: new Date().toISOString(),
         metadata: {
           phase: finalState.currentPhase,
+          component_ref: componentRef || undefined,
+          slide_ref: slideRef || undefined,
         },
       }
 

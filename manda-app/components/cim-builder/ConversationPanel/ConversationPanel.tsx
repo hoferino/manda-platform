@@ -55,7 +55,8 @@ export function ConversationPanel({
   const handleSend = React.useCallback(
     async (content: string) => {
       // Prepend source reference if present
-      const fullContent = sourceRef ? `${sourceRef}\n\n${content}` : content
+      const alreadyPrefixed = sourceRef && content.trimStart().startsWith(sourceRef)
+      const fullContent = sourceRef && !alreadyPrefixed ? `${sourceRef}\n\n${content}` : content
       await sendMessage(fullContent)
       onSourceRefClear()
     },

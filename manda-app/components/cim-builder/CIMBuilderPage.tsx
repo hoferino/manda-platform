@@ -22,6 +22,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { formatComponentReference } from '@/lib/cim/reference-utils'
 
 interface CIMBuilderPageProps {
   projectId: string
@@ -74,6 +75,15 @@ export function CIMBuilderPage({
       }
     },
     [cim, setCurrentSlideIndex]
+  )
+
+  // Handle component click in preview (E9.9)
+  const handleComponentSelect = React.useCallback(
+    (componentId: string, content: string) => {
+      const reference = formatComponentReference(componentId, content)
+      setSourceRef(reference)
+    },
+    [setSourceRef]
   )
 
   if (error) {
@@ -149,6 +159,7 @@ export function CIMBuilderPage({
               slides={cim.slides}
               currentIndex={currentSlideIndex}
               onIndexChange={setCurrentSlideIndex}
+              onComponentSelect={handleComponentSelect}
             />
           }
         />

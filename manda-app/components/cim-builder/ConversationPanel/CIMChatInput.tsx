@@ -7,13 +7,19 @@
  * Shows source reference badge when a source is selected.
  *
  * Story: E9.3 - CIM Builder 3-Panel Layout
- * AC: #3 - Source reference appears in input after clicking
- * AC: #4 - Input area at bottom of conversation panel
+ * Updated: E9.9 - Click-to-reference with component refs in input
  */
 
 import * as React from 'react'
-import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react'
-import { Send, Loader2, X } from 'lucide-react'
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  type KeyboardEvent,
+  type ChangeEvent,
+} from 'react'
+import { Send, Loader2, X, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +46,7 @@ export function CIMChatInput({
 }: CIMChatInputProps) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const previousSourceRef = useRef<string>('')
 
   // Handle input change with auto-resize
   const handleChange = useCallback(
@@ -71,6 +78,15 @@ export function CIMChatInput({
     }
   }, [value, isLoading, onSubmit])
 
+  const isComponentRef = sourceRef?.startsWith('📍')
+
+  const handleClearRef = useCallback(() => {
+    if (isComponentRef && sourceRef && value.startsWith(sourceRef)) {
+      setValue('')
+    }
+    onSourceRefClear?.()
+  }, [isComponentRef, onSourceRefClear, sourceRef, value])
+
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -89,19 +105,38 @@ export function CIMChatInput({
     [handleSubmit]
   )
 
+  // Insert component reference into the input when provided (E9.9)
+  useEffect(() => {
+    if (sourceRef && sourceRef.startsWith('📍') && sourceRef !== previousSourceRef.current) {
+      const referenceText = `${sourceRef} `
+      setValue(referenceText)
+
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          const cursorPos = referenceText.length
+          textareaRef.current.focus()
+          textareaRef.current.setSelectionRange(cursorPos, cursorPos)
+        }
+      })
+    }
+
+    previousSourceRef.current = sourceRef
+  }, [sourceRef])
+
   return (
     <div className={cn('border-t bg-background p-3', className)}>
       {/* Source reference badge */}
       {sourceRef && (
         <div className="mb-2 flex items-center gap-2">
           <Badge
-            variant="secondary"
+            variant={isComponentRef ? 'default' : 'secondary'}
             className="max-w-full truncate pr-1 flex items-center gap-1"
           >
+            {isComponentRef && <MapPin className="h-3 w-3" />}
             <span className="truncate">{sourceRef}</span>
             {onSourceRefClear && (
               <button
-                onClick={onSourceRefClear}
+                onClick={handleClearRef}
                 className="ml-1 hover:bg-muted rounded p-0.5"
                 aria-label="Clear source reference"
               >
