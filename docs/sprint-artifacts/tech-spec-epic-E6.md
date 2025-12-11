@@ -10,6 +10,13 @@ Status: Draft
 > - Sprint-status.yaml and epics.md use the new numbering
 > - This tech spec retains original E6.1-E6.8 section headers for reference
 
+> **UX Pivot Note (2025-12-11):** IRL feature location changed based on UAT feedback:
+> - **Removed:** IRL creation/management from Deliverables tab
+> - **Enhanced:** IRL Checklist in Data Room sidebar now includes full CRUD operations
+> - **Added:** Export to Excel/CSV, Add Section, Add Item, Remove Section, Remove Item
+> - **Preserved:** IRL template selection in project creation wizard (Step 2)
+> - See [Sprint Change Proposal](../sprint-change-proposal-2025-12-11.md) for details
+
 ---
 
 ## Overview

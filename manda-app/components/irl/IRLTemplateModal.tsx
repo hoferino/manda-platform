@@ -202,7 +202,26 @@ interface CategorySectionProps {
   onToggle: () => void
 }
 
+interface SubcategoryGroupProps {
+  subcategory: string
+  items: IRLTemplateItem[]
+}
+
 function CategorySection({ category, isExpanded, onToggle }: CategorySectionProps) {
+  // Group items by subcategory
+  const itemsWithoutSubcategory = category.items.filter(item => !item.subcategory)
+  const itemsBySubcategory = category.items.reduce((acc, item) => {
+    if (item.subcategory) {
+      if (!acc[item.subcategory]) {
+        acc[item.subcategory] = []
+      }
+      acc[item.subcategory]!.push(item)
+    }
+    return acc
+  }, {} as Record<string, IRLTemplateItem[]>)
+
+  const hasSubcategories = Object.keys(itemsBySubcategory).length > 0
+
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <CollapsibleTrigger asChild>
@@ -225,12 +244,58 @@ function CategorySection({ category, isExpanded, onToggle }: CategorySectionProp
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="mt-2 ml-6 space-y-2">
-          {category.items.map((item, index) => (
+          {/* Items without subcategory */}
+          {itemsWithoutSubcategory.map((item, index) => (
             <ItemRow key={`${category.name}-${index}`} item={item} />
+          ))}
+
+          {/* Subcategory groups */}
+          {hasSubcategories && Object.entries(itemsBySubcategory).map(([subcategory, items]) => (
+            <SubcategoryGroup
+              key={`${category.name}-${subcategory}`}
+              subcategory={subcategory}
+              items={items}
+            />
           ))}
         </div>
       </CollapsibleContent>
     </Collapsible>
+  )
+}
+
+function SubcategoryGroup({ subcategory, items }: SubcategoryGroupProps) {
+  const [isExpanded, setIsExpanded] = useState(true)
+
+  return (
+    <div className="border-l-2 border-muted-foreground/20 pl-3">
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        <CollapsibleTrigger asChild>
+          <button
+            className="flex items-center justify-between w-full p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+            data-testid={`subcategory-${subcategory.toLowerCase().replace(/\s+/g, '-')}`}
+          >
+            <div className="flex items-center gap-2">
+              {isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span className="font-medium text-sm">{subcategory}</span>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {items.length}
+            </Badge>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-2 space-y-2">
+            {items.map((item, index) => (
+              <ItemRow key={`${subcategory}-${index}`} item={item} />
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
   )
 }
 

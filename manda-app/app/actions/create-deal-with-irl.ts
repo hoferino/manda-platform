@@ -132,6 +132,7 @@ export async function createDealWithIRL(
           description: item.description || '',
           priority: item.priority,
           status: 'not_started',
+          subcategory: item.subcategory,
         })),
       }))
 
@@ -163,7 +164,7 @@ export async function createDealWithIRL(
           cat.items.map((item, itemIndex) => ({
             irl_id: irl.id,
             category: cat.name,
-            subcategory: null,
+            subcategory: item.subcategory || null,
             item_name: item.name,
             description: item.description || null,
             priority: item.priority || 'medium',

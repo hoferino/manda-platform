@@ -7,9 +7,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
@@ -23,14 +24,18 @@ export interface IRLChecklistItemProps {
   item: IRLItem
   /** Called after successful toggle action */
   onToggle?: (itemId: string, fulfilled: boolean) => void
+  /** Called when item should be removed */
+  onRemove?: (itemId: string) => void
 }
 
 export function IRLChecklistItem({
   item,
   onToggle,
+  onRemove,
 }: IRLChecklistItemProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [localFulfilled, setLocalFulfilled] = useState(item.fulfilled)
+  const [isHovered, setIsHovered] = useState(false)
 
   // Handle checkbox toggle
   const handleToggle = async () => {
@@ -59,17 +64,27 @@ export function IRLChecklistItem({
     }
   }
 
+  // Handle remove item
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (onRemove) {
+      onRemove(item.id)
+    }
+  }
+
   return (
     <TooltipProvider>
       <div
         className={cn(
-          'flex items-start gap-2 rounded-md px-2 py-1.5 text-sm',
+          'group flex items-start gap-2 rounded-md px-2 py-1.5 text-sm',
           'hover:bg-muted/50 transition-colors cursor-pointer',
           localFulfilled && 'bg-green-50/50 dark:bg-green-950/20'
         )}
         onClick={handleToggle}
         role="button"
         tabIndex={0}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -125,9 +140,28 @@ export function IRLChecklistItem({
           )}
         </div>
 
-        {/* Required indicator */}
-        {item.required && !localFulfilled && (
-          <span className="text-xs text-destructive flex-shrink-0">*</span>
+        {/* Required indicator or Remove button */}
+        {onRemove && isHovered ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={handleRemove}
+                aria-label={`Remove "${item.name}"`}
+              >
+                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="text-xs">Remove item</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          item.required && !localFulfilled && (
+            <span className="text-xs text-destructive flex-shrink-0">*</span>
+          )
         )}
       </div>
     </TooltipProvider>

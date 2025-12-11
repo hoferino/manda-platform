@@ -277,6 +277,76 @@ Epic 7 (Learning Loop) can start immediately. Key stories:
 
 ---
 
+## Post-Epic Enhancements
+
+### IRL Template Subcategory Support (December 11, 2025)
+
+**Enhancement:** Extended IRL templates to support three-level hierarchy (Category → Subcategory → Item)
+
+**Context:**
+During user testing, it was discovered that templates needed better organization within categories. Items were being grouped into logical subcategories in the checklist, but:
+- Preview modal didn't show subcategory structure
+- Folder generation didn't create subfolders for subcategories
+- Template data model didn't formally support subcategories
+
+**Implementation:**
+
+1. **Type System Updates** - Added optional `subcategory` field to `IRLTemplateItem`:
+   ```typescript
+   export interface IRLTemplateItem {
+     name: string
+     description?: string
+     priority: IRLPriority
+     subcategory?: string  // NEW
+   }
+   ```
+
+2. **Preview Modal Enhancement** - Updated `IRLTemplateModal.tsx`:
+   - Created `SubcategoryGroup` component for nested display
+   - Items grouped by subcategory with visual hierarchy
+   - Expandable/collapsible sections at category and subcategory levels
+   - Visual indentation with left border for subcategory groups
+
+3. **Folder Generation** - Updated `folders.ts`:
+   - `getIRLCategoryStructure()` now extracts subcategories from template data
+   - Automatic nested folder creation: `category/subcategory/`
+   - Maintains proper GCS path structure
+
+4. **Data Flow** - Updated `create-deal-with-irl.ts`:
+   - Stores subcategory in `irls.sections` JSONB column
+   - Creates `irl_items` records with subcategory values
+   - Preserves subcategory through entire creation workflow
+
+**Example Hierarchy:**
+```
+✓ Financial Information (category)
+  ├─ Balance Sheet (item without subcategory)
+  └─ ✓ Financial Statements (subcategory)
+      ├─ Income Statement
+      └─ Cash Flow Statement
+```
+
+**Results:**
+- ✅ Backward compatible (subcategory is optional)
+- ✅ No database migrations required
+- ✅ Preview shows complete hierarchy
+- ✅ Folders created match IRL structure
+- ✅ Compiled with no type errors
+
+**Files Modified:**
+- `lib/types/irl.ts` - Type definitions and validation
+- `components/irl/IRLTemplateModal.tsx` - Hierarchical preview
+- `lib/services/folders.ts` - Subcategory extraction
+- `app/actions/create-deal-with-irl.ts` - Data persistence
+
+**Impact:**
+- Better template organization and clarity
+- Automatic nested folder structure
+- Improved user experience during project creation
+- Consistent hierarchy across checklist, preview, and folders
+
+---
+
 ## Lessons Learned
 
 ### Technical

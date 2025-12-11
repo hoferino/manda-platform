@@ -7,7 +7,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, ClipboardList, Filter } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardList, Filter, Download, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -19,6 +19,12 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from '@/components/ui/tooltip'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { IRLChecklistItem } from './irl-checklist-item'
 import { IRLEmptyState } from './irl-empty-state'
 import {
@@ -28,6 +34,7 @@ import {
   type IRLCategory,
   type IRLItem,
 } from '@/lib/api/irl'
+import { toast } from 'sonner'
 
 const COLLAPSE_STORAGE_KEY = 'manda-irl-panel-collapsed'
 const FILTER_STORAGE_KEY = 'manda-irl-panel-filter-unfulfilled'
@@ -48,6 +55,9 @@ export function IRLChecklistPanel({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [showUnfulfilledOnly, setShowUnfulfilledOnly] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const [isAddingSectionOpen, setIsAddingSectionOpen] = useState(false)
+  const [newSectionName, setNewSectionName] = useState('')
 
   // Load collapse and filter state from localStorage
   useEffect(() => {
@@ -141,6 +151,83 @@ export function IRLChecklistPanel({
     })
   }, [])
 
+  // Handle export to Excel/CSV
+  const handleExport = useCallback(async (format: 'excel' | 'csv') => {
+    if (!irl) return
+
+    setIsExporting(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/irls/${irl.id}/export?format=${format}`)
+      if (!response.ok) {
+        throw new Error('Export failed')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `IRL-Checklist-${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : 'csv'}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast.success(`Exported to ${format.toUpperCase()}`)
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Failed to export checklist')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [irl, projectId])
+
+  // Handle add section
+  const handleAddSection = useCallback(async () => {
+    if (!irl || !newSectionName.trim()) return
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/irls/${irl.id}/sections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newSectionName.trim() }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add section')
+      }
+
+      toast.success(`Added section: ${newSectionName}`)
+      setNewSectionName('')
+      setIsAddingSectionOpen(false)
+      await loadIRL()
+    } catch (error) {
+      console.error('Add section error:', error)
+      toast.error('Failed to add section')
+    }
+  }, [irl, newSectionName, projectId, loadIRL])
+
+  // Handle remove section
+  const handleRemoveSection = useCallback(async (categoryName: string) => {
+    if (!irl) return
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/irls/${irl.id}/sections/${encodeURIComponent(categoryName)}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to remove section')
+      }
+
+      toast.success(`Removed section: ${categoryName}`)
+      await loadIRL()
+    } catch (error: any) {
+      console.error('Remove section error:', error)
+      toast.error(error.message || 'Failed to remove section')
+    }
+  }, [irl, projectId, loadIRL])
+
   // Calculate categories with filtering
   const categories = useMemo(() => {
     if (!irl) return []
@@ -203,6 +290,36 @@ export function IRLChecklistPanel({
             <h3 className="font-semibold">IRL Checklist</h3>
           </div>
           <div className="flex items-center gap-1">
+            {/* Export Dropdown */}
+            {irl && (
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={isExporting}
+                        aria-label="Export checklist"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Export checklist</TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleExport('excel')}>
+                    Export to Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('csv')}>
+                    Export to CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {/* Filter Toggle */}
             <Tooltip>
               <TooltipTrigger asChild>
@@ -275,7 +392,7 @@ export function IRLChecklistPanel({
 
             {/* Items List */}
             <ScrollArea className="flex-1">
-              <div className="p-4">
+              <div className="p-4 space-y-4">
                 {categories.length === 0 ? (
                   <p className="text-center text-sm text-muted-foreground">
                     {showUnfulfilledOnly
@@ -283,16 +400,75 @@ export function IRLChecklistPanel({
                       : 'No items in this IRL'}
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <>
                     {categories.map((category) => (
                       <IRLChecklistCategory
                         key={category.name}
                         category={category}
+                        irlId={irl.id}
+                        projectId={projectId}
                         isExpanded={expandedCategories.has(category.name)}
                         onToggle={() => toggleCategory(category.name)}
                         onItemToggle={handleItemToggle}
+                        onRemoveSection={handleRemoveSection}
+                        onRefresh={loadIRL}
                       />
                     ))}
+                  </>
+                )}
+
+                {/* Add Section Button */}
+                {!showUnfulfilledOnly && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setIsAddingSectionOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Section
+                  </Button>
+                )}
+
+                {/* Add Section Dialog (inline simple version) */}
+                {isAddingSectionOpen && (
+                  <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
+                    <input
+                      type="text"
+                      placeholder="Section name..."
+                      value={newSectionName}
+                      onChange={(e) => setNewSectionName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddSection()
+                        if (e.key === 'Escape') {
+                          setIsAddingSectionOpen(false)
+                          setNewSectionName('')
+                        }
+                      }}
+                      className="w-full px-2 py-1 text-sm border rounded"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleAddSection}
+                        disabled={!newSectionName.trim()}
+                        className="flex-1"
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setIsAddingSectionOpen(false)
+                          setNewSectionName('')
+                        }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -309,18 +485,75 @@ export function IRLChecklistPanel({
  */
 interface IRLChecklistCategoryProps {
   category: IRLCategory
+  irlId: string
+  projectId: string
   isExpanded: boolean
   onToggle: () => void
   onItemToggle?: (itemId: string, fulfilled: boolean) => void
+  onRemoveSection?: (categoryName: string) => void
+  onRefresh?: () => void
 }
 
 function IRLChecklistCategory({
   category,
+  irlId,
+  projectId,
   isExpanded,
   onToggle,
   onItemToggle,
+  onRemoveSection,
+  onRefresh,
 }: IRLChecklistCategoryProps) {
+  const [isAddingItem, setIsAddingItem] = useState(false)
+  const [newItemName, setNewItemName] = useState('')
   const allFulfilled = category.completedCount === category.totalCount && category.totalCount > 0
+
+  // Handle add item to this category
+  const handleAddItem = useCallback(async () => {
+    if (!newItemName.trim()) return
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/irls/${irlId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: category.name,
+          name: newItemName.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add item')
+      }
+
+      toast.success(`Added item: ${newItemName}`)
+      setNewItemName('')
+      setIsAddingItem(false)
+      onRefresh?.()
+    } catch (error) {
+      console.error('Add item error:', error)
+      toast.error('Failed to add item')
+    }
+  }, [newItemName, category.name, irlId, projectId, onRefresh])
+
+  // Handle remove item
+  const handleRemoveItem = useCallback(async (itemId: string, itemName: string) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/irls/${irlId}/items/${itemId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to remove item')
+      }
+
+      toast.success(`Removed: ${itemName}`)
+      onRefresh?.()
+    } catch (error) {
+      console.error('Remove item error:', error)
+      toast.error('Failed to remove item')
+    }
+  }, [irlId, projectId, onRefresh])
 
   return (
     <div className={cn(
@@ -328,34 +561,58 @@ function IRLChecklistCategory({
       allFulfilled && "border-green-200 dark:border-green-800/50 bg-green-50/30 dark:bg-green-950/20"
     )}>
       {/* Category Header */}
-      <button
-        type="button"
-        className={cn(
-          'flex w-full items-center justify-between px-3 py-2 text-left',
-          'hover:bg-muted/50 transition-colors rounded-t-lg',
-          isExpanded && 'border-b'
-        )}
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-2">
-          <ChevronRight className={cn(
-            "h-4 w-4 transition-transform",
-            isExpanded && "rotate-90"
-          )} />
+      <div className="flex items-center">
+        <button
+          type="button"
+          className={cn(
+            'flex flex-1 items-center justify-between px-3 py-2 text-left',
+            'hover:bg-muted/50 transition-colors rounded-tl-lg',
+            isExpanded && 'border-b'
+          )}
+          onClick={onToggle}
+        >
+          <div className="flex items-center gap-2">
+            <ChevronRight className={cn(
+              "h-4 w-4 transition-transform",
+              isExpanded && "rotate-90"
+            )} />
+            <span className={cn(
+              "font-medium text-sm",
+              allFulfilled && "text-green-700 dark:text-green-400"
+            )}>{category.name}</span>
+          </div>
           <span className={cn(
-            "font-medium text-sm",
-            allFulfilled && "text-green-700 dark:text-green-400"
-          )}>{category.name}</span>
-        </div>
-        <span className={cn(
-          "text-xs",
-          allFulfilled
-            ? "text-green-600 dark:text-green-400 font-medium"
-            : "text-muted-foreground"
-        )}>
-          {category.completedCount}/{category.totalCount}
-        </span>
-      </button>
+            "text-xs",
+            allFulfilled
+              ? "text-green-600 dark:text-green-400 font-medium"
+              : "text-muted-foreground"
+          )}>
+            {category.completedCount}/{category.totalCount}
+          </span>
+        </button>
+        {/* Remove Section Button */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 mr-1 text-muted-foreground hover:text-destructive"
+                onClick={() => {
+                  if (category.totalCount > 0) {
+                    toast.error('Remove all items from this section first')
+                  } else {
+                    onRemoveSection?.(category.name)
+                  }
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Remove section</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
 
       {/* Category Items */}
       {isExpanded && (
@@ -365,8 +622,61 @@ function IRLChecklistCategory({
               key={item.id}
               item={item}
               onToggle={onItemToggle}
+              onRemove={(itemId) => handleRemoveItem(itemId, item.name)}
             />
           ))}
+
+          {/* Add Item Button */}
+          {!isAddingItem ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs h-7"
+              onClick={() => setIsAddingItem(true)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add Item
+            </Button>
+          ) : (
+            <div className="border rounded p-2 space-y-2 bg-background">
+              <input
+                type="text"
+                placeholder="Item name..."
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddItem()
+                  if (e.key === 'Escape') {
+                    setIsAddingItem(false)
+                    setNewItemName('')
+                  }
+                }}
+                className="w-full px-2 py-1 text-xs border rounded"
+                autoFocus
+              />
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  onClick={handleAddItem}
+                  disabled={!newItemName.trim()}
+                  className="flex-1 h-6 text-xs"
+                >
+                  Add
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddingItem(false)
+                    setNewItemName('')
+                  }}
+                  className="flex-1 h-6 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

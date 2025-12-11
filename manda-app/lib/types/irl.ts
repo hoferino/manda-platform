@@ -31,6 +31,7 @@ export interface IRLTemplateItem {
   name: string
   description?: string
   priority: IRLPriority
+  subcategory?: string
 }
 
 /**
@@ -289,6 +290,7 @@ export const IRLTemplateItemSchema = z.object({
   name: z.string().min(1, 'Item name is required'),
   description: z.string().optional(),
   priority: z.enum(IRL_PRIORITIES),
+  subcategory: z.string().optional(),
 })
 
 /**

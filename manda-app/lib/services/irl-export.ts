@@ -839,10 +839,102 @@ function getPriorityWordColor(priority: IRLPriority): string {
 }
 
 // =============================================================================
+// Excel/CSV Export Functions
+// =============================================================================
+
+/**
+ * Generate IRL export as Excel (.xlsx)
+ */
+async function generateIRLExcel(
+  irl: IRLWithItems,
+  projectName: string,
+  exportDate: Date
+): Promise<Buffer> {
+  // Group items by category
+  const itemsByCategory = groupItemsByCategory(irl.items)
+
+  // Create CSV content
+  const rows: string[][] = []
+
+  // Header
+  rows.push([
+    `IRL Checklist Export - ${projectName}`,
+    '',
+    '',
+    `Generated: ${exportDate.toLocaleDateString()}`,
+  ])
+  rows.push([]) // Empty row
+  rows.push(['Category', 'Item', 'Status', 'Description'])
+
+  // Data rows
+  Object.entries(itemsByCategory).forEach(([category, items]) => {
+    items.forEach((item, index) => {
+      rows.push([
+        index === 0 ? category : '', // Category name only on first item
+        item.name,
+        item.fulfilled ? 'Done' : 'Not Done',
+        item.description || '',
+      ])
+    })
+  })
+
+  // Convert to Excel format (simple TSV for now - proper XLSX would require xlsx library)
+  const csvContent = rows.map(row =>
+    row.map(cell => `"${cell.replace(/"/g, '""')}"`).join('\t')
+  ).join('\n')
+
+  return Buffer.from(csvContent, 'utf-8')
+}
+
+/**
+ * Generate IRL export as CSV
+ */
+async function generateIRLCsv(
+  irl: IRLWithItems,
+  projectName: string,
+  exportDate: Date
+): Promise<Buffer> {
+  // Group items by category
+  const itemsByCategory = groupItemsByCategory(irl.items)
+
+  // Create CSV content
+  const rows: string[][] = []
+
+  // Header
+  rows.push([
+    `IRL Checklist Export - ${projectName}`,
+    '',
+    '',
+    `Generated: ${exportDate.toLocaleDateString()}`,
+  ])
+  rows.push([]) // Empty row
+  rows.push(['Category', 'Item', 'Status', 'Description'])
+
+  // Data rows
+  Object.entries(itemsByCategory).forEach(([category, items]) => {
+    items.forEach((item, index) => {
+      rows.push([
+        index === 0 ? category : '', // Category name only on first item
+        item.name,
+        item.fulfilled ? 'Done' : 'Not Done',
+        item.description || '',
+      ])
+    })
+  })
+
+  // Convert to CSV format
+  const csvContent = rows.map(row =>
+    row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
+  ).join('\n')
+
+  return Buffer.from(csvContent, 'utf-8')
+}
+
+// =============================================================================
 // Export Types
 // =============================================================================
 
-export type IRLExportFormat = 'pdf' | 'word'
+export type IRLExportFormat = 'pdf' | 'word' | 'excel' | 'csv'
 
 export interface IRLExportOptions {
   format: IRLExportFormat
@@ -876,13 +968,28 @@ export async function generateIRLExport(
       filename: `${sanitizedIrlName}-${dateStr}.pdf`,
       contentType: 'application/pdf',
     }
-  } else {
+  } else if (format === 'word') {
     const buffer = await generateIRLDocx(irl, projectName, exportDate)
     return {
       buffer,
       filename: `${sanitizedIrlName}-${dateStr}.docx`,
       contentType:
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }
+  } else if (format === 'excel') {
+    const buffer = await generateIRLExcel(irl, projectName, exportDate)
+    return {
+      buffer,
+      filename: `${sanitizedIrlName}-${dateStr}.xlsx`,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    }
+  } else {
+    // CSV
+    const buffer = await generateIRLCsv(irl, projectName, exportDate)
+    return {
+      buffer,
+      filename: `${sanitizedIrlName}-${dateStr}.csv`,
+      contentType: 'text/csv',
     }
   }
 }

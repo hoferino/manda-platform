@@ -120,13 +120,28 @@ export async function getIRLCategoryStructure(
 
   if (!irlError && irlData?.sections) {
     // Parse sections JSONB - each section is a category
-    const sections = irlData.sections as Array<{ name: string; items?: Array<{ name: string }> }>
+    const sections = irlData.sections as Array<{
+      name: string
+      items?: Array<{ name: string; subcategory?: string }>
+    }>
 
     if (sections && Array.isArray(sections) && sections.length > 0) {
-      return sections.map((section) => ({
-        category: section.name,
-        subcategories: [], // Templates don't have subcategories, only categories
-      }))
+      return sections.map((section) => {
+        // Extract unique subcategories from items
+        const subcategories = new Set<string>()
+        if (section.items) {
+          section.items.forEach(item => {
+            if (item.subcategory) {
+              subcategories.add(item.subcategory)
+            }
+          })
+        }
+
+        return {
+          category: section.name,
+          subcategories: Array.from(subcategories),
+        }
+      })
     }
   }
 

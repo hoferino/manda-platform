@@ -299,19 +299,33 @@ Each bucket card shows:
   - Create subfolder
   - Link to IRL item (if IRL configured)
 
-**Right Panel: Document Checklist**
+**Right Panel: IRL Checklist**
 
-**Overall Progress:** 15/19 documents (79%)
+**Header:**
+- Progress: 15/19 items (79%)
+- Filter Toggle: [All Items] / [Not Done Only]
+- Export Button: Export to Excel/CSV
 
 **Hierarchical Checklist:**
-- Mirrors IRL structure
+- Expandable sections (categories)
 - Status indicators:
-  - ✓ Uploaded (green checkmark)
-  - ⏱ Pending (orange clock)
-  - ○ Not started (empty circle)
-- File type icons (PDF, XLSX, DOCX)
-- Quick actions: Upload, view, manage
+  - ✓ Done (green checkmark)
+  - ○ Not Done (empty circle)
+- Per-Section Actions:
+  - Add Item (+)
+  - Remove Section (trash icon - only if empty)
+  - Collapse/Expand (chevron)
+- Per-Item Actions:
+  - Toggle checkbox (mark done/not done)
+  - Remove Item (trash icon on hover)
 - Expand/collapse categories
+
+**CRUD Operations:**
+- **Add Section:** "Add Section" button at bottom of checklist opens inline input form
+- **Add Item:** "Add Item" button per section opens inline input form
+- **Remove Section:** Trash icon in section header (validates section is empty first)
+- **Remove Item:** Trash icon appears on item hover
+- **Export:** Dropdown menu with Excel/CSV options
 
 **Bucket Organization:**
 
@@ -576,35 +590,13 @@ Each bucket card shows:
 
 ### 5.5 Deliverables Studio
 
-**Purpose:** Create and manage IRL, Q&A lists, and CIM
+**Purpose:** Create and manage Q&A lists and CIM
+
+**Note:** IRL (Information Request List) management has been moved to the Data Room checklist sidebar. IRL template selection happens during project creation wizard (Step 2).
 
 **Tab Navigation:**
 
-#### Tab 1: IRL (Information Request List)
-
-**Layout:**
-
-**Template Selection:**
-- Choose template (Tech M&A, Industrial, Pharma, Custom)
-- Preview template structure
-- Customize categories and items
-
-**IRL Builder:**
-- **Category Sections:** Financial, Legal, Operational, etc.
-- **Per-Category:**
-  - Add/remove items
-  - Mark priority (high, medium, low)
-  - Set expected delivery date
-  - Add notes/instructions
-- **Export:** PDF, Word, Excel
-
-**Status Tracking:**
-- Link to Data Room (which docs fulfill which items)
-- Progress indicators
-- Missing items highlighted
-- Follow-up reminders
-
-#### Tab 2: Q&A List
+#### Tab 1: Q&A List
 
 **Purpose:** Collaborative question and answer development
 
@@ -651,7 +643,7 @@ Each bucket card shows:
 
 **Export:** PDF, Word, Excel
 
-#### Tab 3: CIM (Confidential Information Memorandum)
+#### Tab 2: CIM (Confidential Information Memorandum)
 
 **Purpose:** AI-assisted CIM generation and editing
 
