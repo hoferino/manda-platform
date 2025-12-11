@@ -238,17 +238,39 @@ Before we begin, verify:
 
 ## Critical Bugs Found
 
-### 🔴 BUG-001: IRL Template Does Not Create Folders
+### 🔴 BUG-001: IRL Template Does Not Create Folders ✅ FIXED
 **Severity:** CRITICAL
 **Test:** T1.3
 **Impact:** Breaks entire IRL workflow - template selection has no effect
+**Status:** FIXED (2025-12-11 18:45 CET) - Ready for retest
 **Description:**
 - Selecting an IRL template and creating project does nothing
 - Expected: Template sections → folders in data room + IRL checklist populated
 - Actual: Data room empty, IRL checklist empty
 - Workaround: Manual folder creation works
 
-**Files Affected:** IRL template creation logic, folder generation
+**Root Cause:**
+- IRL creation API created IRL record but never called folder generation endpoint
+- Folder generation endpoint exists (`POST /api/projects/[id]/irls/[irlId]/generate-folders`) but was never invoked
+- Integration gap between IRL creation flow and folder generation service
+
+**Fix Applied (2025-12-11 18:45 CET):**
+- ✅ Modified `manda-app/app/api/projects/[id]/irls/route.ts` (lines 152-178) - Auto-generate folders after IRL creation
+- ✅ Updated `manda-app/lib/types/irl.ts` (lines 437-447) - Add folders field to CreateIRLResponse type
+- ✅ Updated `manda-app/app/projects/[id]/deliverables/deliverables-client.tsx` (lines 119-130) - Log folder generation stats
+- Implements Option A (automatic generation) from [bug-001-fix-proposal.md](bug-001-fix-proposal.md)
+
+**Testing Guide:** See [bug-001-testing-guide.md](bug-001-testing-guide.md)
+
+**Next Action:**
+1. Restart Next.js dev server: `pkill -f "next dev" && npm run dev`
+2. Retest T1.3 following testing guide
+3. If successful, retest T1.9 and T1.10 (now unblocked)
+
+**Files Affected:**
+- `manda-app/app/api/projects/[id]/irls/route.ts`
+- `manda-app/lib/types/irl.ts`
+- `manda-app/app/projects/[id]/deliverables/deliverables-client.tsx`
 
 ---
 
@@ -512,7 +534,64 @@ Ready for PM agent review to prioritize:
 
 ---
 
-*Last Updated: 2025-12-11 17:45 CET*
+## Post-Epic Completion Session (2025-12-11 19:30 CET)
+
+**Context:** After completing E1.5 (Project Creation Wizard) and marking it as done, additional critical issues were discovered during UAT that required immediate attention.
+
+### Issues Discovered Post-Epic
+1. **Complete IRL Workflow Integration Gap**
+   - IRL template selection in wizard stored `irl_template` string but never triggered IRL/folder creation
+   - Template names in wizard didn't match backend template IDs
+   - No server-side integration between deal creation and IRL generation
+
+2. **UX Issues in Wizard**
+   - "Change Template" button required extra click (should always show dropdown)
+   - Template preview showed generic sections instead of actual template items
+   - "Upload Custom" option description unclear
+
+### Post-Epic Changes Applied
+
+**1. Created Server Action for Integrated Workflow**
+- **File:** `app/actions/create-deal-with-irl.ts` (NEW)
+- **Purpose:** Single server action that orchestrates: Deal creation → IRL creation → Folder generation
+- **Key Features:**
+  - Template name to ID mapping (`TEMPLATE_NAME_TO_ID`)
+  - Handles 'none' (empty project) and 'upload' (custom IRL) cases
+  - Returns folder creation count for user feedback
+  - Graceful degradation (deal created even if IRL/folders fail)
+
+**2. Updated Project Creation Wizard**
+- **File:** `app/projects/new/page.tsx`
+- **Changes:**
+  - Line 17: Changed from `createDeal` to `createDealWithIRL`
+  - Lines 107-147: Updated submit handler to use integrated workflow
+  - Added folder count in success toast messages
+
+**3. Fixed Template Names and UX**
+- **File:** `components/wizard/Step3IRLTemplate.tsx`
+- **Changes:**
+  - Lines 28-89: Updated template names to match backend (e.g., "Tech M&A Standard IRL" → "Tech M&A")
+  - Line 29: Changed `DEFAULT_TEMPLATE` to "General M&A"
+  - Lines 258-275: Removed "Change Template" button, dropdown now always visible
+  - Lines 344-368: Improved "What Happens Next" descriptions
+
+### Files Modified Post-Epic
+| File | Type | Purpose |
+|------|------|---------|
+| `app/actions/create-deal-with-irl.ts` | CREATE | Integrated workflow server action |
+| `app/projects/new/page.tsx` | MODIFY | Use new server action |
+| `components/wizard/Step3IRLTemplate.tsx` | MODIFY | Fix names, remove button, improve UX |
+
+### Status
+**Ready for Testing** - Complete IRL workflow integration implemented
+- Server running with changes loaded
+- Wizard now properly integrated with backend
+- Template names standardized
+- Next: Test project creation with all templates
+
+---
+
+*Last Updated: 2025-12-11 19:30 CET*
 *Testing Session: Journey 1 - Deal Setup & IRL Foundation*
-*Tester: Max | Test Architect: Murat (Tea Agent)*
-*Status: PAUSED - Awaiting PM prioritization for next testing phase*
+*Tester: Max | Test Architect: Murat (Tea Agent) | PM: John*
+*Status: POST-EPIC CHANGES APPLIED - Ready for integrated workflow testing*

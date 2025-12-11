@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import { WizardLayout } from '@/components/wizard/WizardLayout'
 import { Step1BasicInfo } from '@/components/wizard/Step1BasicInfo'
 import { Step3IRLTemplate as Step2IRLTemplate, NO_IRL_TEMPLATE, UPLOAD_IRL_TEMPLATE } from '@/components/wizard/Step3IRLTemplate'
-import { createDeal } from '@/lib/api/deals-client'
+import { createDealWithIRL } from '@/app/actions/create-deal-with-irl'
 
 interface WizardFormData {
   projectName: string
@@ -71,12 +71,15 @@ export default function NewProjectPage() {
       case 1:
         return formData.projectName.trim().length > 0
       case 2:
-        // Step 2 (IRL Template) is always valid - user can choose "Empty Project" or a template
-        return true
+        // Step 2 is valid if user has made a selection:
+        // - Empty project: irlTemplate === NO_IRL_TEMPLATE
+        // - Upload custom: irlTemplate === UPLOAD_IRL_TEMPLATE
+        // - Use template: irlTemplate is a valid template name (non-empty string)
+        return formData.irlTemplate.trim().length > 0
       default:
         return false
     }
-  }, [currentStep, formData.projectName])
+  }, [currentStep, formData.projectName, formData.irlTemplate])
 
   // Handle next step
   const handleNext = useCallback(() => {
@@ -104,12 +107,14 @@ export default function NewProjectPage() {
     setIsSubmitting(true)
 
     try {
-      // Handle special IRL cases - send null for 'none' or 'upload'
-      const irlTemplate = (formData.irlTemplate === NO_IRL_TEMPLATE || formData.irlTemplate === UPLOAD_IRL_TEMPLATE)
-        ? null
+      // Handle special IRL cases - send 'none' or 'upload' as-is
+      const irlTemplate = formData.irlTemplate === NO_IRL_TEMPLATE
+        ? 'none'
+        : formData.irlTemplate === UPLOAD_IRL_TEMPLATE
+        ? 'upload'
         : formData.irlTemplate || null
 
-      const result = await createDeal({
+      const result = await createDealWithIRL({
         name: formData.projectName.trim(),
         company_name: formData.companyName.trim() || null,
         industry: formData.industry || null,
@@ -123,9 +128,18 @@ export default function NewProjectPage() {
       }
 
       if (result.data) {
-        toast.success('Project created successfully!')
-        // Redirect to project workspace (E1.6 will implement the actual workspace)
-        // For now, redirect to projects list
+        // Show success message with IRL creation feedback
+        if (result.irlCreated && result.foldersCreated) {
+          toast.success(
+            `Project created successfully! Generated ${result.foldersCreated} folders from IRL template.`
+          )
+        } else if (irlTemplate === 'upload') {
+          toast.success('Project created! You can now upload your custom IRL.')
+        } else {
+          toast.success('Project created successfully!')
+        }
+
+        // Redirect to project workspace
         router.push(`/projects/${result.data.id}/dashboard`)
       }
     } catch (error) {

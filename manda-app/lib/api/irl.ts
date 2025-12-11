@@ -114,45 +114,82 @@ export async function getProjectIRL(projectId: string): Promise<{
       throw itemsError
     }
 
-    // Get documents linked to IRL items
-    const { data: docsData, error: docsError } = await supabase
-      .from('documents')
-      .select('id, name, irl_item_id')
-      .eq('deal_id', projectId)
-      .not('irl_item_id', 'is', null)
+    let items: IRLItem[] = []
 
-    if (docsError) {
-      throw docsError
-    }
+    // If no items in irl_items table, try to load from sections JSONB (template-based IRLs)
+    if (!itemsData || itemsData.length === 0) {
+      const sections = irlData.sections as Array<{
+        name: string
+        items: Array<{
+          name: string
+          description?: string
+          priority?: string
+          status?: string
+        }>
+      }> | null
 
-    // Create a map of item_id -> document info
-    const docsByItemId = new Map<string, { id: string; name: string }>()
-    for (const doc of docsData || []) {
-      if (doc.irl_item_id) {
-        docsByItemId.set(doc.irl_item_id, { id: doc.id, name: doc.name })
+      if (sections && Array.isArray(sections)) {
+        let sortOrder = 0
+        for (const section of sections) {
+          for (const sectionItem of section.items || []) {
+            items.push({
+              id: `${irlData.id}-${section.name}-${sortOrder}`, // Generate temp ID
+              irlId: irlData.id,
+              category: section.name,
+              name: sectionItem.name,
+              description: sectionItem.description || null,
+              required: sectionItem.priority === 'high' || sectionItem.priority === 'medium',
+              fulfilled: sectionItem.status === 'completed',
+              sortOrder: sortOrder++,
+              documentId: null,
+              documentName: null,
+              createdAt: irlData.created_at,
+              updatedAt: irlData.updated_at,
+            })
+          }
+        }
       }
-    }
+    } else {
+      // Get documents linked to IRL items
+      const { data: docsData, error: docsError } = await supabase
+        .from('documents')
+        .select('id, name, irl_item_id')
+        .eq('deal_id', projectId)
+        .not('irl_item_id', 'is', null)
 
-    // Map items with document info
-    // Use type assertion to access fulfilled until migration is applied
-    const items: IRLItem[] = (itemsData || []).map((item) => {
-      const linkedDoc = docsByItemId.get(item.id)
-      const itemWithFulfilled = item as typeof item & { fulfilled?: boolean }
-      return {
-        id: item.id,
-        irlId: item.irl_id,
-        category: item.category,
-        name: item.item_name,
-        description: item.description,
-        required: item.required ?? true,
-        fulfilled: itemWithFulfilled.fulfilled ?? false,
-        sortOrder: item.sort_order ?? 0,
-        documentId: linkedDoc?.id || null,
-        documentName: linkedDoc?.name || null,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
+      if (docsError) {
+        throw docsError
       }
-    })
+
+      // Create a map of item_id -> document info
+      const docsByItemId = new Map<string, { id: string; name: string }>()
+      for (const doc of docsData || []) {
+        if (doc.irl_item_id) {
+          docsByItemId.set(doc.irl_item_id, { id: doc.id, name: doc.name })
+        }
+      }
+
+      // Map items with document info
+      // Use type assertion to access fulfilled until migration is applied
+      items = itemsData.map((item) => {
+        const linkedDoc = docsByItemId.get(item.id)
+        const itemWithFulfilled = item as typeof item & { fulfilled?: boolean }
+        return {
+          id: item.id,
+          irlId: item.irl_id,
+          category: item.category,
+          name: item.item_name,
+          description: item.description,
+          required: item.required ?? true,
+          fulfilled: itemWithFulfilled.fulfilled ?? false,
+          sortOrder: item.sort_order ?? 0,
+          documentId: linkedDoc?.id || null,
+          documentName: linkedDoc?.name || null,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+        }
+      })
+    }
 
     // Calculate progress based on fulfilled status
     const completedCount = items.filter((item) => item.fulfilled).length

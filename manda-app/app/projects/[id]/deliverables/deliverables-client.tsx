@@ -116,6 +116,19 @@ export function DeliverablesClient({ projectId }: DeliverablesClientProps) {
 
       const data = await response.json()
 
+      // Log folder generation results (BUG-001 fix feedback)
+      if (data.folders) {
+        if (data.folders.created > 0) {
+          console.log(
+            `✅ Auto-generated ${data.folders.created} folders from IRL template` +
+            (data.folders.skipped > 0 ? ` (skipped ${data.folders.skipped} existing)` : '')
+          )
+        }
+        if (data.folders.errors?.length > 0) {
+          console.warn('⚠️ Folder generation errors:', data.folders.errors)
+        }
+      }
+
       // Close dialog and open the IRL builder
       setIsCreating(false)
       setSelectedTemplate(null)

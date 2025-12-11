@@ -102,11 +102,35 @@ export interface IRLCategoryStructure {
 
 /**
  * Get unique categories and their subcategories from IRL items
+ *
+ * This function supports two data sources:
+ * 1. irl_items table (legacy/manual IRL creation)
+ * 2. irls.sections JSONB column (template-based IRL creation)
  */
 export async function getIRLCategoryStructure(
   supabase: SupabaseClient<Database>,
   irlId: string
 ): Promise<IRLCategoryStructure[]> {
+  // First, try to get categories from the sections JSONB column
+  const { data: irlData, error: irlError } = await supabase
+    .from('irls')
+    .select('sections')
+    .eq('id', irlId)
+    .single()
+
+  if (!irlError && irlData?.sections) {
+    // Parse sections JSONB - each section is a category
+    const sections = irlData.sections as Array<{ name: string; items?: Array<{ name: string }> }>
+
+    if (sections && Array.isArray(sections) && sections.length > 0) {
+      return sections.map((section) => ({
+        category: section.name,
+        subcategories: [], // Templates don't have subcategories, only categories
+      }))
+    }
+  }
+
+  // Fallback: Try to get categories from irl_items table (legacy approach)
   const { data, error } = await supabase
     .from('irl_items')
     .select('category, subcategory')

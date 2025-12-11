@@ -149,9 +149,38 @@ export async function POST(request: NextRequest, context: RouteContext) {
       )
     }
 
+    // Auto-generate folders from IRL template (BUG-001 fix)
+    // This creates the Data Room folder structure automatically when using a template
+    let folderGenerationResult = null
+    if (templateId && template) {
+      try {
+        const { createFoldersFromIRL } = await import('@/lib/services/folders')
+        folderGenerationResult = await createFoldersFromIRL(
+          supabase,
+          projectId,
+          irlData.id
+        )
+        console.log(
+          `[IRL Creation] Auto-generated ${folderGenerationResult.created} folders ` +
+          `from template "${template.name}" (skipped ${folderGenerationResult.skipped} existing)`
+        )
+      } catch (error) {
+        // Don't fail IRL creation if folder generation fails
+        // User can still manually create folders or regenerate later
+        console.error('[IRL Creation] Failed to auto-generate folders:', error)
+        folderGenerationResult = {
+          created: 0,
+          skipped: 0,
+          errors: [(error as Error).message || 'Unknown error'],
+          folders: [],
+        }
+      }
+    }
+
     const response: CreateIRLResponse = {
       irl,
       items: items.length > 0 ? items : undefined,
+      folders: folderGenerationResult || undefined,
     }
 
     return NextResponse.json(response, { status: 201 })

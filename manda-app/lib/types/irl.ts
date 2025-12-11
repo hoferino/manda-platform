@@ -434,4 +434,15 @@ export interface IRLsResponse {
 export interface CreateIRLResponse {
   irl: IRL
   items?: IRLItem[]
+  folders?: {
+    created: number
+    skipped: number
+    errors: string[]
+    folders: Array<{
+      id: string
+      name: string
+      path: string
+      gcsPath: string
+    }>
+  }
 }

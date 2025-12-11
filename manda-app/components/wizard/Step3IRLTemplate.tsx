@@ -8,8 +8,8 @@
 
 'use client'
 
-import { useState } from 'react'
-import { ChevronDown, ChevronUp, FileText, Check, FolderOpen, Upload } from 'lucide-react'
+import { useEffect } from 'react'
+import { FileText, Check, FolderOpen, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -26,12 +26,13 @@ export const NO_IRL_TEMPLATE = 'none'
 export const UPLOAD_IRL_TEMPLATE = 'upload'
 
 // Default template for new projects
-const DEFAULT_TEMPLATE = 'General M&A IRL'
+const DEFAULT_TEMPLATE = 'General M&A'
 
 // IRL template configuration
+// NOTE: These names MUST match TEMPLATE_NAME_TO_ID in create-deal-with-irl.ts
 export const IRL_TEMPLATES = {
   'tech-ma': {
-    name: 'Tech M&A Standard IRL',
+    name: 'Tech M&A',
     sections: [
       'Company Information',
       'Financial Statements (3 years)',
@@ -42,7 +43,7 @@ export const IRL_TEMPLATES = {
     ],
   },
   industrial: {
-    name: 'Industrial M&A IRL',
+    name: 'Industrial',
     sections: [
       'Company Information',
       'Financial Statements',
@@ -53,7 +54,7 @@ export const IRL_TEMPLATES = {
     ],
   },
   pharma: {
-    name: 'Pharma M&A IRL',
+    name: 'Pharma',
     sections: [
       'Company Information',
       'Financial Statements',
@@ -63,8 +64,19 @@ export const IRL_TEMPLATES = {
       'R&D Pipeline',
     ],
   },
+  financial: {
+    name: 'Financial Services',
+    sections: [
+      'Company Information',
+      'Financial Statements',
+      'Regulatory Compliance',
+      'Risk Management',
+      'Customer Data',
+      'Technology Systems',
+    ],
+  },
   custom: {
-    name: 'General M&A IRL',
+    name: 'General M&A',
     sections: [
       'Company Information',
       'Financial Statements',
@@ -89,9 +101,6 @@ export function Step3IRLTemplate({
   selectedTemplate,
   onTemplateChange,
 }: Step3IRLTemplateProps) {
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false)
-  const [showTemplateSelect, setShowTemplateSelect] = useState(false)
-
   // Determine which option is selected
   const getSelectedOption = (): IrlOption => {
     if (selectedTemplate === NO_IRL_TEMPLATE) return 'empty'
@@ -99,6 +108,13 @@ export function Step3IRLTemplate({
     return 'template'
   }
   const selectedOption = getSelectedOption()
+
+  // Auto-select default template when switching to "Use Template" option
+  useEffect(() => {
+    if (selectedOption === 'template' && !selectedTemplate) {
+      onTemplateChange(DEFAULT_TEMPLATE)
+    }
+  }, [selectedOption, selectedTemplate, onTemplateChange])
 
   // Get the template data for the selected template
   const templateKey = Object.entries(IRL_TEMPLATES).find(
@@ -251,75 +267,42 @@ export function Step3IRLTemplate({
       {selectedOption === 'template' && (
         <Card>
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{selectedTemplate}</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowTemplateSelect(!showTemplateSelect)}
-              >
-                Change Template
-              </Button>
-            </div>
+            <CardTitle className="text-lg">Select Template</CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {/* Template Selector */}
-            {showTemplateSelect && (
-              <div className="space-y-2 border-b pb-4">
-                <Select
-                  value={selectedTemplate}
-                  onValueChange={(value) => {
-                    onTemplateChange(value)
-                    setShowTemplateSelect(false)
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(IRL_TEMPLATES).map(([key, tmpl]) => (
-                      <SelectItem key={key} value={tmpl.name}>
-                        {tmpl.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Template Selector - ALWAYS VISIBLE */}
+            <div className="space-y-2">
+              <Select
+                value={selectedTemplate}
+                onValueChange={(value) => onTemplateChange(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(IRL_TEMPLATES).map(([key, tmpl]) => (
+                    <SelectItem key={key} value={tmpl.name}>
+                      {tmpl.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Preview Section */}
-            <div>
-              <Button
-                variant="ghost"
-                className="w-full justify-between px-0 hover:bg-transparent"
-                onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
-              >
-                <span className="text-sm font-medium">Preview Template Sections</span>
-                {isPreviewExpanded ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-
-              <div
-                className={cn(
-                  'overflow-hidden transition-all duration-200',
-                  isPreviewExpanded ? 'mt-3 max-h-96' : 'max-h-0'
-                )}
-              >
-                <ul className="space-y-2 border-l-2 border-muted pl-4">
-                  {template.sections.map((section, index) => (
-                    <li
-                      key={index}
-                      className="text-sm text-muted-foreground"
-                    >
-                      {section}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Preview Template Sections</h4>
+              <ul className="space-y-2 border-l-2 border-muted pl-4">
+                {template.sections.map((section, index) => (
+                  <li
+                    key={index}
+                    className="text-sm text-muted-foreground"
+                  >
+                    {section}
+                  </li>
+                ))}
+              </ul>
             </div>
           </CardContent>
         </Card>
@@ -343,25 +326,25 @@ export function Step3IRLTemplate({
 
       {/* Summary */}
       <div className="rounded-lg bg-muted/50 p-4">
-        <h3 className="mb-2 text-sm font-medium">Ready to Create</h3>
+        <h3 className="mb-2 text-sm font-medium">What Happens Next</h3>
         <p className="text-sm text-muted-foreground">
           {selectedOption === 'empty' && (
             <>
-              Click &quot;Create Project&quot; to create an empty project with no IRL.
-              You can build your IRL structure manually later.
+              Your project will be created with an empty data room.
+              You can manually create folders and upload documents as needed.
             </>
           )}
           {selectedOption === 'upload' && (
             <>
-              Click &quot;Create Project&quot; to create your project. You&apos;ll be
-              prompted to upload your custom IRL file in the project workspace.
+              Your project will be created and you can upload your custom IRL Excel file.
+              The system will parse your Excel file and automatically create folders and checklist items based on your IRL structure.
             </>
           )}
           {selectedOption === 'template' && (
             <>
-              Click &quot;Create Project&quot; to set up your project with the{' '}
-              <strong>{selectedTemplate}</strong>. You can customize the IRL
-              structure after creation.
+              Your project will be created with the <strong>{selectedTemplate}</strong> template.
+              Folders will be automatically created in your data room matching the template categories,
+              and the IRL checklist will be populated with all template items.
             </>
           )}
         </p>
