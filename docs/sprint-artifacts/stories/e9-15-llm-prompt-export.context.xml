@@ -1,0 +1,210 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>15</storyId>
+    <title>LLM Prompt Export</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-11</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-15-llm-prompt-export.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to export my CIM as a structured LLM prompt containing buyer persona, investment thesis, outline, all slide content, and visual specifications</iWant>
+    <soThat>I can use external AI tools (ChatGPT, Claude, custom pipelines) to generate styled presentations, create variations, or refine content further outside the Manda platform</soThat>
+    <tasks>
+      <task id="1" status="pending">Extend CIM Export Service with LLM Prompt Generation (AC: #2, #3)
+        <subtask id="1.1">Add `generateLLMPrompt(cim: CIM): string` function to `lib/services/cim-export.ts`</subtask>
+        <subtask id="1.2">Define structured prompt format with clear section delimiters (use XML-style tags for LLM parsing)</subtask>
+        <subtask id="1.3">Implement buyer persona section formatter (type, description, priorities list, concerns list, metrics list)</subtask>
+        <subtask id="1.4">Implement investment thesis section formatter</subtask>
+        <subtask id="1.5">Implement outline section formatter (title, description, status for each section)</subtask>
+        <subtask id="1.6">Implement slide content formatter (iterate slides, include all components with type and content)</subtask>
+        <subtask id="1.7">Implement visual specifications formatter (layout type, chart recommendations, image suggestions per slide)</subtask>
+        <subtask id="1.8">Handle null/empty values gracefully (omit or mark as "Not specified")</subtask>
+        <subtask id="1.9">Add `LLMPromptExportResult` interface with prompt string, character count, section count</subtask>
+      </task>
+      <task id="2" status="pending">Create LLM Prompt Export UI Components (AC: #1, #4, #5)
+        <subtask id="2.1">Create `components/cim-builder/LLMPromptExportModal.tsx` with preview textarea, char/word count, copy button, download button, close button</subtask>
+        <subtask id="2.2">Add "Export LLM Prompt" option to existing ExportButton dropdown or create separate button</subtask>
+        <subtask id="2.3">Integrate modal trigger into CIMBuilderPage export area</subtask>
+      </task>
+      <task id="3" status="pending">Implement Copy to Clipboard Functionality (AC: #4)
+        <subtask id="3.1">Use `navigator.clipboard.writeText()` API for clipboard access</subtask>
+        <subtask id="3.2">Handle clipboard API permission/availability with fallback (execCommand)</subtask>
+        <subtask id="3.3">Show success toast on copy ("Prompt copied to clipboard")</subtask>
+        <subtask id="3.4">Show error toast if copy fails with guidance</subtask>
+      </task>
+      <task id="4" status="pending">Implement Text File Download (AC: #5)
+        <subtask id="4.1">Add `generateLLMPromptFilename(cimTitle: string): string` function (reuse sanitizeFilename pattern)</subtask>
+        <subtask id="4.2">Create Blob with text/plain content type</subtask>
+        <subtask id="4.3">Trigger download using same pattern as PPTX export (object URL + anchor click)</subtask>
+        <subtask id="4.4">Filename format: `{CIM Name} - LLM Prompt.txt`</subtask>
+      </task>
+      <task id="5" status="pending">Define Structured Prompt Format (AC: #3)
+        <subtask id="5.1">Design prompt structure with XML-style sections (cim_export, metadata, buyer_persona, investment_thesis, outline, slides)</subtask>
+        <subtask id="5.2">Include usage instructions header for LLM ("This is a CIM export. Use this to...")</subtask>
+        <subtask id="5.3">Add section markers that LLMs can reference for targeted edits</subtask>
+      </task>
+      <task id="6" status="pending">Write Unit Tests (AC: #1-#5)
+        <subtask id="6.1">Test `generateLLMPrompt` produces valid structured output</subtask>
+        <subtask id="6.2">Test all CIM sections are included when present</subtask>
+        <subtask id="6.3">Test empty/null fields handled gracefully</subtask>
+        <subtask id="6.4">Test prompt format is parseable (validate XML-like structure)</subtask>
+        <subtask id="6.5">Test `generateLLMPromptFilename` sanitizes special characters</subtask>
+        <subtask id="6.6">Test LLMPromptExportModal renders correctly</subtask>
+        <subtask id="6.7">Test copy button triggers clipboard API</subtask>
+        <subtask id="6.8">Test download button triggers file download</subtask>
+        <subtask id="6.9">Test modal opens from export trigger</subtask>
+        <subtask id="6.10">Target: 35+ tests</subtask>
+      </task>
+      <task id="7" status="pending">Integration Testing (AC: #2)
+        <subtask id="7.1">Test full export flow with sample CIM containing all fields</subtask>
+        <subtask id="7.2">Test export with minimal CIM (only required fields)</subtask>
+        <subtask id="7.3">Verify prompt can be pasted into ChatGPT/Claude and parsed correctly</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC-1" source="docs/sprint-artifacts/tech-spec-epic-E9.md#AC-9.15.1">
+      Export Option Available - An "Export LLM Prompt" option is visible and accessible in the CIM Builder export UI (dropdown, menu, or alongside the PPTX export button)
+    </criterion>
+    <criterion id="AC-2" source="docs/sprint-artifacts/tech-spec-epic-E9.md#AC-9.15.2">
+      Comprehensive Content Inclusion - The exported prompt includes: buyer persona (type, description, priorities, concerns, key metrics), investment thesis, full outline with section titles and descriptions, all slide content (titles, subtitles, text, bullets), and visual specifications (layout type, chart recommendations, image suggestions)
+    </criterion>
+    <criterion id="AC-3" source="docs/sprint-artifacts/tech-spec-epic-E9.md#AC-9.15.3">
+      Structured LLM-Consumable Format - The prompt is formatted in a structured, machine-readable format (XML, JSON, or markdown with clear section delimiters) that LLMs can reliably parse and process
+    </criterion>
+    <criterion id="AC-4" source="docs/sprint-artifacts/tech-spec-epic-E9.md#AC-9.15.4">
+      Copy to Clipboard - A "Copy to Clipboard" action copies the full prompt text and shows a success notification
+    </criterion>
+    <criterion id="AC-5" source="docs/sprint-artifacts/tech-spec-epic-E9.md#AC-9.15.5">
+      Download as Text File - A "Download" action saves the prompt as a `.txt` file named `{CIM Name} - LLM Prompt.txt`
+    </criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic 9 Technical Specification" section="E9.15: LLM Prompt Export" snippet="Defines acceptance criteria AC-9.15.1 through AC-9.15.5 for LLM prompt export functionality including export option visibility, content inclusion, structured format, clipboard copy, and file download." />
+      <doc path="docs/epics.md" title="Epic and Story Breakdown" section="Epic 9: CIM Builder" snippet="Story E9.15 definition (3 points). Export layer includes wireframe PPT and LLM prompt export (E9.14, E9.15)." />
+      <doc path="docs/manda-architecture.md" title="Manda Architecture" section="CIM Export Service" snippet="CIM Export Service at lib/services/cim-export.ts responsible for generating PowerPoint and LLM prompt exports." />
+      <doc path="docs/sprint-artifacts/stories/e9-14-wireframe-powerpoint-export.md" title="Story E9.14 - Wireframe PowerPoint Export" section="Dev Agent Record" snippet="Previous story establishing export patterns: CIM Export Service, ExportButton component, sanitizeFilename utility, triggerPPTXDownload pattern. 94 tests achieved." />
+    </docs>
+    <code>
+      <artifact path="manda-app/lib/services/cim-export.ts" kind="service" symbol="exportWireframePPTX, sanitizeFilename, generateExportFilename, triggerPPTXDownload, CIMExportResult" lines="1-733" reason="Core export service to extend with LLM prompt generation. Contains reusable utilities (sanitizeFilename, download trigger pattern) and established export result interface pattern." />
+      <artifact path="manda-app/lib/types/cim.ts" kind="types" symbol="CIM, BuyerPersona, Slide, SlideComponent, VisualConcept, OutlineSection, ChartRecommendation, ComponentType, LayoutType, ChartType" lines="1-928" reason="All CIM type definitions needed for prompt generation. Buyer persona has buyer_type, buyer_description, priorities, concerns, key_metrics. Slides have components with type and content." />
+      <artifact path="manda-app/components/cim-builder/ExportButton.tsx" kind="component" symbol="ExportButton, ExportButtonIcon, ExportButtonProps" lines="1-253" reason="Existing export button to extend or create companion button. Demonstrates loading/success/error state pattern, tooltip integration, and export callback pattern." />
+      <artifact path="manda-app/components/cim-builder/CIMBuilderPage.tsx" kind="component" symbol="CIMBuilderPage" lines="118-136" reason="Main builder page where ExportButton is integrated. Line 135 shows current ExportButton placement in header. Will need to integrate LLM prompt export option here." />
+      <artifact path="manda-app/__tests__/lib/services/cim-export.test.ts" kind="test" symbol="cim-export service tests" lines="1-100" reason="Existing test patterns for export service. Shows sanitizeFilename tests, generateExportFilename tests, and test organization. Follow same patterns for LLM prompt tests." />
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="pptxgenjs" version="^3.12.0" reason="Used by PPTX export - not needed for LLM prompt but shows export service patterns" />
+        <package name="react" version="^19.0.0" reason="UI components use React with hooks (useState, useCallback, memo)" />
+        <package name="lucide-react" version="^0.454.0" reason="Icons for export button (Download, Loader2, CheckCircle, AlertCircle)" />
+        <package name="@radix-ui/react-tooltip" version="^1.0.0" reason="Tooltip components via shadcn/ui" />
+        <package name="vitest" version="^2.1.8" reason="Test framework for unit tests" />
+        <package name="@testing-library/react" version="^14.0.0" reason="Component testing utilities" />
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="pattern">Follow existing CIM Export Service patterns from E9.14 - extend cim-export.ts rather than creating new file</constraint>
+    <constraint type="pattern">Use same download trigger pattern as PPTX export: create Blob, create object URL, trigger via anchor element click</constraint>
+    <constraint type="pattern">Use same filename sanitization via sanitizeFilename() utility</constraint>
+    <constraint type="pattern">Follow ExportButton state pattern: idle, loading, success, error with setTimeout for state reset</constraint>
+    <constraint type="testing">Target 35+ tests following existing test organization in __tests__/lib/services/cim-export.test.ts</constraint>
+    <constraint type="testing">Component tests use Vitest with @testing-library/react</constraint>
+    <constraint type="ui">Modal components go in components/cim-builder/ directory</constraint>
+    <constraint type="ui">Use shadcn/ui components (Button, Dialog for modal, Tooltip)</constraint>
+    <constraint type="api">Export is client-side only - no server round-trip needed</constraint>
+    <constraint type="format">XML-style tags in prompt output for reliable LLM parsing</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="LLMPromptExportResult" kind="type" path="manda-app/lib/services/cim-export.ts">
+      <signature>
+interface LLMPromptExportResult {
+  prompt: string;           // Full XML-structured prompt
+  characterCount: number;   // Total characters
+  sectionCount: number;     // Number of outline sections
+  slideCount: number;       // Number of slides
+  filename: string;         // Generated filename
+}
+      </signature>
+    </interface>
+    <interface name="generateLLMPrompt" kind="function" path="manda-app/lib/services/cim-export.ts">
+      <signature>function generateLLMPrompt(cim: CIM): string</signature>
+      <purpose>Generate structured XML prompt from CIM data for LLM consumption</purpose>
+    </interface>
+    <interface name="generateLLMPromptFilename" kind="function" path="manda-app/lib/services/cim-export.ts">
+      <signature>function generateLLMPromptFilename(cimTitle: string): string</signature>
+      <purpose>Generate sanitized filename in format "{CIM Name} - LLM Prompt.txt"</purpose>
+    </interface>
+    <interface name="triggerTextDownload" kind="function" path="manda-app/lib/services/cim-export.ts">
+      <signature>function triggerTextDownload(content: string, filename: string): void</signature>
+      <purpose>Trigger browser download of text content as .txt file</purpose>
+    </interface>
+    <interface name="LLMPromptExportModalProps" kind="component-props" path="manda-app/components/cim-builder/LLMPromptExportModal.tsx">
+      <signature>
+interface LLMPromptExportModalProps {
+  cim: CIM;
+  isOpen: boolean;
+  onClose: () => void;
+  onCopySuccess?: () => void;
+  onDownloadSuccess?: () => void;
+}
+      </signature>
+    </interface>
+    <interface name="Clipboard API" kind="browser-api">
+      <signature>navigator.clipboard.writeText(text: string): Promise&lt;void&gt;</signature>
+      <purpose>Copy prompt text to system clipboard</purpose>
+      <fallback>document.execCommand('copy') for older browsers</fallback>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests use Vitest with describe/it/expect pattern. Component tests use @testing-library/react with render, screen, fireEvent, waitFor. Mock external APIs (clipboard) using vi.mock(). Test file naming follows __tests__/{path-mirror}/{filename}.test.ts pattern. Target 35+ tests covering: prompt generation (complete/partial data), format validation, filename generation, modal rendering, clipboard interaction, download trigger.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/services/cim-export.test.ts</location>
+      <location>manda-app/__tests__/components/cim-builder/LLMPromptExportModal.test.tsx</location>
+    </locations>
+    <ideas>
+      <idea ac="AC-1">Test "Export LLM Prompt" option is visible in export UI</idea>
+      <idea ac="AC-1">Test option is accessible (clickable, not disabled when CIM has slides)</idea>
+      <idea ac="AC-2">Test generateLLMPrompt includes buyer_persona when present</idea>
+      <idea ac="AC-2">Test generateLLMPrompt includes investment_thesis when present</idea>
+      <idea ac="AC-2">Test generateLLMPrompt includes all outline sections with title/description</idea>
+      <idea ac="AC-2">Test generateLLMPrompt includes all slides with all components</idea>
+      <idea ac="AC-2">Test generateLLMPrompt includes visual_concept for each slide</idea>
+      <idea ac="AC-2">Test empty buyer_persona handled gracefully (omitted or "Not specified")</idea>
+      <idea ac="AC-2">Test empty investment_thesis handled gracefully</idea>
+      <idea ac="AC-2">Test CIM with no slides produces valid output</idea>
+      <idea ac="AC-3">Test output has valid XML-like structure with opening/closing tags</idea>
+      <idea ac="AC-3">Test cim_export root element present</idea>
+      <idea ac="AC-3">Test metadata section includes title, exported_at, slide_count</idea>
+      <idea ac="AC-3">Test buyer_persona section has type, description, priorities, concerns, key_metrics</idea>
+      <idea ac="AC-3">Test slides section has slide elements with id, section, components</idea>
+      <idea ac="AC-4">Test copy button calls navigator.clipboard.writeText with prompt content</idea>
+      <idea ac="AC-4">Test success toast shown after successful copy</idea>
+      <idea ac="AC-4">Test error toast shown when clipboard fails</idea>
+      <idea ac="AC-4">Test execCommand fallback when clipboard API unavailable</idea>
+      <idea ac="AC-5">Test download button creates correct Blob</idea>
+      <idea ac="AC-5">Test download triggers anchor click with correct href and download attribute</idea>
+      <idea ac="AC-5">Test filename follows "{CIM Name} - LLM Prompt.txt" format</idea>
+      <idea ac="AC-5">Test special characters in CIM name are sanitized in filename</idea>
+      <idea>Test LLMPromptExportModal renders preview textarea with prompt content</idea>
+      <idea>Test modal shows character count</idea>
+      <idea>Test modal shows word count</idea>
+      <idea>Test modal close button works</idea>
+      <idea>Test modal opens from export trigger click</idea>
+      <idea>Test complete CIM export integration (full data)</idea>
+      <idea>Test minimal CIM export integration (required fields only)</idea>
+    </ideas>
+  </tests>
+</story-context>

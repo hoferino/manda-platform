@@ -22,8 +22,8 @@ Epic E9 delivers the **CIM Builder** — a comprehensive framework for creating 
 
 **Business Value:** Enables analysts to create professional CIMs 5-10x faster than traditional methods while ensuring consistency with deal data and source traceability.
 
-**Stories:** 15 implementation stories + 1 spike (E9.1-E9.15, E9.S1)
-**Total Story Points:** ~65 points
+**Stories:** 15 implementation stories (E9.1-E9.15)
+**Total Story Points:** ~60 points
 
 ## Objectives and Scope
 
@@ -46,13 +46,12 @@ Epic E9 delivers the **CIM Builder** — a comprehensive framework for creating 
 | **Interaction** | Click-to-reference in chat, non-linear navigation (E9.9, E9.13) |
 | **Intelligence** | Dependency tracking, consistency alerts, narrative structure, visual concept generation (E9.10, E9.11, E9.12) |
 | **Export** | Wireframe PPT export, LLM prompt export (E9.14, E9.15) |
-| **Research** | Phase 2 styled output spike (E9.S1) |
 
 ### Out of Scope (MVP)
 
 | Area | Rationale |
 |------|-----------|
-| **Styled PowerPoint export** | Deferred to Phase 2 (spike E9.S1 will research) |
+| **Styled PowerPoint export** | Deferred to Phase 2 (spike in Phase 2 backlog) |
 | **Brand style extraction from PPTX/PDF** | Phase 2 feature |
 | **Real-time collaboration** | Single-user workflow for MVP |
 | **Version diffing UI** | Version history stored but no visual diff |
@@ -861,8 +860,6 @@ E9.1 (Database Schema)
   └──► E9.14 (PPTX Export)
          │
          └──► E9.15 (LLM Prompt Export)
-
-E9.S1 (Spike) ──── Can run in parallel
 ```
 
 ### Prior Epics Required
@@ -1044,18 +1041,6 @@ E9.S1 (Spike) ──── Can run in parallel
 | AC-9.15.4 | Copy to clipboard works | Clipboard check |
 | AC-9.15.5 | Download as .txt works | File downloads |
 
-### E9.S1: Phase 2 Styled Output Research (SPIKE)
-
-| ID | Criterion | Testable |
-|----|-----------|----------|
-| AC-9.S1.1 | Extraction pipeline prototype complete (PDF + PPTX) | Demo works |
-| AC-9.S1.2 | Style guide schema definition documented | Doc exists |
-| AC-9.S1.3 | Styled preview of 3 sample slides | Preview works |
-| AC-9.S1.4 | Accuracy report delivered | Report exists |
-| AC-9.S1.5 | Recommended architecture documented | Doc exists |
-| AC-9.S1.6 | Effort estimate for full implementation | Estimate provided |
-| AC-9.S1.7 | 80%+ accurate extraction on colors/logo | Measured accuracy |
-
 ## Traceability Mapping
 
 ### PRD → Epic → Story → AC Mapping
@@ -1148,7 +1133,7 @@ E9.S1 (Spike) ──── Can run in parallel
 | Decision | Rationale | Date |
 |----------|-----------|------|
 | **D1: No slash commands** | Target users are non-technical M&A analysts | 2025-12-09 |
-| **D2: Wireframe-only export for MVP** | Styled export requires spike research (E9.S1) | 2025-12-09 |
+| **D2: Wireframe-only export for MVP** | Styled export spike moved to Phase 2 backlog | 2025-12-09 |
 | **D3: JSONB for state storage** | Simple, queryable, sufficient for MVP scale | 2025-12-09 |
 | **D4: Client-side PPTX generation** | No server dependencies, faster iteration | 2025-12-09 |
 | **D5: Agent-guided flexible outline** | Users define their own CIM structure, not fixed template | 2025-12-09 |

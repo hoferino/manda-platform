@@ -3,10 +3,10 @@
 
 **Document Status:** In Development
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-09
+**Last Updated:** 2025-12-11
 **Owner:** Max
 **Contributors:** PM John
-**Version:** 1.8 (Epic 9 redesigned to CIM Builder per Party Mode findings — full CIM framework with 3-panel UI, user-defined structure)
+**Version:** 1.9 (Moved Styled Output Research spike from Epic 9 to Phase 2 backlog)
 
 ---
 
@@ -404,7 +404,14 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 
 **Features:**
 
-1. **Smart Document Classification & Organization**
+1. **Styled CIM Output Research (Spike)**
+   - Research style extraction from uploaded PPTX/PDF files
+   - Evaluate conversion pipelines (LibreOffice headless, CloudConvert API)
+   - Define style guide schema (colors, fonts, spacing, logo handling)
+   - Prototype styled preview and export capability
+   - Deliverable: Architecture recommendation and effort estimate for styled output
+
+2. **Smart Document Classification & Organization**
    - AI-assisted document classification with user approval workflow
    - Upload section UI: Left (Work Area for uploads) + Right (Folder Structure)
    - Manual drag & drop OR AI classification options
@@ -414,24 +421,24 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
    - Batch operations for multiple documents
    - User override always available with low burden (undoing is painful, so require approval)
 
-2. **Enhanced Data Room**
+3. **Enhanced Data Room**
    - Advanced document organization and tagging
    - Collaborative features (comments, annotations)
    - Version control and change tracking
    - Access control and permissions
 
-3. **External Data Integration**
+4. **External Data Integration**
    - Web research integration (market data, company info)
    - Bloomberg/Capital IQ connectors (if applicable)
    - Public filing imports (SEC, etc.)
    - News and announcement monitoring
 
-3. **Direct Source Connections**
+5. **Direct Source Connections**
    - Google Drive / SharePoint integration
    - Automatic document sync and updates
    - Cloud storage connectors
 
-4. **Advanced CIM Storybook Features**
+6. **Advanced CIM Storybook Features**
    - Industry-specific buyer persona templates (Tech, Healthcare, Manufacturing)
    - Collaborative storybook editing with real-time updates
    - AI-generated chart recommendations based on narrative context
@@ -439,13 +446,13 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
    - Sensitivity analysis and valuation visualization suggestions
    - Direct PowerPoint content generation from approved storybook (bypass manual population)
 
-5. **Workflow Automation**
+7. **Workflow Automation**
    - Automated IRL reminders and follow-ups
    - Document receipt notifications
    - Analysis completion alerts
    - Progress dashboards
 
-6. **Multi-Deal Management**
+8. **Multi-Deal Management**
    - Portfolio view across multiple active deals
    - Cross-deal pattern recognition
    - Template and insight reuse across deals

@@ -1,8 +1,9 @@
 /**
  * CIM Export Service
  *
- * Generates PowerPoint exports for CIMs with wireframe styling.
+ * Generates PowerPoint and LLM prompt exports for CIMs.
  * Story: E9.14 - Wireframe PowerPoint Export
+ * Story: E9.15 - LLM Prompt Export
  *
  * Features:
  * - Client-side PPTX generation with pptxgenjs
@@ -10,6 +11,8 @@
  * - Component-to-slide mapping (title, subtitle, text, bullet, chart, image, table)
  * - Visual concept metadata in placeholders
  * - 16:9 aspect ratio standard presentation format
+ * - LLM prompt generation with structured XML format
+ * - Copy to clipboard and download as text file
  */
 
 import pptxgen from 'pptxgenjs'
@@ -20,6 +23,9 @@ import type {
   ComponentType,
   ChartType,
   VisualConcept,
+  BuyerPersona,
+  OutlineSection,
+  ChartRecommendation,
 } from '@/lib/types/cim'
 
 // ============================================================================
@@ -728,5 +734,379 @@ export async function exportCIMAsWireframe(cim: CIM): Promise<CIMExportResult> {
     filename,
     contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     slideCount: cim.slides.length,
+  }
+}
+
+// ============================================================================
+// LLM Prompt Export (E9.15)
+// ============================================================================
+
+/**
+ * LLM Prompt Export Result interface
+ * Story: E9.15 - LLM Prompt Export (AC #3)
+ */
+export interface LLMPromptExportResult {
+  /** Full XML-structured prompt */
+  prompt: string
+  /** Total characters in prompt */
+  characterCount: number
+  /** Number of outline sections */
+  sectionCount: number
+  /** Number of slides */
+  slideCount: number
+  /** Generated filename */
+  filename: string
+}
+
+/**
+ * Generate export filename for LLM prompt
+ * Format: "{CIM Name} - LLM Prompt.txt"
+ * Story: E9.15 - LLM Prompt Export (AC #5)
+ */
+export function generateLLMPromptFilename(cimTitle: string): string {
+  const sanitized = sanitizeFilename(cimTitle) || 'CIM'
+  return `${sanitized} - LLM Prompt.txt`
+}
+
+/**
+ * Escape XML special characters in text content
+ */
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+/**
+ * Format buyer persona section for LLM prompt
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatBuyerPersonaSection(persona: BuyerPersona | null): string {
+  if (!persona) {
+    return `  <buyer_persona>Not specified</buyer_persona>`
+  }
+
+  const prioritiesItems = persona.priorities.length > 0
+    ? persona.priorities.map(p => `      <item>${escapeXml(p)}</item>`).join('\n')
+    : '      <item>Not specified</item>'
+
+  const concernsItems = persona.concerns.length > 0
+    ? persona.concerns.map(c => `      <item>${escapeXml(c)}</item>`).join('\n')
+    : '      <item>Not specified</item>'
+
+  const metricsItems = persona.key_metrics.length > 0
+    ? persona.key_metrics.map(m => `      <item>${escapeXml(m)}</item>`).join('\n')
+    : '      <item>Not specified</item>'
+
+  return `  <buyer_persona>
+    <type>${escapeXml(persona.buyer_type)}</type>
+    <description>${escapeXml(persona.buyer_description)}</description>
+    <priorities>
+${prioritiesItems}
+    </priorities>
+    <concerns>
+${concernsItems}
+    </concerns>
+    <key_metrics>
+${metricsItems}
+    </key_metrics>
+  </buyer_persona>`
+}
+
+/**
+ * Format investment thesis section for LLM prompt
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatInvestmentThesisSection(thesis: string | null): string {
+  if (!thesis) {
+    return `  <investment_thesis>Not specified</investment_thesis>`
+  }
+  return `  <investment_thesis>${escapeXml(thesis)}</investment_thesis>`
+}
+
+/**
+ * Format outline section for LLM prompt
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatOutlineSection(outline: OutlineSection[], slides: Slide[]): string {
+  if (outline.length === 0) {
+    return `  <outline>No sections defined</outline>`
+  }
+
+  const sections = outline.map(section => {
+    const sectionSlides = slides.filter(s => s.section_id === section.id)
+    return `    <section order="${section.order}" status="${section.status}">
+      <title>${escapeXml(section.title)}</title>
+      <description>${escapeXml(section.description)}</description>
+      <slide_count>${sectionSlides.length}</slide_count>
+    </section>`
+  }).join('\n')
+
+  return `  <outline>
+${sections}
+  </outline>`
+}
+
+/**
+ * Format slide component for LLM prompt
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatSlideComponent(component: SlideComponent): string {
+  const typeAttr = `type="${component.type}"`
+  const metadata = component.metadata || {}
+
+  // Add chart-specific attributes
+  let extraAttrs = ''
+  if (component.type === 'chart' && metadata.chartType) {
+    extraAttrs += ` chart_type="${escapeXml(String(metadata.chartType))}"`
+  }
+  if (metadata.dataDescription) {
+    extraAttrs += ` data_description="${escapeXml(String(metadata.dataDescription))}"`
+  }
+
+  return `        <component ${typeAttr}${extraAttrs}>${escapeXml(component.content)}</component>`
+}
+
+/**
+ * Format chart recommendations for visual concept
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatChartRecommendations(recommendations: ChartRecommendation[] | undefined): string {
+  if (!recommendations || recommendations.length === 0) {
+    return ''
+  }
+
+  const charts = recommendations.map(rec =>
+    `          <chart type="${rec.type}" purpose="${escapeXml(rec.purpose)}">${escapeXml(rec.data_description)}</chart>`
+  ).join('\n')
+
+  return `        <chart_recommendations>
+${charts}
+        </chart_recommendations>`
+}
+
+/**
+ * Format image suggestions for visual concept
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatImageSuggestions(suggestions: string[] | undefined): string {
+  if (!suggestions || suggestions.length === 0) {
+    return ''
+  }
+
+  const items = suggestions.map(s => `          <suggestion>${escapeXml(s)}</suggestion>`).join('\n')
+
+  return `        <image_suggestions>
+${items}
+        </image_suggestions>`
+}
+
+/**
+ * Format visual concept for a slide
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatVisualConcept(visualConcept: VisualConcept | null): string {
+  if (!visualConcept) {
+    return ''
+  }
+
+  const parts: string[] = []
+  parts.push(`        <layout>${visualConcept.layout_type}</layout>`)
+
+  const chartRecs = formatChartRecommendations(visualConcept.chart_recommendations)
+  if (chartRecs) parts.push(chartRecs)
+
+  const imageSugs = formatImageSuggestions(visualConcept.image_suggestions)
+  if (imageSugs) parts.push(imageSugs)
+
+  if (visualConcept.notes) {
+    parts.push(`        <notes>${escapeXml(visualConcept.notes)}</notes>`)
+  }
+
+  return `      <visual_concept>
+${parts.join('\n')}
+      </visual_concept>`
+}
+
+/**
+ * Format a single slide for LLM prompt
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatSlide(slide: Slide, outline: OutlineSection[]): string {
+  const section = outline.find(s => s.id === slide.section_id)
+  const sectionTitle = section?.title || 'Unknown Section'
+
+  const components = slide.components.length > 0
+    ? slide.components.map(formatSlideComponent).join('\n')
+    : '        <component type="text">No content</component>'
+
+  const visualConcept = formatVisualConcept(slide.visual_concept)
+
+  const slideContent = [
+    `      <title>${escapeXml(slide.title)}</title>`,
+    `      <components>`,
+    components,
+    `      </components>`,
+  ]
+
+  if (visualConcept) {
+    slideContent.push(visualConcept)
+  }
+
+  return `    <slide id="${slide.id}" section="${escapeXml(sectionTitle)}" status="${slide.status}">
+${slideContent.join('\n')}
+    </slide>`
+}
+
+/**
+ * Format slides section for LLM prompt
+ * Story: E9.15 - LLM Prompt Export (AC #2)
+ */
+function formatSlidesSection(slides: Slide[], outline: OutlineSection[]): string {
+  if (slides.length === 0) {
+    return `  <slides>No slides defined</slides>`
+  }
+
+  const formattedSlides = slides.map(slide => formatSlide(slide, outline)).join('\n')
+
+  return `  <slides>
+${formattedSlides}
+  </slides>`
+}
+
+/**
+ * Generate structured LLM prompt from CIM data
+ * Story: E9.15 - LLM Prompt Export (AC #2, #3)
+ *
+ * @param cim - The CIM to export
+ * @returns Structured XML prompt string
+ */
+export function generateLLMPrompt(cim: CIM): string {
+  const exportedAt = new Date().toISOString()
+
+  const prompt = `<cim_export version="1.0">
+  <instructions>
+    This is an exported CIM (Confidential Information Memorandum) for M&amp;A due diligence.
+    Use this structured content to generate styled presentations, create variations,
+    or refine content in external AI tools.
+
+    Structure:
+    - metadata: Basic information about this CIM export
+    - buyer_persona: Target buyer profile with priorities, concerns, and key metrics
+    - investment_thesis: Core value proposition and investment rationale
+    - outline: Section structure with titles, descriptions, and completion status
+    - slides: Full slide content with components and visual specifications
+  </instructions>
+
+  <metadata>
+    <title>${escapeXml(cim.title)}</title>
+    <exported_at>${exportedAt}</exported_at>
+    <slide_count>${cim.slides.length}</slide_count>
+    <section_count>${cim.outline.length}</section_count>
+    <version>${cim.version}</version>
+  </metadata>
+
+${formatBuyerPersonaSection(cim.buyerPersona)}
+
+${formatInvestmentThesisSection(cim.investmentThesis)}
+
+${formatOutlineSection(cim.outline, cim.slides)}
+
+${formatSlidesSection(cim.slides, cim.outline)}
+</cim_export>`
+
+  return prompt
+}
+
+/**
+ * Trigger browser download of text content
+ * Story: E9.15 - LLM Prompt Export (AC #5)
+ *
+ * @param content - The text content to download
+ * @param filename - The filename for the download
+ */
+export function triggerTextDownload(content: string, filename: string): void {
+  // Create blob with text/plain content type
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+
+  // Create object URL
+  const url = URL.createObjectURL(blob)
+
+  // Create temporary anchor element
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.style.display = 'none'
+
+  // Trigger download
+  document.body.appendChild(anchor)
+  anchor.click()
+
+  // Cleanup
+  document.body.removeChild(anchor)
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * Copy text to clipboard with fallback
+ * Story: E9.15 - LLM Prompt Export (AC #4)
+ *
+ * @param text - The text to copy to clipboard
+ * @returns Promise that resolves when copy is complete
+ * @throws Error if copy fails
+ */
+export async function copyToClipboard(text: string): Promise<void> {
+  // Try modern clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  // Fallback using execCommand (for older browsers)
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.left = '-9999px'
+  textarea.style.top = '-9999px'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+
+  try {
+    const successful = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    if (!successful) {
+      throw new Error('Clipboard copy failed')
+    }
+  } catch (err) {
+    document.body.removeChild(textarea)
+    throw new Error('Clipboard copy failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
+  }
+}
+
+/**
+ * Full LLM prompt export flow: generate prompt and prepare result
+ * Story: E9.15 - LLM Prompt Export (AC #2, #3, #4, #5)
+ *
+ * @param cim - The CIM to export
+ * @returns LLMPromptExportResult with prompt, counts, and filename
+ */
+export function exportCIMAsLLMPrompt(cim: CIM): LLMPromptExportResult {
+  const prompt = generateLLMPrompt(cim)
+  const filename = generateLLMPromptFilename(cim.title)
+
+  return {
+    prompt,
+    characterCount: prompt.length,
+    sectionCount: cim.outline.length,
+    slideCount: cim.slides.length,
+    filename,
   }
 }

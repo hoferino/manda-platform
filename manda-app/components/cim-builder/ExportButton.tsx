@@ -1,22 +1,31 @@
 'use client'
 
 /**
- * ExportButton - CIM Wireframe PowerPoint Export Button
+ * ExportButton - CIM Export Button with Dropdown
  *
  * Provides export functionality for CIMs with:
- * - Download icon and "Export Wireframe" label
+ * - Dropdown menu with export options
+ * - Export Wireframe PPTX option
+ * - Export LLM Prompt option (opens modal)
  * - Loading state during generation
  * - Disabled state when no slides exist
  * - Error handling with user feedback
  *
  * Story: E9.14 - Wireframe PowerPoint Export
+ * Story: E9.15 - LLM Prompt Export
  * AC: #1 (Export Button Visibility), #6 (Browser Download)
  */
 
 import * as React from 'react'
 import { memo, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Download, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { Download, Loader2, AlertCircle, CheckCircle, FileText, ChevronDown } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
@@ -28,6 +37,7 @@ import {
   exportCIMAsWireframe,
   triggerPPTXDownload,
 } from '@/lib/services/cim-export'
+import { LLMPromptExportModal } from './LLMPromptExportModal'
 
 // ============================================================================
 // Types
@@ -50,12 +60,14 @@ type ExportStatus = 'idle' | 'loading' | 'success' | 'error'
 // ============================================================================
 
 /**
- * ExportButton - Trigger wireframe PPTX export for a CIM
+ * ExportButton - Export dropdown with PPTX and LLM Prompt options
  *
  * Features:
+ * - Dropdown with two export options (AC #1 - E9.15)
  * - Disabled when CIM has no slides (AC #1)
  * - Shows loading spinner during generation
  * - Triggers browser download without server round-trip (AC #6)
+ * - Opens LLM prompt modal for structured export
  * - Provides success/error feedback
  */
 export const ExportButton = memo(function ExportButton({
@@ -69,13 +81,14 @@ export const ExportButton = memo(function ExportButton({
 }: ExportButtonProps) {
   const [status, setStatus] = useState<ExportStatus>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isLLMPromptModalOpen, setIsLLMPromptModalOpen] = useState(false)
 
   // Determine if export is available (AC #1)
   const hasSlides = cim.slides.length > 0
   const isDisabled = !hasSlides || status === 'loading'
 
-  // Handle export click
-  const handleExport = useCallback(async () => {
+  // Handle PPTX export click
+  const handlePPTXExport = useCallback(async () => {
     if (isDisabled) return
 
     try {
@@ -108,6 +121,11 @@ export const ExportButton = memo(function ExportButton({
     }
   }, [cim, isDisabled, onExportStart, onExportComplete, onExportError])
 
+  // Handle LLM Prompt export click (E9.15 AC #1)
+  const handleLLMPromptExport = useCallback(() => {
+    setIsLLMPromptModalOpen(true)
+  }, [])
+
   // Render appropriate icon based on status
   const renderIcon = () => {
     switch (status) {
@@ -132,7 +150,7 @@ export const ExportButton = memo(function ExportButton({
       case 'error':
         return 'Export Failed'
       default:
-        return 'Export Wireframe'
+        return 'Export'
     }
   }
 
@@ -141,30 +159,62 @@ export const ExportButton = memo(function ExportButton({
     ? 'Add slides to your CIM before exporting'
     : errorMessage
       ? errorMessage
-      : 'Export as PowerPoint wireframe'
+      : 'Export CIM as PPTX or LLM Prompt'
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={variant}
-            size={size}
-            className={className}
-            disabled={isDisabled}
-            onClick={handleExport}
-            data-testid="export-button"
-            aria-label="Export CIM as wireframe PowerPoint"
-          >
-            {renderIcon()}
-            <span className="ml-2">{renderLabel()}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{tooltipContent}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant={variant}
+                    size={size}
+                    className={className}
+                    disabled={isDisabled}
+                    data-testid="export-button"
+                    aria-label="Export CIM"
+                  >
+                    {renderIcon()}
+                    <span className="ml-2">{renderLabel()}</span>
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={handlePPTXExport}
+                    disabled={isDisabled}
+                    data-testid="export-pptx-option"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Wireframe (PPTX)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleLLMPromptExport}
+                    data-testid="export-llm-prompt-option"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Export LLM Prompt
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltipContent}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      {/* LLM Prompt Export Modal (E9.15) */}
+      <LLMPromptExportModal
+        cim={cim}
+        isOpen={isLLMPromptModalOpen}
+        onClose={() => setIsLLMPromptModalOpen(false)}
+      />
+    </>
   )
 })
 
@@ -179,11 +229,12 @@ export const ExportButtonIcon = memo(function ExportButtonIcon({
   onExportError,
 }: Omit<ExportButtonProps, 'variant' | 'size'>) {
   const [status, setStatus] = useState<ExportStatus>('idle')
+  const [isLLMPromptModalOpen, setIsLLMPromptModalOpen] = useState(false)
 
   const hasSlides = cim.slides.length > 0
   const isDisabled = !hasSlides || status === 'loading'
 
-  const handleExport = useCallback(async () => {
+  const handlePPTXExport = useCallback(async () => {
     if (isDisabled) return
 
     try {
@@ -206,6 +257,10 @@ export const ExportButtonIcon = memo(function ExportButtonIcon({
     }
   }, [cim, isDisabled, onExportStart, onExportComplete, onExportError])
 
+  const handleLLMPromptExport = useCallback(() => {
+    setIsLLMPromptModalOpen(true)
+  }, [])
+
   const renderIcon = () => {
     switch (status) {
       case 'loading':
@@ -220,32 +275,59 @@ export const ExportButtonIcon = memo(function ExportButtonIcon({
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={className}
-            disabled={isDisabled}
-            onClick={handleExport}
-            data-testid="export-button-icon"
-            aria-label="Export CIM as wireframe PowerPoint"
-          >
-            {renderIcon()}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>
-            {!hasSlides
-              ? 'Add slides to export'
-              : status === 'loading'
-                ? 'Generating...'
-                : 'Export Wireframe'}
-          </p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={className}
+                    disabled={isDisabled}
+                    data-testid="export-button-icon"
+                    aria-label="Export CIM"
+                  >
+                    {renderIcon()}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={handlePPTXExport}
+                    disabled={isDisabled}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Wireframe (PPTX)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLLMPromptExport}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Export LLM Prompt
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              {!hasSlides
+                ? 'Add slides to export'
+                : status === 'loading'
+                  ? 'Generating...'
+                  : 'Export Options'}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      {/* LLM Prompt Export Modal (E9.15) */}
+      <LLMPromptExportModal
+        cim={cim}
+        isOpen={isLLMPromptModalOpen}
+        onClose={() => setIsLLMPromptModalOpen(false)}
+      />
+    </>
   )
 })
 

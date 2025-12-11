@@ -54,10 +54,7 @@ Implements the CIM Builder — a comprehensive framework for creating complete C
 - E9.14: Wireframe PowerPoint Export
 - E9.15: LLM Prompt Export
 
-### Spike (1)
-- E9.S1: Phase 2 Styled Output Research
-
-**Total Stories:** 15 + 1 Spike
+**Total Stories:** 15
 
 **Priority:** P1
 
@@ -409,35 +406,6 @@ Export a comprehensive prompt that captures the entire CIM context for external 
 - [ ] Structured format for easy LLM consumption
 - [ ] Copy to clipboard or download as .txt
 - [ ] Useful for generating styled presentations externally
-
----
-
-### E9.S1: Phase 2 Styled Output Research (SPIKE)
-
-**Story ID:** E9.S1
-**Points:** 5
-**Type:** Spike
-
-**Description:**
-Research how to extract brand styles from uploaded PPTX/PDF files and apply them to CIM previews and exports.
-
-**Research Areas:**
-1. **Style Extraction:** PPTX parsing (python-pptx), PDF parsing (PyMuPDF), Vision-based extraction
-2. **Conversion Pipeline:** LibreOffice headless vs CloudConvert API
-3. **Style Guide Schema:** Colors, fonts, spacing, logo handling
-4. **User Flow:** Upload → Extract → Review → Apply
-
-**Deliverables:**
-- [ ] Extraction pipeline prototype (PDF + PPTX)
-- [ ] Style guide schema definition
-- [ ] Styled preview of 3 sample slides
-- [ ] Accuracy report: What extracts reliably vs needs user input
-- [ ] Recommended architecture
-- [ ] Effort estimate for full implementation
-
-**Timebox:** 1 sprint
-
-**Success Criteria:** 80%+ accurate extraction on colors/logo, with graceful fallback for fonts.
 
 ---
 

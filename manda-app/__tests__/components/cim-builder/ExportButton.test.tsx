@@ -2,13 +2,15 @@
  * ExportButton Component Tests
  *
  * Story: E9.14 - Wireframe PowerPoint Export
+ * Story: E9.15 - LLM Prompt Export
  * AC: #1 (Export Button Visibility), #6 (Browser Download)
  *
  * Tests button states, export triggering, and user feedback
+ * Updated for dropdown menu implementation (E9.15)
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ExportButton, ExportButtonIcon } from '@/components/cim-builder/ExportButton'
 import type { CIM, Slide, SlideComponent } from '@/lib/types/cim'
@@ -20,6 +22,15 @@ const mockTriggerPPTXDownload = vi.fn()
 vi.mock('@/lib/services/cim-export', () => ({
   exportCIMAsWireframe: (...args: unknown[]) => mockExportCIMAsWireframe(...args),
   triggerPPTXDownload: (...args: unknown[]) => mockTriggerPPTXDownload(...args),
+  exportCIMAsLLMPrompt: vi.fn(() => ({
+    prompt: '<cim_export>test</cim_export>',
+    characterCount: 100,
+    sectionCount: 1,
+    slideCount: 1,
+    filename: 'Test - LLM Prompt.txt',
+  })),
+  copyToClipboard: vi.fn(),
+  triggerTextDownload: vi.fn(),
 }))
 
 // ============================================================================
@@ -122,11 +133,11 @@ describe('ExportButton', () => {
       expect(button).toBeDisabled()
     })
 
-    it('should show "Export Wireframe" label by default', () => {
+    it('should show "Export" label by default (dropdown trigger)', () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} />)
 
-      expect(screen.getByText('Export Wireframe')).toBeInTheDocument()
+      expect(screen.getByText('Export')).toBeInTheDocument()
     })
 
     it('should have download icon', () => {
@@ -142,22 +153,32 @@ describe('ExportButton', () => {
   // Export Trigger Tests (AC #6)
   // ==========================================================================
   describe('export trigger (AC #6)', () => {
-    it('should call export service when clicked', async () => {
+    it('should call export service when PPTX option clicked', async () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} />)
 
+      // Open dropdown menu
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
 
-      expect(mockExportCIMAsWireframe).toHaveBeenCalledWith(cim)
+      // Click PPTX export option
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
+
+      await waitFor(() => {
+        expect(mockExportCIMAsWireframe).toHaveBeenCalledWith(cim)
+      })
     })
 
-    it('should trigger download after export', async () => {
+    it('should trigger download after PPTX export', async () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       await waitFor(() => {
         expect(mockTriggerPPTXDownload).toHaveBeenCalledWith(
@@ -174,6 +195,7 @@ describe('ExportButton', () => {
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
 
+      // Dropdown shouldn't open when disabled, so export shouldn't be called
       expect(mockExportCIMAsWireframe).not.toHaveBeenCalled()
     })
   })
@@ -196,8 +218,11 @@ describe('ExportButton', () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       // Should show loading text
       expect(screen.getByText('Exporting...')).toBeInTheDocument()
@@ -208,8 +233,11 @@ describe('ExportButton', () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       await waitFor(() => {
         expect(screen.getByText('Exported!')).toBeInTheDocument()
@@ -220,8 +248,11 @@ describe('ExportButton', () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       // Verify success state is achieved
       await waitFor(() => {
@@ -240,8 +271,11 @@ describe('ExportButton', () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       await waitFor(() => {
         expect(screen.getByText('Export Failed')).toBeInTheDocument()
@@ -255,8 +289,11 @@ describe('ExportButton', () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} onExportError={onExportError} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       await waitFor(() => {
         expect(onExportError).toHaveBeenCalledWith(expect.any(Error))
@@ -269,8 +306,11 @@ describe('ExportButton', () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       // Verify error state is shown
       await waitFor(() => {
@@ -288,8 +328,11 @@ describe('ExportButton', () => {
       const cim = createMockCIM('Test CIM', 1)
       render(<ExportButton cim={cim} onExportStart={onExportStart} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       await waitFor(() => {
         expect(onExportStart).toHaveBeenCalled()
@@ -308,8 +351,11 @@ describe('ExportButton', () => {
       const cim = createMockCIM('Test CIM', 5)
       render(<ExportButton cim={cim} onExportComplete={onExportComplete} />)
 
+      // Open dropdown and click PPTX option
       const button = screen.getByTestId('export-button')
       await userEvent.click(button)
+      const pptxOption = screen.getByTestId('export-pptx-option')
+      await userEvent.click(pptxOption)
 
       await waitFor(() => {
         expect(onExportComplete).toHaveBeenCalledWith(5)
@@ -401,12 +447,17 @@ describe('ExportButtonIcon', () => {
     expect(button).toBeDisabled()
   })
 
-  it('should trigger export when clicked', async () => {
+  it('should trigger PPTX export when dropdown option clicked', async () => {
     const cim = createMockCIM('Test CIM', 1)
     render(<ExportButtonIcon cim={cim} />)
 
+    // Open dropdown
     const button = screen.getByTestId('export-button-icon')
     await userEvent.click(button)
+
+    // Click PPTX option in dropdown
+    const pptxOption = screen.getByText('Export Wireframe (PPTX)')
+    await userEvent.click(pptxOption)
 
     await waitFor(() => {
       expect(mockExportCIMAsWireframe).toHaveBeenCalledWith(cim)
@@ -426,8 +477,11 @@ describe('ExportButtonIcon', () => {
       />
     )
 
+    // Open dropdown and click PPTX option
     const button = screen.getByTestId('export-button-icon')
     await userEvent.click(button)
+    const pptxOption = screen.getByText('Export Wireframe (PPTX)')
+    await userEvent.click(pptxOption)
 
     await waitFor(() => {
       expect(onExportStart).toHaveBeenCalled()
