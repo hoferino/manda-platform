@@ -22,8 +22,8 @@ Epic E9 delivers the **CIM Builder** — a comprehensive framework for creating 
 
 **Business Value:** Enables analysts to create professional CIMs 5-10x faster than traditional methods while ensuring consistency with deal data and source traceability.
 
-**Stories:** 14 implementation stories + 1 spike (E9.1-E9.14, E9.S1)
-**Total Story Points:** ~60 points
+**Stories:** 15 implementation stories + 1 spike (E9.1-E9.15, E9.S1)
+**Total Story Points:** ~65 points
 
 ## Objectives and Scope
 
@@ -43,9 +43,9 @@ Epic E9 delivers the **CIM Builder** — a comprehensive framework for creating 
 | **UI** | CIM list view, 3-panel builder layout, wireframe preview renderer (E9.2, E9.3, E9.8) |
 | **Agent Core** | LangGraph workflow engine with state persistence and resume (E9.4) |
 | **Workflow Phases** | Buyer persona, investment thesis, outline definition, slide content creation (E9.5, E9.6, E9.7) |
-| **Interaction** | Click-to-reference in chat, non-linear navigation (E9.9, E9.12) |
-| **Intelligence** | Dependency tracking, consistency alerts, visual concept generation (E9.10, E9.11) |
-| **Export** | Wireframe PPT export, LLM prompt export (E9.13, E9.14) |
+| **Interaction** | Click-to-reference in chat, non-linear navigation (E9.9, E9.13) |
+| **Intelligence** | Dependency tracking, consistency alerts, narrative structure, visual concept generation (E9.10, E9.11, E9.12) |
+| **Export** | Wireframe PPT export, LLM prompt export (E9.14, E9.15) |
 | **Research** | Phase 2 styled output spike (E9.S1) |
 
 ### Out of Scope (MVP)
@@ -853,12 +853,14 @@ E9.1 (Database Schema)
   │                    │                    └──► E9.10 (Visual Concepts)
   │                    │
   │                    ├──► E9.11 (Dependency Tracking)
+  │                    │      │
+  │                    │      └──► E9.12 (Narrative Structure)
   │                    │
-  │                    └──► E9.12 (Non-Linear Nav)
+  │                    └──► E9.13 (Non-Linear Nav)
   │
-  └──► E9.13 (PPTX Export)
+  └──► E9.14 (PPTX Export)
          │
-         └──► E9.14 (LLM Prompt Export)
+         └──► E9.15 (LLM Prompt Export)
 
 E9.S1 (Spike) ──── Can run in parallel
 ```
@@ -998,38 +1000,49 @@ E9.S1 (Spike) ──── Can run in parallel
 | AC-9.11.5 | User can review flagged slides | Navigation works |
 | AC-9.11.6 | Coherence check validates narrative flow | Check runs |
 
-### E9.12: Non-Linear Navigation with Context
+### E9.12: Narrative Structure Dependencies
 
 | ID | Criterion | Testable |
 |----|-----------|----------|
-| AC-9.12.1 | Click any section in Structure panel to jump | Click works |
-| AC-9.12.2 | Agent acknowledges jump and summarizes state | Agent message |
-| AC-9.12.3 | Agent tracks section status (complete, in-progress, pending) | Status visible |
-| AC-9.12.4 | Forward jumps: agent notes skipped sections | Note present |
-| AC-9.12.5 | Backward jumps: agent notes potential updates | Note present |
-| AC-9.12.6 | Coherence warnings when navigation creates inconsistencies | Warning shown |
+| AC-9.12.1 | Section narrative structure stored when agent creates multi-slide sections | DB check for narrativeStructure field |
+| AC-9.12.2 | Each slide has defined narrative role (introduction, context, evidence, analysis, implications, projections, conclusion) | Slide role visible in data |
+| AC-9.12.3 | Content-role mismatch detected when content moves between slides with incompatible roles | Alert triggered on mismatch |
+| AC-9.12.4 | Agent alerts "You moved evidence content to a projections slide" when structure violated | Warning message present |
+| AC-9.12.5 | Agent suggests reorganization to maintain narrative flow | Suggestion present |
+| AC-9.12.6 | validateCoherenceTool extended to check narrative structure integrity within sections | Coherence includes structure check |
 
-### E9.13: Wireframe PowerPoint Export
-
-| ID | Criterion | Testable |
-|----|-----------|----------|
-| AC-9.13.1 | "Export" button visible in CIM Builder | Button present |
-| AC-9.13.2 | Generate PPTX with wireframe styling | Download file |
-| AC-9.13.3 | One slide per CIM section | Slide count matches |
-| AC-9.13.4 | Placeholders for charts/images with specs noted | Content inspection |
-| AC-9.13.5 | Text content included | Content inspection |
-| AC-9.13.6 | Download triggered in browser | File downloads |
-| AC-9.13.7 | File named: `{CIM Name} - Wireframe.pptx` | Filename check |
-
-### E9.14: LLM Prompt Export
+### E9.13: Non-Linear Navigation with Context
 
 | ID | Criterion | Testable |
 |----|-----------|----------|
-| AC-9.14.1 | "Export LLM Prompt" option available | Option visible |
-| AC-9.14.2 | Prompt includes: buyer persona, thesis, outline, all slide content, visual specs | Content check |
-| AC-9.14.3 | Structured format for LLM consumption | Format validation |
-| AC-9.14.4 | Copy to clipboard works | Clipboard check |
-| AC-9.14.5 | Download as .txt works | File downloads |
+| AC-9.13.1 | Click any section in Structure panel to jump | Click works |
+| AC-9.13.2 | Agent acknowledges jump and summarizes state | Agent message |
+| AC-9.13.3 | Agent tracks section status (complete, in-progress, pending) | Status visible |
+| AC-9.13.4 | Forward jumps: agent notes skipped sections | Note present |
+| AC-9.13.5 | Backward jumps: agent notes potential updates | Note present |
+| AC-9.13.6 | Coherence warnings when navigation creates inconsistencies | Warning shown |
+
+### E9.14: Wireframe PowerPoint Export
+
+| ID | Criterion | Testable |
+|----|-----------|----------|
+| AC-9.14.1 | "Export" button visible in CIM Builder | Button present |
+| AC-9.14.2 | Generate PPTX with wireframe styling | Download file |
+| AC-9.14.3 | One slide per CIM section | Slide count matches |
+| AC-9.14.4 | Placeholders for charts/images with specs noted | Content inspection |
+| AC-9.14.5 | Text content included | Content inspection |
+| AC-9.14.6 | Download triggered in browser | File downloads |
+| AC-9.14.7 | File named: `{CIM Name} - Wireframe.pptx` | Filename check |
+
+### E9.15: LLM Prompt Export
+
+| ID | Criterion | Testable |
+|----|-----------|----------|
+| AC-9.15.1 | "Export LLM Prompt" option available | Option visible |
+| AC-9.15.2 | Prompt includes: buyer persona, thesis, outline, all slide content, visual specs | Content check |
+| AC-9.15.3 | Structured format for LLM consumption | Format validation |
+| AC-9.15.4 | Copy to clipboard works | Clipboard check |
+| AC-9.15.5 | Download as .txt works | File downloads |
 
 ### E9.S1: Phase 2 Styled Output Research (SPIKE)
 
@@ -1071,9 +1084,10 @@ E9.S1 (Spike) ──── Can run in parallel
 | E9.9 | Reference parsing | Component updates | Click-to-edit |
 | E9.10 | Visual spec generation | Agent flow | Visual approval |
 | E9.11 | Dependency graph | Alert generation | Dependency warning |
-| E9.12 | Navigation state | Jump handling | Non-linear nav |
-| E9.13 | PPTX generation | - | Export download |
-| E9.14 | Prompt formatting | - | Export copy/download |
+| E9.12 | Content-role matching | Structure violation detection | Narrative alerts |
+| E9.13 | Navigation state | Jump handling | Non-linear nav |
+| E9.14 | PPTX generation | - | Export download |
+| E9.15 | Prompt formatting | - | Export copy/download |
 
 ### Component → File Mapping
 
@@ -1085,13 +1099,13 @@ E9.S1 (Spike) ──── Can run in parallel
 | **API Routes** | `app/api/cims/[id]/route.ts`, `app/api/deals/[id]/cims/route.ts` | E9.1 |
 | **Agent Workflow** | `lib/agent/cim/workflow.ts` | E9.4 |
 | **Agent Nodes** | `lib/agent/cim/nodes/*.ts` | E9.5, E9.6, E9.7, E9.10 |
-| **Agent Tools** | `lib/agent/cim/tools/*.ts` | E9.7, E9.11 |
+| **Agent Tools** | `lib/agent/cim/tools/*.ts` | E9.7, E9.11, E9.12 |
 | **CIM List UI** | `components/cim-builder/CIMList/*.tsx` | E9.2 |
 | **Builder Layout** | `components/cim-builder/CIMBuilderLayout.tsx` | E9.3 |
 | **Sources Panel** | `components/cim-builder/SourcesPanel/*.tsx` | E9.3 |
 | **Conversation Panel** | `components/cim-builder/ConversationPanel/*.tsx` | E9.3, E9.5, E9.6, E9.7 |
 | **Preview Panel** | `components/cim-builder/PreviewPanel/*.tsx` | E9.8, E9.9 |
-| **Export Service** | `lib/services/cim-export.ts` | E9.13, E9.14 |
+| **Export Service** | `lib/services/cim-export.ts` | E9.14, E9.15 |
 | **Page Route** | `app/projects/[id]/cim-builder/page.tsx` | E9.2 |
 | **Builder Route** | `app/projects/[id]/cim-builder/[cimId]/page.tsx` | E9.3 |
 
@@ -1147,7 +1161,8 @@ E9.S1 (Spike) ──── Can run in parallel
 |----------|-------|------------|------------|
 | **P0 (Critical)** | E9.4 (Agent Core) | High | State persistence, resume, error recovery |
 | **P0 (Critical)** | E9.11 (Dependencies) | High | Dependency detection accuracy |
-| **P0 (Critical)** | E9.13 (PPTX Export) | Medium | Output validation, file integrity |
+| **P0 (Critical)** | E9.12 (Narrative Structure) | High | Content-role matching accuracy |
+| **P0 (Critical)** | E9.14 (PPTX Export) | Medium | Output validation, file integrity |
 | **P1 (High)** | E9.7 (Slide Creation) | Medium | RAG integration, content quality |
 | **P1 (High)** | E9.9 (Click-to-Reference) | Medium | Component reference reliability |
 | **P2 (Medium)** | E9.3 (Layout) | Low | Responsive behavior, panel interactions |

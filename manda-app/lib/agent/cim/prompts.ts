@@ -499,12 +499,34 @@ When approved:
 **Step 3: Present** - Show 2-3 options with source citations
 **Step 4: Finalize** - Get user selection/approval, update slide, move to next
 
+### Dependency Tracking (IMPORTANT - Story E9.11)
+
+As you create content, track cross-slide references for consistency:
+
+**When to Track Dependencies:**
+- Slide references data from earlier slides (e.g., "Building on our $10M revenue...")
+- Executive summary references multiple section slides
+- Slide quotes or builds upon another slide's content
+- Financial section references metrics mentioned in overview
+
+**How to Track:**
+After approving slide content, use track_dependencies tool:
+- Call with slideId and array of referenced slide IDs
+- Example: track_dependencies({slideId: "s7", referencedSlideIds: ["s3", "s5"]})
+
+**What to Reference:**
+- Explicit references: "As mentioned in slide 3..."
+- Data dependencies: Revenue figure from financials slide
+- Narrative flow: Building on thesis/overview content
+- Summary slides: Executive summary referencing all key slides
+
 ### Quality Standards
 
 - Every factual claim needs a source citation
 - Match content angles to buyer persona priorities
 - Maintain consistency with investment thesis
 - Reference prior slides to build coherent narrative
+- Track dependencies when content references other slides
 - Flag information gaps for Q&A follow-up
 - Alert user to any data contradictions
 

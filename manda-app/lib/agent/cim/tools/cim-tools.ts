@@ -34,7 +34,15 @@ import {
   CHART_TYPES,
   ChartType,
   SOURCE_TYPES,
+  DependencyGraph,
 } from '@/lib/types/cim'
+import {
+  updateGraphOnSlideChange,
+  getDependents,
+  getReferences,
+  validateGraph,
+  getGraphStats,
+} from '@/lib/agent/cim/utils/dependency-graph'
 import { generateEmbedding } from '@/lib/services/embeddings'
 import {
   retrieveContentForSlide,
@@ -1467,6 +1475,426 @@ export const transitionPhaseTool = tool(
 )
 
 // ============================================================================
+// Dependency Tracking Tools (E9.11)
+// ============================================================================
+
+/**
+ * Track slide dependencies - updates the dependency graph when a slide references other slides
+ * Story: E9.11 - Dependency Tracking & Consistency Alerts
+ * AC #1: Agent maintains a dependency graph between slides
+ */
+export const trackDependenciesTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      // Validate that the slide exists
+      const slide = cim.slides.find(s => s.id === input.slideId)
+      if (!slide) {
+        return formatError(`Slide ${input.slideId} not found`)
+      }
+
+      // Validate that all referenced slides exist
+      const validSlideIds = new Set(cim.slides.map(s => s.id))
+      const invalidRefs = input.referencedSlideIds.filter(id => !validSlideIds.has(id))
+      if (invalidRefs.length > 0) {
+        return formatError(`Referenced slides not found: ${invalidRefs.join(', ')}`)
+      }
+
+      // Update the dependency graph
+      const updatedGraph = updateGraphOnSlideChange(
+        cim.dependencyGraph,
+        input.slideId,
+        input.referencedSlideIds
+      )
+
+      // Persist to database
+      await updateCIM(supabase, input.cimId, {
+        dependencyGraph: updatedGraph,
+      })
+
+      // Get stats for response
+      const stats = getGraphStats(updatedGraph)
+      const validation = validateGraph(updatedGraph)
+
+      return formatSuccess({
+        message: 'Dependencies tracked successfully',
+        slideId: input.slideId,
+        referencedSlides: input.referencedSlideIds,
+        graphStats: {
+          totalSlides: stats.totalSlides,
+          totalEdges: stats.totalEdges,
+        },
+        graphValid: validation.isValid,
+      })
+    } catch (err) {
+      console.error('[track_dependencies] Error:', err)
+      return formatError('Failed to track dependencies')
+    }
+  },
+  {
+    name: 'track_dependencies',
+    description: `Track dependencies between slides. Call this when a slide references content from other slides.
+
+**When to use:**
+- After creating/updating slide content that references other slides
+- When slide mentions data points, metrics, or narrative from other slides
+- After approving slide content to record detected dependencies
+
+**Example references to detect:**
+- "As shown in slide 3..." → references s3
+- "Building on our revenue of $10M" (from slide 3) → references s3
+- Executive summary referencing multiple slides → references all cited slides`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      slideId: z.string().describe('The slide ID that references other slides (e.g., "s7")'),
+      referencedSlideIds: z.array(z.string()).describe('Array of slide IDs this slide references (e.g., ["s3", "s5"])'),
+    }),
+  }
+)
+
+/**
+ * Get slides that depend on a given slide
+ * Story: E9.11 - Dependency Tracking & Consistency Alerts
+ * AC #2: When user edits slide N, agent identifies all slides that depend on it
+ */
+export const getDependentSlidesTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      // Validate that the slide exists
+      const slide = cim.slides.find(s => s.id === input.slideId)
+      if (!slide) {
+        return formatError(`Slide ${input.slideId} not found`)
+      }
+
+      // Get dependents from the graph
+      const dependentIds = getDependents(cim.dependencyGraph, input.slideId)
+
+      // Get slide details for each dependent
+      const dependentSlides = dependentIds
+        .map(id => cim.slides.find(s => s.id === id))
+        .filter((s): s is Slide => s !== undefined)
+        .map(s => ({
+          id: s.id,
+          title: s.title,
+          sectionId: s.section_id,
+          status: s.status,
+        }))
+
+      // Get section titles for context
+      const dependentSlidesWithSections = dependentSlides.map(s => {
+        const section = cim.outline.find(sec => sec.id === s.sectionId)
+        return {
+          ...s,
+          sectionTitle: section?.title || 'Unknown Section',
+        }
+      })
+
+      const hasDependents = dependentSlidesWithSections.length > 0
+
+      return formatSuccess({
+        message: hasDependents
+          ? `Found ${dependentSlidesWithSections.length} slide(s) that depend on slide "${slide.title}"`
+          : `No slides depend on slide "${slide.title}"`,
+        slideId: input.slideId,
+        slideTitle: slide.title,
+        dependentSlides: dependentSlidesWithSections,
+        dependentCount: dependentSlidesWithSections.length,
+        hasDependents,
+        // Proactive suggestion for agent to communicate (AC #4)
+        proactiveSuggestion: hasDependents
+          ? `⚠️ **Attention:** Changes to "${slide.title}" may affect ${dependentSlidesWithSections.length} other slide(s):\n${dependentSlidesWithSections.map(s => `- ${s.title} (${s.sectionTitle})`).join('\n')}\n\nConsider reviewing these slides after making changes.`
+          : null,
+      })
+    } catch (err) {
+      console.error('[get_dependent_slides] Error:', err)
+      return formatError('Failed to get dependent slides')
+    }
+  },
+  {
+    name: 'get_dependent_slides',
+    description: `Get all slides that depend on a given slide. Use this to warn users about potential impacts when editing slide content.
+
+**When to use:**
+- Before or after a slide is edited
+- When user clicks on a slide to modify it
+- To check what might be affected by a change
+
+**Response includes:**
+- List of dependent slides with titles and sections
+- Proactive warning message for user communication
+- Whether any dependents exist`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      slideId: z.string().describe('The slide ID to check dependents for'),
+    }),
+  }
+)
+
+/**
+ * Validate narrative coherence across slides
+ * Story: E9.11 - Dependency Tracking & Consistency Alerts
+ * AC #6: Agent validates narrative flow and flags inconsistencies
+ */
+export const validateCoherenceTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      const issues: Array<{
+        type: 'conflict' | 'broken_reference' | 'narrative_gap'
+        severity: 'warning' | 'error'
+        slideId: string
+        slideTitle: string
+        description: string
+        relatedSlideId?: string
+      }> = []
+
+      // Get slides with content to analyze
+      const slidesWithContent = cim.slides.filter(s =>
+        s.components && s.components.length > 0
+      )
+
+      // Check 1: Broken references - slides that reference non-existent slides
+      for (const slideId of Object.keys(cim.dependencyGraph.references || {})) {
+        const refs = cim.dependencyGraph.references[slideId] || []
+        const slide = cim.slides.find(s => s.id === slideId)
+
+        for (const refId of refs) {
+          const refSlide = cim.slides.find(s => s.id === refId)
+          if (!refSlide) {
+            issues.push({
+              type: 'broken_reference',
+              severity: 'error',
+              slideId,
+              slideTitle: slide?.title || slideId,
+              description: `References deleted slide ${refId}`,
+            })
+          } else if (refSlide.status === 'draft' && slide?.status === 'approved') {
+            issues.push({
+              type: 'broken_reference',
+              severity: 'warning',
+              slideId,
+              slideTitle: slide?.title || slideId,
+              description: `References draft slide "${refSlide.title}" - content may not be finalized`,
+              relatedSlideId: refId,
+            })
+          }
+        }
+      }
+
+      // Check 2: Find potential data conflicts across slides
+      // Extract numeric values from slide content for comparison
+      const numericPatterns: Array<{
+        slideId: string
+        slideTitle: string
+        pattern: string
+        value: string
+        context: string
+      }> = []
+
+      for (const slide of slidesWithContent) {
+        for (const component of slide.components) {
+          const content = component.content || ''
+          // Match common financial/metric patterns: $X, X%, X million, etc.
+          const matches = content.match(/\$[\d,.]+\s*(?:M|B|K|million|billion)?|\d+(?:\.\d+)?%|\d+(?:\.\d+)?\s*(?:million|billion|M|B|K)/gi)
+
+          if (matches) {
+            matches.forEach(match => {
+              numericPatterns.push({
+                slideId: slide.id,
+                slideTitle: slide.title,
+                pattern: match.toLowerCase().replace(/[\s,]/g, ''),
+                value: match,
+                context: content.substring(0, 50),
+              })
+            })
+          }
+        }
+      }
+
+      // Look for conflicting values that might represent the same metric
+      // This is a heuristic - we flag similar-looking values that differ
+      const valueGroups = new Map<string, typeof numericPatterns>()
+      for (const p of numericPatterns) {
+        // Group by rough category ($ values, % values, etc.)
+        const category = p.pattern.includes('$') ? 'currency' :
+                        p.pattern.includes('%') ? 'percentage' : 'number'
+        const key = category
+        const group = valueGroups.get(key) || []
+        group.push(p)
+        valueGroups.set(key, group)
+      }
+
+      // For each category, check if there are significantly different values
+      // that appear in dependent slides
+      for (const slideId of Object.keys(cim.dependencyGraph.dependencies || {})) {
+        const dependents = cim.dependencyGraph.dependencies[slideId] || []
+        const sourceSlide = cim.slides.find(s => s.id === slideId)
+
+        if (dependents.length > 0 && sourceSlide) {
+          // Get values from source slide
+          const sourcePatterns = numericPatterns.filter(p => p.slideId === slideId)
+
+          for (const dependent of dependents) {
+            const dependentPatterns = numericPatterns.filter(p => p.slideId === dependent)
+            const dependentSlide = cim.slides.find(s => s.id === dependent)
+
+            // Check if dependent slide has different values for similar patterns
+            for (const sp of sourcePatterns) {
+              for (const dp of dependentPatterns) {
+                // Same category but different value
+                const sameCategory = (sp.pattern.includes('$') && dp.pattern.includes('$')) ||
+                                   (sp.pattern.includes('%') && dp.pattern.includes('%'))
+
+                if (sameCategory && sp.pattern !== dp.pattern) {
+                  // Only flag if values are "close" enough to potentially be the same metric
+                  // e.g., $10M vs $12M might be the same metric with different values
+                  const sv = parseFloat(sp.pattern.replace(/[^0-9.]/g, ''))
+                  const dv = parseFloat(dp.pattern.replace(/[^0-9.]/g, ''))
+
+                  if (!isNaN(sv) && !isNaN(dv)) {
+                    const ratio = Math.max(sv, dv) / Math.min(sv, dv)
+                    // Flag if values are within 2x of each other but not equal
+                    if (ratio < 2 && ratio > 1.05) {
+                      issues.push({
+                        type: 'conflict',
+                        severity: 'warning',
+                        slideId: dependent,
+                        slideTitle: dependentSlide?.title || dependent,
+                        description: `Value "${dp.value}" differs from "${sp.value}" in "${sourceSlide.title}"`,
+                        relatedSlideId: slideId,
+                      })
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Check 3: Narrative gaps - look for approved slides with no dependencies
+      // that come after slides with dependencies (potential flow issue)
+      const approvedSlides = cim.slides.filter(s => s.status === 'approved')
+      const sortedApproved = [...approvedSlides].sort((a, b) => {
+        const sectionA = cim.outline.find(o => o.id === a.section_id)
+        const sectionB = cim.outline.find(o => o.id === b.section_id)
+        return (sectionA?.order || 0) - (sectionB?.order || 0)
+      })
+
+      let previousHadDependencies = false
+      for (const slide of sortedApproved) {
+        const refs = getReferences(cim.dependencyGraph, slide.id)
+        const hasDeps = refs.length > 0
+
+        // Skip first few slides (intro/overview often has no deps)
+        const slideOrder = cim.outline.find(o => o.id === slide.section_id)?.order || 0
+        if (slideOrder > 2 && previousHadDependencies && !hasDeps) {
+          // This slide has no references but previous ones did
+          // Could indicate a narrative gap
+          issues.push({
+            type: 'narrative_gap',
+            severity: 'warning',
+            slideId: slide.id,
+            slideTitle: slide.title,
+            description: 'No cross-references to other slides - potential narrative disconnect',
+          })
+        }
+
+        previousHadDependencies = hasDeps
+      }
+
+      // Deduplicate issues
+      const uniqueIssues = issues.filter((issue, index, self) =>
+        index === self.findIndex(i =>
+          i.slideId === issue.slideId && i.type === issue.type && i.description === issue.description
+        )
+      )
+
+      const hasIssues = uniqueIssues.length > 0
+      const errorCount = uniqueIssues.filter(i => i.severity === 'error').length
+      const warningCount = uniqueIssues.filter(i => i.severity === 'warning').length
+
+      return formatSuccess({
+        message: hasIssues
+          ? `Found ${uniqueIssues.length} coherence issue(s): ${errorCount} error(s), ${warningCount} warning(s)`
+          : 'No coherence issues found',
+        hasIssues,
+        issues: uniqueIssues,
+        summary: {
+          totalIssues: uniqueIssues.length,
+          errors: errorCount,
+          warnings: warningCount,
+          brokenReferences: uniqueIssues.filter(i => i.type === 'broken_reference').length,
+          conflicts: uniqueIssues.filter(i => i.type === 'conflict').length,
+          narrativeGaps: uniqueIssues.filter(i => i.type === 'narrative_gap').length,
+        },
+        // Formatted message for agent to present to user
+        formattedMessage: hasIssues
+          ? `⚠️ **Coherence Check Results**\n\n${uniqueIssues.map(i =>
+              `- **${i.slideTitle}**: ${i.description}${i.relatedSlideId ? ` (see slide ${i.relatedSlideId})` : ''}`
+            ).join('\n')}\n\nWould you like me to help address these issues?`
+          : '✅ All slides are coherent - no conflicts, broken references, or narrative gaps detected.',
+      })
+    } catch (err) {
+      console.error('[validate_coherence] Error:', err)
+      return formatError('Failed to validate coherence')
+    }
+  },
+  {
+    name: 'validate_coherence',
+    description: `Validate narrative coherence across all CIM slides. Checks for:
+- **Conflicting data**: Same metrics with different values across slides
+- **Broken references**: Slides referencing deleted or incomplete content
+- **Narrative gaps**: Disconnected slides that break narrative flow
+
+**When to use:**
+- After multiple slides have been edited
+- When user navigates non-linearly through the CIM
+- Before finalizing/exporting the CIM
+- When user asks to "check for issues" or "validate the document"
+
+Returns a summary of issues with specific slide references for correction.`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID to validate'),
+    }),
+  }
+)
+
+// ============================================================================
 // Export All Tools
 // ============================================================================
 
@@ -1489,6 +1917,10 @@ export const cimTools = [
   generateVisualConceptTool,  // AC #1, #3: Visual Concept Generation
   regenerateVisualConceptTool,  // AC #4: Alternative Visual Concept Requests
   setVisualConceptTool,  // AC #5: Visual Concept Persistence
+  // Dependency tracking tools (E9.11)
+  trackDependenciesTool,  // AC #1: Track dependencies between slides
+  getDependentSlidesTool,  // AC #2, #4: Get dependent slides with proactive suggestion
+  validateCoherenceTool,  // AC #6: Coherence validation
   // Workflow tools
   transitionPhaseTool,
 ]

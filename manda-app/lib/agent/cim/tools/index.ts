@@ -6,6 +6,7 @@
  * Story: E9.6 - Agenda/Outline Collaborative Definition
  * Story: E9.7 - Slide Content Creation (RAG-powered)
  * Story: E9.10 - Visual Concept Generation
+ * Story: E9.11 - Dependency Tracking & Consistency Alerts
  */
 
 export {
@@ -27,6 +28,10 @@ export {
   generateVisualConceptTool,
   regenerateVisualConceptTool,
   setVisualConceptTool,
+  // Dependency tracking tools (E9.11)
+  trackDependenciesTool,
+  getDependentSlidesTool,
+  validateCoherenceTool,
   // Workflow tools
   transitionPhaseTool,
   // Aggregate export

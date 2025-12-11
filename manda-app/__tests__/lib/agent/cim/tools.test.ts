@@ -39,6 +39,9 @@ import {
   approveSlideContentTool,
   generateVisualConceptTool,
   regenerateVisualConceptTool,
+  trackDependenciesTool,
+  getDependentSlidesTool,
+  validateCoherenceTool,
   cimTools,
   CIM_TOOL_COUNT,
 } from '@/lib/agent/cim/tools'
@@ -232,10 +235,10 @@ describe('E9.6 - CIM Tools for Outline Definition', () => {
       expect(toolNames).toContain('reorder_outline_sections')
     })
 
-    it('should have correct tool count (14 total with E9.7 and E9.10)', () => {
-      // Count includes E9.10 visual concept tools
-      expect(CIM_TOOL_COUNT).toBe(14)
-      expect(cimTools.length).toBe(14)
+    it('should have correct tool count (17 total with E9.7, E9.10, and E9.11)', () => {
+      // Count includes E9.10 visual concept tools and E9.11 dependency/coherence tools
+      expect(CIM_TOOL_COUNT).toBe(17)
+      expect(cimTools.length).toBe(17)
     })
   })
 })
@@ -342,10 +345,10 @@ describe('E9.7 - CIM Tools for Slide Content Creation', () => {
       expect(toolNames).toContain('approve_slide_content')
     })
 
-    it('should have correct tool count (14 total including E9.10 visual concept tools)', () => {
-      // 12 base tools + 2 new E9.10 visual concept tools (generateVisualConceptTool, regenerateVisualConceptTool)
-      expect(CIM_TOOL_COUNT).toBe(14)
-      expect(cimTools.length).toBe(14)
+    it('should have correct tool count (17 total including E9.10 visual + E9.11 dependency/coherence tools)', () => {
+      // 12 base tools + 2 E9.10 visual concept tools + 3 E9.11 dependency/coherence tools
+      expect(CIM_TOOL_COUNT).toBe(17)
+      expect(cimTools.length).toBe(17)
     })
 
     it('should include E9.10 visual concept tools in array', () => {
@@ -425,6 +428,141 @@ describe('E9.10 - CIM Tools for Visual Concept Generation', () => {
     it('should be included in cimTools array', () => {
       const toolNames = cimTools.map(t => t.name)
       expect(toolNames).toContain('regenerate_visual_concept')
+    })
+  })
+})
+
+// =============================================================================
+// E9.11 - Dependency Tracking Tools
+// =============================================================================
+
+describe('E9.11 - CIM Tools for Dependency Tracking', () => {
+  describe('trackDependenciesTool (AC #1)', () => {
+    it('should be exported and named correctly', () => {
+      expect(trackDependenciesTool).toBeDefined()
+      expect(trackDependenciesTool.name).toBe('track_dependencies')
+    })
+
+    it('should have proper schema with required fields', () => {
+      const schema = trackDependenciesTool.schema
+      expect(schema).toBeDefined()
+
+      const description = trackDependenciesTool.description
+      expect(description).toContain('dependencies')
+      expect(description).toContain('slides')
+    })
+
+    it('should have description mentioning when to track dependencies', () => {
+      const description = trackDependenciesTool.description
+      expect(description.toLowerCase()).toContain('when to use')
+      expect(description.toLowerCase()).toContain('references')
+    })
+
+    it('should have description with example references to detect', () => {
+      const description = trackDependenciesTool.description
+      expect(description).toContain('Example references')
+      expect(description).toContain('slide 3')
+    })
+
+    it('should accept slideId and referencedSlideIds parameters', () => {
+      // Schema should require slideId and referencedSlideIds (checked via schema)
+      const schema = trackDependenciesTool.schema
+      expect(schema).toBeDefined()
+    })
+
+    it('should be included in cimTools array', () => {
+      const toolNames = cimTools.map(t => t.name)
+      expect(toolNames).toContain('track_dependencies')
+    })
+  })
+
+  describe('getDependentSlidesTool (AC #2, #4)', () => {
+    it('should be exported and named correctly', () => {
+      expect(getDependentSlidesTool).toBeDefined()
+      expect(getDependentSlidesTool.name).toBe('get_dependent_slides')
+    })
+
+    it('should have proper schema', () => {
+      const schema = getDependentSlidesTool.schema
+      expect(schema).toBeDefined()
+    })
+
+    it('should have description mentioning dependent slides', () => {
+      const description = getDependentSlidesTool.description
+      expect(description.toLowerCase()).toContain('depend')
+      expect(description.toLowerCase()).toContain('slide')
+    })
+
+    it('should have description mentioning proactive warning (AC #4)', () => {
+      const description = getDependentSlidesTool.description
+      expect(description.toLowerCase()).toContain('warn')
+      expect(description.toLowerCase()).toContain('impacts')
+    })
+
+    it('should mention when to use', () => {
+      const description = getDependentSlidesTool.description
+      expect(description.toLowerCase()).toContain('when to use')
+      expect(description.toLowerCase()).toContain('edited')
+    })
+
+    it('should be included in cimTools array', () => {
+      const toolNames = cimTools.map(t => t.name)
+      expect(toolNames).toContain('get_dependent_slides')
+    })
+  })
+
+  describe('validateCoherenceTool (AC #6)', () => {
+    it('should be exported and named correctly', () => {
+      expect(validateCoherenceTool).toBeDefined()
+      expect(validateCoherenceTool.name).toBe('validate_coherence')
+    })
+
+    it('should have proper schema', () => {
+      const schema = validateCoherenceTool.schema
+      expect(schema).toBeDefined()
+    })
+
+    it('should have description mentioning coherence checks', () => {
+      const description = validateCoherenceTool.description
+      expect(description.toLowerCase()).toContain('coherence')
+      expect(description.toLowerCase()).toContain('validate')
+    })
+
+    it('should have description mentioning conflicting data', () => {
+      const description = validateCoherenceTool.description
+      expect(description.toLowerCase()).toContain('conflict')
+    })
+
+    it('should have description mentioning broken references', () => {
+      const description = validateCoherenceTool.description
+      expect(description.toLowerCase()).toContain('broken')
+      expect(description.toLowerCase()).toContain('reference')
+    })
+
+    it('should have description mentioning narrative gaps', () => {
+      const description = validateCoherenceTool.description
+      expect(description.toLowerCase()).toContain('narrative')
+      expect(description.toLowerCase()).toContain('gap')
+    })
+
+    it('should mention when to use', () => {
+      const description = validateCoherenceTool.description
+      expect(description.toLowerCase()).toContain('when to use')
+    })
+
+    it('should be included in cimTools array', () => {
+      const toolNames = cimTools.map(t => t.name)
+      expect(toolNames).toContain('validate_coherence')
+    })
+  })
+
+  describe('cimTools array includes E9.11 tools', () => {
+    it('should include all dependency tracking and coherence tools', () => {
+      const toolNames = cimTools.map(t => t.name)
+
+      expect(toolNames).toContain('track_dependencies')
+      expect(toolNames).toContain('get_dependent_slides')
+      expect(toolNames).toContain('validate_coherence')
     })
   })
 })

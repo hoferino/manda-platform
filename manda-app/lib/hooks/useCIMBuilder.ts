@@ -7,7 +7,9 @@
  * Handles CIM loading, updates, and state coordination.
  *
  * Story: E9.3 - CIM Builder 3-Panel Layout
+ * Story: E9.11 - Dependency Tracking & Consistency Alerts
  * AC: #1-6 - State management for all acceptance criteria
+ * AC: E9.11 #3, #5 - Flagged sections state management
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -18,6 +20,7 @@ import type {
   Slide,
   ConversationMessage,
 } from '@/lib/types/cim'
+import type { FlaggedSection } from '@/components/cim-builder/SourcesPanel/StructureTree'
 
 interface UseCIMBuilderReturn {
   cim: CIM | null
@@ -31,6 +34,11 @@ interface UseCIMBuilderReturn {
   updateOutline: (outline: OutlineSection[]) => Promise<void>
   updateSlides: (slides: Slide[]) => Promise<void>
   refresh: () => Promise<void>
+  // E9.11: Flagged sections for dependency alerts
+  flaggedSections: FlaggedSection[]
+  flagSections: (sections: FlaggedSection[]) => void
+  clearFlag: (sectionId: string) => void
+  clearAllFlags: () => void
 }
 
 export function useCIMBuilder(projectId: string, cimId: string): UseCIMBuilderReturn {
@@ -39,6 +47,8 @@ export function useCIMBuilder(projectId: string, cimId: string): UseCIMBuilderRe
   const [error, setError] = useState<string | null>(null)
   const [sourceRef, setSourceRef] = useState('')
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
+  // E9.11: Flagged sections state
+  const [flaggedSections, setFlaggedSections] = useState<FlaggedSection[]>([])
 
   // Track if initial load has completed
   const initialLoadRef = useRef(false)
@@ -150,6 +160,27 @@ export function useCIMBuilder(projectId: string, cimId: string): UseCIMBuilderRe
     [cim, projectId, cimId]
   )
 
+  // E9.11: Flag sections for review (additive - keeps existing flags)
+  const flagSections = useCallback((sections: FlaggedSection[]) => {
+    setFlaggedSections((prev) => {
+      // Merge with existing flags, avoiding duplicates
+      const existingIds = new Set(prev.map(f => f.sectionId))
+      const newFlags = sections.filter(s => !existingIds.has(s.sectionId))
+      if (newFlags.length === 0) return prev
+      return [...prev, ...newFlags]
+    })
+  }, [])
+
+  // E9.11: Clear a specific flag (AC #5)
+  const clearFlag = useCallback((sectionId: string) => {
+    setFlaggedSections((prev) => prev.filter(f => f.sectionId !== sectionId))
+  }, [])
+
+  // E9.11: Clear all flags
+  const clearAllFlags = useCallback(() => {
+    setFlaggedSections([])
+  }, [])
+
   return {
     cim,
     isLoading,
@@ -162,5 +193,10 @@ export function useCIMBuilder(projectId: string, cimId: string): UseCIMBuilderRe
     updateOutline,
     updateSlides,
     refresh,
+    // E9.11: Flagged sections
+    flaggedSections,
+    flagSections,
+    clearFlag,
+    clearAllFlags,
   }
 }

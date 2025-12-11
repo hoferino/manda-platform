@@ -1,0 +1,257 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>11</storyId>
+    <title>Dependency Tracking &amp; Consistency Alerts</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-11</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-11-dependency-tracking-and-consistency-alerts.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>the system to track relationships between slides and alert me when changes to one slide may affect others</iWant>
+    <soThat>I can maintain narrative consistency across my CIM without manually checking every slide for inconsistencies after making edits</soThat>
+    <tasks>
+      <task id="1" title="Implement Dependency Graph Data Structure" ac="1">
+        <subtask id="1.1">Define DependencyGraph type in lib/types/cim.ts with dependencies and references maps</subtask>
+        <subtask id="1.2">Verify dependency_graph JSONB column exists in cims table</subtask>
+        <subtask id="1.3">Create lib/agent/cim/utils/dependency-graph.ts with addDependency, removeDependency, getDependents, getReferences, updateGraphOnSlideChange</subtask>
+        <subtask id="1.4">Write unit tests for dependency graph utilities</subtask>
+      </task>
+      <task id="2" title="Implement Automatic Dependency Detection" ac="1">
+        <subtask id="2.1">Create trackDependenciesTool in cim-tools.ts</subtask>
+        <subtask id="2.2">Add dependency detection prompts to prompts.ts</subtask>
+        <subtask id="2.3">Update slide content creation workflow to call trackDependenciesTool</subtask>
+        <subtask id="2.4">Persist updated dependency_graph to database</subtask>
+      </task>
+      <task id="3" title="Implement Dependent Slide Identification on Edit" ac="2,4">
+        <subtask id="3.1">Create getDependentSlidesTool in cim-tools.ts</subtask>
+        <subtask id="3.2">Integrate dependency check into click-to-reference edit flow</subtask>
+        <subtask id="3.3">Integrate dependency check into direct slide content updates</subtask>
+        <subtask id="3.4">Format agent response to include affected slide list</subtask>
+      </task>
+      <task id="4" title="Implement Structure Panel Flagging UI" ac="3,5">
+        <subtask id="4.1">Add flaggedSlides state to CIM builder state management</subtask>
+        <subtask id="4.2">Update StructureTree.tsx to display warning indicator</subtask>
+        <subtask id="4.3">Make flagged items clickable for navigation</subtask>
+        <subtask id="4.4">Add clear flags action</subtask>
+        <subtask id="4.5">Write component tests for flagged state</subtask>
+      </task>
+      <task id="5" title="Implement Coherence Validation" ac="6">
+        <subtask id="5.1">Create validateCoherenceTool in cim-tools.ts</subtask>
+        <subtask id="5.2">Add coherence check prompts to prompts.ts</subtask>
+        <subtask id="5.3">Trigger coherence validation after non-linear navigation or multiple edits</subtask>
+        <subtask id="5.4">Display coherence warnings in agent conversation</subtask>
+        <subtask id="5.5">Write unit tests for coherence validation</subtask>
+      </task>
+      <task id="6" title="Write Integration and E2E Tests" ac="1-6">
+        <subtask id="6.1">Unit tests for dependency graph operations</subtask>
+        <subtask id="6.2">Integration tests for dependency detection during slide creation</subtask>
+        <subtask id="6.3">Integration tests for flagging flow</subtask>
+        <subtask id="6.4">Component tests for Structure panel flagging</subtask>
+        <subtask id="6.5">Coherence validation scenario tests</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" title="Dependency Graph Maintenance">Agent maintains a dependency graph between slides (stored in cims.dependency_graph JSONB), tracking which slides reference content from other slides</criterion>
+    <criterion id="2" title="Dependent Slide Identification">When user edits slide N, agent identifies all slides that reference or depend on content from slide N</criterion>
+    <criterion id="3" title="Structure Panel Flagging">Affected slides are visually flagged in the Structure panel with a warning indicator (e.g., alert icon, yellow highlight)</criterion>
+    <criterion id="4" title="Proactive Suggestion">Agent proactively suggests reviewing affected slides with message like "This change may affect slides 7 and 12"</criterion>
+    <criterion id="5" title="Flagged Slide Review">User can navigate to flagged slides directly from Structure panel or via agent suggestion</criterion>
+    <criterion id="6" title="Coherence Validation">Agent validates narrative flow across slides and flags inconsistencies (e.g., conflicting data, broken references, narrative discontinuity)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-E9.md</path>
+        <title>Epic E9 Technical Specification</title>
+        <section>E9.11 Dependency Tracking &amp; Consistency Alerts</section>
+        <snippet>Defines AC-9.11.1 through AC-9.11.6 with dependency graph schema, coherence validation requirements, and integration points.</snippet>
+      </doc>
+      <doc>
+        <path>docs/manda-architecture.md</path>
+        <title>Manda Architecture Document v3.1</title>
+        <section>Technology Stack, System Architecture</section>
+        <snippet>Defines LangGraph agent framework, Supabase JSONB storage patterns, and React component structure for the platform.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/stories/e9-10-visual-concept-generation.md</path>
+        <title>Story E9.10 Visual Concept Generation</title>
+        <section>Dev Agent Record</section>
+        <snippet>Previous story patterns: tool definition patterns in cim-tools.ts, prompt enhancement in prompts.ts, SlidePreview component patterns.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>manda-app/lib/types/cim.ts</path>
+        <kind>types</kind>
+        <symbol>DependencyGraph, CIM, Slide, SlideComponent</symbol>
+        <lines>182-187, 208-224, 168-177, 157-163</lines>
+        <reason>DependencyGraph interface already exists (lines 182-187). CIM interface uses dependencyGraph field. Slide and SlideComponent types for tracking references.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/cim/tools/cim-tools.ts</path>
+        <kind>agent-tools</kind>
+        <symbol>approveSlideContentTool, updateSlideTool, generateVisualConceptTool, cimTools</symbol>
+        <lines>736-843, 848-923, 935-1132, 1473-1496</lines>
+        <reason>Existing tool patterns to follow. Hook dependency tracking into approveSlideContentTool and updateSlideTool. Add trackDependenciesTool, getDependentSlidesTool, validateCoherenceTool to cimTools array.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/cim/prompts.ts</path>
+        <kind>prompts</kind>
+        <symbol>PHASE_PROMPTS, CIM_TOOL_USAGE_PROMPT, CIM_AGENT_BASE_PROMPT</symbol>
+        <lines>70-685, 690-722, 19-65</lines>
+        <reason>Add dependency detection and coherence validation prompts to PHASE_PROMPTS. Update CIM_TOOL_USAGE_PROMPT with new dependency tools.</reason>
+      </file>
+      <file>
+        <path>manda-app/components/cim-builder/SourcesPanel/StructureTree.tsx</path>
+        <kind>component</kind>
+        <symbol>StructureTree, statusIcons, statusColors</symbol>
+        <lines>1-96</lines>
+        <reason>Add flagged state rendering. Current statusIcons only has complete/in_progress/pending. Add warning state for flagged slides.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/services/cim.ts</path>
+        <kind>service</kind>
+        <symbol>updateCIM, getCIM</symbol>
+        <lines>143-185, 84-104</lines>
+        <reason>updateCIM handles dependencyGraph updates. Use for persisting dependency graph changes.</reason>
+      </file>
+      <file>
+        <path>manda-app/lib/agent/cim/tools/index.ts</path>
+        <kind>exports</kind>
+        <symbol>exports</symbol>
+        <reason>Export new dependency tracking tools from tools index.</reason>
+      </file>
+      <file>
+        <path>manda-app/__tests__/lib/agent/cim/tools.test.ts</path>
+        <kind>test</kind>
+        <symbol>test patterns</symbol>
+        <lines>1-100</lines>
+        <reason>Test patterns for CIM tools. Follow same structure for dependency tracking tool tests.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <node>
+        <package>@langchain/core</package>
+        <version>^1.1.0</version>
+        <usage>tool() function for creating agent tools</usage>
+      </node>
+      <node>
+        <package>zod</package>
+        <version>^4.1.13</version>
+        <usage>Schema validation for tool inputs and outputs</usage>
+      </node>
+      <node>
+        <package>@supabase/supabase-js</package>
+        <version>^2.84.0</version>
+        <usage>Database operations for persisting dependency graph</usage>
+      </node>
+      <node>
+        <package>lucide-react</package>
+        <version>^0.554.0</version>
+        <usage>AlertTriangle icon for flagged slides in StructureTree</usage>
+      </node>
+      <node>
+        <package>react</package>
+        <version>^19.2.1</version>
+        <usage>Component state for flaggedSlides</usage>
+      </node>
+      <node>
+        <package>vitest</package>
+        <version>^4.0.14</version>
+        <usage>Unit and integration testing framework</usage>
+      </node>
+      <node>
+        <package>@testing-library/react</package>
+        <version>^16.3.0</version>
+        <usage>Component testing for StructureTree flagging</usage>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">Dependency graph stored in cims.dependency_graph JSONB column - already exists in schema</constraint>
+    <constraint type="pattern">Follow existing tool patterns from E9.10 (generateVisualConceptTool, regenerateVisualConceptTool)</constraint>
+    <constraint type="pattern">Use formatSuccess/formatError helper functions for tool responses</constraint>
+    <constraint type="pattern">Add new tools to cimTools array export</constraint>
+    <constraint type="testing">Target 80% unit test coverage, follow existing tools.test.ts patterns</constraint>
+    <constraint type="ui">Use Lucide icons (AlertTriangle) for consistency with existing UI</constraint>
+    <constraint type="state">State management via React hooks or zustand - StructureTree currently receives outline as props</constraint>
+    <constraint type="integration">Hook into existing approveSlideContentTool flow for dependency tracking after slide approval</constraint>
+    <constraint type="performance">Dependency graph operations should be O(1) for single slide lookups</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>DependencyGraph</name>
+      <kind>TypeScript interface</kind>
+      <signature>interface DependencyGraph { dependencies: Record&lt;string, string[]&gt;; references: Record&lt;string, string[]&gt;; }</signature>
+      <path>manda-app/lib/types/cim.ts:182-187</path>
+    </interface>
+    <interface>
+      <name>trackDependenciesTool</name>
+      <kind>LangChain tool</kind>
+      <signature>tool(async (input: { cimId: string; slideId: string; referencedSlideIds: string[] }) =&gt; string)</signature>
+      <path>manda-app/lib/agent/cim/tools/cim-tools.ts (NEW)</path>
+    </interface>
+    <interface>
+      <name>getDependentSlidesTool</name>
+      <kind>LangChain tool</kind>
+      <signature>tool(async (input: { cimId: string; slideId: string }) =&gt; string)</signature>
+      <path>manda-app/lib/agent/cim/tools/cim-tools.ts (NEW)</path>
+    </interface>
+    <interface>
+      <name>validateCoherenceTool</name>
+      <kind>LangChain tool</kind>
+      <signature>tool(async (input: { cimId: string }) =&gt; string)</signature>
+      <path>manda-app/lib/agent/cim/tools/cim-tools.ts (NEW)</path>
+    </interface>
+    <interface>
+      <name>StructureTreeProps</name>
+      <kind>React props</kind>
+      <signature>interface StructureTreeProps { outline: OutlineSection[]; onSectionClick: (sectionId: string) =&gt; void; flaggedSlides?: string[]; onFlagClick?: (slideId: string) =&gt; void; className?: string; }</signature>
+      <path>manda-app/components/cim-builder/SourcesPanel/StructureTree.tsx:19-23 (EXTEND)</path>
+    </interface>
+    <interface>
+      <name>updateCIM</name>
+      <kind>Service function</kind>
+      <signature>async function updateCIM(supabase: SupabaseClientTyped, cimId: string, input: UpdateCIMInput): Promise&lt;CIM&gt;</signature>
+      <path>manda-app/lib/services/cim.ts:143-185</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Unit tests use Vitest with thread pool parallelization. Test files mirror source structure under __tests__/. Use shared Supabase mock utilities from __tests__/utils/supabase-mock.ts. Data factories exist for createMockDocument, createMockUser, createMockFolder. Component tests use React Testing Library. E2E tests use Playwright with authentication setup.
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/agent/cim/tools.test.ts</location>
+      <location>manda-app/__tests__/lib/agent/cim/utils/dependency-graph.test.ts (NEW)</location>
+      <location>manda-app/__tests__/components/cim-builder/StructureTree.test.tsx (NEW)</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test addDependency creates correct graph edges</idea>
+      <idea ac="1">Test removeDependency cleans up both directions</idea>
+      <idea ac="1">Test getDependents returns all dependent slides</idea>
+      <idea ac="1">Test getReferences returns all referenced slides</idea>
+      <idea ac="1">Test updateGraphOnSlideChange reconciles graph correctly</idea>
+      <idea ac="2">Test trackDependenciesTool updates graph and persists to DB</idea>
+      <idea ac="2">Test dependency detection identifies explicit data references</idea>
+      <idea ac="3">Test StructureTree renders warning icon for flagged slides</idea>
+      <idea ac="3">Test flagged slide has yellow highlight styling</idea>
+      <idea ac="4">Test getDependentSlidesTool returns formatted affected slide list</idea>
+      <idea ac="4">Test agent response includes proactive review suggestion</idea>
+      <idea ac="5">Test clicking flagged item calls onFlagClick with slideId</idea>
+      <idea ac="5">Test navigation to flagged slide works from Structure panel</idea>
+      <idea ac="6">Test validateCoherenceTool detects conflicting data</idea>
+      <idea ac="6">Test coherence check detects broken references</idea>
+      <idea ac="6">Test coherence check detects narrative discontinuity</idea>
+    </ideas>
+  </tests>
+</story-context>

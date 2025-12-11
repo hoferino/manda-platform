@@ -4965,24 +4965,25 @@ Then the agent calls import_qa_excel() and summarizes results
 | E9.9 | Click-to-Reference in Chat | 5 |
 | E9.10 | Visual Concept Generation | 6 |
 
-**Intelligence (2 stories — 8 pts)**
+**Intelligence (3 stories — 13 pts)**
 | Story | Title | Points |
 |-------|-------|--------|
 | E9.11 | Dependency Tracking & Consistency Alerts | 5 |
-| E9.12 | Non-Linear Navigation with Context | 3 |
+| E9.12 | Narrative Structure Dependencies | 5 |
+| E9.13 | Non-Linear Navigation with Context | 3 |
 
-**Export (2 stories — 7 pts)**
+**Export (2 stories — 8 pts)**
 | Story | Title | Points |
 |-------|-------|--------|
-| E9.13 | Wireframe PowerPoint Export | 5 |
-| E9.14 | LLM Prompt Export | 2 |
+| E9.14 | Wireframe PowerPoint Export | 5 |
+| E9.15 | LLM Prompt Export | 3 |
 
-**Spike (1 — 3 pts)**
+**Spike (1 — 5 pts)**
 | Story | Title | Points |
 |-------|-------|--------|
-| E9.S1 | Phase 2 Styled Output Research | 3 |
+| E9.S1 | Phase 2 Styled Output Research | 5 |
 
-**Total: 14 stories + 1 spike = 65 story points**
+**Total: 15 stories + 1 spike = ~65 story points**
 
 ---
 

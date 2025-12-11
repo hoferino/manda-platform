@@ -1681,15 +1681,26 @@ development_status:
     - Full test suite passes (2475 tests), production build verified
   e9-10-points: 5
   # Intelligence (2 stories)
-  e9-11-dependency-tracking-and-consistency-alerts: backlog
+  e9-11-dependency-tracking-and-consistency-alerts: done
+  e9-11-context-generated: 2025-12-11
+  e9-11-completion-date: 2025-12-11
+  e9-11-completion-notes:
+    - Implemented dependency graph utilities with 52 unit tests
+    - Created trackDependenciesTool, getDependentSlidesTool, validateCoherenceTool
+    - Added StructureTree flagging UI with amber highlighting
+    - Implemented coherence validation (conflicts, broken refs, narrative gaps)
+    - All 132 tests passing (52 dependency graph + 80 CIM tools)
   e9-11-points: 5
-  e9-12-non-linear-navigation-with-context: backlog
-  e9-12-points: 3
+  e9-12-narrative-structure-dependencies: backlog
+  e9-12-points: 5
+  e9-12-notes: Extends E9.11 to handle intra-section narrative structure and content-role validation
+  e9-13-non-linear-navigation-with-context: backlog
+  e9-13-points: 3
   # Export (2 stories)
-  e9-13-wireframe-powerpoint-export: backlog
-  e9-13-points: 5
-  e9-14-llm-prompt-export: backlog
-  e9-14-points: 3
+  e9-14-wireframe-powerpoint-export: backlog
+  e9-14-points: 5
+  e9-15-llm-prompt-export: backlog
+  e9-15-points: 3
   # Spike (1)
   e9-s1-phase-2-styled-output-research: backlog
   e9-s1-points: 5

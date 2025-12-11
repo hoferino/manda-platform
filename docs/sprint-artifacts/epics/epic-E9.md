@@ -45,18 +45,19 @@ Implements the CIM Builder — a comprehensive framework for creating complete C
 - E9.9: Click-to-Reference in Chat
 - E9.10: Visual Concept Generation
 
-### Intelligence (2 stories)
+### Intelligence (3 stories)
 - E9.11: Dependency Tracking & Consistency Alerts
-- E9.12: Non-Linear Navigation with Context
+- E9.12: Narrative Structure Dependencies
+- E9.13: Non-Linear Navigation with Context
 
 ### Export (2 stories)
-- E9.13: Wireframe PowerPoint Export
-- E9.14: LLM Prompt Export
+- E9.14: Wireframe PowerPoint Export
+- E9.15: LLM Prompt Export
 
 ### Spike (1)
 - E9.S1: Phase 2 Styled Output Research
 
-**Total Stories:** 14 + 1 Spike
+**Total Stories:** 15 + 1 Spike
 
 **Priority:** P1
 
@@ -330,9 +331,32 @@ Track relationships between slides so that when one changes, the system flags de
 
 ---
 
-### E9.12: Non-Linear Navigation with Context
+### E9.12: Narrative Structure Dependencies
 
 **Story ID:** E9.12
+**Points:** 5
+
+**Description:**
+Extend E9.11 to understand intended narrative structure within sections and alert when content moves disrupt that structure. When a multi-slide section has an established information architecture (e.g., context → evidence → projections), detect when content reorganization violates that structure.
+
+**Acceptance Criteria:**
+- [ ] Section narrative structure storage: when agent creates multi-slide sections, store intended information architecture
+- [ ] Slide role definition: each slide has a narrative role (introduction, context, evidence, analysis, implications, projections, conclusion)
+- [ ] Content-role mismatch detection: when content moves, analyze if content type matches destination slide's role
+- [ ] Structural coherence alert: agent alerts "You moved evidence content to a projections slide"
+- [ ] Reorganization suggestions: agent suggests how to maintain narrative flow
+- [ ] Section-level validation: validateCoherenceTool extended to check narrative structure integrity
+
+**Technical Notes:**
+- Extends E9.11's dependency tracking with intra-section narrative awareness
+- Content classification heuristics: numbers/charts = evidence, future tense = projections, etc.
+- Standard narrative patterns: chronological, problem-solution, comparative
+
+---
+
+### E9.13: Non-Linear Navigation with Context
+
+**Story ID:** E9.13
 **Points:** 3
 
 **Description:**
@@ -348,9 +372,9 @@ Allow users to jump to any section while the agent maintains context and coheren
 
 ---
 
-### E9.13: Wireframe PowerPoint Export
+### E9.14: Wireframe PowerPoint Export
 
-**Story ID:** E9.13
+**Story ID:** E9.14
 **Points:** 5
 
 **Description:**
@@ -371,9 +395,9 @@ Export the CIM as a wireframe PowerPoint presentation.
 
 ---
 
-### E9.14: LLM Prompt Export
+### E9.15: LLM Prompt Export
 
-**Story ID:** E9.14
+**Story ID:** E9.15
 **Points:** 3
 
 **Description:**
@@ -422,7 +446,8 @@ Research how to extract brand styles from uploaded PPTX/PDF files and apply them
 ### High Risk (test first)
 - **E9.4** (Orchestration) — the brain. Integration tests for state persistence/resume
 - **E9.11** (Dependencies) — unit tests for consistency detection
-- **E9.13** (PPT Export) — output validation
+- **E9.12** (Narrative Structure) — unit tests for content-role matching
+- **E9.14** (PPT Export) — output validation
 
 ### Medium Risk
 - **E9.7** (Slide Creation) — RAG integration complexity
