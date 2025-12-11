@@ -1691,14 +1691,44 @@ development_status:
     - Implemented coherence validation (conflicts, broken refs, narrative gaps)
     - All 132 tests passing (52 dependency graph + 80 CIM tools)
   e9-11-points: 5
-  e9-12-narrative-structure-dependencies: backlog
+  e9-12-narrative-structure-dependencies: done
+  e9-12-context-generated: 2025-12-11
+  e9-12-completed: 2025-12-11
   e9-12-points: 5
   e9-12-notes: Extends E9.11 to handle intra-section narrative structure and content-role validation
-  e9-13-non-linear-navigation-with-context: backlog
+  e9-12-completion-notes: |
+    - Added NarrativeRole type (7 roles) and NarrativeStructure interface to lib/types/cim.ts
+    - Created narrative-structure.ts utility (490 lines) with compatibility matrix and role detection
+    - Added 3 agent tools: checkNarrativeCompatibilityTool, getSectionReorganizationTool, validateNarrativeStructureTool
+    - Updated generateSlideContentTool to auto-assign narrative roles during slide creation
+    - Updated updateSlideTool to support role changes with compatibility checking
+    - Added NarrativeRoleBadge component to SlidePreview with role-specific colors and icons
+    - All 37 tests passing for narrative structure utilities
+  e9-13-non-linear-navigation-with-context: done
+  e9-13-drafted: 2025-12-11
+  e9-13-started: 2025-12-11
+  e9-13-completed: 2025-12-11
   e9-13-points: 3
+  e9-13-implementation-notes: |
+    - Created navigation-coherence.ts utility (280 lines) with coherence checking functions
+    - Created useCIMNavigation hook (300 lines) for navigation state management
+    - Added 2 agent tools: navigateToSectionTool, getNextSectionTool
+    - Added 6 navigation types and Zod schemas to cim.ts
+    - Enhanced StructureTree with currentSectionId, dependencyWarnings props
+    - Added 'needs_review' to SECTION_STATUSES
+    - 93 tests passing (exceeds 50 target)
   # Export (2 stories)
-  e9-14-wireframe-powerpoint-export: backlog
+  e9-14-wireframe-powerpoint-export: done
+  e9-14-drafted: 2025-12-11
+  e9-14-ready-for-dev: 2025-12-11
+  e9-14-completed: 2025-12-11
   e9-14-points: 5
+  e9-14-implementation-notes: |
+    - Installed pptxgenjs v4.0.1 for client-side PPTX generation
+    - Created cim-export.ts service (640 lines) with wireframe styling
+    - Created ExportButton.tsx component with loading/success/error states
+    - Integrated export button into CIMBuilderPage header
+    - 94 tests passing (exceeds 40 target)
   e9-15-llm-prompt-export: backlog
   e9-15-points: 3
   # Spike (1)

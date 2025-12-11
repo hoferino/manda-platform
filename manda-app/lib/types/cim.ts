@@ -73,6 +73,25 @@ export const SOURCE_TYPES = ['document', 'finding', 'qa'] as const
 export type SourceType = (typeof SOURCE_TYPES)[number]
 
 /**
+ * Narrative roles for slides within a section
+ * Story: E9.12 - Narrative Structure Dependencies
+ *
+ * Each slide can have a narrative role that defines its purpose within a section's
+ * story arc. This enables detection of content-role mismatches when content moves
+ * between slides with incompatible roles.
+ */
+export const NARRATIVE_ROLES = [
+  'introduction',   // Sets context, hooks reader
+  'context',        // Background information, market/industry context
+  'evidence',       // Data points, facts, supporting information
+  'analysis',       // Interpretation of evidence, insights
+  'implications',   // What the analysis means for buyer
+  'projections',    // Forward-looking statements, forecasts
+  'conclusion',     // Summary, call to action
+] as const
+export type NarrativeRole = (typeof NARRATIVE_ROLES)[number]
+
+/**
  * Slide status
  */
 export const SLIDE_STATUSES = ['draft', 'approved', 'locked'] as const
@@ -80,9 +99,17 @@ export type SlideStatus = (typeof SLIDE_STATUSES)[number]
 
 /**
  * Outline section status
+ * Story: E9.13 - Added 'needs_review' for flagging sections with incomplete dependencies
  */
-export const SECTION_STATUSES = ['pending', 'in_progress', 'complete'] as const
+export const SECTION_STATUSES = ['pending', 'in_progress', 'complete', 'needs_review'] as const
 export type SectionStatus = (typeof SECTION_STATUSES)[number]
+
+/**
+ * Navigation event types for tracking user navigation patterns
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export const NAVIGATION_TYPES = ['sequential', 'jump', 'backward', 'forward'] as const
+export type NavigationType = (typeof NAVIGATION_TYPES)[number]
 
 // ============================================================================
 // Core Types
@@ -111,6 +138,23 @@ export interface BuyerPersona {
 }
 
 /**
+ * Narrative structure definition for a section
+ * Story: E9.12 - Narrative Structure Dependencies
+ *
+ * Captures the expected narrative flow pattern for a section type.
+ * This enables detection of structural violations when slides are reordered
+ * or content is moved between slides with incompatible roles.
+ */
+export interface NarrativeStructure {
+  /** Expected sequence of roles for this section type */
+  expectedRoleSequence: NarrativeRole[]
+  /** Which roles are required for the section to be complete */
+  requiredRoles: NarrativeRole[]
+  /** Optional roles that can be included but aren't mandatory */
+  optionalRoles: NarrativeRole[]
+}
+
+/**
  * A section in the CIM outline
  */
 export interface OutlineSection {
@@ -120,6 +164,8 @@ export interface OutlineSection {
   order: number
   status: SectionStatus
   slide_ids: string[]
+  /** E9.12: Narrative structure definition for this section */
+  narrativeStructure?: NarrativeStructure
 }
 
 /**
@@ -172,6 +218,8 @@ export interface Slide {
   components: SlideComponent[]
   visual_concept: VisualConcept | null
   status: SlideStatus
+  /** E9.12: This slide's narrative role within its section */
+  narrative_role?: NarrativeRole
   created_at: string
   updated_at: string
 }
@@ -184,6 +232,97 @@ export interface DependencyGraph {
   dependencies: Record<string, string[]>
   /** slide_id -> array of slide_ids it references */
   references: Record<string, string[]>
+}
+
+// ============================================================================
+// Navigation Types (E9.13 - Non-Linear Navigation with Context)
+// ============================================================================
+
+/**
+ * Warning about incomplete dependencies when navigating
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export interface NavigationWarning {
+  /** Type of warning */
+  type: 'incomplete_dependency' | 'missing_content' | 'stale_reference'
+  /** The section/slide that has the issue */
+  sourceId: string
+  /** Human-readable warning message */
+  message: string
+  /** IDs of dependencies that are incomplete */
+  incompleteDependencies: string[]
+  /** Severity level */
+  severity: 'info' | 'warning' | 'error'
+}
+
+/**
+ * A navigation event recorded in history
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export interface NavigationEvent {
+  /** Unique event ID */
+  id: string
+  /** Type of navigation that occurred */
+  type: NavigationType
+  /** Section navigated from (null if first navigation) */
+  fromSectionId: string | null
+  /** Section navigated to */
+  toSectionId: string
+  /** Timestamp of the navigation */
+  timestamp: string
+  /** Any warnings generated during navigation */
+  warnings: NavigationWarning[]
+  /** Whether user acknowledged warnings before proceeding */
+  warningsAcknowledged: boolean
+}
+
+/**
+ * Current navigation state for CIM builder
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export interface NavigationState {
+  /** Currently active section ID */
+  currentSectionId: string | null
+  /** Currently active slide ID within the section */
+  currentSlideId: string | null
+  /** History of navigation events */
+  history: NavigationEvent[]
+  /** Current position in history (for forward/backward) */
+  historyIndex: number
+  /** Sections flagged with warnings */
+  flaggedSections: Record<string, NavigationWarning[]>
+}
+
+/**
+ * Result of a navigation operation
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export interface NavigationResult {
+  /** Whether navigation was successful */
+  success: boolean
+  /** The navigation event that was created */
+  event: NavigationEvent | null
+  /** Updated navigation state */
+  state: NavigationState
+  /** Warnings about incomplete dependencies */
+  warnings: NavigationWarning[]
+  /** If navigation requires confirmation due to warnings */
+  requiresConfirmation: boolean
+  /** User-friendly message about the navigation */
+  message: string
+}
+
+/**
+ * Options for navigation operations
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export interface NavigationOptions {
+  /** Skip coherence checks (not recommended) */
+  skipCoherenceCheck?: boolean
+  /** Auto-acknowledge warnings */
+  acknowledgeWarnings?: boolean
+  /** Include context summary in result */
+  includeContextSummary?: boolean
 }
 
 /**
@@ -302,6 +441,22 @@ export const SlideStatusSchema = z.enum(SLIDE_STATUSES)
 export const SectionStatusSchema = z.enum(SECTION_STATUSES)
 
 /**
+ * Schema for narrative role
+ * Story: E9.12 - Narrative Structure Dependencies
+ */
+export const NarrativeRoleSchema = z.enum(NARRATIVE_ROLES)
+
+/**
+ * Schema for narrative structure
+ * Story: E9.12 - Narrative Structure Dependencies
+ */
+export const NarrativeStructureSchema = z.object({
+  expectedRoleSequence: z.array(NarrativeRoleSchema),
+  requiredRoles: z.array(NarrativeRoleSchema),
+  optionalRoles: z.array(NarrativeRoleSchema),
+})
+
+/**
  * Schema for workflow state
  */
 export const WorkflowStateSchema = z.object({
@@ -373,6 +528,7 @@ export const OutlineSectionSchema = z.object({
   order: z.number().int().min(0),
   status: SectionStatusSchema,
   slide_ids: z.array(z.string().uuid()),
+  narrativeStructure: NarrativeStructureSchema.optional(),
 })
 
 /**
@@ -385,6 +541,7 @@ export const SlideSchema = z.object({
   components: z.array(SlideComponentSchema),
   visual_concept: VisualConceptSchema.nullable(),
   status: SlideStatusSchema,
+  narrative_role: NarrativeRoleSchema.optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 })
@@ -395,6 +552,73 @@ export const SlideSchema = z.object({
 export const DependencyGraphSchema = z.object({
   dependencies: z.record(z.string(), z.array(z.string())),
   references: z.record(z.string(), z.array(z.string())),
+})
+
+/**
+ * Schema for navigation type
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export const NavigationTypeSchema = z.enum(NAVIGATION_TYPES)
+
+/**
+ * Schema for navigation warning
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export const NavigationWarningSchema = z.object({
+  type: z.enum(['incomplete_dependency', 'missing_content', 'stale_reference']),
+  sourceId: z.string(),
+  message: z.string(),
+  incompleteDependencies: z.array(z.string()),
+  severity: z.enum(['info', 'warning', 'error']),
+})
+
+/**
+ * Schema for navigation event
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export const NavigationEventSchema = z.object({
+  id: z.string(),
+  type: NavigationTypeSchema,
+  fromSectionId: z.string().nullable(),
+  toSectionId: z.string(),
+  timestamp: z.string().datetime(),
+  warnings: z.array(NavigationWarningSchema),
+  warningsAcknowledged: z.boolean(),
+})
+
+/**
+ * Schema for navigation state
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export const NavigationStateSchema = z.object({
+  currentSectionId: z.string().nullable(),
+  currentSlideId: z.string().nullable(),
+  history: z.array(NavigationEventSchema),
+  historyIndex: z.number().int().min(-1),
+  flaggedSections: z.record(z.string(), z.array(NavigationWarningSchema)),
+})
+
+/**
+ * Schema for navigation result
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export const NavigationResultSchema = z.object({
+  success: z.boolean(),
+  event: NavigationEventSchema.nullable(),
+  state: NavigationStateSchema,
+  warnings: z.array(NavigationWarningSchema),
+  requiresConfirmation: z.boolean(),
+  message: z.string(),
+})
+
+/**
+ * Schema for navigation options
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export const NavigationOptionsSchema = z.object({
+  skipCoherenceCheck: z.boolean().optional(),
+  acknowledgeWarnings: z.boolean().optional(),
+  includeContextSummary: z.boolean().optional(),
 })
 
 /**
@@ -534,6 +758,69 @@ export function createDefaultDependencyGraph(): DependencyGraph {
     dependencies: {},
     references: {},
   }
+}
+
+/**
+ * Create default navigation state for a new CIM
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export function createDefaultNavigationState(): NavigationState {
+  return {
+    currentSectionId: null,
+    currentSlideId: null,
+    history: [],
+    historyIndex: -1,
+    flaggedSections: {},
+  }
+}
+
+/**
+ * Determine navigation type based on section indices
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export function determineNavigationType(
+  fromIndex: number | null,
+  toIndex: number,
+  historyIndex: number,
+  historyLength: number
+): NavigationType {
+  // First navigation
+  if (fromIndex === null) {
+    return 'sequential'
+  }
+
+  // Moving through history
+  if (historyIndex >= 0 && historyIndex < historyLength - 1) {
+    return 'forward'
+  }
+
+  // Sequential navigation (next/previous)
+  const diff = toIndex - fromIndex
+  if (diff === 1) {
+    return 'sequential'
+  }
+  if (diff === -1) {
+    return 'backward'
+  }
+
+  // Jump navigation (more than 1 section apart)
+  return 'jump'
+}
+
+/**
+ * Check if navigation state can go backward
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export function canNavigateBack(state: NavigationState): boolean {
+  return state.historyIndex > 0
+}
+
+/**
+ * Check if navigation state can go forward
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export function canNavigateForward(state: NavigationState): boolean {
+  return state.historyIndex < state.history.length - 1
 }
 
 // ============================================================================

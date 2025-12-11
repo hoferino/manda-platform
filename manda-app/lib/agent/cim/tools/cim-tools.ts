@@ -35,6 +35,8 @@ import {
   ChartType,
   SOURCE_TYPES,
   DependencyGraph,
+  NarrativeRole,
+  NARRATIVE_ROLES,
 } from '@/lib/types/cim'
 import {
   updateGraphOnSlideChange,
@@ -43,6 +45,20 @@ import {
   validateGraph,
   getGraphStats,
 } from '@/lib/agent/cim/utils/dependency-graph'
+import {
+  suggestNarrativeRoleForSlide,
+  getNarrativeRoleLabel,
+  checkContentRoleCompatibility,
+  suggestReorganization,
+  validateNarrativeStructure,
+} from '@/lib/agent/cim/utils/narrative-structure'
+import {
+  checkNavigationCoherence,
+  getNavigationContextSummary,
+  shouldRequireConfirmation,
+  formatNavigationWarnings,
+  getRecommendedNextSection,
+} from '@/lib/agent/cim/utils/navigation-coherence'
 import { generateEmbedding } from '@/lib/services/embeddings'
 import {
   retrieveContentForSlide,
@@ -549,7 +565,21 @@ export const generateSlideContentTool = tool(
         })
       }
 
-      // Create new slide
+      // E9.12: Auto-assign narrative role based on content and position
+      const sectionSlides = cim.slides.filter(s => s.section_id === input.sectionId)
+      const existingRoles = sectionSlides
+        .map(s => s.narrative_role)
+        .filter((r): r is NarrativeRole => r !== undefined)
+      const slideContent = input.content || input.topic || input.title
+      const narrativeRole = suggestNarrativeRoleForSlide(
+        slideContent,
+        sectionSlides.length, // Position is current length (0-indexed)
+        sectionSlides.length + 1, // Total after adding this slide
+        existingRoles,
+        section.title
+      )
+
+      // Create new slide with narrative role
       const newSlide: Slide = {
         id: slideId,
         section_id: input.sectionId,
@@ -557,6 +587,7 @@ export const generateSlideContentTool = tool(
         components,
         visual_concept: null,
         status: 'draft',
+        narrative_role: narrativeRole,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
@@ -588,6 +619,11 @@ export const generateSlideContentTool = tool(
         message: 'Slide content generated with hybrid RAG search',
         slideId,
         slide: newSlide,
+        // E9.12: Narrative role information
+        narrativeRole: {
+          assigned: narrativeRole,
+          label: getNarrativeRoleLabel(narrativeRole),
+        },
         // Context information for agent (AC #7)
         context: {
           openingMessage,
@@ -885,6 +921,7 @@ export const updateSlideTool = tool(
         components: (input.components as SlideComponent[]) ?? existingSlide.components,
         visual_concept: existingSlide.visual_concept,
         status: (input.status as Slide['status']) ?? existingSlide.status,
+        narrative_role: (input.narrativeRole as NarrativeRole) ?? existingSlide.narrative_role,
         created_at: existingSlide.created_at,
         updated_at: new Date().toISOString(),
       }
@@ -897,9 +934,26 @@ export const updateSlideTool = tool(
         slides: updatedSlides,
       })
 
+      // E9.12: Check content-role compatibility if role was changed
+      let compatibilityCheck = null
+      if (input.narrativeRole && updatedSlide.narrative_role) {
+        const content = updatedSlide.components.map(c => c.content).join(' ')
+        compatibilityCheck = checkContentRoleCompatibility(content, updatedSlide.narrative_role)
+      }
+
       return formatSuccess({
         message: 'Slide updated successfully',
         slide: updatedSlide,
+        // E9.12: Include compatibility check if role was changed
+        ...(compatibilityCheck && {
+          narrativeRoleCheck: {
+            isCompatible: compatibilityCheck.isCompatible,
+            compatibilityLevel: compatibilityCheck.compatibilityLevel,
+            detectedRole: compatibilityCheck.detectedRole,
+            assignedRole: compatibilityCheck.assignedRole,
+            warning: compatibilityCheck.mismatchDetails,
+          },
+        }),
       })
     } catch (err) {
       console.error('[update_slide] Error:', err)
@@ -908,12 +962,13 @@ export const updateSlideTool = tool(
   },
   {
     name: 'update_slide',
-    description: 'Update an existing slide. Use this to modify slide content or status.',
+    description: 'Update an existing slide. Use this to modify slide content, status, or narrative role.',
     schema: z.object({
       cimId: z.string().uuid().describe('The CIM ID'),
       slideId: z.string().uuid().describe('The slide ID to update'),
       title: z.string().optional().describe('New slide title'),
       status: z.enum(['draft', 'approved', 'locked']).optional().describe('Slide status'),
+      narrativeRole: z.enum(NARRATIVE_ROLES).optional().describe('Narrative role for this slide (E9.12)'),
       components: z.array(z.object({
         id: z.string(),
         type: z.enum(COMPONENT_TYPES),
@@ -1895,6 +1950,579 @@ Returns a summary of issues with specific slide references for correction.`,
 )
 
 // ============================================================================
+// Narrative Structure Tools (E9.12)
+// ============================================================================
+
+/**
+ * Check content-role compatibility for a slide
+ * Story: E9.12 - Narrative Structure Dependencies
+ * AC #3, #4: Content-role compatibility checking
+ */
+export const checkNarrativeCompatibilityTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      const slide = cim.slides.find(s => s.id === input.slideId)
+      if (!slide) {
+        return formatError('Slide not found')
+      }
+
+      if (!slide.narrative_role) {
+        return formatSuccess({
+          message: 'Slide has no assigned narrative role',
+          slideId: input.slideId,
+          slideTitle: slide.title,
+          hasRole: false,
+        })
+      }
+
+      // Get slide content
+      const content = slide.components.map(c => c.content).join(' ')
+
+      // Check compatibility
+      const result = checkContentRoleCompatibility(content, slide.narrative_role)
+
+      return formatSuccess({
+        message: result.isCompatible
+          ? `Content is compatible with "${getNarrativeRoleLabel(slide.narrative_role)}" role`
+          : `⚠️ Content-role mismatch detected`,
+        slideId: input.slideId,
+        slideTitle: slide.title,
+        hasRole: true,
+        assignedRole: slide.narrative_role,
+        assignedRoleLabel: getNarrativeRoleLabel(slide.narrative_role),
+        isCompatible: result.isCompatible,
+        compatibilityLevel: result.compatibilityLevel,
+        detectedRole: result.detectedRole,
+        detectedRoleLabel: result.detectedRole ? getNarrativeRoleLabel(result.detectedRole) : null,
+        mismatchDetails: result.mismatchDetails,
+        suggestedRole: result.suggestedRole,
+        suggestedRoleLabel: result.suggestedRole ? getNarrativeRoleLabel(result.suggestedRole) : null,
+      })
+    } catch (err) {
+      console.error('[check_narrative_compatibility] Error:', err)
+      return formatError('Failed to check narrative compatibility')
+    }
+  },
+  {
+    name: 'check_narrative_compatibility',
+    description: `Check if a slide's content is compatible with its assigned narrative role.
+
+**Use this tool when:**
+- User modifies slide content
+- User questions if content fits the slide's purpose
+- Before approving slide content
+- When reviewing section narrative flow
+
+**Returns:**
+- Whether content matches the assigned role
+- The detected role based on content analysis
+- Suggestion for a better-fitting role if mismatched`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      slideId: z.string().describe('The slide ID to check'),
+    }),
+  }
+)
+
+/**
+ * Get reorganization suggestions for a section
+ * Story: E9.12 - Narrative Structure Dependencies
+ * AC #5: Reorganization suggestions
+ */
+export const getSectionReorganizationTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      const section = cim.outline.find(s => s.id === input.sectionId)
+      if (!section) {
+        return formatError('Section not found')
+      }
+
+      // Get slides for this section
+      const sectionSlides = cim.slides.filter(s => s.section_id === input.sectionId)
+
+      if (sectionSlides.length === 0) {
+        return formatSuccess({
+          message: 'No slides in this section yet',
+          sectionId: input.sectionId,
+          sectionTitle: section.title,
+          suggestions: [],
+        })
+      }
+
+      // Get reorganization suggestions
+      const suggestions = suggestReorganization(sectionSlides, section)
+
+      // Format suggestions with slide titles
+      const formattedSuggestions = suggestions.map(s => ({
+        type: s.type,
+        slideId: s.slideId,
+        slideTitle: s.slideTitle,
+        currentRole: s.currentRole,
+        currentRoleLabel: s.currentRole ? getNarrativeRoleLabel(s.currentRole) : null,
+        suggestedRole: s.suggestedRole,
+        suggestedRoleLabel: getNarrativeRoleLabel(s.suggestedRole),
+        reason: s.reason,
+        targetPosition: s.targetPosition,
+      }))
+
+      const hasSuggestions = formattedSuggestions.length > 0
+
+      return formatSuccess({
+        message: hasSuggestions
+          ? `Found ${formattedSuggestions.length} suggestion(s) to improve narrative flow`
+          : 'Section narrative structure looks good!',
+        sectionId: input.sectionId,
+        sectionTitle: section.title,
+        slideCount: sectionSlides.length,
+        hasSuggestions,
+        suggestions: formattedSuggestions,
+        // Proactive message for agent to present
+        proactiveMessage: hasSuggestions
+          ? `📋 **Narrative Structure Suggestions for "${section.title}":**\n\n${formattedSuggestions.map((s, i) =>
+              `${i + 1}. **${s.slideTitle}**: ${s.reason}`
+            ).join('\n')}\n\nWould you like me to apply any of these suggestions?`
+          : null,
+      })
+    } catch (err) {
+      console.error('[get_section_reorganization] Error:', err)
+      return formatError('Failed to get reorganization suggestions')
+    }
+  },
+  {
+    name: 'get_section_reorganization',
+    description: `Get suggestions for reorganizing slides within a section to improve narrative flow.
+
+**Use this tool when:**
+- User asks to improve section flow
+- After adding multiple slides to a section
+- When reviewing section structure
+- User asks "is this section organized well?"
+
+**Returns:**
+- List of suggestions (role changes, reordering)
+- Explanation for each suggestion
+- Proactive message to present to user`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      sectionId: z.string().uuid().describe('The section ID to analyze'),
+    }),
+  }
+)
+
+/**
+ * Validate narrative structure for a section or entire CIM
+ * Story: E9.12 - Narrative Structure Dependencies
+ * AC #6: Extends coherence validation with narrative checks
+ */
+export const validateNarrativeStructureTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      // If sectionId provided, validate just that section
+      // Otherwise validate all sections
+      const sectionsToValidate = input.sectionId
+        ? cim.outline.filter(s => s.id === input.sectionId)
+        : cim.outline
+
+      if (sectionsToValidate.length === 0) {
+        return formatError('No sections to validate')
+      }
+
+      interface SectionValidation {
+        sectionId: string
+        sectionTitle: string
+        isValid: boolean
+        completeness: number
+        issueCount: number
+        suggestionCount: number
+        issues: Array<{
+          type: string
+          severity: string
+          slideId?: string
+          slideTitle?: string
+          description: string
+        }>
+      }
+
+      const sectionResults: SectionValidation[] = []
+      let totalIssues = 0
+      let totalSuggestions = 0
+
+      for (const section of sectionsToValidate) {
+        const sectionSlides = cim.slides.filter(s => s.section_id === section.id)
+        const result = validateNarrativeStructure(sectionSlides, section)
+
+        sectionResults.push({
+          sectionId: section.id,
+          sectionTitle: section.title,
+          isValid: result.isValid,
+          completeness: result.completeness,
+          issueCount: result.issues.length,
+          suggestionCount: result.suggestions.length,
+          issues: result.issues,
+        })
+
+        totalIssues += result.issues.length
+        totalSuggestions += result.suggestions.length
+      }
+
+      const allValid = sectionResults.every(r => r.isValid)
+      const averageCompleteness = sectionResults.length > 0
+        ? Math.round(sectionResults.reduce((sum, r) => sum + r.completeness, 0) / sectionResults.length)
+        : 100
+
+      // Build formatted message
+      let formattedMessage = ''
+      if (allValid && totalIssues === 0) {
+        formattedMessage = '✅ **Narrative Structure Valid**\n\nAll sections have proper narrative flow with no issues detected.'
+      } else {
+        formattedMessage = `⚠️ **Narrative Structure Issues Found**\n\n`
+        formattedMessage += `- Sections checked: ${sectionResults.length}\n`
+        formattedMessage += `- Total issues: ${totalIssues}\n`
+        formattedMessage += `- Suggestions available: ${totalSuggestions}\n\n`
+
+        for (const section of sectionResults) {
+          if (section.issueCount > 0) {
+            formattedMessage += `**${section.sectionTitle}** (${section.completeness}% complete):\n`
+            for (const issue of section.issues) {
+              formattedMessage += `  - ${issue.description}\n`
+            }
+            formattedMessage += '\n'
+          }
+        }
+
+        formattedMessage += '\nWould you like me to show reorganization suggestions?'
+      }
+
+      return formatSuccess({
+        message: allValid ? 'Narrative structure is valid' : 'Narrative structure has issues',
+        isValid: allValid,
+        averageCompleteness,
+        totalIssues,
+        totalSuggestions,
+        sectionResults,
+        formattedMessage,
+      })
+    } catch (err) {
+      console.error('[validate_narrative_structure] Error:', err)
+      return formatError('Failed to validate narrative structure')
+    }
+  },
+  {
+    name: 'validate_narrative_structure',
+    description: `Validate narrative structure for a section or the entire CIM.
+
+**Checks for:**
+- Missing required narrative roles
+- Roles out of expected order
+- Content-role mismatches
+- Duplicate roles where only one is expected
+
+**Use this tool when:**
+- Before finalizing a section
+- When user asks to review structure
+- After significant content changes
+- Before exporting the CIM
+
+**Returns:**
+- Validity status per section
+- Completeness percentage
+- List of issues and suggestions`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      sectionId: z.string().uuid().optional().describe('Specific section ID (optional, validates all if omitted)'),
+    }),
+  }
+)
+
+// ============================================================================
+// Navigation Tools (E9.13 - Non-Linear Navigation with Context)
+// ============================================================================
+
+/**
+ * Navigate to a specific section in the CIM
+ * Story: E9.13 - Non-Linear Navigation with Context
+ *
+ * This tool:
+ * 1. Checks for incomplete dependencies at the target section
+ * 2. Provides context summary for the agent
+ * 3. Returns warnings if jumping ahead may cause issues
+ */
+export const navigateToSectionTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      // Find target section
+      const targetSection = cim.outline.find((s) => s.id === input.sectionId)
+      if (!targetSection) {
+        return formatError('Section not found')
+      }
+
+      // Find current section index if provided
+      let fromIndex: number | null = null
+      if (input.fromSectionId) {
+        const fromSection = cim.outline.find((s) => s.id === input.fromSectionId)
+        if (fromSection) {
+          fromIndex = cim.outline.findIndex((s) => s.id === input.fromSectionId)
+        }
+      }
+
+      const toIndex = cim.outline.findIndex((s) => s.id === input.sectionId)
+
+      // Perform coherence check unless explicitly skipped
+      let warnings: ReturnType<typeof checkNavigationCoherence> = []
+      let requiresConfirmation = false
+
+      if (!input.skipCoherenceCheck) {
+        warnings = checkNavigationCoherence(
+          input.sectionId,
+          cim.outline,
+          cim.slides,
+          cim.dependencyGraph
+        )
+        requiresConfirmation = shouldRequireConfirmation(warnings)
+      }
+
+      // Get context summary for the agent
+      const contextSummary = getNavigationContextSummary(
+        input.sectionId,
+        cim.outline,
+        cim.slides,
+        cim.dependencyGraph
+      )
+
+      // Get slides in this section
+      const sectionSlides = cim.slides
+        .filter((s) => s.section_id === input.sectionId)
+        .map((s) => ({
+          id: s.id,
+          title: s.title,
+          status: s.status,
+          narrativeRole: s.narrative_role,
+        }))
+
+      // Determine navigation type
+      let navigationType: 'sequential' | 'jump' | 'backward' | 'forward' = 'sequential'
+      if (fromIndex !== null) {
+        const diff = toIndex - fromIndex
+        if (diff === 1) {
+          navigationType = 'sequential'
+        } else if (diff === -1) {
+          navigationType = 'backward'
+        } else if (diff > 1) {
+          navigationType = 'jump'
+        } else if (diff < -1) {
+          navigationType = 'backward'
+        }
+      }
+
+      // Build formatted message for user
+      let formattedMessage = `**Navigating to: ${targetSection.title}**\n\n`
+      formattedMessage += contextSummary + '\n\n'
+
+      if (warnings.length > 0) {
+        formattedMessage += formatNavigationWarnings(warnings)
+
+        if (requiresConfirmation && !input.acknowledgeWarnings) {
+          formattedMessage += '\n\n⚠️ This section has incomplete dependencies. Proceeding may result in placeholder content that needs updating later.'
+        }
+      }
+
+      // Get recommended next section for agent context
+      const recommendedNext = getRecommendedNextSection(
+        cim.outline,
+        cim.slides,
+        cim.dependencyGraph
+      )
+
+      return formatSuccess({
+        message: requiresConfirmation && !input.acknowledgeWarnings
+          ? 'Navigation requires confirmation due to incomplete dependencies'
+          : 'Navigation successful',
+        sectionId: input.sectionId,
+        sectionTitle: targetSection.title,
+        sectionStatus: targetSection.status,
+        sectionDescription: targetSection.description,
+        navigationType,
+        slides: sectionSlides,
+        warnings: warnings.map((w) => ({
+          type: w.type,
+          message: w.message,
+          severity: w.severity,
+          incompleteDependencies: w.incompleteDependencies,
+        })),
+        requiresConfirmation: requiresConfirmation && !input.acknowledgeWarnings,
+        contextSummary,
+        recommendedNextSection: recommendedNext,
+        formattedMessage,
+      })
+    } catch (err) {
+      console.error('[navigate_to_section] Error:', err)
+      return formatError('Failed to navigate to section')
+    }
+  },
+  {
+    name: 'navigate_to_section',
+    description: `Navigate to a specific section in the CIM to work on it.
+
+**This tool:**
+- Checks for incomplete dependencies at the target section
+- Warns if jumping ahead may cause content issues
+- Provides context about the section and its relationships
+
+**Use this tool when:**
+- User requests to jump to a specific section
+- User clicks on a section in the structure tree
+- Moving to the next section in workflow
+- User wants to review a previously completed section
+
+**Returns:**
+- Section details and status
+- Warnings about incomplete dependencies
+- Context summary for understanding the section
+- Recommendation for next section to work on
+
+**IMPORTANT:** If requiresConfirmation is true, ask user before proceeding with content creation.`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+      sectionId: z.string().uuid().describe('The section ID to navigate to'),
+      fromSectionId: z.string().uuid().optional().describe('Current section ID (for determining navigation type)'),
+      skipCoherenceCheck: z.boolean().optional().describe('Skip dependency coherence check (not recommended)'),
+      acknowledgeWarnings: z.boolean().optional().describe('User has acknowledged warnings about incomplete dependencies'),
+    }),
+  }
+)
+
+/**
+ * Get recommended next section to work on
+ * Story: E9.13 - Non-Linear Navigation with Context
+ */
+export const getNextSectionTool = tool(
+  async (input) => {
+    try {
+      const supabase = await createClient()
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatError('Authentication required')
+      }
+
+      const cim = await getCIM(supabase, input.cimId)
+      if (!cim) {
+        return formatError('CIM not found')
+      }
+
+      const recommendedId = getRecommendedNextSection(
+        cim.outline,
+        cim.slides,
+        cim.dependencyGraph
+      )
+
+      if (!recommendedId) {
+        return formatSuccess({
+          message: 'All sections are complete!',
+          hasNextSection: false,
+          sectionId: null,
+          sectionTitle: null,
+        })
+      }
+
+      const section = cim.outline.find((s) => s.id === recommendedId)
+      const warnings = checkNavigationCoherence(
+        recommendedId,
+        cim.outline,
+        cim.slides,
+        cim.dependencyGraph
+      )
+
+      return formatSuccess({
+        message: `Recommended next section: "${section?.title}"`,
+        hasNextSection: true,
+        sectionId: recommendedId,
+        sectionTitle: section?.title,
+        sectionStatus: section?.status,
+        warningCount: warnings.length,
+        formattedMessage: section
+          ? `📍 **Recommended:** ${section.title}\n${section.description || 'No description'}\nStatus: ${section.status}`
+          : 'No next section available',
+      })
+    } catch (err) {
+      console.error('[get_next_section] Error:', err)
+      return formatError('Failed to get next section')
+    }
+  },
+  {
+    name: 'get_next_section',
+    description: `Get the recommended next section to work on based on dependencies.
+
+**Recommends sections that:**
+- Have all dependencies complete
+- Are not yet complete
+- Are in the optimal order
+
+**Use this tool when:**
+- User asks "what's next?"
+- After completing a section
+- User wants guidance on workflow order`,
+    schema: z.object({
+      cimId: z.string().uuid().describe('The CIM ID'),
+    }),
+  }
+)
+
+// ============================================================================
 // Export All Tools
 // ============================================================================
 
@@ -1921,6 +2549,13 @@ export const cimTools = [
   trackDependenciesTool,  // AC #1: Track dependencies between slides
   getDependentSlidesTool,  // AC #2, #4: Get dependent slides with proactive suggestion
   validateCoherenceTool,  // AC #6: Coherence validation
+  // Narrative structure tools (E9.12)
+  checkNarrativeCompatibilityTool,  // AC #3, #4: Content-role compatibility
+  getSectionReorganizationTool,  // AC #5: Reorganization suggestions
+  validateNarrativeStructureTool,  // AC #6: Narrative structure validation
+  // Navigation tools (E9.13)
+  navigateToSectionTool,  // AC #1, #2, #4, #5: Jump to section with coherence check
+  getNextSectionTool,  // AC #1: Get recommended next section
   // Workflow tools
   transitionPhaseTool,
 ]

@@ -11,18 +11,20 @@
  * - Visual status indicators (draft/approved/locked)
  * - Click handler support for component selection
  * - Visual concept-driven layout rendering (E9.10)
+ * - Narrative role badge display (E9.12)
  *
  * Story: E9.8 - Wireframe Preview Renderer
  * Story: E9.10 - Visual Concept Generation (AC #6: Preview Rendering)
+ * Story: E9.12 - Narrative Structure Dependencies (AC #2: Show role in preview)
  * AC: #1 (Component Rendering), #2 (Stable IDs), #3 (Wireframe Styling), #5 (Reactive Updates)
  */
 
 import * as React from 'react'
 import { memo, useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import { Layout, BarChart3, Image, Columns2, FileText } from 'lucide-react'
+import { Layout, BarChart3, Image, Columns2, FileText, BookOpen, Database, LineChart, Lightbulb, TrendingUp, MessageSquare, CheckCircle } from 'lucide-react'
 import { ComponentRenderer } from './ComponentRenderer'
-import type { Slide, SlideComponent, ComponentType, VisualConcept, LayoutType, ChartType } from '@/lib/types/cim'
+import type { Slide, SlideComponent, ComponentType, VisualConcept, LayoutType, ChartType, NarrativeRole } from '@/lib/types/cim'
 
 // ============================================================================
 // Types
@@ -131,6 +133,59 @@ const ChartRecommendations = memo(function ChartRecommendations({ recommendation
 })
 
 // ============================================================================
+// Narrative Role Badge (E9.12)
+// ============================================================================
+
+const narrativeRoleIcons: Record<NarrativeRole, React.ReactNode> = {
+  introduction: <BookOpen className="h-3 w-3" />,
+  context: <MessageSquare className="h-3 w-3" />,
+  evidence: <Database className="h-3 w-3" />,
+  analysis: <Lightbulb className="h-3 w-3" />,
+  implications: <LineChart className="h-3 w-3" />,
+  projections: <TrendingUp className="h-3 w-3" />,
+  conclusion: <CheckCircle className="h-3 w-3" />,
+}
+
+const narrativeRoleLabels: Record<NarrativeRole, string> = {
+  introduction: 'Introduction',
+  context: 'Context',
+  evidence: 'Evidence',
+  analysis: 'Analysis',
+  implications: 'Implications',
+  projections: 'Projections',
+  conclusion: 'Conclusion',
+}
+
+const narrativeRoleColors: Record<NarrativeRole, string> = {
+  introduction: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  context: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400',
+  evidence: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  analysis: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  implications: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+  projections: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+  conclusion: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400',
+}
+
+interface NarrativeRoleBadgeProps {
+  role: NarrativeRole
+}
+
+const NarrativeRoleBadge = memo(function NarrativeRoleBadge({ role }: NarrativeRoleBadgeProps) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
+        narrativeRoleColors[role]
+      )}
+      data-testid="narrative-role-badge"
+    >
+      {narrativeRoleIcons[role]}
+      {narrativeRoleLabels[role]}
+    </span>
+  )
+})
+
+// ============================================================================
 // Component Index Tracking
 // ============================================================================
 
@@ -216,16 +271,24 @@ export const SlidePreview = memo(function SlidePreview({
       data-testid="slide-preview"
       data-slide-id={slide.id}
       data-layout-type={slide.visual_concept?.layout_type}
+      data-narrative-role={slide.narrative_role}
     >
-      {/* Slide header with title and layout badge */}
+      {/* Slide header with title and badges */}
       <div className="flex-shrink-0 mb-4">
         <div className="flex items-start justify-between gap-2">
           <h2 className="text-xl font-bold text-foreground leading-tight flex-1">
             {slide.title || 'Untitled Slide'}
           </h2>
-          {slide.visual_concept && (
-            <LayoutBadge layoutType={slide.visual_concept.layout_type} />
-          )}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* E9.12: Narrative role badge */}
+            {slide.narrative_role && (
+              <NarrativeRoleBadge role={slide.narrative_role} />
+            )}
+            {/* E9.10: Layout badge */}
+            {slide.visual_concept && (
+              <LayoutBadge layoutType={slide.visual_concept.layout_type} />
+            )}
+          </div>
         </div>
         {/* Show chart recommendations if present */}
         {slide.visual_concept?.chart_recommendations && slide.visual_concept.chart_recommendations.length > 0 && (

@@ -17,6 +17,7 @@ import { CIMBuilderLayout } from './CIMBuilderLayout'
 import { SourcesPanel } from './SourcesPanel/SourcesPanel'
 import { ConversationPanel } from './ConversationPanel/ConversationPanel'
 import { PreviewPanel } from './PreviewPanel/PreviewPanel'
+import { ExportButton } from './ExportButton'
 import { useCIMBuilder } from '@/lib/hooks/useCIMBuilder'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -116,7 +117,7 @@ export function CIMBuilderPage({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with back navigation */}
+      {/* Header with back navigation and export button */}
       <div className="flex items-center gap-4 px-4 py-3 border-b bg-background flex-shrink-0">
         <Link href={`/projects/${projectId}/cim-builder`}>
           <Button variant="ghost" size="sm">
@@ -130,6 +131,8 @@ export function CIMBuilderPage({
             {cim.slides.length} slides | {cim.outline.length} sections
           </p>
         </div>
+        {/* Export Button - E9.14: Wireframe PowerPoint Export */}
+        <ExportButton cim={cim} />
       </div>
 
       {/* Main 3-panel layout */}

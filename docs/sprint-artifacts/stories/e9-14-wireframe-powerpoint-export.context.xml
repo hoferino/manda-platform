@@ -1,0 +1,198 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>E9</epicId>
+    <storyId>14</storyId>
+    <title>Wireframe PowerPoint Export</title>
+    <status>drafted</status>
+    <generatedAt>2025-12-11</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/stories/e9-14-wireframe-powerpoint-export.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>M&amp;A analyst</asA>
+    <iWant>to export my CIM as a wireframe PowerPoint presentation with one slide per section, including text content and placeholders for charts/images</iWant>
+    <soThat>I can share the CIM structure with stakeholders, begin design refinement in PowerPoint, and have a professional baseline document to work from</soThat>
+    <tasks>
+      <task id="1" ac="2,6">Install and Configure pptxgenjs Library
+        <subtask id="1.1">Install pptxgenjs via npm: npm install pptxgenjs</subtask>
+        <subtask id="1.2">Verify client-side compatibility with Next.js (check for SSR issues)</subtask>
+        <subtask id="1.3">Create test export to confirm library works in browser environment</subtask>
+      </task>
+      <task id="2" ac="2,3,4,5,7">Create CIM Export Service
+        <subtask id="2.1">Create lib/services/cim-export.ts with CIMExportService interface</subtask>
+        <subtask id="2.2">Implement exportWireframePPTX(cim: CIM): Promise&lt;Blob&gt; method</subtask>
+        <subtask id="2.3">Define wireframe slide master template (muted colors, consistent fonts, 16:9)</subtask>
+        <subtask id="2.4">Implement slide generation for each CIM section</subtask>
+        <subtask id="2.5">Implement component renderers (title, subtitle, text, bullet, chart, image, table)</subtask>
+        <subtask id="2.6">Add visual concept metadata to placeholders (from slide.visual_concept)</subtask>
+        <subtask id="2.7">Implement file naming: {CIM Name} - Wireframe.pptx</subtask>
+      </task>
+      <task id="3" ac="1,6">Create Export Button UI Component
+        <subtask id="3.1">Create components/cim-builder/ExportButton.tsx</subtask>
+        <subtask id="3.2">Integrate ExportButton into CIM Builder header/toolbar area</subtask>
+        <subtask id="3.3">Implement download trigger via Blob URL and anchor click</subtask>
+      </task>
+      <task id="4" ac="6">Implement Client-Side Download Flow
+        <subtask id="4.1">Generate PPTX as Blob using pptxgenjs write('blob') method</subtask>
+        <subtask id="4.2">Create temporary object URL for blob</subtask>
+        <subtask id="4.3">Programmatically trigger download via anchor element</subtask>
+        <subtask id="4.4">Cleanup object URL after download initiates</subtask>
+        <subtask id="4.5">Handle errors gracefully with user feedback</subtask>
+      </task>
+      <task id="5" ac="2,4">Create Wireframe Visual Styles
+        <subtask id="5.1">Define color constants (background #FFFFFF, text #333333, placeholders #E5E7EB, accent #6B7280)</subtask>
+        <subtask id="5.2">Create placeholder shapes with dashed borders</subtask>
+        <subtask id="5.3">Add chart type icons/indicators in chart placeholders</subtask>
+        <subtask id="5.4">Add image icons in image placeholders</subtask>
+        <subtask id="5.5">Style table wireframes with column/row headers</subtask>
+      </task>
+      <task id="6" ac="1-7">Write Unit Tests (target: 40+ tests)
+        <subtask id="6.1">Test export service generates valid PPTX blob</subtask>
+        <subtask id="6.2">Test slide count matches section count</subtask>
+        <subtask id="6.3">Test component content is included in slides</subtask>
+        <subtask id="6.4">Test placeholder generation for charts/images</subtask>
+        <subtask id="6.5">Test file naming with various CIM names (including special characters)</subtask>
+        <subtask id="6.6">Test ExportButton states (enabled, disabled, loading)</subtask>
+        <subtask id="6.7">Test download trigger mechanism</subtask>
+      </task>
+      <task id="7" ac="2,3,5">Write Integration Tests
+        <subtask id="7.1">Test full export flow with sample CIM data</subtask>
+        <subtask id="7.2">Test PPTX can be opened in PowerPoint/LibreOffice</subtask>
+        <subtask id="7.3">Test visual concept metadata appears in placeholders</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="AC-9.14.1">Export Button Visibility - An "Export" button is visible in the CIM Builder UI when a CIM has at least one slide created</criterion>
+    <criterion id="AC-9.14.2">Generate PPTX with Wireframe Styling - The exported file is a valid PPTX file with wireframe styling (muted colors, placeholder graphics, professional schematic appearance)</criterion>
+    <criterion id="AC-9.14.3">One Slide Per CIM Section - The PPTX contains one slide per CIM section, matching the section count in the Structure panel</criterion>
+    <criterion id="AC-9.14.4">Chart/Image Placeholders with Specs - Placeholders for charts and images include visual type indicators and specs noted (e.g., "Bar Chart: Revenue by Region")</criterion>
+    <criterion id="AC-9.14.5">Text Content Included - All text content from slide components (titles, subtitles, bullets, paragraphs) is included in the exported slides</criterion>
+    <criterion id="AC-9.14.6">Browser Download Triggered - Export triggers a file download in the browser without requiring server round-trip</criterion>
+    <criterion id="AC-9.14.7">File Naming Convention - Downloaded file is named {CIM Name} - Wireframe.pptx with the actual CIM name substituted</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/sprint-artifacts/tech-spec-epic-E9.md" title="Epic E9 Technical Specification" section="E9.14: Wireframe PowerPoint Export">
+        <snippet>Defines client-side PPTX generation with pptxgenjs, wireframe styling, and export performance target (&lt; 5s for 30 slides). Decision D4: Client-side PPTX generation.</snippet>
+      </doc>
+      <doc path="docs/sprint-artifacts/epics/epic-E9.md" title="Epic E9: CIM Builder" section="E9.14: Wireframe PowerPoint Export">
+        <snippet>Story definition with 5 points, acceptance criteria for export button, PPTX generation, slide count matching, placeholders, and file naming.</snippet>
+      </doc>
+      <doc path="docs/manda-prd.md" title="Product Requirements Document" section="CIM Builder Requirements">
+        <snippet>FR-CIM-001 through FR-CIM-006 cover CIM Builder capabilities including export functionality as part of the core value proposition.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact path="manda-app/lib/types/cim.ts" kind="types" symbol="CIM, Slide, SlideComponent, VisualConcept" lines="1-928">
+        <reason>Core type definitions for CIM entities. Export service must consume CIM interface with slides[], SlideComponent[], and VisualConcept for generating PPTX content.</reason>
+      </artifact>
+      <artifact path="manda-app/lib/services/cim.ts" kind="service" symbol="CIMService functions" lines="1-389">
+        <reason>Existing CIM service pattern to follow. Export service should complement CRUD operations with exportWireframePPTX method.</reason>
+      </artifact>
+      <artifact path="manda-app/components/cim-builder/CIMBuilderLayout.tsx" kind="component" symbol="CIMBuilderLayout" lines="1-239">
+        <reason>3-panel layout container where ExportButton will be integrated. Shows header structure and panel organization.</reason>
+      </artifact>
+      <artifact path="manda-app/components/cim-builder/CIMBuilderPage.tsx" kind="component" symbol="CIMBuilderPage" lines="1-170">
+        <reason>Main orchestration component. ExportButton should be added to header area alongside Back button. Shows cim prop access pattern.</reason>
+      </artifact>
+      <artifact path="manda-app/components/cim-builder/PreviewPanel/SlidePreview.tsx" kind="component" symbol="SlidePreview, StatusBadge, LayoutBadge, NarrativeRoleBadge" lines="1-354">
+        <reason>Wireframe rendering logic for slides. Component rendering patterns (title, subtitle, chart, image, table) should map directly to PPTX elements.</reason>
+      </artifact>
+      <artifact path="manda-app/components/cim-builder/PreviewPanel/ComponentRenderer.tsx" kind="component" symbol="ComponentRenderer, generateComponentId, ChartWireframe" lines="1-417">
+        <reason>Type-specific rendering for slide components. ChartWireframe SVGs show chart type patterns (bar, line, pie, area, table) that should be replicated in PPTX placeholders.</reason>
+      </artifact>
+      <artifact path="manda-app/lib/services/irl-export.ts" kind="service" symbol="IRL export functions">
+        <reason>Existing export service pattern in the codebase. Shows Blob generation and download trigger patterns to follow.</reason>
+      </artifact>
+      <artifact path="manda-app/lib/services/qa-export.ts" kind="service" symbol="QA export functions">
+        <reason>Another export service example. Shows file download implementation patterns used in the project.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package name="pptxgenjs" version="^3.12.0" purpose="PowerPoint generation library - NEW - needs install">Client-side PPTX creation without server dependencies. Use pres.addSlide(), slide.addText(), slide.addShape(), pres.write('blob').</package>
+        <package name="react" version="^19.2.1">Component framework for ExportButton</package>
+        <package name="@supabase/supabase-js" version="^2.84.0">Database access for CIM data</package>
+        <package name="zod" version="^4.1.13">Schema validation already in cim.ts</package>
+        <package name="lucide-react" version="^0.554.0">Icons for export button (Download icon)</package>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint source="tech-spec" type="performance">PPTX export must complete in &lt; 5 seconds for 30 slides</constraint>
+    <constraint source="tech-spec" type="architecture">Client-side generation only - no server round-trip (Decision D4)</constraint>
+    <constraint source="tech-spec" type="styling">Wireframe styling: muted colors, dashed borders for placeholders, 16:9 aspect ratio, professional schematic appearance</constraint>
+    <constraint source="dev-notes" type="pattern">Services in lib/services/ directory, Components in components/cim-builder/</constraint>
+    <constraint source="dev-notes" type="pattern">Tests in __tests__/ mirror structure with Vitest framework</constraint>
+    <constraint source="tech-spec" type="security">Sanitize CIM name for file naming (remove special characters)</constraint>
+    <constraint source="dev-notes" type="ux">Show loading state during generation, handle errors gracefully with user feedback</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="CIMExportService" kind="service interface" path="manda-app/lib/services/cim-export.ts (NEW)">
+      <signature>exportWireframePPTX(cim: CIM): Promise&lt;Blob&gt;</signature>
+      <note>Returns PPTX as Blob for client-side download. Should generate one slide per section with wireframe styling.</note>
+    </interface>
+    <interface name="CIM" kind="TypeScript interface" path="manda-app/lib/types/cim.ts">
+      <signature>interface CIM { id, dealId, title, slides: Slide[], outline: OutlineSection[], ... }</signature>
+      <note>Primary input for export. title used for filename, slides[] for content generation.</note>
+    </interface>
+    <interface name="Slide" kind="TypeScript interface" path="manda-app/lib/types/cim.ts">
+      <signature>interface Slide { id, section_id, title, components: SlideComponent[], visual_concept: VisualConcept | null, status, ... }</signature>
+      <note>Each slide maps to one PPTX slide. components[] defines content, visual_concept provides layout hints.</note>
+    </interface>
+    <interface name="SlideComponent" kind="TypeScript interface" path="manda-app/lib/types/cim.ts">
+      <signature>interface SlideComponent { id, type: ComponentType, content, metadata?, source_refs? }</signature>
+      <note>Component types: title, subtitle, text, bullet, chart, image, table. Map to appropriate PPTX elements.</note>
+    </interface>
+    <interface name="VisualConcept" kind="TypeScript interface" path="manda-app/lib/types/cim.ts">
+      <signature>interface VisualConcept { layout_type: LayoutType, chart_recommendations?, image_suggestions?, notes }</signature>
+      <note>Provides layout hints and chart recommendations. Include in placeholder specs when generating PPTX.</note>
+    </interface>
+    <interface name="pptxgenjs API" kind="external library" path="node_modules/pptxgenjs">
+      <signature>new pptxgen(), pres.addSlide(), slide.addText(), slide.addShape(), slide.addTable(), pres.write('blob')</signature>
+      <note>Use defineSlideMaster() for wireframe template. write('blob') returns Promise&lt;Blob&gt; for download.</note>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      <paragraph>Use Vitest as test framework (vitest ^4.0.14). Follow existing test patterns in __tests__/ directory with describe/it structure. Use @testing-library/react for component tests. Mock external dependencies. Target 40+ tests for export functionality covering unit tests (export service, component rendering), integration tests (full export flow), and component tests (ExportButton states).</paragraph>
+    </standards>
+    <locations>
+      <location>manda-app/__tests__/lib/services/cim-export.test.ts (NEW)</location>
+      <location>manda-app/__tests__/components/cim-builder/ExportButton.test.tsx (NEW)</location>
+      <location>manda-app/__tests__/lib/services/*.test.ts (existing patterns)</location>
+      <location>manda-app/__tests__/components/cim-builder/*.test.tsx (existing patterns)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC-9.14.1">Test ExportButton renders when slides.length > 0, hidden/disabled when slides.length === 0</idea>
+      <idea ac="AC-9.14.1">Test ExportButton loading state during generation</idea>
+      <idea ac="AC-9.14.2">Test exportWireframePPTX returns Blob with correct MIME type (application/vnd.openxmlformats-officedocument.presentationml.presentation)</idea>
+      <idea ac="AC-9.14.2">Test wireframe colors are applied (check pptxgenjs options)</idea>
+      <idea ac="AC-9.14.3">Test slide count in generated PPTX matches cim.slides.length</idea>
+      <idea ac="AC-9.14.3">Test each section generates exactly one slide</idea>
+      <idea ac="AC-9.14.4">Test chart placeholders include chart type from visual_concept.chart_recommendations</idea>
+      <idea ac="AC-9.14.4">Test image placeholders include image_suggestions text</idea>
+      <idea ac="AC-9.14.4">Test placeholder styling (dashed borders, muted colors)</idea>
+      <idea ac="AC-9.14.5">Test title component content appears in slide</idea>
+      <idea ac="AC-9.14.5">Test subtitle component content appears in slide</idea>
+      <idea ac="AC-9.14.5">Test bullet component content appears in slide with bullet formatting</idea>
+      <idea ac="AC-9.14.5">Test text paragraph content appears in slide</idea>
+      <idea ac="AC-9.14.6">Test download triggers without server call</idea>
+      <idea ac="AC-9.14.6">Test Blob URL created and cleanup after download</idea>
+      <idea ac="AC-9.14.7">Test filename format: {cim.title} - Wireframe.pptx</idea>
+      <idea ac="AC-9.14.7">Test filename sanitization (remove special characters like / \ : * ? " &lt; &gt; |)</idea>
+      <idea ac="AC-9.14.7">Test filename with unicode characters</idea>
+      <idea ac="general">Test error handling when pptxgenjs fails</idea>
+      <idea ac="general">Test large CIM (30+ slides) completes in under 5 seconds</idea>
+      <idea ac="general">Test empty CIM handling (no slides)</idea>
+      <idea ac="general">Test component type coverage (all 7 types render correctly)</idea>
+    </ideas>
+  </tests>
+</story-context>

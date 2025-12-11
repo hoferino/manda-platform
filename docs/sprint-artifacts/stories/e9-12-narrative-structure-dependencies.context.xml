@@ -1,0 +1,699 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context: E9.12 - Narrative Structure Dependencies
+  Generated: 2025-12-11
+  Epic: E9 - CIM Builder AI-Assisted Module
+
+  This context file assembles all relevant documentation, code patterns,
+  and architectural decisions needed to implement the story.
+-->
+<story-context story-id="e9-12" epic-id="E9">
+
+  <!-- ============================================================
+       SECTION 1: STORY REQUIREMENTS
+       ============================================================ -->
+  <story-requirements>
+    <title>Narrative Structure Dependencies</title>
+    <description>Add narrative structure tracking and suggestions to help users build coherent, sequenced CIM content with clear data flow between sections.</description>
+
+    <acceptance-criteria>
+      <criterion id="AC1" title="Narrative Sequence Detection">
+        <description>Agent tracks slide creation order, section flow, and explicit cross-references to understand the current narrative structure.</description>
+        <implementation-notes>
+          - Extend dependency-graph.ts to track narrative relationships (not just data dependencies)
+          - Create a narrative sequence map: section → dependent sections
+          - Track explicit "building on" or "as shown in" references in content
+          - Detect implicit narrative flow from section ordering in outline
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC2" title="Narrative Context in Prompts">
+        <description>The CIM agent prompts include structured narrative context to maintain forward momentum and coherence.</description>
+        <implementation-notes>
+          - Extend getCIMSystemPrompt() in prompts.ts to inject narrative context
+          - Include "narrative_so_far" with key points from completed sections
+          - Include "upcoming_sections" that reference this content
+          - Provide "transition_suggestions" from prior slide to current
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC3" title="Suggestion API for Next Slides">
+        <description>Agent suggests optimal next sections based on narrative flow patterns and dependencies.</description>
+        <implementation-notes>
+          - Create suggestNextSection() function based on:
+            1. Unfilled sections with dependencies on completed sections
+            2. Natural narrative flow (Company Overview → Products → Market)
+            3. Buyer persona priorities (lead with what matters most)
+          - Return ranked list of suggestions with rationale
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC4" title="Structure Conflict Detection">
+        <description>Detect and alert when content placement conflicts with established narrative patterns.</description>
+        <implementation-notes>
+          - Define "narrative rules" (e.g., "Financial Performance should follow Company Overview")
+          - Check new content against existing narrative structure
+          - Generate conflict alerts with specific recommendations
+          - Show conflicts in StructureTree.tsx with visual indicators
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC5" title="UI Narrative Indicators">
+        <description>StructureTree shows narrative flow indicators between sections.</description>
+        <implementation-notes>
+          - Add visual connectors between dependent sections
+          - Show narrative health score per section (isolated, well-connected)
+          - Highlight sections that break narrative flow
+          - Add tooltip showing narrative relationships
+        </implementation-notes>
+      </criterion>
+    </acceptance-criteria>
+
+    <story-points>5</story-points>
+    <priority>high</priority>
+
+    <dependencies>
+      <dependency story-id="e9-11" type="builds-on">
+        Extends dependency tracking with narrative-aware tracking
+      </dependency>
+      <dependency story-id="e9-4" type="uses">
+        Agent orchestration core for prompt injection
+      </dependency>
+      <dependency story-id="e9-3" type="uses">
+        3-panel layout for UI indicators
+      </dependency>
+    </dependencies>
+
+    <tasks>
+      <task id="T1" title="Create Narrative Graph Types">
+        <description>Define TypeScript types for narrative structure tracking</description>
+        <location>lib/types/cim.ts</location>
+        <subtasks>
+          <subtask>Add NarrativeNode interface (sectionId, narrativeDeps, narrativeFlow)</subtask>
+          <subtask>Add NarrativeGraph type with nodes and flow patterns</subtask>
+          <subtask>Add NarrativeConflict type for detected issues</subtask>
+          <subtask>Add NarrativeSuggestion type for section recommendations</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T2" title="Implement Narrative Graph Utilities">
+        <description>Create utilities for managing narrative relationships</description>
+        <location>lib/agent/cim/utils/narrative-graph.ts (new file)</location>
+        <subtasks>
+          <subtask>createNarrativeGraph() - Initialize empty graph</subtask>
+          <subtask>addNarrativeEdge() - Track "flows to" relationships</subtask>
+          <subtask>detectNarrativeFlow() - Analyze current content for implicit flow</subtask>
+          <subtask>suggestNextSection() - Return ranked section suggestions</subtask>
+          <subtask>detectNarrativeConflicts() - Find structural issues</subtask>
+          <subtask>getNarrativeContext() - Build context for prompts</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T3" title="Extend Agent Prompts with Narrative Context">
+        <description>Inject narrative context into CIM agent system prompts</description>
+        <location>lib/agent/cim/prompts.ts</location>
+        <subtasks>
+          <subtask>Update getCIMSystemPrompt() to accept narrative context</subtask>
+          <subtask>Add narrative guidance section to content_creation phase</subtask>
+          <subtask>Include "story so far" summary in context</subtask>
+          <subtask>Add transition suggestions between sections</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T4" title="Add Narrative Tracking Agent Tools">
+        <description>Create tools for agent to track and query narrative</description>
+        <location>lib/agent/cim/tools/cim-tools.ts</location>
+        <subtasks>
+          <subtask>track_narrative_reference tool - Record cross-section references</subtask>
+          <subtask>get_narrative_suggestions tool - Query next section recommendations</subtask>
+          <subtask>check_narrative_conflicts tool - Validate content placement</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T5" title="Update StructureTree UI">
+        <description>Add narrative flow indicators to structure panel</description>
+        <location>components/cim-builder/SourcesPanel/StructureTree.tsx</location>
+        <subtasks>
+          <subtask>Add narrative connection lines between sections</subtask>
+          <subtask>Show narrative health indicators (color coding)</subtask>
+          <subtask>Add conflict warning badges</subtask>
+          <subtask>Implement narrative tooltip on hover</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T6" title="Write Unit Tests">
+        <description>Comprehensive test coverage for narrative tracking</description>
+        <location>__tests__/lib/cim/utils/narrative-graph.test.ts (new file)</location>
+        <subtasks>
+          <subtask>Test narrative edge creation/deletion</subtask>
+          <subtask>Test suggestNextSection ranking logic</subtask>
+          <subtask>Test conflict detection scenarios</subtask>
+          <subtask>Test getNarrativeContext output format</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story-requirements>
+
+  <!-- ============================================================
+       SECTION 2: TECHNICAL CONTEXT
+       ============================================================ -->
+  <technical-context>
+    <tech-spec-reference epic="E9" section="5.12">
+      See docs/sprint-artifacts/tech-spec-epic-E9.md for detailed specifications
+    </tech-spec-reference>
+
+    <architecture-patterns>
+      <pattern name="Dependency Graph">
+        <description>
+          Existing dependency-graph.ts provides the foundation. It uses a bidirectional
+          graph structure with:
+          - dependencies: slideId → [slides that depend on this one]
+          - references: slideId → [slides this one references]
+
+          Narrative graph should follow same immutable update pattern.
+        </description>
+        <code-reference>manda-app/lib/agent/cim/utils/dependency-graph.ts</code-reference>
+      </pattern>
+
+      <pattern name="Agent Tool Pattern">
+        <description>
+          CIM tools follow the LangChain DynamicTool pattern with Zod schemas.
+          Each tool includes:
+          - name: lowercase_snake_case
+          - description: What the tool does (shown to LLM)
+          - schema: Zod schema for input validation
+          - func: Async function that executes tool logic
+        </description>
+        <code-reference>manda-app/lib/agent/cim/tools/cim-tools.ts</code-reference>
+      </pattern>
+
+      <pattern name="UI State Pattern">
+        <description>
+          StructureTree receives data via props, not direct state access.
+          Use flaggedSections pattern for narrative indicators.
+          Follow existing FlaggedSection interface pattern.
+        </description>
+        <code-reference>manda-app/components/cim-builder/SourcesPanel/StructureTree.tsx</code-reference>
+      </pattern>
+    </architecture-patterns>
+
+    <existing-interfaces>
+      <interface name="DependencyGraph" location="lib/types/cim.ts">
+        <code><![CDATA[
+export interface DependencyGraph {
+  dependencies: Record<string, string[]>  // slideId → dependents
+  references: Record<string, string[]>    // slideId → references
+}
+        ]]></code>
+      </interface>
+
+      <interface name="FlaggedSection" location="StructureTree.tsx">
+        <code><![CDATA[
+export interface FlaggedSection {
+  sectionId: string
+  reason: string
+  sourceSlideId?: string
+}
+        ]]></code>
+      </interface>
+
+      <interface name="OutlineSection" location="lib/types/cim.ts">
+        <code><![CDATA[
+export interface OutlineSection {
+  id: string
+  title: string
+  description?: string
+  order: number
+  status: SectionStatus
+}
+        ]]></code>
+      </interface>
+    </existing-interfaces>
+  </technical-context>
+
+  <!-- ============================================================
+       SECTION 3: REFERENCE CODE PATTERNS
+       ============================================================ -->
+  <reference-code>
+    <file path="lib/agent/cim/utils/dependency-graph.ts" relevance="high">
+      <purpose>Foundation pattern for narrative graph implementation</purpose>
+      <key-patterns>
+        <pattern name="Immutable Graph Updates">
+          All functions return new graph objects, never mutate in place.
+          Clone with spread operator: { ...graph }
+        </pattern>
+        <pattern name="Bidirectional Edge Management">
+          When adding edge A→B, update both:
+          - B's dependencies list (A depends on B)
+          - A's references list (A references B)
+        </pattern>
+        <pattern name="Transitive Traversal">
+          getTransitiveDependents() shows BFS pattern for deep dependencies.
+          Same pattern applies for narrative chain traversal.
+        </pattern>
+        <pattern name="Validation">
+          validateGraph() checks consistency between both directions.
+          Apply same rigor to narrative graph validation.
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="lib/agent/cim/prompts.ts" relevance="high">
+      <purpose>Shows how to inject context into agent prompts</purpose>
+      <key-patterns>
+        <pattern name="Phase-specific Prompts">
+          PHASE_PROMPTS record contains per-phase guidance.
+          Add narrative context injection to content_creation phase.
+        </pattern>
+        <pattern name="Dynamic Context">
+          getCIMSystemPrompt() concatenates base + phase + tools + deal context.
+          Add narrative context as additional section.
+        </pattern>
+        <pattern name="Forward Context Flow">
+          Content creation phase already references prior slides.
+          Extend with structured narrative context.
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="components/cim-builder/SourcesPanel/StructureTree.tsx" relevance="high">
+      <purpose>Target component for narrative UI indicators</purpose>
+      <key-patterns>
+        <pattern name="Flagged Sections">
+          flaggedSections prop with FlaggedSection[] type.
+          flaggedMap useMemo for O(1) lookup.
+          Visual: amber highlighting + AlertTriangle icon.
+        </pattern>
+        <pattern name="Status Icons">
+          statusIcons record maps status → icon component.
+          statusColors record maps status → Tailwind classes.
+        </pattern>
+        <pattern name="Interactive Elements">
+          Each section is a button with onClick handler.
+          Nested button for clear flag action (stopPropagation).
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="lib/agent/cim/tools/cim-tools.ts" relevance="medium">
+      <purpose>Pattern for creating new agent tools</purpose>
+      <key-patterns>
+        <pattern name="Tool Definition">
+          Use DynamicTool from @langchain/core/tools
+          Define input schema with Zod
+          Return structured response for agent
+        </pattern>
+        <pattern name="CIM State Access">
+          Tools receive getCIMState callback
+          Access slides, outline, dependencies via state
+        </pattern>
+        <pattern name="Tool Response Format">
+          Return descriptive strings for agent understanding
+          Include success/failure indicators
+          Provide actionable next steps
+        </pattern>
+      </key-patterns>
+    </file>
+  </reference-code>
+
+  <!-- ============================================================
+       SECTION 4: IMPLEMENTATION GUIDANCE
+       ============================================================ -->
+  <implementation-guidance>
+    <new-types>
+      <type name="NarrativeEdge">
+        <code><![CDATA[
+export interface NarrativeEdge {
+  fromSectionId: string
+  toSectionId: string
+  type: 'explicit' | 'implicit' | 'suggested'
+  reason?: string  // "References revenue from slide 3"
+}
+        ]]></code>
+      </type>
+
+      <type name="NarrativeGraph">
+        <code><![CDATA[
+export interface NarrativeGraph {
+  // Section → sections that should come AFTER this one
+  flowsTo: Record<string, string[]>
+  // Section → sections that should come BEFORE this one
+  flowsFrom: Record<string, string[]>
+  // Detected narrative edges with metadata
+  edges: NarrativeEdge[]
+}
+        ]]></code>
+      </type>
+
+      <type name="NarrativeConflict">
+        <code><![CDATA[
+export interface NarrativeConflict {
+  type: 'missing_prerequisite' | 'circular_reference' | 'orphaned_section' | 'broken_flow'
+  sectionId: string
+  affectedSections: string[]
+  message: string
+  suggestion: string
+}
+        ]]></code>
+      </type>
+
+      <type name="NarrativeSuggestion">
+        <code><![CDATA[
+export interface NarrativeSuggestion {
+  sectionId: string
+  sectionTitle: string
+  score: number  // 0-100 ranking
+  reasons: string[]  // Why this section should be next
+  prerequisites: string[]  // Sections that should come first
+}
+        ]]></code>
+      </type>
+
+      <type name="NarrativeContext">
+        <code><![CDATA[
+export interface NarrativeContext {
+  completedSections: {
+    id: string
+    title: string
+    keyPoints: string[]
+  }[]
+  currentSection: {
+    id: string
+    title: string
+    prerequisites: string[]
+    suggestedTransition: string
+  }
+  upcomingSections: {
+    id: string
+    title: string
+    dependsOn: string[]
+  }[]
+  narrativeHealth: 'strong' | 'moderate' | 'weak'
+  conflicts: NarrativeConflict[]
+}
+        ]]></code>
+      </type>
+    </new-types>
+
+    <narrative-rules>
+      <rule id="NR1" name="Company Overview First">
+        <description>Company Overview should precede most other content sections</description>
+        <precedence>Company Overview → Products/Services, Market, Customers, Financials</precedence>
+      </rule>
+
+      <rule id="NR2" name="Market Before Products">
+        <description>Market opportunity provides context for product positioning</description>
+        <precedence>Market Opportunity → Products/Services</precedence>
+      </rule>
+
+      <rule id="NR3" name="Products Before Customers">
+        <description>Understand what's being sold before discussing who buys it</description>
+        <precedence>Products/Services → Customer Base</precedence>
+      </rule>
+
+      <rule id="NR4" name="Financials Reference Earlier Content">
+        <description>Financial Performance should reference metrics from earlier sections</description>
+        <precedence>Company Overview, Products, Customers → Financial Performance</precedence>
+      </rule>
+
+      <rule id="NR5" name="Investment Highlights Last">
+        <description>Summary section should come after substantive content</description>
+        <precedence>All content sections → Investment Highlights</precedence>
+      </rule>
+
+      <rule id="NR6" name="Executive Summary Flexible">
+        <description>Can appear first (preview) or last (summary), but content should reference it</description>
+        <flexible>true</flexible>
+      </rule>
+    </narrative-rules>
+
+    <suggestion-algorithm>
+      <description>Algorithm for ranking next section suggestions</description>
+      <pseudo-code><![CDATA[
+function suggestNextSection(
+  outline: OutlineSection[],
+  narrativeGraph: NarrativeGraph,
+  completedSections: string[],
+  buyerPersona: BuyerPersona
+): NarrativeSuggestion[] {
+  const suggestions: NarrativeSuggestion[] = []
+
+  for (const section of outline) {
+    if (completedSections.includes(section.id)) continue
+
+    let score = 50  // Base score
+    const reasons: string[] = []
+
+    // 1. Check prerequisites (sections that should come before)
+    const prerequisites = narrativeGraph.flowsFrom[section.id] || []
+    const unmetPrereqs = prerequisites.filter(p => !completedSections.includes(p))
+
+    if (unmetPrereqs.length === 0 && prerequisites.length > 0) {
+      score += 30  // All prerequisites met
+      reasons.push(`Prerequisites complete: ${prerequisites.join(', ')}`)
+    } else if (unmetPrereqs.length > 0) {
+      score -= 20 * unmetPrereqs.length  // Penalize unmet prerequisites
+      reasons.push(`Waiting on: ${unmetPrereqs.join(', ')}`)
+    }
+
+    // 2. Check buyer persona priority alignment
+    if (section matches buyerPersona.priorities) {
+      score += 15
+      reasons.push(`Aligns with buyer priority: ${matchedPriority}`)
+    }
+
+    // 3. Natural flow bonus (next in outline order)
+    const lastCompleted = getLastCompletedOrder(completedSections, outline)
+    if (section.order === lastCompleted + 1) {
+      score += 10
+      reasons.push('Natural outline sequence')
+    }
+
+    // 4. Narrative chain bonus (continues from last section)
+    if (narrativeGraph.flowsFrom[section.id]?.includes(lastCompletedSection)) {
+      score += 20
+      reasons.push(`Continues narrative from ${lastCompletedSection}`)
+    }
+
+    suggestions.push({
+      sectionId: section.id,
+      sectionTitle: section.title,
+      score: Math.max(0, Math.min(100, score)),
+      reasons,
+      prerequisites: unmetPrereqs
+    })
+  }
+
+  return suggestions.sort((a, b) => b.score - a.score)
+}
+      ]]></pseudo-code>
+    </suggestion-algorithm>
+  </implementation-guidance>
+
+  <!-- ============================================================
+       SECTION 5: TESTING STRATEGY
+       ============================================================ -->
+  <testing-strategy>
+    <unit-tests>
+      <test-file path="__tests__/lib/cim/utils/narrative-graph.test.ts">
+        <test-case name="createNarrativeGraph returns empty graph">
+          <setup>None</setup>
+          <action>Call createNarrativeGraph()</action>
+          <assertion>Returns {flowsTo: {}, flowsFrom: {}, edges: []}</assertion>
+        </test-case>
+
+        <test-case name="addNarrativeEdge creates bidirectional relationship">
+          <setup>Create empty graph</setup>
+          <action>addNarrativeEdge(graph, 's1', 's2', 'explicit', 'References revenue')</action>
+          <assertion>flowsTo['s1'] contains 's2', flowsFrom['s2'] contains 's1'</assertion>
+        </test-case>
+
+        <test-case name="suggestNextSection prioritizes met prerequisites">
+          <setup>
+            Graph with: Overview → Products → Customers
+            Completed: [Overview]
+          </setup>
+          <action>suggestNextSection()</action>
+          <assertion>Products ranks highest (prerequisite met), Customers lower</assertion>
+        </test-case>
+
+        <test-case name="detectNarrativeConflicts finds circular references">
+          <setup>Graph with: A → B → C → A (cycle)</setup>
+          <action>detectNarrativeConflicts()</action>
+          <assertion>Returns conflict with type 'circular_reference'</assertion>
+        </test-case>
+
+        <test-case name="detectNarrativeConflicts finds orphaned sections">
+          <setup>Graph where section X has no incoming or outgoing edges</setup>
+          <action>detectNarrativeConflicts()</action>
+          <assertion>Returns conflict with type 'orphaned_section'</assertion>
+        </test-case>
+
+        <test-case name="getNarrativeContext builds complete context">
+          <setup>
+            Outline with 5 sections, 2 completed
+            Narrative edges between sections
+          </setup>
+          <action>getNarrativeContext()</action>
+          <assertion>
+            Returns NarrativeContext with:
+            - completedSections array with keyPoints
+            - currentSection with transition suggestion
+            - upcomingSections with dependencies
+            - narrativeHealth score
+          </assertion>
+        </test-case>
+      </test-file>
+
+      <test-file path="__tests__/lib/agent/cim/tools/narrative-tools.test.ts">
+        <test-case name="track_narrative_reference tool records edge">
+          <setup>Mock CIM state with slides</setup>
+          <action>Execute tool with fromSlide='s1', toSlide='s2'</action>
+          <assertion>State.narrativeGraph updated with edge</assertion>
+        </test-case>
+
+        <test-case name="get_narrative_suggestions tool returns ranked list">
+          <setup>Mock CIM state with outline and partial completion</setup>
+          <action>Execute tool</action>
+          <assertion>Returns suggestions sorted by score descending</assertion>
+        </test-case>
+      </test-file>
+    </unit-tests>
+
+    <integration-tests>
+      <test-case name="Agent receives narrative context in prompts">
+        <setup>CIM in content_creation phase with 2 completed sections</setup>
+        <action>Generate system prompt for agent</action>
+        <assertion>Prompt includes narrative context section with completed sections</assertion>
+      </test-case>
+
+      <test-case name="StructureTree displays narrative indicators">
+        <setup>Render StructureTree with narrativeGraph prop</setup>
+        <action>Inspect rendered output</action>
+        <assertion>
+          - Sections show connection indicators
+          - Orphaned sections show warning badge
+          - Hover shows narrative tooltip
+        </assertion>
+      </test-case>
+    </integration-tests>
+  </testing-strategy>
+
+  <!-- ============================================================
+       SECTION 6: DEPENDENCIES & FRAMEWORKS
+       ============================================================ -->
+  <dependencies>
+    <runtime-dependencies>
+      <dependency name="react" version="^19.2.1" usage="UI components" />
+      <dependency name="lucide-react" version="^0.554.0" usage="Icons for narrative indicators" />
+      <dependency name="@langchain/core" version="^1.1.0" usage="Agent tool definitions" />
+      <dependency name="zod" version="^4.1.13" usage="Tool input validation" />
+      <dependency name="zustand" version="^5.0.8" usage="CIM state management" />
+    </runtime-dependencies>
+
+    <dev-dependencies>
+      <dependency name="vitest" version="^4.0.14" usage="Unit testing" />
+      <dependency name="@testing-library/react" version="^16.3.0" usage="Component testing" />
+    </dev-dependencies>
+
+    <internal-dependencies>
+      <dependency path="lib/types/cim.ts" usage="Type definitions" />
+      <dependency path="lib/agent/cim/utils/dependency-graph.ts" usage="Graph pattern reference" />
+      <dependency path="lib/agent/cim/prompts.ts" usage="Prompt injection point" />
+      <dependency path="lib/agent/cim/tools/cim-tools.ts" usage="Tool registration" />
+      <dependency path="components/cim-builder/SourcesPanel/StructureTree.tsx" usage="UI updates" />
+    </internal-dependencies>
+  </dependencies>
+
+  <!-- ============================================================
+       SECTION 7: FILES TO CREATE/MODIFY
+       ============================================================ -->
+  <file-changes>
+    <new-files>
+      <file path="lib/agent/cim/utils/narrative-graph.ts">
+        <purpose>Core narrative graph utilities</purpose>
+        <exports>
+          - createNarrativeGraph()
+          - addNarrativeEdge()
+          - removeNarrativeEdge()
+          - getNarrativeFlow()
+          - suggestNextSection()
+          - detectNarrativeConflicts()
+          - getNarrativeContext()
+          - validateNarrativeGraph()
+        </exports>
+      </file>
+
+      <file path="__tests__/lib/cim/utils/narrative-graph.test.ts">
+        <purpose>Unit tests for narrative graph utilities</purpose>
+      </file>
+    </new-files>
+
+    <modified-files>
+      <file path="lib/types/cim.ts">
+        <changes>
+          - Add NarrativeEdge interface
+          - Add NarrativeGraph interface
+          - Add NarrativeConflict interface
+          - Add NarrativeSuggestion interface
+          - Add NarrativeContext interface
+          - Extend CIMState to include narrativeGraph
+        </changes>
+      </file>
+
+      <file path="lib/agent/cim/prompts.ts">
+        <changes>
+          - Update getCIMSystemPrompt() to accept narrativeContext parameter
+          - Add formatNarrativeContextForPrompt() helper
+          - Extend content_creation phase prompt with narrative guidance
+        </changes>
+      </file>
+
+      <file path="lib/agent/cim/tools/cim-tools.ts">
+        <changes>
+          - Add track_narrative_reference tool
+          - Add get_narrative_suggestions tool
+          - Add check_narrative_conflicts tool
+        </changes>
+      </file>
+
+      <file path="components/cim-builder/SourcesPanel/StructureTree.tsx">
+        <changes>
+          - Add narrativeGraph prop
+          - Add NarrativeIndicator sub-component
+          - Add narrative connection lines (CSS/SVG)
+          - Add narrative health badge
+          - Add narrative tooltip on hover
+        </changes>
+      </file>
+
+      <file path="lib/agent/cim/state.ts">
+        <changes>
+          - Add narrativeGraph to CIM state
+          - Add updateNarrativeGraph action
+        </changes>
+      </file>
+    </modified-files>
+  </file-changes>
+
+  <!-- ============================================================
+       SECTION 8: VALIDATION CHECKLIST
+       ============================================================ -->
+  <validation-checklist>
+    <item category="types">All new types have JSDoc comments</item>
+    <item category="types">Types are exported from lib/types/cim.ts</item>
+    <item category="utilities">All utility functions are pure (no side effects)</item>
+    <item category="utilities">Graph updates return new objects (immutable)</item>
+    <item category="utilities">Edge cases handled (empty graph, missing sections)</item>
+    <item category="tools">Tools have descriptive names for LLM understanding</item>
+    <item category="tools">Tool schemas validate all required inputs</item>
+    <item category="tools">Tool responses are informative for agent next steps</item>
+    <item category="ui">UI updates are responsive and don't block</item>
+    <item category="ui">Narrative indicators are accessible (aria labels)</item>
+    <item category="ui">Dark mode support for all visual elements</item>
+    <item category="testing">All utility functions have unit tests</item>
+    <item category="testing">Edge cases have test coverage</item>
+    <item category="testing">Integration tests verify end-to-end flow</item>
+  </validation-checklist>
+
+</story-context>

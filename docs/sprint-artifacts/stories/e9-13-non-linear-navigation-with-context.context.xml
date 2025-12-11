@@ -1,0 +1,1033 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Story Context: E9.13 - Non-Linear Navigation with Context
+  Generated: 2025-12-11
+  Epic: E9 - CIM Builder AI-Assisted Module
+
+  This context file assembles all relevant documentation, code patterns,
+  and architectural decisions needed to implement the story.
+-->
+<story-context story-id="e9-13" epic-id="E9">
+
+  <!-- ============================================================
+       SECTION 1: STORY REQUIREMENTS
+       ============================================================ -->
+  <story-requirements>
+    <title>Non-Linear Navigation with Context</title>
+    <description>Enable users to jump to any section in the CIM outline while the agent maintains full context of workflow state, completed sections, and flagged areas.</description>
+
+    <user-story>
+      <as-a>M&A analyst</as-a>
+      <i-want>to jump to any section in the CIM outline while the agent maintains full context of my workflow state, completed sections, and flagged areas</i-want>
+      <so-that>I can work on sections in any order based on my priorities, skip ahead when needed, return to refine earlier sections, and always have the agent aware of what's complete, in-progress, and may need updating</so-that>
+    </user-story>
+
+    <acceptance-criteria>
+      <criterion id="AC1" title="Section Click Navigation">
+        <description>Clicking any section/slide in StructureTree navigates the preview and signals navigation intent to the agent</description>
+        <implementation-notes>
+          - Extend StructureTree onClick to trigger navigation
+          - Preview panel updates to show selected slide
+          - Send navigation event to agent context
+          - Use navigate_to_section agent tool
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC2" title="Agent Jump Acknowledgment">
+        <description>Agent acknowledges jump with context-aware message: "Jumping to [Section]. This section depends on [X, Y, Z] which are complete/incomplete. Let me know how you'd like to proceed."</description>
+        <implementation-notes>
+          - Agent tool returns structured navigation response
+          - Include dependency status from dependency_graph
+          - Include narrative context from narrative-structure
+          - Generate appropriate acknowledgment message
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC3" title="Section Status Tracking">
+        <description>Track section status (not-started, in-progress, complete, needs-review) and display in StructureTree</description>
+        <implementation-notes>
+          - Use existing OutlineSection.status field
+          - Add 'needs-review' status option
+          - Update StructureTree to show status badges
+          - Navigation state stored in useCIMNavigation hook
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC4" title="Forward Jump Awareness">
+        <description>When jumping forward (to incomplete section), agent notes: "Jumping ahead to [X]. Sections [A, B] before this are incomplete - let me know if you want to work on those first."</description>
+        <implementation-notes>
+          - Detect forward vs backward navigation
+          - Calculate incomplete predecessor sections
+          - Generate forward-jump specific message
+          - Optionally suggest completing predecessors first
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC5" title="Backward Jump Awareness">
+        <description>When jumping backward (to completed section), agent notes: "Returning to [X]. Content here is [complete]. Would you like to refine this section?"</description>
+        <implementation-notes>
+          - Detect backward navigation to completed section
+          - Show completion status and content summary
+          - Offer refinement options
+          - Check for dependent sections that might need updates
+        </implementation-notes>
+      </criterion>
+
+      <criterion id="AC6" title="Coherence Warnings on Navigation">
+        <description>If the user jumps to a section that references incomplete dependencies, show a soft warning: "This section references content from [X] which is incomplete."</description>
+        <implementation-notes>
+          - Use dependency_graph to check references
+          - Show warning in agent acknowledgment
+          - Optionally flag in StructureTree UI
+          - Suggest completing referenced sections
+        </implementation-notes>
+      </criterion>
+    </acceptance-criteria>
+
+    <story-points>5</story-points>
+    <priority>high</priority>
+
+    <dependencies>
+      <dependency story-id="e9-11" type="builds-on">
+        Dependency tracking for coherence warnings (AC #6)
+      </dependency>
+      <dependency story-id="e9-12" type="builds-on">
+        Narrative structure for context-aware messages (AC #2, #4, #5)
+      </dependency>
+      <dependency story-id="e9-3" type="uses">
+        3-panel layout and existing StructureTree component
+      </dependency>
+      <dependency story-id="e9-4" type="uses">
+        Agent orchestration core for navigation tool
+      </dependency>
+    </dependencies>
+
+    <tasks>
+      <task id="T1" title="Implement Navigation State Tracking">
+        <description>Create navigation state types and tracking logic</description>
+        <location>lib/types/cim.ts, lib/hooks/useCIMNavigation.ts (new)</location>
+        <subtasks>
+          <subtask>Add NavigationState interface to cim.ts</subtask>
+          <subtask>Add NavigationEvent type for tracking jumps</subtask>
+          <subtask>Create useCIMNavigation hook with state management</subtask>
+          <subtask>Track navigation history for backward/forward detection</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T2" title="Create Navigation Jump Agent Tool">
+        <description>Build the navigate_to_section agent tool with context awareness</description>
+        <location>lib/agent/cim/tools/cim-tools.ts</location>
+        <subtasks>
+          <subtask>Define navigate_to_section tool with Zod schema</subtask>
+          <subtask>Implement dependency checking logic</subtask>
+          <subtask>Generate context-aware acknowledgment messages</subtask>
+          <subtask>Handle forward vs backward jump detection</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T3" title="Implement Coherence Check on Navigation">
+        <description>Add dependency-based coherence warnings when navigating</description>
+        <location>lib/agent/cim/utils/navigation-coherence.ts (new)</location>
+        <subtasks>
+          <subtask>Create checkNavigationCoherence() function</subtask>
+          <subtask>Integrate with dependency_graph utilities</subtask>
+          <subtask>Generate warning messages for incomplete dependencies</subtask>
+          <subtask>Calculate coherence score for target section</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T4" title="Enhance StructureTree for Navigation">
+        <description>Update StructureTree component with navigation capabilities</description>
+        <location>components/cim-builder/SourcesPanel/StructureTree.tsx</location>
+        <subtasks>
+          <subtask>Add onNavigate callback prop</subtask>
+          <subtask>Update onClick to trigger navigation intent</subtask>
+          <subtask>Add visual indicators for section status</subtask>
+          <subtask>Show coherence warnings on hover/click</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T5" title="Implement useCIMNavigation Hook">
+        <description>Create centralized navigation hook for CIM builder</description>
+        <location>lib/hooks/useCIMNavigation.ts (new)</location>
+        <subtasks>
+          <subtask>Track current section/slide position</subtask>
+          <subtask>Maintain navigation history</subtask>
+          <subtask>Detect navigation direction (forward/backward)</subtask>
+          <subtask>Calculate incomplete predecessor/successor sections</subtask>
+          <subtask>Integrate with agent context updates</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T6" title="Add Navigation UI Enhancements">
+        <description>Visual enhancements for navigation state</description>
+        <location>components/cim-builder/</location>
+        <subtasks>
+          <subtask>Add section status badges to StructureTree</subtask>
+          <subtask>Show dependency warnings with tooltip</subtask>
+          <subtask>Highlight current navigation position</subtask>
+          <subtask>Add keyboard navigation support (optional)</subtask>
+        </subtasks>
+      </task>
+
+      <task id="T7" title="Write Unit and Integration Tests">
+        <description>Comprehensive test coverage (~50 tests target)</description>
+        <location>__tests__/lib/hooks/useCIMNavigation.test.ts, __tests__/lib/agent/cim/tools/navigation-tools.test.ts</location>
+        <subtasks>
+          <subtask>Test navigation state transitions</subtask>
+          <subtask>Test forward/backward jump detection</subtask>
+          <subtask>Test coherence checking logic</subtask>
+          <subtask>Test agent tool responses</subtask>
+          <subtask>Test StructureTree navigation interactions</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story-requirements>
+
+  <!-- ============================================================
+       SECTION 2: TECHNICAL CONTEXT
+       ============================================================ -->
+  <technical-context>
+    <tech-spec-reference epic="E9" section="5.13">
+      See docs/sprint-artifacts/tech-spec-epic-E9.md for detailed specifications
+    </tech-spec-reference>
+
+    <architecture-patterns>
+      <pattern name="Navigation Hook Pattern">
+        <description>
+          Existing useSlideNavigation hook provides foundation for index-based navigation.
+          New useCIMNavigation should extend this with:
+          - Section-level navigation (not just slide index)
+          - Navigation history tracking
+          - Forward/backward jump detection
+          - Integration with agent context
+        </description>
+        <code-reference>manda-app/lib/hooks/useSlideNavigation.ts</code-reference>
+      </pattern>
+
+      <pattern name="CIM Builder State Pattern">
+        <description>
+          useCIMBuilder hook manages centralized CIM state including:
+          - currentSlideIndex for preview position
+          - flaggedSections for E9.11 dependency alerts
+          - Optimistic updates for outline/slide changes
+
+          Navigation should integrate with this existing state management.
+        </description>
+        <code-reference>manda-app/lib/hooks/useCIMBuilder.ts</code-reference>
+      </pattern>
+
+      <pattern name="Dependency Graph Pattern">
+        <description>
+          dependency-graph.ts provides bidirectional graph for tracking slide references.
+          Use getDependents() and getReferences() to check section dependencies.
+          Use getTransitiveDependents() for deep dependency chains.
+        </description>
+        <code-reference>manda-app/lib/agent/cim/utils/dependency-graph.ts</code-reference>
+      </pattern>
+
+      <pattern name="Narrative Structure Pattern">
+        <description>
+          narrative-structure.ts (E9.12) provides content-role compatibility and
+          narrative flow validation. Use for context-aware navigation messages:
+          - getNarrativeRoleLabel() for section descriptions
+          - validateNarrativeStructure() to check section health
+          - suggestReorganization() for flow recommendations
+        </description>
+        <code-reference>manda-app/lib/agent/cim/utils/narrative-structure.ts</code-reference>
+      </pattern>
+
+      <pattern name="Agent Tool Pattern">
+        <description>
+          CIM tools follow the DynamicTool pattern with Zod schemas.
+          Navigate tool should:
+          - Accept targetSectionId or targetSlideId
+          - Return structured NavigationResult with context
+          - Include acknowledgment message for agent
+        </description>
+        <code-reference>manda-app/lib/agent/cim/tools/cim-tools.ts</code-reference>
+      </pattern>
+    </architecture-patterns>
+
+    <existing-interfaces>
+      <interface name="OutlineSection" location="lib/types/cim.ts">
+        <code><![CDATA[
+export interface OutlineSection {
+  id: string
+  title: string
+  description?: string
+  order: number
+  status: SectionStatus
+  narrativeStructure?: NarrativeStructure
+}
+
+export type SectionStatus = 'not_started' | 'in_progress' | 'complete' | 'approved'
+        ]]></code>
+        <note>Need to add 'needs_review' status option</note>
+      </interface>
+
+      <interface name="Slide" location="lib/types/cim.ts">
+        <code><![CDATA[
+export interface Slide {
+  id: string
+  section_id: string
+  title: string
+  components: SlideComponent[]
+  visual_concept: VisualConcept | null
+  status: SlideStatus
+  narrative_role?: NarrativeRole
+  created_at: string
+  updated_at: string
+}
+
+export type SlideStatus = 'draft' | 'content_created' | 'visual_created' | 'approved'
+        ]]></code>
+      </interface>
+
+      <interface name="DependencyGraph" location="lib/types/cim.ts">
+        <code><![CDATA[
+export interface DependencyGraph {
+  dependencies: Record<string, string[]>  // slideId → dependents
+  references: Record<string, string[]>    // slideId → references
+}
+        ]]></code>
+      </interface>
+
+      <interface name="FlaggedSection" location="StructureTree.tsx">
+        <code><![CDATA[
+export interface FlaggedSection {
+  sectionId: string
+  reason: string
+  sourceSlideId?: string
+}
+        ]]></code>
+      </interface>
+
+      <interface name="UseSlideNavigationReturn" location="lib/hooks/useSlideNavigation.ts">
+        <code><![CDATA[
+interface UseSlideNavigationReturn {
+  currentSlide: Slide | null
+  currentIndex: number
+  totalSlides: number
+  goToSlide: (index: number) => void
+  goToNext: () => void
+  goToPrevious: () => void
+  canGoNext: boolean
+  canGoPrevious: boolean
+}
+        ]]></code>
+      </interface>
+    </existing-interfaces>
+  </technical-context>
+
+  <!-- ============================================================
+       SECTION 3: REFERENCE CODE PATTERNS
+       ============================================================ -->
+  <reference-code>
+    <file path="lib/hooks/useSlideNavigation.ts" relevance="high">
+      <purpose>Foundation for navigation hook, extend this pattern</purpose>
+      <key-patterns>
+        <pattern name="Index-based Navigation">
+          Uses currentIndex + onIndexChange callback pattern.
+          goToSlide, goToNext, goToPrevious for navigation.
+          Bounds checking with canGoNext/canGoPrevious.
+        </pattern>
+        <pattern name="Memoized Current Slide">
+          useMemo for currentSlide with bounds safety.
+          Pattern: Math.max(0, Math.min(index, slides.length - 1))
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="lib/hooks/useCIMBuilder.ts" relevance="high">
+      <purpose>Central state management, integrate navigation here</purpose>
+      <key-patterns>
+        <pattern name="State Management">
+          useState for CIM, currentSlideIndex, flaggedSections
+          Callbacks: setCurrentSlideIndex, flagSections, clearFlag
+        </pattern>
+        <pattern name="Optimistic Updates">
+          Store previous value, update optimistically, rollback on error.
+          Pattern for outline and slides updates.
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="lib/agent/cim/utils/dependency-graph.ts" relevance="high">
+      <purpose>Use for coherence checking during navigation</purpose>
+      <key-patterns>
+        <pattern name="getDependents">
+          Returns slides affected if this slide changes.
+          Use to warn about downstream impact of edits.
+        </pattern>
+        <pattern name="getReferences">
+          Returns slides this slide depends on.
+          Use to check if prerequisites are complete.
+        </pattern>
+        <pattern name="getTransitiveDependents">
+          BFS traversal for deep dependency chains.
+          Use for comprehensive coherence warnings.
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="lib/agent/cim/utils/narrative-structure.ts" relevance="high">
+      <purpose>Narrative context for acknowledgment messages</purpose>
+      <key-patterns>
+        <pattern name="getNarrativeRoleLabel">
+          Human-readable labels: 'introduction' → 'Introduction'
+        </pattern>
+        <pattern name="validateNarrativeStructure">
+          Returns isValid, issues, suggestions, completeness.
+          Use to assess section health during navigation.
+        </pattern>
+        <pattern name="suggestReorganization">
+          Suggests slide reordering based on narrative flow.
+          Can inform navigation recommendations.
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="lib/agent/cim/tools/cim-tools.ts" relevance="high">
+      <purpose>Pattern for navigate_to_section tool implementation</purpose>
+      <key-patterns>
+        <pattern name="Tool Definition">
+          DynamicTool with name, description, schema, func.
+          Zod schema for input validation.
+          Return descriptive string for agent.
+        </pattern>
+        <pattern name="Existing Tools">
+          - create_outline_section, update_outline_section
+          - generate_slide_content, update_slide
+          - track_dependencies (E9.11)
+          - set_visual_concept (E9.10)
+        </pattern>
+        <pattern name="Tool Response Format">
+          Return formatted string for agent understanding.
+          Include success/failure, context, next steps.
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="components/cim-builder/SourcesPanel/StructureTree.tsx" relevance="high">
+      <purpose>Target for navigation UI enhancements</purpose>
+      <key-patterns>
+        <pattern name="Section Click Handler">
+          Each section is button with onClick.
+          onSectionClick(section.id) callback.
+          Currently handles section selection.
+        </pattern>
+        <pattern name="Flagged Sections Display">
+          flaggedMap useMemo for O(1) lookup.
+          Amber highlighting + AlertTriangle icon.
+          Nested button for clear action.
+        </pattern>
+        <pattern name="Status Icons">
+          statusIcons record: status → Lucide icon.
+          statusColors record: status → Tailwind classes.
+        </pattern>
+      </key-patterns>
+    </file>
+
+    <file path="lib/agent/cim/prompts.ts" relevance="medium">
+      <purpose>Context for agent acknowledgment message generation</purpose>
+      <key-patterns>
+        <pattern name="Phase Prompts">
+          PHASE_PROMPTS[phase] contains phase-specific guidance.
+          Navigation messages should follow similar style.
+        </pattern>
+        <pattern name="Tool Usage Prompt">
+          Lists available tools for agent.
+          Add navigate_to_section to this list.
+        </pattern>
+      </key-patterns>
+    </file>
+  </reference-code>
+
+  <!-- ============================================================
+       SECTION 4: IMPLEMENTATION GUIDANCE
+       ============================================================ -->
+  <implementation-guidance>
+    <new-types>
+      <type name="NavigationState">
+        <code><![CDATA[
+export interface NavigationState {
+  currentSectionId: string | null
+  currentSlideId: string | null
+  currentSlideIndex: number
+  navigationHistory: NavigationEvent[]
+  lastNavigationDirection: 'forward' | 'backward' | 'jump' | null
+}
+        ]]></code>
+      </type>
+
+      <type name="NavigationEvent">
+        <code><![CDATA[
+export interface NavigationEvent {
+  timestamp: string
+  fromSectionId: string | null
+  toSectionId: string
+  fromSlideIndex: number
+  toSlideIndex: number
+  direction: 'forward' | 'backward' | 'jump'
+  trigger: 'user_click' | 'agent_navigate' | 'keyboard' | 'auto'
+}
+        ]]></code>
+      </type>
+
+      <type name="NavigationResult">
+        <code><![CDATA[
+export interface NavigationResult {
+  success: boolean
+  targetSection: OutlineSection
+  targetSlide: Slide | null
+  direction: 'forward' | 'backward' | 'jump'
+  acknowledgmentMessage: string
+  warnings: NavigationWarning[]
+  incompletePredecessors: string[]  // section IDs
+  dependentSections: string[]       // sections that depend on this one
+}
+        ]]></code>
+      </type>
+
+      <type name="NavigationWarning">
+        <code><![CDATA[
+export interface NavigationWarning {
+  type: 'incomplete_dependency' | 'incomplete_predecessor' | 'needs_review'
+  severity: 'info' | 'warning'
+  sectionId: string
+  sectionTitle: string
+  message: string
+}
+        ]]></code>
+      </type>
+
+      <type name="SectionStatus Extended">
+        <code><![CDATA[
+// Extend existing SectionStatus type
+export type SectionStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'complete'
+  | 'approved'
+  | 'needs_review'  // NEW: Added for E9.13
+        ]]></code>
+      </type>
+    </new-types>
+
+    <navigate-tool-design>
+      <description>Design for navigate_to_section agent tool</description>
+      <input-schema><![CDATA[
+const navigateToSectionSchema = z.object({
+  targetSectionId: z.string().describe('ID of the section to navigate to'),
+  targetSlideId: z.string().optional().describe('Optional specific slide within section'),
+  reason: z.string().optional().describe('Reason for navigation (shown in acknowledgment)')
+})
+      ]]></input-schema>
+
+      <response-format><![CDATA[
+function generateNavigationResponse(result: NavigationResult): string {
+  const { targetSection, direction, warnings, incompletePredecessors } = result
+
+  let response = `Navigating to **${targetSection.title}**.\n\n`
+
+  // Direction-aware context
+  if (direction === 'forward' && incompletePredecessors.length > 0) {
+    response += `**Note:** Jumping ahead. Sections before this are incomplete: ${incompletePredecessors.join(', ')}\n`
+  } else if (direction === 'backward' && targetSection.status === 'complete') {
+    response += `**Note:** Returning to completed section. Would you like to refine this content?\n`
+  }
+
+  // Dependency warnings
+  if (warnings.length > 0) {
+    response += `\n**Coherence Warnings:**\n`
+    for (const warning of warnings) {
+      response += `- ${warning.message}\n`
+    }
+  }
+
+  response += `\nLet me know how you'd like to proceed.`
+  return response
+}
+      ]]></response-format>
+    </navigate-tool-design>
+
+    <navigation-detection-algorithm>
+      <description>Algorithm for detecting navigation direction</description>
+      <pseudo-code><![CDATA[
+function detectNavigationDirection(
+  fromSection: OutlineSection | null,
+  toSection: OutlineSection,
+  outline: OutlineSection[]
+): 'forward' | 'backward' | 'jump' {
+  if (!fromSection) return 'jump'
+
+  const fromOrder = fromSection.order
+  const toOrder = toSection.order
+
+  // Check if adjacent in outline
+  const orderDiff = toOrder - fromOrder
+
+  if (orderDiff === 1) return 'forward'
+  if (orderDiff === -1) return 'backward'
+
+  // Non-adjacent jump
+  return toOrder > fromOrder ? 'forward' : 'backward'
+}
+
+function getIncompletePredecessors(
+  targetSection: OutlineSection,
+  outline: OutlineSection[]
+): OutlineSection[] {
+  return outline
+    .filter(s => s.order < targetSection.order)
+    .filter(s => s.status === 'not_started' || s.status === 'in_progress')
+}
+
+function checkDependencyCoherence(
+  targetSectionId: string,
+  slides: Slide[],
+  dependencyGraph: DependencyGraph
+): NavigationWarning[] {
+  const warnings: NavigationWarning[] = []
+  const sectionSlides = slides.filter(s => s.section_id === targetSectionId)
+
+  for (const slide of sectionSlides) {
+    const references = getReferences(dependencyGraph, slide.id)
+    for (const refSlideId of references) {
+      const refSlide = slides.find(s => s.id === refSlideId)
+      if (refSlide && refSlide.status !== 'approved') {
+        warnings.push({
+          type: 'incomplete_dependency',
+          severity: 'warning',
+          sectionId: refSlide.section_id,
+          sectionTitle: refSlide.title,
+          message: `References content from "${refSlide.title}" which is incomplete`
+        })
+      }
+    }
+  }
+
+  return warnings
+}
+      ]]></pseudo-code>
+    </navigation-detection-algorithm>
+
+    <useCIMNavigation-design>
+      <description>Design for the useCIMNavigation hook</description>
+      <pseudo-code><![CDATA[
+interface UseCIMNavigationOptions {
+  outline: OutlineSection[]
+  slides: Slide[]
+  dependencyGraph: DependencyGraph
+  currentSlideIndex: number
+  onSlideIndexChange: (index: number) => void
+}
+
+interface UseCIMNavigationReturn {
+  // Current state
+  currentSection: OutlineSection | null
+  currentSlide: Slide | null
+  navigationHistory: NavigationEvent[]
+
+  // Navigation actions
+  navigateToSection: (sectionId: string) => NavigationResult
+  navigateToSlide: (slideId: string) => NavigationResult
+  goBack: () => NavigationResult | null
+
+  // Navigation info
+  getIncompletePredecessors: (sectionId: string) => OutlineSection[]
+  getDependencyWarnings: (sectionId: string) => NavigationWarning[]
+  canGoBack: boolean
+
+  // For agent integration
+  generateAcknowledgment: (result: NavigationResult) => string
+}
+
+export function useCIMNavigation(options: UseCIMNavigationOptions): UseCIMNavigationReturn {
+  const [navigationHistory, setNavigationHistory] = useState<NavigationEvent[]>([])
+
+  const currentSection = useMemo(() => {
+    const slide = options.slides[options.currentSlideIndex]
+    if (!slide) return null
+    return options.outline.find(s => s.id === slide.section_id) || null
+  }, [options.slides, options.currentSlideIndex, options.outline])
+
+  const navigateToSection = useCallback((sectionId: string): NavigationResult => {
+    // 1. Find target section
+    const targetSection = options.outline.find(s => s.id === sectionId)
+    if (!targetSection) throw new Error('Section not found')
+
+    // 2. Find first slide in section
+    const targetSlideIndex = options.slides.findIndex(s => s.section_id === sectionId)
+    const targetSlide = targetSlideIndex >= 0 ? options.slides[targetSlideIndex] : null
+
+    // 3. Detect direction
+    const direction = detectNavigationDirection(currentSection, targetSection, options.outline)
+
+    // 4. Get warnings
+    const warnings = checkDependencyCoherence(sectionId, options.slides, options.dependencyGraph)
+    const incompletePredecessors = getIncompletePredecessors(targetSection, options.outline)
+      .map(s => s.title)
+
+    // 5. Record navigation event
+    const event: NavigationEvent = {
+      timestamp: new Date().toISOString(),
+      fromSectionId: currentSection?.id || null,
+      toSectionId: sectionId,
+      fromSlideIndex: options.currentSlideIndex,
+      toSlideIndex: targetSlideIndex,
+      direction,
+      trigger: 'user_click'
+    }
+    setNavigationHistory(prev => [...prev, event])
+
+    // 6. Update slide index
+    if (targetSlideIndex >= 0) {
+      options.onSlideIndexChange(targetSlideIndex)
+    }
+
+    // 7. Build result
+    return {
+      success: true,
+      targetSection,
+      targetSlide,
+      direction,
+      acknowledgmentMessage: generateAcknowledgmentMessage(targetSection, direction, warnings, incompletePredecessors),
+      warnings,
+      incompletePredecessors,
+      dependentSections: [] // TODO: compute from dependency graph
+    }
+  }, [currentSection, options])
+
+  return {
+    currentSection,
+    currentSlide: options.slides[options.currentSlideIndex] || null,
+    navigationHistory,
+    navigateToSection,
+    navigateToSlide: (slideId) => { /* similar implementation */ },
+    goBack: () => { /* pop from history */ },
+    getIncompletePredecessors: (sectionId) => getIncompletePredecessors(/* ... */),
+    getDependencyWarnings: (sectionId) => checkDependencyCoherence(/* ... */),
+    canGoBack: navigationHistory.length > 0,
+    generateAcknowledgment: generateAcknowledgmentMessage
+  }
+}
+      ]]></pseudo-code>
+    </useCIMNavigation-design>
+  </implementation-guidance>
+
+  <!-- ============================================================
+       SECTION 5: TESTING STRATEGY
+       ============================================================ -->
+  <testing-strategy>
+    <test-count-target>~50 tests</test-count-target>
+
+    <unit-tests>
+      <test-file path="__tests__/lib/hooks/useCIMNavigation.test.ts">
+        <test-case name="navigateToSection updates currentSection">
+          <setup>Hook with 3 sections, starting at section 1</setup>
+          <action>navigateToSection('section-2')</action>
+          <assertion>currentSection.id === 'section-2'</assertion>
+        </test-case>
+
+        <test-case name="navigateToSection detects forward direction">
+          <setup>At section 1, navigate to section 3</setup>
+          <action>navigateToSection('section-3')</action>
+          <assertion>result.direction === 'forward'</assertion>
+        </test-case>
+
+        <test-case name="navigateToSection detects backward direction">
+          <setup>At section 3, navigate to section 1</setup>
+          <action>navigateToSection('section-1')</action>
+          <assertion>result.direction === 'backward'</assertion>
+        </test-case>
+
+        <test-case name="navigateToSection records history">
+          <setup>Empty history, navigate twice</setup>
+          <action>navigateToSection('s2'), navigateToSection('s3')</action>
+          <assertion>navigationHistory.length === 2</assertion>
+        </test-case>
+
+        <test-case name="getIncompletePredecessors returns incomplete sections">
+          <setup>Sections 1,2 incomplete, section 3 complete</setup>
+          <action>getIncompletePredecessors('section-3')</action>
+          <assertion>Returns ['section-1', 'section-2']</assertion>
+        </test-case>
+
+        <test-case name="getDependencyWarnings returns warnings for incomplete references">
+          <setup>Section with slide referencing incomplete slide</setup>
+          <action>getDependencyWarnings('section-2')</action>
+          <assertion>Returns warning with type 'incomplete_dependency'</assertion>
+        </test-case>
+
+        <test-case name="goBack navigates to previous section">
+          <setup>Navigate s1 → s2 → s3</setup>
+          <action>goBack()</action>
+          <assertion>currentSection.id === 'section-2'</assertion>
+        </test-case>
+
+        <test-case name="canGoBack is false with empty history">
+          <setup>Fresh hook with no navigation</setup>
+          <assertion>canGoBack === false</assertion>
+        </test-case>
+
+        <test-case name="generateAcknowledgment includes direction context">
+          <setup>Forward navigation result</setup>
+          <action>generateAcknowledgment(result)</action>
+          <assertion>Message contains 'Jumping ahead'</assertion>
+        </test-case>
+      </test-file>
+
+      <test-file path="__tests__/lib/agent/cim/tools/navigation-tools.test.ts">
+        <test-case name="navigate_to_section tool validates input">
+          <setup>Mock CIM state</setup>
+          <action>Execute tool with missing targetSectionId</action>
+          <assertion>Returns validation error</assertion>
+        </test-case>
+
+        <test-case name="navigate_to_section returns success for valid section">
+          <setup>CIM with outline sections</setup>
+          <action>Execute tool with valid sectionId</action>
+          <assertion>Response contains 'Navigating to'</assertion>
+        </test-case>
+
+        <test-case name="navigate_to_section includes dependency warnings">
+          <setup>Section with incomplete dependencies</setup>
+          <action>Execute tool</action>
+          <assertion>Response contains 'Coherence Warnings'</assertion>
+        </test-case>
+
+        <test-case name="navigate_to_section handles forward jump">
+          <setup>CIM at section 1, navigate to section 4</setup>
+          <action>Execute tool with targetSectionId='s4'</action>
+          <assertion>Response mentions incomplete preceding sections</assertion>
+        </test-case>
+
+        <test-case name="navigate_to_section handles backward jump to complete section">
+          <setup>Section 1 complete, navigate back from section 3</setup>
+          <action>Execute tool with targetSectionId='s1'</action>
+          <assertion>Response offers refinement option</assertion>
+        </test-case>
+      </test-file>
+
+      <test-file path="__tests__/lib/agent/cim/utils/navigation-coherence.test.ts">
+        <test-case name="checkNavigationCoherence finds incomplete references">
+          <setup>Slide references incomplete slide via dependency graph</setup>
+          <action>checkNavigationCoherence()</action>
+          <assertion>Returns warning for incomplete dependency</assertion>
+        </test-case>
+
+        <test-case name="checkNavigationCoherence returns empty for complete dependencies">
+          <setup>All referenced slides are approved</setup>
+          <action>checkNavigationCoherence()</action>
+          <assertion>Returns empty warnings array</assertion>
+        </test-case>
+
+        <test-case name="detectNavigationDirection handles adjacent sections">
+          <setup>Sections with order 1, 2, 3</setup>
+          <action>detectNavigationDirection(section1, section2)</action>
+          <assertion>Returns 'forward'</assertion>
+        </test-case>
+
+        <test-case name="detectNavigationDirection handles non-adjacent jump">
+          <setup>Navigate from section 1 to section 5</setup>
+          <action>detectNavigationDirection(section1, section5)</action>
+          <assertion>Returns 'forward' (jump)</assertion>
+        </test-case>
+      </test-file>
+
+      <test-file path="__tests__/components/cim-builder/SourcesPanel/StructureTree.navigation.test.ts">
+        <test-case name="clicking section calls onNavigate">
+          <setup>Render StructureTree with onNavigate mock</setup>
+          <action>Click on section button</action>
+          <assertion>onNavigate called with section.id</assertion>
+        </test-case>
+
+        <test-case name="section shows status badge">
+          <setup>Section with status 'in_progress'</setup>
+          <action>Render component</action>
+          <assertion>Badge with 'In Progress' visible</assertion>
+        </test-case>
+
+        <test-case name="section shows dependency warning icon">
+          <setup>Section has incomplete dependencies</setup>
+          <action>Render with dependencyWarnings prop</action>
+          <assertion>Warning icon visible on section</assertion>
+        </test-case>
+
+        <test-case name="current section is highlighted">
+          <setup>currentSectionId prop set</setup>
+          <action>Render component</action>
+          <assertion>Current section has highlight class</assertion>
+        </test-case>
+      </test-file>
+    </unit-tests>
+
+    <integration-tests>
+      <test-case name="Full navigation flow updates preview">
+        <setup>CIM Builder with populated outline and slides</setup>
+        <action>Click section in StructureTree</action>
+        <assertion>
+          - useCIMNavigation records event
+          - Preview panel shows correct slide
+          - Agent receives navigation context
+        </assertion>
+      </test-case>
+
+      <test-case name="Agent tool integrates with navigation state">
+        <setup>Agent session active</setup>
+        <action>Agent calls navigate_to_section tool</action>
+        <assertion>
+          - Navigation state updates
+          - Acknowledgment message generated
+          - Warnings displayed in UI
+        </assertion>
+      </test-case>
+    </integration-tests>
+  </testing-strategy>
+
+  <!-- ============================================================
+       SECTION 6: DEPENDENCIES & FRAMEWORKS
+       ============================================================ -->
+  <dependencies>
+    <runtime-dependencies>
+      <dependency name="react" version="^19.2.1" usage="UI components, hooks" />
+      <dependency name="lucide-react" version="^0.554.0" usage="Navigation and status icons" />
+      <dependency name="@langchain/core" version="^1.1.0" usage="Agent tool definitions" />
+      <dependency name="zod" version="^4.1.13" usage="Tool input validation" />
+      <dependency name="zustand" version="^5.0.8" usage="CIM state management (if used)" />
+      <dependency name="sonner" version="^2.0.7" usage="Toast notifications for navigation feedback" />
+    </runtime-dependencies>
+
+    <dev-dependencies>
+      <dependency name="vitest" version="^4.0.14" usage="Unit testing" />
+      <dependency name="@testing-library/react" version="^16.3.0" usage="Component testing" />
+      <dependency name="@testing-library/user-event" version="^14.6.1" usage="Click simulation" />
+    </dev-dependencies>
+
+    <internal-dependencies>
+      <dependency path="lib/types/cim.ts" usage="Type definitions, extend with NavigationState" />
+      <dependency path="lib/hooks/useSlideNavigation.ts" usage="Base navigation pattern" />
+      <dependency path="lib/hooks/useCIMBuilder.ts" usage="State management integration" />
+      <dependency path="lib/agent/cim/utils/dependency-graph.ts" usage="Coherence checking" />
+      <dependency path="lib/agent/cim/utils/narrative-structure.ts" usage="Narrative context for messages" />
+      <dependency path="lib/agent/cim/tools/cim-tools.ts" usage="Tool registration" />
+      <dependency path="lib/agent/cim/prompts.ts" usage="Tool listing update" />
+      <dependency path="components/cim-builder/SourcesPanel/StructureTree.tsx" usage="UI navigation triggers" />
+    </internal-dependencies>
+  </dependencies>
+
+  <!-- ============================================================
+       SECTION 7: FILES TO CREATE/MODIFY
+       ============================================================ -->
+  <file-changes>
+    <new-files>
+      <file path="lib/hooks/useCIMNavigation.ts">
+        <purpose>Centralized navigation state management hook</purpose>
+        <exports>
+          - useCIMNavigation()
+          - NavigationState type
+          - NavigationEvent type
+          - NavigationResult type
+        </exports>
+      </file>
+
+      <file path="lib/agent/cim/utils/navigation-coherence.ts">
+        <purpose>Coherence checking utilities for navigation</purpose>
+        <exports>
+          - checkNavigationCoherence()
+          - detectNavigationDirection()
+          - getIncompletePredecessors()
+          - generateAcknowledgmentMessage()
+        </exports>
+      </file>
+
+      <file path="__tests__/lib/hooks/useCIMNavigation.test.ts">
+        <purpose>Unit tests for navigation hook (~20 tests)</purpose>
+      </file>
+
+      <file path="__tests__/lib/agent/cim/tools/navigation-tools.test.ts">
+        <purpose>Unit tests for navigate_to_section tool (~10 tests)</purpose>
+      </file>
+
+      <file path="__tests__/lib/agent/cim/utils/navigation-coherence.test.ts">
+        <purpose>Unit tests for coherence utilities (~10 tests)</purpose>
+      </file>
+    </new-files>
+
+    <modified-files>
+      <file path="lib/types/cim.ts">
+        <changes>
+          - Add NavigationState interface
+          - Add NavigationEvent interface
+          - Add NavigationResult interface
+          - Add NavigationWarning interface
+          - Extend SectionStatus with 'needs_review'
+        </changes>
+      </file>
+
+      <file path="lib/agent/cim/tools/cim-tools.ts">
+        <changes>
+          - Add navigate_to_section tool
+          - Implement navigation logic with dependency checking
+          - Generate context-aware acknowledgment messages
+        </changes>
+      </file>
+
+      <file path="lib/agent/cim/prompts.ts">
+        <changes>
+          - Add navigate_to_section to CIM_TOOL_USAGE_PROMPT
+          - Update tool descriptions for navigation
+        </changes>
+      </file>
+
+      <file path="components/cim-builder/SourcesPanel/StructureTree.tsx">
+        <changes>
+          - Add onNavigate callback prop
+          - Add currentSectionId prop for highlighting
+          - Add dependencyWarnings prop for coherence indicators
+          - Update section click handler to trigger navigation
+          - Add status badge component
+          - Add warning icon for sections with incomplete deps
+        </changes>
+      </file>
+
+      <file path="lib/hooks/useCIMBuilder.ts">
+        <changes>
+          - Optionally integrate with useCIMNavigation
+          - Add navigation-related state if needed
+        </changes>
+      </file>
+    </modified-files>
+  </file-changes>
+
+  <!-- ============================================================
+       SECTION 8: VALIDATION CHECKLIST
+       ============================================================ -->
+  <validation-checklist>
+    <item category="types">All new types have JSDoc comments</item>
+    <item category="types">Types are exported from lib/types/cim.ts</item>
+    <item category="types">NavigationState, NavigationEvent, NavigationResult defined</item>
+    <item category="hook">useCIMNavigation hook is exported from lib/hooks/</item>
+    <item category="hook">Hook handles edge cases (empty outline, no slides)</item>
+    <item category="hook">Navigation history is properly tracked</item>
+    <item category="tool">navigate_to_section tool has Zod schema</item>
+    <item category="tool">Tool returns properly formatted acknowledgment</item>
+    <item category="tool">Tool is registered in createCIMTools array</item>
+    <item category="tool">Tool is listed in CIM_TOOL_USAGE_PROMPT</item>
+    <item category="coherence">Dependency checking uses existing dependency-graph.ts</item>
+    <item category="coherence">Warnings include section titles, not just IDs</item>
+    <item category="ui">StructureTree accepts onNavigate callback</item>
+    <item category="ui">Current section is visually highlighted</item>
+    <item category="ui">Status badges show for all section statuses</item>
+    <item category="ui">Warning icons display for incomplete dependencies</item>
+    <item category="testing">~50 unit tests covering all acceptance criteria</item>
+    <item category="testing">Tests cover forward/backward/jump navigation</item>
+    <item category="testing">Tests cover coherence warning generation</item>
+    <item category="testing">Tests cover empty/edge case scenarios</item>
+    <item category="a11y">Navigation elements are keyboard accessible</item>
+    <item category="a11y">Status badges have aria-labels</item>
+  </validation-checklist>
+
+</story-context>
