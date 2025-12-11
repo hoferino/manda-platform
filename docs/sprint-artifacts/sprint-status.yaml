@@ -1738,5 +1738,9 @@ development_status:
     - Updated ExportButton.tsx with dropdown menu (PPTX + LLM Prompt options)
     - 132 E9.15 tests passing (2 skipped for deprecated execCommand API)
     - Pre-existing failures in tools.test.ts (CIM_TOOL_COUNT) unrelated to E9.15
-  epic-9-retrospective: optional
+  epic-9-retrospective: done
+  epic-9-retrospective-file: docs/sprint-artifacts/retrospectives/epic-E9-retrospective.md
+  epic-9-retrospective-date: 2025-12-11
+  epic-9-completed: 2025-12-11
+  phase-1-mvp-complete: true
   # NOTE: Spike E9.S1 (Phase 2 Styled Output Research) moved to Phase 2 backlog per PRD

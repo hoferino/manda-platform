@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Next.js build output
+.next
+
+# Testing
+coverage
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+playwright-report
+test-results
+
+# Environment files (use secrets in Cloud Run)
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+docs
+
+# Service account keys (NEVER include in image)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
+# Supabase local config
+supabase/.temp
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml

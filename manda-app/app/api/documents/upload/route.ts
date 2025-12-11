@@ -2,7 +2,7 @@
  * Document Upload API
  *
  * POST /api/documents/upload
- * Handles file uploads to Google Cloud Storage
+ * Handles file uploads to Google Cloud Storage and triggers document processing
  *
  * Request: FormData with:
  * - file: File to upload
@@ -11,6 +11,11 @@
  * - category: Optional document category
  *
  * Response: Document metadata including GCS paths
+ *
+ * Flow:
+ * 1. Upload file to GCS
+ * 2. Create document record in database
+ * 3. Trigger manda-processing webhook to start parsing pipeline
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -143,6 +148,63 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Trigger document processing via manda-processing webhook
+    let processingJobId: string | null = null
+    const processingApiUrl = process.env.MANDA_PROCESSING_API_URL
+    const processingApiKey = process.env.MANDA_PROCESSING_API_KEY
+
+    if (processingApiUrl && processingApiKey) {
+      try {
+        const gcsPath = `gs://${gcsResult.bucket}/${gcsResult.objectPath}`
+        const webhookResponse = await fetch(
+          `${processingApiUrl}/webhooks/document-uploaded`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': processingApiKey,
+            },
+            body: JSON.stringify({
+              document_id: document.id,
+              deal_id: projectId,
+              user_id: user.id,
+              gcs_path: gcsPath,
+              file_type: file.type,
+              file_name: file.name,
+            }),
+          }
+        )
+
+        if (webhookResponse.ok) {
+          const result = await webhookResponse.json()
+          processingJobId = result.job_id
+          console.log('Document processing job enqueued:', {
+            documentId: document.id,
+            jobId: processingJobId,
+          })
+        } else {
+          const errorData = await webhookResponse.json().catch(() => ({}))
+          console.error('Processing webhook failed:', {
+            status: webhookResponse.status,
+            error: errorData,
+            documentId: document.id,
+          })
+          // Don't fail the upload - document is saved, processing can be retried
+        }
+      } catch (webhookError) {
+        console.error('Failed to call processing webhook:', {
+          error: webhookError,
+          documentId: document.id,
+        })
+        // Don't fail the upload - document is saved, processing can be retried
+      }
+    } else {
+      console.warn(
+        'MANDA_PROCESSING_API_URL or MANDA_PROCESSING_API_KEY not configured. ' +
+        'Document processing will not be triggered automatically.'
+      )
+    }
+
     // Log audit event
     await createAuditLog({
       event_type: DATA_ACCESS_EVENTS.DOCUMENT_UPLOADED,
@@ -156,6 +218,7 @@ export async function POST(request: NextRequest) {
         category: category || null,
         folder_path: folderPath || null,
         irl_item_id: irlItemId || null,
+        processing_job_id: processingJobId,
       },
       success: true,
     })
@@ -173,6 +236,7 @@ export async function POST(request: NextRequest) {
         uploadStatus: document.upload_status,
         processingStatus: document.processing_status,
         createdAt: document.created_at,
+        processingJobId,
       },
     })
   } catch (error) {

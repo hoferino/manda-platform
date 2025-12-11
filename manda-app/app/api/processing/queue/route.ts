@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${processingApiKey}`,
+          'x-api-key': processingApiKey,
           'Content-Type': 'application/json',
         },
       }
