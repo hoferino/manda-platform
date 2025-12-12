@@ -730,37 +730,43 @@ export function DataRoomClient({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Action bar */}
-      <div className="flex items-center justify-between border-b px-4 py-2">
+      {/* Action bar - Enhanced */}
+      <div className="flex items-center justify-between border-b px-6 py-4 bg-muted/20">
         {/* E3.6: Realtime connection status indicator */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="realtime-status" data-status={realtimeStatus}>
+        <div className="flex items-center gap-3 text-sm" data-testid="realtime-status" data-status={realtimeStatus}>
           {realtimeStatus === 'connected' ? (
             <>
-              <Wifi className="h-4 w-4 text-green-500" />
-              <span className="hidden sm:inline">Live updates</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 text-success">
+                <Wifi className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline font-medium">Live</span>
+              </div>
             </>
           ) : realtimeStatus === 'connecting' ? (
             <>
-              <Wifi className="h-4 w-4 animate-pulse text-yellow-500" />
-              <span className="hidden sm:inline">Connecting...</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 text-warning">
+                <Wifi className="h-3.5 w-3.5 animate-pulse" />
+                <span className="hidden sm:inline font-medium">Connecting...</span>
+              </div>
             </>
           ) : (
             <>
-              <WifiOff className="h-4 w-4 text-red-500" />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-auto p-0 text-red-500 hover:text-red-600"
-                onClick={reconnectRealtime}
-              >
-                Reconnect
-              </Button>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive">
+                <WifiOff className="h-3.5 w-3.5" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 text-destructive hover:text-destructive/80 font-medium"
+                  onClick={reconnectRealtime}
+                >
+                  Reconnect
+                </Button>
+              </div>
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={loadDocuments}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={loadDocuments} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
           {/* E2.7: Integrated Upload Button with progress tracking */}
@@ -774,7 +780,7 @@ export function DataRoomClient({
       {/* Two-panel layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel: Folder tree */}
-        <div className="w-64 flex-shrink-0 border-r bg-muted/30">
+        <div className="w-64 flex-shrink-0 border-r">
           <FolderTree
             projectId={projectId}
             folders={folders}
@@ -788,9 +794,9 @@ export function DataRoomClient({
         </div>
 
         {/* Right panel: Document list */}
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden bg-background">
           {/* Breadcrumb */}
-          <div className="border-b px-4 py-2">
+          <div className="border-b px-6 py-3 bg-muted/10">
             <Breadcrumb
               folderPath={selectedPath}
               onNavigate={handleSelectFolder}
@@ -803,7 +809,7 @@ export function DataRoomClient({
           </div>
 
           {/* Document list */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto custom-scrollbar">
             <DocumentList
               documents={documents}
               isLoading={isLoading}

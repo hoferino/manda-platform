@@ -113,14 +113,14 @@ export function FolderTree({
   }, [onDropDocument])
 
   return (
-    <div className="flex h-full flex-col" data-testid="folder-tree">
+    <div className="flex h-full flex-col bg-muted/20" data-testid="folder-tree">
       {/* Header with New Folder button */}
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-medium">Folders</span>
+      <div className="flex items-center justify-between border-b px-4 py-3 bg-background">
+        <span className="text-sm font-semibold font-heading">Folders</span>
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 w-7 p-0"
+          className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
           onClick={() => onCreateFolder(null)}
           title="New Folder"
           data-testid="create-folder-button"
@@ -132,8 +132,9 @@ export function FolderTree({
       {/* Root folder (All Documents) */}
       <div
         className={cn(
-          'flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-muted/50',
-          selectedPath === null && 'bg-muted',
+          'flex cursor-pointer items-center gap-2.5 px-4 py-2.5 mx-2 my-1 rounded-lg smooth-transition',
+          'hover:bg-accent',
+          selectedPath === null && 'bg-primary/10 text-primary font-medium',
           dragOverPath === '' && 'ring-2 ring-primary ring-inset'
         )}
         onClick={() => onSelectFolder(null)}
@@ -141,12 +142,15 @@ export function FolderTree({
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, null)}
       >
-        <Folder className="h-4 w-4 text-muted-foreground" />
+        <Folder className={cn(
+          "h-4 w-4 smooth-transition",
+          selectedPath === null ? "text-primary" : "text-muted-foreground"
+        )} />
         <span className="text-sm">All Documents</span>
       </div>
 
       {/* Folder tree */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto custom-scrollbar px-2">
         {folders.map((folder) => (
           <FolderTreeNode
             key={folder.id}
@@ -210,11 +214,12 @@ function FolderTreeNode({
     <div>
       <div
         className={cn(
-          'group flex cursor-pointer items-center gap-1 py-1.5 pr-2 hover:bg-muted/50',
-          isSelected && 'bg-muted',
+          'group flex cursor-pointer items-center gap-1.5 py-2 px-2 my-0.5 rounded-lg smooth-transition',
+          'hover:bg-accent',
+          isSelected && 'bg-primary/10 text-primary font-medium',
           isDragOver && 'ring-2 ring-primary ring-inset'
         )}
-        style={{ paddingLeft: `${(level + 1) * 12 + 8}px` }}
+        style={{ paddingLeft: `${(level + 1) * 16 + 8}px` }}
         onClick={() => onSelect(folder.path)}
         onDragOver={(e) => onDragOver(e, folder.path)}
         onDragLeave={onDragLeave}
@@ -223,7 +228,7 @@ function FolderTreeNode({
         {/* Expand/collapse toggle */}
         <button
           className={cn(
-            'flex h-5 w-5 items-center justify-center rounded hover:bg-muted',
+            'flex h-5 w-5 items-center justify-center rounded hover:bg-primary/10 smooth-transition',
             !hasChildren && 'invisible'
           )}
           onClick={(e) => {
@@ -233,18 +238,24 @@ function FolderTreeNode({
         >
           {hasChildren && (
             isExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             )
           )}
         </button>
 
         {/* Folder icon */}
         {isExpanded && hasChildren ? (
-          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          <FolderOpen className={cn(
+            "h-4 w-4 smooth-transition",
+            isSelected ? "text-primary" : "text-muted-foreground"
+          )} />
         ) : (
-          <Folder className="h-4 w-4 text-muted-foreground" />
+          <Folder className={cn(
+            "h-4 w-4 smooth-transition",
+            isSelected ? "text-primary" : "text-muted-foreground"
+          )} />
         )}
 
         {/* Folder name */}
@@ -252,7 +263,12 @@ function FolderTreeNode({
 
         {/* Document count badge */}
         {folder.documentCount !== undefined && folder.documentCount > 0 && (
-          <span className="text-xs text-muted-foreground">
+          <span className={cn(
+            "text-xs px-1.5 py-0.5 rounded-full smooth-transition",
+            isSelected 
+              ? "bg-primary/20 text-primary font-medium" 
+              : "bg-muted text-muted-foreground"
+          )}>
             {folder.documentCount}
           </span>
         )}

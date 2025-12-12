@@ -113,7 +113,8 @@ export function DocumentCard({
   return (
     <div
       className={cn(
-        'group grid cursor-pointer grid-cols-[1fr_100px_120px_40px] items-center gap-4 px-4 py-3 hover:bg-muted/50',
+        'group grid cursor-pointer grid-cols-[1fr_100px_120px_40px] items-center gap-4 px-4 py-3.5',
+        'hover:bg-accent/50 smooth-transition rounded-lg',
         draggable && 'cursor-grab active:cursor-grabbing',
         className
       )}
@@ -132,9 +133,11 @@ export function DocumentCard({
     >
       {/* Name with icon and badges */}
       <div className="flex items-center gap-3 overflow-hidden">
-        <Icon className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-        <div className="flex flex-col gap-1 overflow-hidden">
-          <span className="truncate text-sm font-medium">{document.name}</span>
+        <div className="flex-shrink-0 rounded-lg bg-primary/5 p-2 group-hover:bg-primary/10 smooth-transition">
+          <Icon className="h-4 w-4 text-primary/70 group-hover:text-primary smooth-transition" />
+        </div>
+        <div className="flex flex-col gap-1.5 overflow-hidden">
+          <span className="truncate text-sm font-medium group-hover:text-primary smooth-transition">{document.name}</span>
           <div className="flex items-center gap-2">
             {/* Category badge */}
             {categoryLabel && (
@@ -178,7 +181,7 @@ export function DocumentCard({
  */
 export function DocumentCardHeader() {
   return (
-    <div className="grid grid-cols-[1fr_100px_120px_40px] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground">
+    <div className="grid grid-cols-[1fr_100px_120px_40px] gap-4 px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b bg-muted/30">
       <div>Name</div>
       <div>Size</div>
       <div>Date</div>

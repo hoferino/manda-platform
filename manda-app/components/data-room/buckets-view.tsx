@@ -294,42 +294,51 @@ export function BucketsView({
 
   return (
     <div className="flex h-full flex-col" data-testid="buckets-view">
-      {/* Action bar */}
-      <div className="flex items-center justify-between border-b px-4 py-2">
-        {onCreateFolder && (
-          <Button variant="outline" size="sm" onClick={onCreateFolder}>
-            <FolderPlus className="mr-2 h-4 w-4" />
-            New Bucket
-          </Button>
-        )}
-        <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={loadBuckets}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+      {/* Action bar - Enhanced */}
+      <div className="flex items-center justify-between border-b px-6 py-4 bg-muted/30">
+        <div className="flex items-center gap-3">
+          {onCreateFolder && (
+            <Button 
+              onClick={onCreateFolder}
+              className="font-medium shadow-sm"
+            >
+              <FolderPlus className="mr-2 h-4 w-4" />
+              New Bucket
+            </Button>
+          )}
+          <div className="text-sm text-muted-foreground">
+            {buckets.length} {buckets.length === 1 ? 'bucket' : 'buckets'}
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={loadBuckets} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
           Refresh
         </Button>
       </div>
 
       {/* Content area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Buckets grid */}
+        {/* Buckets grid - Enhanced with better spacing */}
         <div
           className={cn(
-            'flex-1 overflow-auto p-6 transition-all',
+            'flex-1 overflow-auto p-8 custom-scrollbar transition-all duration-300',
             expandedFolder && 'w-1/2'
           )}
         >
           {buckets.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-              <FolderOpen className="h-12 w-12 text-muted-foreground" />
-              <div>
-                <p className="font-medium">No buckets yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Create your first bucket to start organizing documents
+            <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
+              <div className="rounded-full bg-muted p-6">
+                <FolderOpen className="h-16 w-16 text-muted-foreground" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-heading text-xl font-semibold">No buckets yet</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Create your first bucket to start organizing documents by category or project phase
                 </p>
               </div>
               {onCreateFolder && (
-                <Button onClick={onCreateFolder}>
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button onClick={onCreateFolder} size="lg" className="mt-2">
+                  <Plus className="mr-2 h-5 w-5" />
                   Create First Bucket
                 </Button>
               )}
@@ -337,10 +346,10 @@ export function BucketsView({
           ) : (
             <div
               className={cn(
-                'grid gap-4',
+                'grid gap-6',
                 expandedFolder
-                  ? 'grid-cols-1 lg:grid-cols-2'
-                  : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                  ? 'grid-cols-1 xl:grid-cols-2'
+                  : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
               )}
             >
               {buckets.map((bucket) => (
@@ -359,9 +368,9 @@ export function BucketsView({
           )}
         </div>
 
-        {/* Expanded item list panel */}
+        {/* Expanded item list panel - Enhanced */}
         {expandedFolder && expandedBucket && (
-          <div className="w-1/2 border-l bg-muted/30">
+          <div className="w-1/2 border-l bg-muted/20 slide-in">
             <BucketItemList
               folderName={expandedBucket.folderName}
               folderPath={expandedBucket.folderPath}
