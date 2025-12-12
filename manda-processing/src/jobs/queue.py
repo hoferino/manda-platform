@@ -106,6 +106,31 @@ class JobQueue:
         settings = get_settings()
         self._schema = settings.pgboss_schema
 
+    async def ensure_queue(self, name: str) -> None:
+        """
+        Ensure a queue is registered in pg-boss.
+
+        Args:
+            name: Queue name to register
+        """
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                f"""
+                INSERT INTO {self._schema}.queue (
+                    name, policy, retry_limit, retry_delay, retry_backoff,
+                    expire_seconds, retention_seconds, deletion_seconds,
+                    partition, table_name, created_on, updated_on
+                )
+                VALUES (
+                    $1, 'standard', 3, 30, true,
+                    300, 86400, 172800,
+                    false, 'job', NOW(), NOW()
+                )
+                ON CONFLICT (name) DO NOTHING
+                """,
+                name,
+            )
+
     async def enqueue(
         self,
         name: str,
@@ -126,10 +151,13 @@ class JobQueue:
         if options is None:
             options = DEFAULT_JOB_OPTIONS.get(name, EnqueueOptions())
 
+        # Ensure the queue is registered
+        await self.ensure_queue(name)
+
         job_id = str(uuid.uuid4())
 
         # Calculate expiration and start time
-        expire_in = f"{options.expire_in_seconds} seconds"
+        expire_seconds = options.expire_in_seconds
         start_after = options.start_after or datetime.now(timezone.utc)
 
         async with self._pool.acquire() as conn:
@@ -138,12 +166,12 @@ class JobQueue:
                 INSERT INTO {self._schema}.job (
                     id, name, data, priority,
                     retry_limit, retry_delay, retry_backoff,
-                    expire_in, start_after, singleton_key,
+                    expire_seconds, start_after, singleton_key,
                     state, created_on
                 ) VALUES (
                     $1, $2, $3, $4,
                     $5, $6, $7,
-                    $8::interval, $9, $10,
+                    $8, $9, $10,
                     'created', NOW()
                 )
                 """,
@@ -154,7 +182,7 @@ class JobQueue:
                 options.retry_limit,
                 options.retry_delay,
                 options.retry_backoff,
-                expire_in,
+                expire_seconds,
                 start_after,
                 options.singleton_key,
             )
@@ -379,6 +407,7 @@ async def create_pool() -> asyncpg.Pool:
             settings.database_url,
             min_size=5,
             max_size=20,
+            statement_cache_size=0,  # Required for Supabase Transaction mode (pgbouncer)
         )
         logger.info("Database pool created")
     return _pool

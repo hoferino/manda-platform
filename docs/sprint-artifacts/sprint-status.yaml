@@ -745,7 +745,7 @@ development_status:
   e4-13-drafted: 2025-11-30
   e4-13-context-ready: 2025-11-30
   e4-13-completed: 2025-11-30
-  e4-13-note: "Renumbered from E4.14 after duplicate E4.11 removal. Last story in Epic 4."
+  e4-13-note: "Renumbered from E4.14 after duplicate E4.11 removal."
   e4-13-completion-notes: |
     - Created useFindingsRealtime hook for findings table subscriptions
     - Created useContradictionsRealtime hook for contradictions table subscriptions
@@ -758,6 +758,15 @@ development_status:
     - 100ms debouncing, exponential backoff reconnection, subscription cleanup
     - Comprehensive tests: hook unit tests, component tests, integration tests
     - Build passing with all TypeScript checks
+  e4-15-sync-findings-to-neo4j-knowledge-graph: drafted
+  e4-15-jira-id: TBD
+  e4-15-drafted: 2025-12-12
+  e4-15-note: |
+    NEW STORY - Discovered during Phase 4 manual testing (2025-12-12).
+    Root cause: E1-7 only created frontend Neo4j client (TypeScript), E4-13 only frontend realtime hooks.
+    Gap: Backend Python service (manda-processing) has NO Neo4j integration code.
+    Current state: Neo4j database EMPTY (0 Finding nodes) despite 8 findings extracted by Gemini.
+    This story implements backend Neo4j sync in analyze-document job handler.
   epic-4-retrospective: done
   epic-4-retrospective-notes: |
     Completed: 2025-11-30

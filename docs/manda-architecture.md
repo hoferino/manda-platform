@@ -6,7 +6,7 @@
 **Last Updated:** 2025-12-12
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 3.2 (Added Intelligent Excel Parser for IRL Import - v2.7)
+**Version:** 3.3 (Clarified pg-boss + Python Worker Architecture)
 
 ---
 
@@ -201,54 +201,73 @@ Development & Deployment:
 │  - Collaborative Analysis Interface                            │
 └─────────────────────┬───────────────────────────────────────────┘
                       │ HTTPS + WebSocket
-┌─────────────────────▼───────────────────────────────────────────┐
-│                        API GATEWAY                              │
-│  FastAPI + Pydantic Validation                                 │
-│  - REST API endpoints                                          │
-│  - WebSocket for real-time updates                            │
-│  - Authentication middleware (Supabase)                        │
-│  - Rate limiting & request validation                          │
-└─────────────┬───────────────────┬───────────────────────────────┘
-              │                   │
-    ┌─────────▼─────────┐  ┌─────▼─────────┐
-    │  PLATFORM LAYER   │  │  AGENT LAYER  │
-    │  (Services)       │  │  (Intelligence)│
-    └─────────┬─────────┘  └─────┬─────────┘
-              │                   │
-┌─────────────▼───────────────────▼───────────────────────────────┐
+                      │
+          ┌───────────┴──────────────┐
+          │                          │
+┌─────────▼─────────────┐   ┌────────▼──────────────────────────┐
+│   Next.js API Routes  │   │  FastAPI (Python)                 │
+│   (Web Gateway)       │   │  (Processing Gateway)             │
+│                       │   │                                   │
+│  - File upload        │   │  - Webhook receiver               │
+│  - Auth endpoints     │   │  - Job enqueuer (pg-boss)         │
+│  - WebSocket relay    │   │  - Pydantic validation            │
+└───────────┬───────────┘   └────────┬──────────────────────────┘
+            │                        │
+            │         ┌──────────────▼──────────────────┐
+            │         │    SHARED JOB QUEUE             │
+            │         │    pg-boss (Postgres)           │
+            │         │  - Language-agnostic            │
+            │         │  - TypeScript enqueue (unused)  │
+            │         │  - Python enqueue + process     │
+            │         └──────────┬──────────────────────┘
+            │                    │
+            │         ┌──────────▼──────────────────────┐
+            │         │  Python Worker Processes        │
+            │         │  - Poll pg-boss queue           │
+            │         │  - Execute job handlers         │
+            │         │  - Document parsing (Docling)   │
+            │         │  - Embedding generation (OpenAI)│
+            │         │  - LLM analysis (Gemini)        │
+            │         │  - Pattern detection            │
+            │         │  - Graph updates (Neo4j)        │
+            │         └──────────┬──────────────────────┘
+            │                    │
+┌───────────▼────────────────────▼───────────────────────────────┐
 │                       DATA LAYER                                │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
 │  │   Supabase   │  │    Neo4j     │  │   Google     │         │
 │  │   Postgres   │  │  (Graph DB)  │  │   Cloud      │         │
 │  │  + pgvector  │  │              │  │   Storage    │         │
+│  │  + pg-boss   │  │              │  │              │         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
-              │
-┌─────────────▼───────────────────────────────────────────────────┐
-│                   PROCESSING LAYER                              │
-│  Background Workers (Python)                                    │
-│  - Document parsing (Docling)                                  │
-│  - Embedding generation (OpenAI)                               │
-│  - LLM analysis (Gemini 3.0 Pro)                              │
-│  - Pattern detection (Phase 3)                                 │
-│  - Graph updates (Neo4j)                                       │
-└─────────────────────────────────────────────────────────────────┘
 ```
+
+**Architecture Note:** The platform uses a **microservices pattern** where:
+- **Next.js** handles web serving, user authentication, file uploads (triggers webhook)
+- **FastAPI (Python)** receives webhooks and enqueues jobs to pg-boss
+- **Python Workers** poll pg-boss and execute heavy processing (Docling, embeddings, LLM analysis)
+- **pg-boss** (Postgres-based queue) coordinates work between services using direct SQL access
+
+This design enables:
+- Technology specialization (TypeScript for web, Python for ML/data)
+- Independent scaling (scale workers separately from web tier)
+- Language-agnostic job queue (both services use same Postgres tables)
 
 ### Document Processing Flow
 
 ```
 User uploads document
   ↓
-API Gateway → Google Cloud Storage (file saved)
+Next.js Upload API → Google Cloud Storage (file saved)
   ↓
 Create document record in Postgres
   ↓
-Emit event: document_uploaded
+POST webhook → FastAPI (manda-processing)
   ↓
-pg-boss enqueues job: parse_document
+FastAPI enqueues job to pg-boss: parse_document
   ↓
-Background Worker picks up job
+Python Worker polls and picks up job
   ↓
 Docling parses document
   - Extracts text, tables, formulas
@@ -2536,6 +2555,23 @@ npm install
 - Provides clear implementation guidance for developers
 - Validates architecture decision with production-tested patterns
 - Establishes type safety as first-class concern throughout the system
+
+### Version 3.3 (2025-12-12)
+**Architecture Clarification:**
+- **Updated High-Level Diagram:** Clarified microservices pattern showing Next.js + FastAPI + Python Workers
+- **pg-boss Architecture:** Added detailed explanation of shared job queue design:
+  - Next.js API Routes handle web gateway (file upload, auth, websockets)
+  - FastAPI (Python) receives webhooks and enqueues jobs to pg-boss
+  - Python Worker processes poll pg-boss queue and execute job handlers
+  - pg-boss (Postgres-based) provides language-agnostic job queue
+- **Document Processing Flow:** Updated to show webhook → FastAPI → pg-boss → worker pattern
+- **Architecture Note:** Added benefits explanation (technology specialization, independent scaling, language-agnostic design)
+
+**Why This Matters:**
+- Eliminates confusion about "placeholder" handlers in Next.js (they're for future expansion)
+- Clarifies that Python does all heavy processing (Docling, embeddings, LLM analysis)
+- Shows how TypeScript and Python share the same pg-boss queue via direct SQL
+- Validates microservices pattern for separating web tier from compute tier
 
 ### Version 2.0 (2025-11-21)
 **Major Updates:**
