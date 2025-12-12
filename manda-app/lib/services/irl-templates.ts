@@ -1,214 +1,179 @@
 /**
  * IRL Template Service
- *
- * Loads and manages IRL templates from static JSON files.
- * Story: E6.1 - Build IRL Builder UI with Template Selection
- *
- * Features:
- * - Dynamic template discovery from filesystem
- * - Template validation with Zod schemas
- * - Caching for performance
- * - Type-safe template access
+ * Provides predefined IRL templates for different deal types
  */
 
-import fs from 'fs'
-import path from 'path'
-import { IRLTemplate, IRLTemplateSchema } from '@/lib/types/irl'
-
-// Path to templates directory relative to project root
-const TEMPLATES_DIR = path.join(process.cwd(), 'packages/shared/templates/irls')
-
-// Module-level cache for templates
-let templatesCache: IRLTemplate[] | null = null
-let cacheTimestamp: number = 0
-const CACHE_TTL_MS = 60 * 1000 // 1 minute cache TTL for dev mode hot reload
-
-/**
- * Clear the template cache
- * Useful for testing or when templates are updated
- */
-export function clearTemplateCache(): void {
-  templatesCache = null
-  cacheTimestamp = 0
+export interface IRLTemplateItem {
+  name: string
+  description?: string
+  priority?: 'high' | 'medium' | 'low'
+  subcategory?: string | null
 }
 
-/**
- * Check if the cache is still valid
- */
-function isCacheValid(): boolean {
-  if (!templatesCache) return false
-  const now = Date.now()
-  return now - cacheTimestamp < CACHE_TTL_MS
+export interface IRLTemplateCategory {
+  name: string
+  items: IRLTemplateItem[]
 }
 
-/**
- * Load and validate a single template from a JSON file
- */
-function loadTemplateFromFile(filePath: string): IRLTemplate | null {
-  try {
-    const content = fs.readFileSync(filePath, 'utf-8')
-    const data = JSON.parse(content)
-
-    // Validate with Zod schema
-    const result = IRLTemplateSchema.safeParse(data)
-
-    if (!result.success) {
-      console.error(`Invalid template file ${filePath}:`, result.error.format())
-      return null
-    }
-
-    return result.data
-  } catch (error) {
-    console.error(`Error loading template ${filePath}:`, error)
-    return null
-  }
-}
-
-/**
- * List all available IRL templates
- * Scans the templates directory for JSON files
- *
- * @returns Array of validated IRL templates
- */
-export async function listTemplates(): Promise<IRLTemplate[]> {
-  // Return cached templates if still valid
-  if (isCacheValid() && templatesCache) {
-    return templatesCache
-  }
-
-  const templates: IRLTemplate[] = []
-
-  try {
-    // Check if directory exists
-    if (!fs.existsSync(TEMPLATES_DIR)) {
-      console.warn(`Templates directory not found: ${TEMPLATES_DIR}`)
-      return templates
-    }
-
-    // Read all JSON files from the templates directory
-    const files = fs.readdirSync(TEMPLATES_DIR)
-      .filter(file => file.endsWith('.json'))
-
-    for (const file of files) {
-      const filePath = path.join(TEMPLATES_DIR, file)
-      const template = loadTemplateFromFile(filePath)
-
-      if (template) {
-        templates.push(template)
-      }
-    }
-
-    // Sort templates by name for consistent ordering
-    templates.sort((a, b) => a.name.localeCompare(b.name))
-
-    // Update cache
-    templatesCache = templates
-    cacheTimestamp = Date.now()
-
-  } catch (error) {
-    console.error('Error listing templates:', error)
-    throw new Error('Failed to load IRL templates')
-  }
-
-  return templates
-}
-
-/**
- * Get a single template by ID
- *
- * @param templateId - The template ID to look up
- * @returns The template or null if not found
- */
-export async function getTemplate(templateId: string): Promise<IRLTemplate | null> {
-  // First try the cache
-  const templates = await listTemplates()
-  const cached = templates.find(t => t.id === templateId)
-
-  if (cached) {
-    return cached
-  }
-
-  // Template not found in cache, try loading directly
-  const filePath = path.join(TEMPLATES_DIR, `${templateId}.json`)
-
-  if (fs.existsSync(filePath)) {
-    const template = loadTemplateFromFile(filePath)
-
-    if (template) {
-      // Add to cache
-      if (templatesCache) {
-        templatesCache.push(template)
-      }
-      return template
-    }
-  }
-
-  return null
-}
-
-/**
- * Check if a template exists
- *
- * @param templateId - The template ID to check
- * @returns True if template exists
- */
-export async function templateExists(templateId: string): Promise<boolean> {
-  const template = await getTemplate(templateId)
-  return template !== null
-}
-
-/**
- * Get template IDs without loading full templates
- * Useful for quick existence checks
- *
- * @returns Array of template IDs
- */
-export function getTemplateIds(): string[] {
-  try {
-    if (!fs.existsSync(TEMPLATES_DIR)) {
-      return []
-    }
-
-    return fs.readdirSync(TEMPLATES_DIR)
-      .filter(file => file.endsWith('.json'))
-      .map(file => path.basename(file, '.json'))
-  } catch (error) {
-    console.error('Error getting template IDs:', error)
-    return []
-  }
-}
-
-/**
- * Get template summary (name and item count) without full category data
- *
- * @param templateId - The template ID
- * @returns Summary with name and total items, or null
- */
-export async function getTemplateSummary(templateId: string): Promise<{
+export interface IRLTemplate {
   id: string
   name: string
   description: string
-  dealType: string
-  totalItems: number
-  categoryCount: number
-} | null> {
-  const template = await getTemplate(templateId)
+  categories: IRLTemplateCategory[]
+}
 
-  if (!template) {
-    return null
-  }
+const TECH_MA_TEMPLATE: IRLTemplate = {
+  id: 'tech-ma',
+  name: 'Tech M&A',
+  description: 'Information request list for technology company acquisitions',
+  categories: [
+    {
+      name: 'Financial',
+      items: [
+        { name: 'Balance Sheet (Last 3 Years)', priority: 'high', subcategory: 'Statements' },
+        { name: 'P&L Statements (Last 3 Years)', priority: 'high', subcategory: 'Statements' },
+        { name: 'Cash Flow Statements', priority: 'high', subcategory: 'Statements' },
+        { name: 'Tax Returns', priority: 'medium', subcategory: 'Tax' },
+        { name: 'Audit Reports', priority: 'medium', subcategory: 'Audit' },
+        { name: 'Revenue Breakdown by Product/Service', priority: 'high', subcategory: 'Revenue' },
+        { name: 'ARR/MRR Details (if SaaS)', priority: 'high', subcategory: 'Revenue' },
+      ],
+    },
+    {
+      name: 'Legal',
+      items: [
+        { name: 'Articles of Incorporation', priority: 'high', subcategory: 'Corporate' },
+        { name: 'Cap Table', priority: 'high', subcategory: 'Corporate' },
+        { name: 'Shareholder Agreements', priority: 'high', subcategory: 'Corporate' },
+        { name: 'Material Contracts', priority: 'high', subcategory: 'Contracts' },
+        { name: 'IP Assignment Agreements', priority: 'high', subcategory: 'IP' },
+      ],
+    },
+    {
+      name: 'Technical',
+      items: [
+        { name: 'Product Roadmap', priority: 'medium', subcategory: 'Product' },
+        { name: 'Technology Stack Documentation', priority: 'medium', subcategory: 'Architecture' },
+        { name: 'Security Certifications', priority: 'high', subcategory: 'Security' },
+      ],
+    },
+    {
+      name: 'Commercial',
+      items: [
+        { name: 'Customer List (Top 20)', priority: 'high', subcategory: 'Customers' },
+        { name: 'Sales Pipeline', priority: 'medium', subcategory: 'Sales' },
+        { name: 'Customer Acquisition Cost', priority: 'high', subcategory: 'Metrics' },
+      ],
+    },
+  ],
+}
 
-  const totalItems = template.categories.reduce(
-    (sum, category) => sum + category.items.length,
-    0
-  )
+const INDUSTRIAL_TEMPLATE: IRLTemplate = {
+  id: 'industrial',
+  name: 'Industrial',
+  description: 'Information request list for industrial deals',
+  categories: [
+    {
+      name: 'Financial',
+      items: [
+        { name: 'Balance Sheet (Last 3 Years)', priority: 'high' },
+        { name: 'P&L Statements (Last 3 Years)', priority: 'high' },
+        { name: 'Working Capital Analysis', priority: 'high' },
+      ],
+    },
+    {
+      name: 'Operations',
+      items: [
+        { name: 'Facility Leases', priority: 'high' },
+        { name: 'Equipment List', priority: 'high' },
+      ],
+    },
+  ],
+}
 
-  return {
-    id: template.id,
-    name: template.name,
-    description: template.description,
-    dealType: template.dealType,
-    totalItems,
-    categoryCount: template.categories.length,
-  }
+const PHARMA_TEMPLATE: IRLTemplate = {
+  id: 'pharma',
+  name: 'Pharma',
+  description: 'Information request list for pharma deals',
+  categories: [
+    {
+      name: 'Financial',
+      items: [
+        { name: 'Balance Sheet (Last 3 Years)', priority: 'high' },
+        { name: 'R&D Spend Breakdown', priority: 'high' },
+      ],
+    },
+    {
+      name: 'Regulatory',
+      items: [
+        { name: 'FDA Approvals', priority: 'high' },
+        { name: 'Clinical Trial Data', priority: 'high' },
+        { name: 'Patent Portfolio', priority: 'high' },
+      ],
+    },
+  ],
+}
+
+const FINANCIAL_TEMPLATE: IRLTemplate = {
+  id: 'financial',
+  name: 'Financial Services',
+  description: 'Information request list for financial services deals',
+  categories: [
+    {
+      name: 'Financial',
+      items: [
+        { name: 'Balance Sheet (Last 3 Years)', priority: 'high' },
+        { name: 'AUM Details', priority: 'high' },
+      ],
+    },
+    {
+      name: 'Regulatory',
+      items: [
+        { name: 'Licenses and Registrations', priority: 'high' },
+        { name: 'Compliance Audit Reports', priority: 'high' },
+      ],
+    },
+  ],
+}
+
+const CUSTOM_TEMPLATE: IRLTemplate = {
+  id: 'custom',
+  name: 'General M&A',
+  description: 'Basic information request list for general deals',
+  categories: [
+    {
+      name: 'Financial',
+      items: [
+        { name: 'Balance Sheet (Last 3 Years)', priority: 'high' },
+        { name: 'P&L Statements (Last 3 Years)', priority: 'high' },
+      ],
+    },
+    {
+      name: 'Legal',
+      items: [
+        { name: 'Articles of Incorporation', priority: 'high' },
+        { name: 'Cap Table', priority: 'high' },
+      ],
+    },
+  ],
+}
+
+const TEMPLATES: Record<string, IRLTemplate> = {
+  'tech-ma': TECH_MA_TEMPLATE,
+  industrial: INDUSTRIAL_TEMPLATE,
+  pharma: PHARMA_TEMPLATE,
+  financial: FINANCIAL_TEMPLATE,
+  custom: CUSTOM_TEMPLATE,
+}
+
+export function getTemplate(templateId: string): IRLTemplate | null {
+  return TEMPLATES[templateId] || null
+}
+
+export function getAllTemplates(): IRLTemplate[] {
+  return Object.values(TEMPLATES)
+}
+
+export function getTemplateIds(): string[] {
+  return Object.keys(TEMPLATES)
 }

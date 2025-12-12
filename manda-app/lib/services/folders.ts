@@ -13,7 +13,11 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/supabase/database.types'
-import { createGCSFolderPrefix, deleteGCSFolderPrefix } from '@/lib/gcs/folder-operations'
+import {
+  createGCSFolderPrefix,
+  deleteGCSFolderPrefix,
+  createMultipleGCSFolderPrefixes,
+} from '@/lib/gcs/folder-operations'
 
 type DbFolder = Database['public']['Tables']['folders']['Row']
 
@@ -216,8 +220,8 @@ export async function createFoldersFromIRL(
     return result
   }
 
-  // Track created GCS prefixes for rollback
-  const createdGCSPrefixes: string[] = []
+  // Collect all GCS paths to create in batch
+  const gcsPathsToCreate: string[] = []
 
   try {
     // Process each category
@@ -242,10 +246,9 @@ export async function createFoldersFromIRL(
         result.folders.push(parentFolder.folder)
         result.created++
 
-        // Create GCS prefix for parent folder
+        // Queue GCS prefix creation
         const gcsPath = `${dealId}/data-room/${sanitizedCategory}/`
-        await createGCSFolderPrefix(gcsPath)
-        createdGCSPrefixes.push(gcsPath)
+        gcsPathsToCreate.push(gcsPath)
       } else {
         result.skipped++
       }
@@ -274,26 +277,28 @@ export async function createFoldersFromIRL(
           result.folders.push(subfolder.folder)
           result.created++
 
-          // Create GCS prefix for subfolder
+          // Queue GCS prefix creation
           const gcsPath = `${dealId}/data-room/${subfolderPath}/`
-          await createGCSFolderPrefix(gcsPath)
-          createdGCSPrefixes.push(gcsPath)
+          gcsPathsToCreate.push(gcsPath)
         } else {
           result.skipped++
         }
       }
     }
-  } catch (error) {
-    // Rollback: Delete created GCS prefixes
-    console.error('Error creating folders from IRL, rolling back:', error)
 
-    for (const gcsPath of createdGCSPrefixes) {
-      try {
-        await deleteGCSFolderPrefix(gcsPath)
-      } catch (rollbackError) {
-        console.error('Failed to rollback GCS prefix:', gcsPath, rollbackError)
+    // Create all GCS prefixes in parallel (much faster!)
+    if (gcsPathsToCreate.length > 0) {
+      const { errors: gcsErrors } = await createMultipleGCSFolderPrefixes(gcsPathsToCreate)
+
+      if (gcsErrors.length > 0) {
+        console.error('Some GCS folders failed to create:', gcsErrors)
+        result.errors.push(
+          ...gcsErrors.map((e: { error: string; path: string }) => `GCS: ${e.error} (${e.path})`)
+        )
       }
     }
+  } catch (error) {
+    console.error('Error creating folders from IRL:', error)
 
     result.errors.push(
       error instanceof Error ? error.message : 'Failed to create folders'

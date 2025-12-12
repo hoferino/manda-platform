@@ -21,6 +21,7 @@ interface WizardFormData {
   companyName: string
   industry: string
   irlTemplate: string
+  uploadedFile: File | null
 }
 
 interface ValidationErrors {
@@ -42,6 +43,7 @@ export default function NewProjectPage() {
     companyName: '',
     industry: '',
     irlTemplate: '',
+    uploadedFile: null,
   })
 
   // Validation for Step 1
@@ -73,13 +75,16 @@ export default function NewProjectPage() {
       case 2:
         // Step 2 is valid if user has made a selection:
         // - Empty project: irlTemplate === NO_IRL_TEMPLATE
-        // - Upload custom: irlTemplate === UPLOAD_IRL_TEMPLATE
+        // - Upload custom: irlTemplate === UPLOAD_IRL_TEMPLATE AND uploadedFile is present
         // - Use template: irlTemplate is a valid template name (non-empty string)
+        if (formData.irlTemplate === UPLOAD_IRL_TEMPLATE) {
+          return formData.uploadedFile !== null
+        }
         return formData.irlTemplate.trim().length > 0
       default:
         return false
     }
-  }, [currentStep, formData.projectName, formData.irlTemplate])
+  }, [currentStep, formData.projectName, formData.irlTemplate, formData.uploadedFile])
 
   // Handle next step
   const handleNext = useCallback(() => {
@@ -107,13 +112,59 @@ export default function NewProjectPage() {
     setIsSubmitting(true)
 
     try {
-      // Handle special IRL cases - send 'none' or 'upload' as-is
+      // Handle special IRL cases
       const irlTemplate = formData.irlTemplate === NO_IRL_TEMPLATE
         ? 'none'
         : formData.irlTemplate === UPLOAD_IRL_TEMPLATE
         ? 'upload'
         : formData.irlTemplate || null
 
+      // If user selected "Upload Custom" and has a file, process it via API
+      if (irlTemplate === 'upload' && formData.uploadedFile) {
+        // First create the deal
+        const dealResult = await createDealWithIRL({
+          name: formData.projectName.trim(),
+          company_name: formData.companyName.trim() || null,
+          industry: formData.industry || null,
+          irl_template: 'none', // Create empty deal first
+          status: 'active',
+        })
+
+        if (dealResult.error || !dealResult.data) {
+          toast.error(dealResult.error || 'Failed to create project')
+          return
+        }
+
+        const dealId = dealResult.data.id
+
+        // Then upload and process the IRL file
+        const formDataObj = new FormData()
+        formDataObj.append('file', formData.uploadedFile)
+        formDataObj.append('name', `${formData.projectName.trim()} - IRL`)
+        formDataObj.append('generateFolders', 'true')
+
+        const uploadResponse = await fetch(`/api/projects/${dealId}/irl/import`, {
+          method: 'POST',
+          body: formDataObj,
+        })
+
+        const uploadResult = await uploadResponse.json()
+
+        if (!uploadResponse.ok) {
+          toast.error(uploadResult.error || 'Failed to import IRL')
+          // Still redirect to project even if IRL upload fails
+          router.push(`/projects/${dealId}/dashboard`)
+          return
+        }
+
+        toast.success(
+          `Project created! Imported ${uploadResult.itemsCreated} IRL items and created ${uploadResult.foldersCreated} folders.`
+        )
+        router.push(`/projects/${dealId}/dashboard`)
+        return
+      }
+
+      // Standard template or empty project creation
       const result = await createDealWithIRL({
         name: formData.projectName.trim(),
         company_name: formData.companyName.trim() || null,
@@ -133,8 +184,6 @@ export default function NewProjectPage() {
           toast.success(
             `Project created successfully! Generated ${result.foldersCreated} folders from IRL template.`
           )
-        } else if (irlTemplate === 'upload') {
-          toast.success('Project created! You can now upload your custom IRL.')
         } else {
           toast.success('Project created successfully!')
         }
@@ -189,6 +238,8 @@ export default function NewProjectPage() {
         <Step2IRLTemplate
           selectedTemplate={formData.irlTemplate}
           onTemplateChange={(template) => updateFormData('irlTemplate', template)}
+          uploadedFile={formData.uploadedFile}
+          onFileChange={(file) => updateFormData('uploadedFile', file)}
         />
       )}
     </WizardLayout>

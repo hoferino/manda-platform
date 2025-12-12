@@ -3,10 +3,10 @@
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-09
+**Last Updated:** 2025-12-12
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 3.1 (Epic 9 CIM Builder redesigned per Party Mode findings — 3-panel UI, user-defined structure, full CIM framework)
+**Version:** 3.2 (Added Intelligent Excel Parser for IRL Import - v2.7)
 
 ---
 
@@ -86,11 +86,17 @@ Data Layer:
 
 Document Processing:
   parser: Docling (IBM open source)
+  irl_parser: ExcelJS with intelligent column detection (v2.7, 2025-12-12)
   supported_formats:
     - Excel (.xlsx, .xls) with formula preservation
     - PDF (native + scanned with OCR)
     - Word (.docx, .doc)
     - Images (PNG, JPG) with OCR
+  irl_features:
+    - Smart header analysis for dynamic column mapping
+    - Hierarchical category support (Level 1 → Level 2)
+    - Real-time preview before import
+    - Automatic category name cleaning
 
 Background Processing:
   job_queue: pg-boss (Postgres-based)

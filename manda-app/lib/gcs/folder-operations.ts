@@ -105,7 +105,7 @@ export async function listFolderPrefixes(basePath: string): Promise<string[]> {
 }
 
 /**
- * Create multiple folder prefixes in GCS.
+ * Create multiple folder prefixes in GCS in parallel.
  *
  * @param gcsPaths - Array of full paths including trailing slashes
  * @returns Object with created paths and any errors
@@ -116,17 +116,28 @@ export async function createMultipleGCSFolderPrefixes(
   const created: string[] = []
   const errors: Array<{ path: string; error: string }> = []
 
-  for (const gcsPath of gcsPaths) {
-    try {
+  // Create all folders in parallel for better performance
+  const results = await Promise.allSettled(
+    gcsPaths.map(async (gcsPath) => {
       await createGCSFolderPrefix(gcsPath)
-      created.push(gcsPath)
-    } catch (error) {
+      return gcsPath
+    })
+  )
+
+  // Process results
+  results.forEach((result, index) => {
+    const gcsPath = gcsPaths[index]
+    if (!gcsPath) return
+
+    if (result.status === 'fulfilled') {
+      created.push(result.value)
+    } else {
       errors.push({
         path: gcsPath,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
       })
     }
-  }
+  })
 
   return { created, errors }
 }

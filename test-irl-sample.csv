@@ -1,0 +1,19 @@
+Sample IRL - Tech Acquisition
+Date: 2025-12-12
+Category,Item,Status,Description,Priority,Subcategory,Notes
+Financial,Balance Sheet (Last 3 Years),Not Started,Most recent 3 years of balance sheets,high,Statements,
+Financial,P&L Statements (Last 3 Years),Not Started,Profit and loss statements,high,Statements,
+Financial,Cash Flow Statements,Not Started,Operating cash flow details,high,Statements,
+Financial,Tax Returns,Not Started,Last 3 years of tax filings,medium,Tax,
+Financial,Revenue Breakdown,Not Started,Revenue by product line,high,Revenue,
+Legal,Articles of Incorporation,Not Started,Company formation documents,high,Corporate,
+Legal,Cap Table,Not Started,Current capitalization table,high,Corporate,
+Legal,IP Assignments,Not Started,Intellectual property agreements,high,IP,
+Legal,Material Contracts,Not Started,Key customer and vendor contracts,high,Contracts,
+Technical,Product Roadmap,Not Started,12-month product development plan,medium,Product,
+Technical,Architecture Docs,Not Started,System architecture documentation,medium,Architecture,
+Technical,Security Certifications,Not Started,SOC 2 ISO 27001 etc,high,Security,
+Commercial,Customer List,Not Started,Top 20 customers by revenue,high,Customers,
+Commercial,Sales Pipeline,Not Started,Current sales opportunities,medium,Sales,
+HR,Organization Chart,Not Started,Current org structure,medium,Organization,
+HR,Employee List,Not Started,All full-time employees,high,Headcount,

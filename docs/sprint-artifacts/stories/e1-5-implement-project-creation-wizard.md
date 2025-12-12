@@ -555,6 +555,12 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 11. **Increased character limit** - 200 chars (up from 100) for longer project codenames
 12. **Three IRL options** - "Use Template", "Empty Project", "Upload Custom" with 3-column card layout
 
+**Post-implementation enhancements (v2.7, 2025-12-12 - Intelligent Parser):**
+13. **Intelligent Excel Parser** - Smart column detection analyzes header rows to detect "Category Level 1", "Category Level 2", "Item", "Status", "Priority" columns dynamically
+14. **Hierarchical Category Support** - Supports 2-level category hierarchies (Category → Subcategory) with automatic name cleaning (removes "1.", "2." numbering)
+15. **Preview Before Import** - New `/api/irl/preview` endpoint shows detected structure with expandable category/subcategory tree before project creation
+16. **Real-time File Analysis** - Upload preview displays total items, categories, subcategories with warnings about column detection
+
 ### File List
 
 **Created:**
@@ -572,6 +578,11 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 **Modified:**
 - `app/layout.tsx` - Added Toaster import and component
 - `package.json` - Added sonner, tooltip dependencies (via shadcn)
+- `lib/services/irl-import.ts` - Enhanced with intelligent column detection and hierarchical category support (v2.7)
+- `components/wizard/Step3IRLTemplate.tsx` - Added preview functionality with real-time file analysis (v2.7)
+
+**Created (v2.7 - Intelligent Parser):**
+- `app/api/irl/preview/route.ts` - Preview API endpoint for analyzing Excel/CSV structure before import
 
 ## Change Log
 
@@ -581,6 +592,7 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 | 2025-11-25 | Dev Agent (Claude Opus 4.5) | Implementation complete - all 13 tasks done |
 | 2025-11-25 | Senior Dev Review (Claude Opus 4.5) | Code review completed - APPROVED |
 | 2025-11-26 | Course Correction (v2.6) | Deprecated AC3 (deal type selection) - field removed as it didn't drive behavior |
+| 2025-12-12 | Enhancement (v2.7) | Added intelligent Excel parser with preview - smart column detection, hierarchical categories, real-time file analysis |
 
 ---
 

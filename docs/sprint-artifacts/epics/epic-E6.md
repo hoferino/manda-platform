@@ -7,7 +7,7 @@
 **User Value:** Users can create IRLs and auto-generate Data Room folder structures
 
 **Description:**
-Implements Information Request List (IRL) creation, editing, and management with AI-assisted auto-generation from documents and automatic Data Room folder structure generation from IRL.
+Implements Information Request List (IRL) creation, editing, and management with AI-assisted auto-generation from documents and automatic Data Room folder structure generation from IRL. Enhanced with intelligent Excel/CSV parser that supports hierarchical categories, smart column detection, and real-time preview before import (v2.7, 2025-12-12).
 
 **Functional Requirements Covered:**
 - FR-IRL-001: IRL Creation

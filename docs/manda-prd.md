@@ -331,8 +331,9 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 **Core Features:**
 
 1. **IRL-Driven Workflow**
-   - **Upload and Extract IRL**: Upload IRL (Excel) and system extracts structure, categories, and requested items
-   - **Auto-Generate Data Room**: Automatically create folder structure in Data Room based on extracted IRL
+   - **Upload and Extract IRL**: Upload IRL (Excel/CSV) with intelligent parser that automatically detects hierarchical structure
+   - **Real-Time Preview**: Preview detected categories, subcategories, and items before creating project
+   - **Auto-Generate Data Room**: Automatically create folder structure in Data Room based on extracted IRL hierarchy
    - **Document Organization**: Manual drag & drop document organization into folders
    - **IRL Checklist Tracking**: IRL checklist auto-updates as documents placed in folders, showing coverage and gaps
    - **Gap Identification**: System identifies missing items and suggests follow-up requests
@@ -659,7 +660,17 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 - Template sharing (if multi-user)
 
 **FR-IRL-005: Auto-Generate Folder Structure from IRL**
-- Parse uploaded IRL (Excel format) to extract categories and structure
+- Parse uploaded IRL (Excel/CSV format) to extract categories and structure
+- **Intelligent Parser (v2.7, 2025-12-12)**: Smart column detection analyzes header rows to automatically detect column purposes
+  - Supports hierarchical categories (Category Level 1 → Category Level 2)
+  - Handles flexible column ordering and naming conventions
+  - Automatically cleans category names (removes "1.", "2." numbering)
+  - Detects common column types: Category, Subcategory, Item, Status, Priority, Description
+- **Real-time Preview**: Show detected structure before importing
+  - Preview API displays total items, categories, subcategories
+  - Expandable tree view of detected hierarchy
+  - Warning messages about column detection
+  - User confirms structure before project creation
 - **Create real GCS folders** in Data Room matching IRL hierarchy
 - Folder structure stored in `folders` table with `gcs_path` for each folder
 - Documents uploaded to folders stored in GCS at `{deal_id}/data-room/{folder_path}/`
