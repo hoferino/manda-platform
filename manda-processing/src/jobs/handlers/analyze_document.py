@@ -2,6 +2,7 @@
 Analyze document job handler for LLM-based finding extraction.
 Story: E3.5 - Implement LLM Analysis with Gemini 2.5 (Tiered Approach) (AC: #1, #4, #5)
 Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
+Story: E4.15 - Sync Findings to Neo4j Knowledge Graph (AC: #3)
 
 This handler processes analyze-document jobs from the pg-boss queue:
 1. Updates document status to 'analyzing'
@@ -9,16 +10,21 @@ This handler processes analyze-document jobs from the pg-boss queue:
 3. Selects appropriate model tier based on document type
 4. Extracts findings using Gemini LLM
 5. Stores findings in database
-6. Updates document status to 'analyzed'
-7. Enqueues next job (extract_financials for xlsx, or marks complete)
+6. Syncs findings to Neo4j (E4.15)
+7. Updates document status to 'analyzed'
+8. Enqueues next job (extract_financials for xlsx, or marks complete)
 
 Enhanced with E3.8:
 - Stage tracking via last_completed_stage
 - Error classification and retry decisions
 - Structured error reporting
+
+Enhanced with E4.15:
+- Neo4j knowledge graph sync (best-effort, doesn't fail job)
 """
 
 import time
+from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID
 
@@ -33,6 +39,12 @@ from src.storage.supabase_client import (
     SupabaseClient,
     DatabaseError,
     get_supabase_client,
+)
+from src.storage.neo4j_client import (
+    create_finding_node,
+    create_document_node,
+    create_extracted_from_relationship,
+    Neo4jConnectionError,
 )
 
 logger = structlog.get_logger(__name__)
@@ -269,6 +281,13 @@ class AnalyzeDocumentHandler:
                 stored_count = 0
                 await self.db.update_document_status(document_id, "analyzed")
 
+            # E4.15: Sync findings to Neo4j knowledge graph (best-effort, don't fail job)
+            if stored_count > 0:
+                await self._sync_findings_to_neo4j(
+                    document_id=document_id,
+                    document=doc,
+                )
+
             # E3.8: Mark analysis stage as complete
             await self.retry_mgr.mark_stage_complete(document_id, "analyzed")
 
@@ -424,6 +443,109 @@ class AnalyzeDocumentHandler:
                 retry_count=job.retry_count,
             )
             raise
+
+    async def _sync_findings_to_neo4j(
+        self,
+        document_id: UUID,
+        document: dict[str, Any],
+    ) -> None:
+        """
+        Sync findings to Neo4j knowledge graph.
+
+        Story: E4.15 - Sync Findings to Neo4j Knowledge Graph (AC: #3)
+
+        Args:
+            document_id: UUID of the document whose findings to sync
+            document: Document metadata dict from database
+
+        Note:
+            Best-effort sync - logs errors but doesn't fail the job.
+            PostgreSQL is source of truth, Neo4j is derived data.
+            Queries findings from database to get IDs (assigned during insert).
+        """
+        doc_id_str = str(document_id)
+        document_name = document.get("name", "Unknown")
+        project_id = str(document.get("deal_id", ""))
+        upload_date = document.get("created_at", datetime.now(timezone.utc).isoformat())
+        doc_type = document.get("file_type") or document.get("mime_type", "").split("/")[-1]
+        user_id = str(document.get("user_id", ""))
+
+        try:
+            # Query findings from database to get IDs
+            findings = await self.db.get_findings_by_document(document_id)
+
+            if not findings:
+                logger.warning(
+                    "No findings found for document in database",
+                    document_id=doc_id_str,
+                )
+                return
+
+            logger.info(
+                "Syncing findings to Neo4j",
+                document_id=doc_id_str,
+                finding_count=len(findings),
+            )
+
+            # Create document node (idempotent)
+            create_document_node(
+                document_id=doc_id_str,
+                name=document_name,
+                project_id=project_id,
+                upload_date=upload_date,
+                doc_type=doc_type,
+            )
+
+            # Create finding nodes and relationships
+            for finding in findings:
+                finding_id = str(finding["id"])
+
+                # Convert confidence from 0-1 (DB) to 0-1 (Neo4j)
+                confidence = finding.get("confidence", 0.0)
+
+                # Extract date_referenced from metadata if present
+                metadata = finding.get("metadata", {})
+                date_referenced = metadata.get("date_referenced") if metadata else None
+
+                create_finding_node(
+                    finding_id=finding_id,
+                    content=finding.get("text", ""),
+                    finding_type=finding.get("finding_type", "fact"),
+                    confidence=confidence,
+                    domain=finding.get("domain", "operational"),
+                    date_referenced=date_referenced,
+                    date_extracted=finding.get("created_at", datetime.now(timezone.utc).isoformat()),
+                    user_id=user_id,
+                    project_id=project_id,
+                )
+
+                create_extracted_from_relationship(
+                    finding_id=finding_id,
+                    document_id=doc_id_str,
+                )
+
+            logger.info(
+                "Neo4j sync complete",
+                document_id=doc_id_str,
+                finding_count=len(findings),
+            )
+
+        except Neo4jConnectionError as e:
+            # Log error but don't fail the job - PostgreSQL is source of truth
+            logger.error(
+                "Neo4j sync failed",
+                error=str(e),
+                document_id=doc_id_str,
+            )
+        except Exception as e:
+            # Catch any unexpected errors to prevent job failure
+            logger.error(
+                "Unexpected error during Neo4j sync",
+                error=str(e),
+                error_type=type(e).__name__,
+                document_id=doc_id_str,
+                exc_info=True,
+            )
 
     async def _enqueue_next_job(
         self,

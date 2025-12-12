@@ -211,6 +211,19 @@ def get_worker() -> Worker:
 
 async def run_worker() -> None:
     """Run the worker process (main entry point for worker)."""
+    # E4.15: Initialize Neo4j schema on startup
+    try:
+        from src.storage.neo4j_schema import initialize_neo4j_schema
+
+        initialize_neo4j_schema()
+        logger.info("Neo4j schema initialized successfully")
+    except Exception as e:
+        logger.warning(
+            "Failed to initialize Neo4j schema - Neo4j sync will be unavailable",
+            error=str(e),
+        )
+        # Don't fail worker startup - Neo4j is best-effort
+
     worker = get_worker()
     await worker.start()
 

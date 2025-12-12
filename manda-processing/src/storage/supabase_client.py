@@ -2000,6 +2000,145 @@ class SupabaseClient:
                 retryable=self._is_retryable_error(e),
             )
 
+    async def get_findings_by_document(
+        self,
+        document_id: UUID,
+    ) -> list[dict[str, Any]]:
+        """
+        Get all findings for a specific document.
+
+        Story: E4.15 - Sync Findings to Neo4j Knowledge Graph (AC: #5)
+
+        Args:
+            document_id: UUID of the document
+
+        Returns:
+            List of finding records as dicts with id, text, finding_type, confidence, etc.
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        pool = await self._get_pool()
+
+        logger.info(
+            "Fetching findings for document",
+            document_id=str(document_id),
+        )
+
+        try:
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT id, deal_id, document_id, user_id,
+                           text, page_number, confidence,
+                           chunk_id, finding_type, domain,
+                           status, metadata, created_at
+                    FROM findings
+                    WHERE document_id = $1
+                    ORDER BY created_at ASC
+                    """,
+                    document_id,
+                )
+
+                findings = [dict(row) for row in rows]
+
+                logger.info(
+                    "Findings fetched for document",
+                    document_id=str(document_id),
+                    findings_count=len(findings),
+                )
+
+                return findings
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error fetching findings for document",
+                document_id=str(document_id),
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to fetch findings for document: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
+    async def get_all_findings_with_documents(self) -> list[dict[str, Any]]:
+        """
+        Get all findings with their associated document information.
+
+        Story: E4.15 - Sync Findings to Neo4j Knowledge Graph (AC: #5)
+
+        Returns:
+            List of finding records with embedded document info
+
+        Raises:
+            DatabaseError: If query fails
+        """
+        pool = await self._get_pool()
+
+        logger.info("Fetching all findings with document info")
+
+        try:
+            async with pool.acquire() as conn:
+                rows = await conn.fetch(
+                    """
+                    SELECT f.id, f.deal_id, f.document_id, f.user_id,
+                           f.text, f.page_number, f.confidence,
+                           f.chunk_id, f.finding_type, f.domain,
+                           f.status, f.metadata, f.created_at,
+                           d.name as doc_name, d.mime_type as doc_file_type,
+                           d.created_at as doc_created_at
+                    FROM findings f
+                    LEFT JOIN documents d ON f.document_id = d.id
+                    ORDER BY f.created_at ASC
+                    """
+                )
+
+                findings = []
+                for row in rows:
+                    row_dict = dict(row)
+                    # Restructure to match expected format with nested documents
+                    finding = {
+                        "id": row_dict["id"],
+                        "deal_id": row_dict["deal_id"],
+                        "document_id": row_dict["document_id"],
+                        "user_id": row_dict["user_id"],
+                        "text": row_dict["text"],
+                        "page_number": row_dict["page_number"],
+                        "confidence": row_dict["confidence"],
+                        "chunk_id": row_dict["chunk_id"],
+                        "finding_type": row_dict["finding_type"],
+                        "domain": row_dict["domain"],
+                        "status": row_dict["status"],
+                        "metadata": row_dict["metadata"],
+                        "created_at": row_dict["created_at"],
+                        "documents": {
+                            "id": row_dict["document_id"],
+                            "name": row_dict["doc_name"],
+                            "file_type": row_dict["doc_file_type"],
+                            "created_at": row_dict["doc_created_at"],
+                            "deal_id": row_dict["deal_id"],
+                            "user_id": row_dict["user_id"],
+                        } if row_dict["doc_name"] else None,
+                    }
+                    findings.append(finding)
+
+                logger.info(
+                    "All findings fetched with documents",
+                    findings_count=len(findings),
+                )
+
+                return findings
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error fetching all findings with documents",
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to fetch findings with documents: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
     async def get_existing_contradiction(
         self,
         finding_a_id: UUID,

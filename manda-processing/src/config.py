@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_service_role_key: str
 
+    # Neo4j Graph Database (E4.15)
+    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: str = ""
+
     # pg-boss configuration
     pgboss_schema: str = "pgboss"
 

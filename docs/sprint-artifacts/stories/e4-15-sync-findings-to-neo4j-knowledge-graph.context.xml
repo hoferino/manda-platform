@@ -13,22 +13,106 @@
     <asA>developer</asA>
     <iWant>findings automatically synced to Neo4j after LLM extraction</iWant>
     <soThat>the knowledge graph is populated and ready for relationship queries, contradiction detection, and agent tools</soThat>
-    <tasks>{{story_tasks}}</tasks>
+    <tasks>
+      - Task 1: Install Neo4j Python Driver (pip install neo4j)
+      - Task 2: Create Neo4j Client Module (src/storage/neo4j_client.py)
+      - Task 3: Implement Node Creation Functions (create_finding_node, create_document_node, create_extracted_from_relationship)
+      - Task 4: Implement Schema Initialization (src/storage/neo4j_schema.py)
+      - Task 5: Integrate Neo4j Sync into analyze-document Handler (after line 267 in analyze_document.py)
+      - Task 6: Add Neo4j Settings to Config (config.py: neo4j_uri, neo4j_user, neo4j_password)
+      - Task 7: Create Backfill Script for Existing Findings (src/scripts/backfill_neo4j.py)
+      - Task 8: Test Neo4j Sync with New Upload
+      - Task 9: Test Error Handling (Neo4j unavailable scenario)
+      - Task 10: Run Backfill Script for Phase 4 Findings (8 findings)
+      - Task 11: Verify Neo4j Queries (Neo4j Browser verification)
+      - Task 12: Update Documentation
+      - Task 13: Write Unit Tests (pytest with pytest-mock)
+      - Task 14: Performance Testing (measure <500ms sync time)
+    </tasks>
   </story>
 
-  <acceptanceCriteria>{{acceptance_criteria}}</acceptanceCriteria>
+  <acceptanceCriteria>
+    <criteria id="AC1">Neo4j Python Client Module Created - src/storage/neo4j_client.py with singleton driver, connection pooling, node creation functions</criteria>
+    <criteria id="AC2">Neo4j Schema Initialization on Startup - constraints and indexes created idempotently when worker starts</criteria>
+    <criteria id="AC3">Findings Synced to Neo4j After Extraction - analyze-document handler calls sync after PostgreSQL storage</criteria>
+    <criteria id="AC4">Document Nodes Created on Upload - idempotent document node creation with project_id, upload_date</criteria>
+    <criteria id="AC5">Existing Findings Synced (Backfill Script) - 8 Phase 4 findings synced via backfill script</criteria>
+    <criteria id="AC6">Neo4j Sync Performance - <500ms for 8 findings, <5% impact on total job time</criteria>
+    <criteria id="AC7">Neo4j Sync Error Handling - PostgreSQL writes succeed even if Neo4j unavailable</criteria>
+    <criteria id="AC8">Verification Queries Work - Cypher queries for count, filter, traverse complete in <100ms</criteria>
+    <criteria id="AC9">Logging and Observability - info/error logs for sync operations with document_id</criteria>
+    <criteria id="AC10">Documentation Updated - architecture, PHASE4_GEMINI_SETUP_COMPLETE, README, code comments</criteria>
+  </acceptanceCriteria>
 
   <artifacts>
-    <docs>{{docs_artifacts}}</docs>
-    <code>{{code_artifacts}}</code>
-    <dependencies>{{dependencies_artifacts}}</dependencies>
+    <docs>
+      <doc path="docs/sprint-artifacts/stories/e1-7-configure-neo4j-graph-database.md" title="E1-7 Neo4j Setup" section="Graph Schema Design" snippet="Defines Node types (Finding, Document, Deal) and relationship types (EXTRACTED_FROM, CONTRADICTS, SUPERSEDES, SUPPORTS, PATTERN_DETECTED, BASED_ON). Frontend TypeScript client created but backend Python integration missing." />
+      <doc path="docs/sprint-artifacts/NEO4J_ARCHITECTURE_EXPLAINED.md" title="Neo4j Architecture Explanation" section="Root Cause Analysis" snippet="E1-7 only created frontend Neo4j client (TypeScript). E4-13 only frontend realtime hooks. Backend Python service (manda-processing) has NO Neo4j integration code. Neo4j database is EMPTY despite 8 findings extracted." />
+      <doc path="docs/sprint-artifacts/PHASE4_GEMINI_SETUP_COMPLETE.md" title="Phase 4 Gemini Setup" section="Complete Pipeline Flow" snippet="Pipeline: Upload → Parse (Docling) → Embed (OpenAI) → Analyze (Gemini 2.5 Flash) → Store (PostgreSQL only). Neo4j sync step missing. 8 findings extracted from test document c9d7117b-e696-4434-b7ef-a9e4607eec49." />
+      <doc path="docs/manda-architecture.md" title="System Architecture" section="Neo4j Graph Schema" snippet="Hybrid database strategy: PostgreSQL (source of truth, embeddings) + Neo4j (relationships, patterns). Neo4j schema defined with Finding, Document nodes and EXTRACTED_FROM relationships. Worker should update Neo4j after Gemini analysis." />
+      <doc path="docs/manda-prd.md" title="Product Requirements" section="Vision & Alignment" snippet="Knowledge graph critical for cross-domain pattern detection and source attribution. Persistent knowledge base stores findings with relationships tracked in Neo4j." />
+    </docs>
+    <code>
+      <file path="manda-processing/src/jobs/handlers/analyze_document.py" kind="job handler" symbol="AnalyzeDocumentHandler" lines="233-269" reason="WHERE TO ADD: After line 267 (store_findings_and_update_status), add Neo4j sync try/except block. PostgreSQL storage completes at line 267, then sync findings to Neo4j." />
+      <file path="manda-processing/src/config.py" kind="settings" symbol="Settings" lines="1-88" reason="ADD SETTINGS: neo4j_uri, neo4j_user, neo4j_password fields (similar to database_url pattern). Environment variables already exist in .env from Phase 4 setup." />
+      <file path="manda-processing/src/jobs/__main__.py" kind="worker startup" symbol="main" lines="1-50" reason="INITIALIZE SCHEMA: Call initialize_neo4j_schema() function on worker startup (after worker creation, before poll loops start)." />
+      <file path="manda-processing/src/storage/supabase_client.py" kind="database client" symbol="SupabaseClient.store_findings_and_update_status" lines="755-882" reason="REFERENCE: Pattern for database operations - transaction handling, error logging, atomic updates. Use similar pattern for Neo4j sync." />
+      <file path="manda-processing/src/storage/gcs_client.py" kind="storage client" symbol="GCSClient" lines="1-200" reason="REFERENCE: Client singleton pattern - global _client variable, get_client() function. Use same pattern for Neo4j driver." />
+    </code>
+    <dependencies>
+      <python>
+        <existing>
+          <package name="neo4j" version="6.0.3" note="Already installed! Latest Python driver for Neo4j. No installation needed." />
+          <package name="asyncpg" version="latest" note="PostgreSQL async driver - reference for connection pooling patterns" />
+          <package name="pydantic" version="v2.12+" note="Used for Settings validation - add Neo4j fields to Settings class" />
+        </existing>
+      </python>
+    </dependencies>
   </artifacts>
 
-  <constraints>{{constraints}}</constraints>
-  <interfaces>{{interfaces}}</interfaces>
+  <constraints>
+    <constraint>Best-Effort Sync: PostgreSQL write failure → job fails (critical). Neo4j write failure → log error, continue (best-effort). PostgreSQL is source of truth, Neo4j is derived data (can backfill).</constraint>
+    <constraint>Idempotency: Use MERGE instead of CREATE for all Neo4j writes. Backfill script must be safe to run multiple times without creating duplicates.</constraint>
+    <constraint>Connection Pooling: Singleton driver pattern (one driver per application). Use with statement for sessions (auto-close). max_connection_pool_size=10 for 5 worker threads.</constraint>
+    <constraint>User Isolation: Every Finding node must have user_id and project_id properties for multi-tenancy. No RLS in Neo4j Community Edition - application-level enforcement.</constraint>
+    <constraint>Performance: Neo4j sync must complete in <500ms for ~8 findings. Total job time increase <5% (currently 5-10s for Gemini analysis).</constraint>
+    <constraint>Temporal Metadata: Include date_referenced and date_extracted on Finding nodes for contradiction detection (from E1-7 schema).</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Neo4j Driver Singleton" kind="Python module" signature="get_neo4j_driver() -> Driver" path="manda-processing/src/storage/neo4j_client.py">
+      Global singleton driver instance. Returns existing driver or creates new one with connection pooling (max_connection_pool_size=10).
+    </interface>
+    <interface name="Finding Node Creation" kind="function" signature="create_finding_node(finding_id: str, content: str, finding_type: str, confidence: float, domain: str, date_referenced: str | None, date_extracted: str, user_id: str, project_id: str)" path="manda-processing/src/storage/neo4j_client.py">
+      Creates Finding node in Neo4j using MERGE (idempotent). Sets all properties including temporal metadata.
+    </interface>
+    <interface name="Document Node Creation" kind="function" signature="create_document_node(document_id: str, name: str, project_id: str, upload_date: str, doc_type: str)" path="manda-processing/src/storage/neo4j_client.py">
+      Creates Document node in Neo4j using MERGE (idempotent). Called before creating finding nodes.
+    </interface>
+    <interface name="Relationship Creation" kind="function" signature="create_extracted_from_relationship(finding_id: str, document_id: str)" path="manda-processing/src/storage/neo4j_client.py">
+      Creates EXTRACTED_FROM relationship between Finding and Document nodes. Uses MATCH + MERGE pattern.
+    </interface>
+    <interface name="Schema Initialization" kind="function" signature="initialize_neo4j_schema()" path="manda-processing/src/storage/neo4j_schema.py">
+      Creates constraints (finding_id_unique, document_id_unique, deal_id_unique) and indexes (finding_date_referenced, finding_user_id, finding_domain, document_project_id) using IF NOT EXISTS (idempotent).
+    </interface>
+  </interfaces>
+
   <tests>
-    <standards>{{test_standards}}</standards>
-    <locations>{{test_locations}}</locations>
-    <ideas>{{test_ideas}}</ideas>
+    <standards>
+      Python backend uses pytest for unit testing. Mock external dependencies (Neo4j driver) using pytest-mock. Integration tests require running Neo4j instance (Docker). Test database operations for idempotency (run twice, verify no duplicates). Test error handling when Neo4j unavailable (mock connection failures).
+    </standards>
+    <locations>
+      - manda-processing/tests/test_neo4j_client.py (new file for unit tests)
+      - manda-processing/tests/integration/ (integration tests with running Neo4j)
+    </locations>
+    <ideas>
+      <idea ac="AC1">Unit test: Mock Neo4j driver, verify get_neo4j_driver() returns singleton instance</idea>
+      <idea ac="AC1">Unit test: Mock driver.session(), verify create_finding_node() calls session.run() with correct Cypher query</idea>
+      <idea ac="AC2">Unit test: Mock session.run(), verify initialize_neo4j_schema() creates all constraints and indexes</idea>
+      <idea ac="AC3">Integration test: Upload document → analyze → verify Finding nodes in Neo4j match PostgreSQL findings</idea>
+      <idea ac="AC5">Integration test: Run backfill script with 1-2 sample findings → verify Neo4j contains nodes → run again → verify no duplicates (idempotency)</idea>
+      <idea ac="AC7">Unit test: Mock Neo4j driver to raise exception → verify analyze-document handler logs error, continues, PostgreSQL write succeeds</idea>
+      <idea ac="AC8">Integration test: Create findings in Neo4j → run Cypher queries → measure performance (<100ms), verify correct results</idea>
+    </ideas>
   </tests>
 </story-context>
