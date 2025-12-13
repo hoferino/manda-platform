@@ -6,9 +6,9 @@
 
 ## 📋 Project Overview
 
-**Status:** In Development - Phase 1 Planning Complete
-**Version:** PRD 1.4, Architecture 2.3, Epics 2.1
-**Last Updated:** 2025-11-24
+**Status:** In Development - Phase 1 MVP (Epics 1-6 Complete)
+**Version:** PRD 1.9, Architecture 3.3, Epics 2.3
+**Last Updated:** 2025-12-13
 
 ### What is Manda?
 
@@ -25,50 +25,30 @@ Manda is an AI-powered M&A intelligence platform designed for investment banking
 
 ```
 manda-platform/
-├── bmad/                          # BMAD Framework (Build Mad Agentic Delivery)
-│   ├── core/                      # Core BMAD infrastructure
-│   │   ├── agents/                # bmad-master agent
-│   │   ├── workflows/             # party-mode, brainstorming
-│   │   ├── tasks/                 # advanced-elicitation, index-docs
-│   │   └── tools/                 # shard-doc
-│   ├── bmm/                       # BMAD Method (Product Development)
-│   │   ├── agents/                # pm, architect, dev, analyst, ux-designer, sm, tea, tech-writer, frame-expert
-│   │   ├── workflows/             # prd, architecture, epics, dev-story, code-review, etc.
-│   │   ├── docs/                  # Complete BMM documentation
-│   │   ├── teams/                 # Team configurations
-│   │   └── testarch/              # Test architecture knowledge base
-│   ├── bmb/                       # BMAD Builder (Meta-Framework Development)
-│   │   ├── agents/                # bmad-builder agent
-│   │   └── workflows/             # create-workflow, create-agent, create-module, audit-workflow
-│   ├── manda/                     # Manda-specific BMAD module
-│   │   ├── agents/                # M&A-specific agents (coming soon)
-│   │   ├── workflows/             # M&A-specific workflows (coming soon)
-│   │   └── cim-templates/         # CIM templates
-│   └── _cfg/                      # Framework configuration
-│       ├── agents/                # Agent customization configs
-│       ├── ides/                  # IDE-specific configs (Claude Code, Codex)
-│       └── manifest files         # Component manifests
-├── docs/                          # Manda Platform Documentation
-│   ├── manda-prd.md              # Product Requirements Document (v1.3)
-│   ├── manda-architecture.md      # Technical Architecture (v2.1)
-│   ├── epics.md                   # Epic and Story Breakdown (v2.0)
+├── manda-app/                     # Next.js 15 Frontend Application
+│   ├── app/                       # App Router pages and API routes
+│   ├── components/                # React components (shadcn/ui)
+│   ├── lib/                       # Services, hooks, utilities
+│   └── public/                    # Static assets
+├── manda-processing/              # FastAPI Document Processing Service
+│   ├── src/api/                   # REST endpoints, webhooks
+│   ├── src/jobs/                  # pg-boss job handlers (parse, embed, analyze)
+│   ├── src/llm/                   # LLM client (Gemini, OpenAI)
+│   └── src/storage/               # GCS, Neo4j clients
+├── docs/                          # Documentation (see docs/README.md)
+│   ├── manda-prd.md              # Product Requirements Document (v1.9)
+│   ├── manda-architecture.md      # Technical Architecture (v3.3)
+│   ├── epics.md                   # Epic and Story Breakdown (v2.3)
 │   ├── ux-design-specification.md # UX Design Specification
-│   ├── frontend-development-plan.md
-│   ├── implementation-readiness-report-2025-11-21.md
-│   ├── validation-report-2025-11-19.md
-│   └── brainstorming-session-results-2025-11-19.md
-├── manda-standalone-poc/          # Proof of Concept for CIM v3 Workflow
-│   ├── PRD-V2-SLASH-COMMANDS.md
-│   ├── TEST-SIMULATION-RESULTS-V3.md
-│   ├── data/test-company/         # Sample test data
-│   ├── workflows/                 # POC workflow implementations
-│   └── README.md                  # POC-specific documentation
-├── .claude/                       # Claude Code Configuration
-│   └── commands/                  # Slash commands
-│       ├── manda-analyze.md       # Document analysis command
-│       ├── manda-cim-company-overview-v3.md
-│       └── bmad/                  # BMAD slash commands
-└── README.md                      # This file
+│   ├── testing/                   # Testing guide and archives
+│   ├── sprint-artifacts/          # Tech specs, stories, retrospectives
+│   └── archive/                   # Historical planning documents
+├── bmad/                          # BMAD Framework
+│   ├── bmm/                       # BMAD Method (agents, workflows)
+│   ├── bmb/                       # BMAD Builder
+│   ├── core/                      # Core infrastructure
+│   └── manda/                     # Manda-specific module
+└── .claude/                       # Claude Code configuration
 ```
 
 ## 🚀 Key Features
@@ -112,18 +92,17 @@ manda-platform/
 ## 📖 Documentation
 
 ### Core Documents
-- **[Product Requirements Document](docs/manda-prd.md)** - Complete product requirements (v1.3)
-- **[Architecture Document](docs/manda-architecture.md)** - Technical architecture and implementation details (v2.1)
-- **[Epics & Stories](docs/epics.md)** - Epic breakdown for implementation (v2.0, 9 epics, 60+ stories)
 
-### Planning Documents
-- **[UX Design Specification](docs/ux-design-specification.md)** - Complete UX design and interaction patterns
-- **[Frontend Development Plan](docs/frontend-development-plan.md)** - Frontend implementation roadmap
-- **[Implementation Readiness Report](docs/implementation-readiness-report-2025-11-21.md)** - Validation of PRD, Architecture, and Epics alignment
+- **[Documentation Index](docs/README.md)** - Navigation hub for all documentation
+- **[Product Requirements Document](docs/manda-prd.md)** - Complete product requirements (v1.9)
+- **[Architecture Document](docs/manda-architecture.md)** - Technical architecture (v3.3)
+- **[Epics & Stories](docs/epics.md)** - Epic breakdown (v2.3, 9 epics, 86 stories)
+- **[UX Design Specification](docs/ux-design-specification.md)** - Complete UX design
 
-### Research & Validation
-- **[Brainstorming Session Results](docs/brainstorming-session-results-2025-11-19.md)** - First principles analysis and cross-domain patterns
-- **[Validation Report](docs/validation-report-2025-11-19.md)** - Quality validation of planning artifacts
+### Development Resources
+
+- **[Testing & Operations Guide](docs/testing/testing-guide.md)** - Service setup, testing procedures, troubleshooting
+- **[Sprint Artifacts](docs/sprint-artifacts/)** - Tech specs, stories, retrospectives
 
 ## 🏗️ BMAD Framework
 
@@ -181,51 +160,21 @@ This project is built using the **BMAD Framework** (Build Mad Agentic Delivery) 
 - **Storage:** Local filesystem + S3-compatible object storage
 - **Monitoring:** OpenTelemetry, Prometheus, Grafana
 
-## 📊 Implementation Plan
+## 📊 Implementation Status
 
-### Phase 1: Foundation (Weeks 1-4) ✅ COMPLETE
-- [x] PRD development and validation
-- [x] Architecture design and review
-- [x] Epic and story breakdown
-- [x] UX design specification
-- [x] CIM v3 workflow POC and testing
+| Epic | Name | Status | Stories |
+|------|------|--------|---------|
+| E1 | Project Foundation | ✅ Complete | 9/9 |
+| E2 | Document Ingestion & Storage | ✅ Complete | 8/8 |
+| E3 | Intelligent Document Processing | ✅ Complete | 9/9 |
+| E4 | Collaborative Knowledge Workflow | ✅ Complete | 13/13 |
+| E5 | Conversational Assistant | ✅ Complete | 8/9 |
+| E6 | IRL Management & Auto-Generation | ✅ Complete | 7/7 |
+| E7 | Learning Loop | Backlog | 0/6 |
+| E8 | Q&A Co-Creation Workflow | Backlog | 0/8 |
+| E9 | CIM Builder | Backlog | 0/15 |
 
-### Phase 2: Infrastructure (Weeks 5-8)
-- [ ] Database setup (PostgreSQL + Neo4j)
-- [ ] Authentication and user management
-- [ ] Document storage and processing pipeline
-- [ ] Background job system
-
-### Phase 3: Core Features (Weeks 9-16)
-- [ ] Conversational knowledge base with RAG
-- [ ] Chat interface with agent integration
-- [ ] Document upload and extraction
-- [ ] Knowledge graph construction
-
-### Phase 4: Advanced Features (Weeks 17-20)
-- [ ] CIM Company Overview workflow (14 phases)
-- [ ] IRL generation and management
-- [ ] Q&A workspace
-- [ ] Cross-domain intelligence patterns
-
-### Phase 5: Polish & Testing (Weeks 21-24)
-- [ ] End-to-end testing
-- [ ] Performance optimization
-- [ ] Security audit
-- [ ] User acceptance testing
-
-## 🧪 POC: CIM v3 Workflow
-
-The `manda-standalone-poc/` directory contains a proof-of-concept implementation of the CIM v3 workflow that was used to validate the approach before integration into the full platform.
-
-**Key Results:**
-- ✅ 20 successful test simulations demonstrating workflow viability
-- ✅ Validated 14-phase structure with human-in-the-loop checkpoints
-- ✅ Confirmed content-first, then visual approach
-- ✅ Tested extreme visual precision validation
-- ✅ Validated multi-format export functionality
-
-See [manda-standalone-poc/TEST-SIMULATION-RESULTS-V3.md](manda-standalone-poc/TEST-SIMULATION-RESULTS-V3.md) for detailed results.
+**Current Phase:** Testing & Stabilization (validating Phase 1 MVP before Phase 2 enhancements)
 
 ## 🤝 Contributing
 
@@ -244,4 +193,4 @@ Proprietary - All Rights Reserved
 
 *Built with the BMAD Framework - Agentic delivery for modern software development*
 
-*Last Updated: 2025-11-23*
+*Last Updated: 2025-12-13*
