@@ -1385,8 +1385,9 @@ development_status:
   # Architecture v3.0 updated: qa_items schema, 19 agent tools (7 new Q&A tools)
   # CONTEXTED: 2025-12-09
   # Tech Spec: docs/sprint-artifacts/tech-spec-epic-E8.md
-  epic-8: contexted
+  epic-8: done
   epic-8-contexted: 2025-12-09
+  epic-8-completed: 2025-12-09
   epic-8-tech-spec: docs/sprint-artifacts/tech-spec-epic-E8.md
   epic-8-redesigned: 2025-12-09
   epic-8-prd-updated: 2025-12-09  # docs/manda-prd.md section 5.6
@@ -1531,7 +1532,7 @@ development_status:
   # - Preview Rendering: React components (fast iteration)
   # - RAG Integration: Existing vector search (document_chunks embeddings)
   # - Dependencies: pptxgenjs ^3.12.0 (NEW)
-  epic-9: contexted
+  epic-9: done
   epic-9-contexted: 2025-12-10
   epic-9-tech-spec: docs/sprint-artifacts/tech-spec-epic-E9.md
   epic-9-rewritten: 2025-12-09
@@ -1755,3 +1756,93 @@ development_status:
   epic-9-completed: 2025-12-11
   phase-1-mvp-complete: true
   # NOTE: Spike E9.S1 (Phase 2 Styled Output Research) moved to Phase 2 backlog per PRD
+
+  # ===================
+  # PHASE 2: REFINEMENT SPRINT
+  # ===================
+  # Sprint Change Proposal: docs/sprint-change-proposal-2025-12-14.md (original)
+  # Sprint Change Proposal: docs/sprint-change-proposal-2025-12-15.md (architecture evolution - APPROVED)
+  # Research: docs/research/knowledge-base-architecture-research.md
+
+  epic-10: backlog
+  epic-10-jira-id: SCRUM-10
+  epic-10-name: "Knowledge Graph Foundation (Graphiti + Neo4j)"
+  epic-10-priority: P0
+  epic-10-epic-file: docs/sprint-artifacts/epics/epic-E10.md
+  epic-10-stories: 8
+  epic-10-points: 42
+  epic-10-notes: |
+    REWRITTEN 2025-12-15: Major architecture evolution per sprint-change-proposal-2025-12-15.md
+
+    Consolidates to Graphiti + Neo4j as single knowledge store (removes pgvector).
+    Implements temporal knowledge graph with bi-temporal model for "living truth".
+
+    Key changes from original E10:
+    - pgvector removed, embeddings in Neo4j native vector indexes
+    - Voyage finance-2 embeddings (1024d, finance-optimized) replace OpenAI
+    - Graphiti framework for entity extraction, resolution, temporal tracking
+    - Reranking pipeline (Voyage rerank-2.5) for 20-35% accuracy improvement
+    - Dynamic ontology with sell-side spine schema
+
+    Stories:
+    - E10.1: Graphiti Infrastructure Setup (5 pts)
+    - E10.2: Voyage Embedding Integration (3 pts)
+    - E10.3: Sell-Side Spine Schema (5 pts)
+    - E10.4: Document Ingestion Pipeline (8 pts)
+    - E10.5: Q&A and Chat Ingestion (5 pts)
+    - E10.6: Entity Resolution (5 pts)
+    - E10.7: Hybrid Retrieval with Reranking (8 pts)
+    - E10.8: PostgreSQL Cleanup (3 pts)
+
+  epic-11: backlog
+  epic-11-jira-id: SCRUM-11
+  epic-11-name: "Agent Context Engineering"
+  epic-11-priority: P1
+  epic-11-epic-file: docs/sprint-artifacts/epics/epic-E11.md
+  epic-11-stories: 7
+  epic-11-notes: |
+    UPDATED 2025-12-15: Aligned with Graphiti architecture (sprint-change-proposal-2025-12-15.md)
+
+    Enables "agent chat from anywhere" vision with seamless context-knowledge flow.
+    Depends on E10 for Graphiti infrastructure.
+
+    Key deliverables:
+    - E11.1: Tool Call Context Compression
+    - E11.2: Conversation Summarization
+    - E11.3: Knowledge Base Write-Back from Chat (uses Graphiti ingestion)
+    - E11.4: Intent-Aware Knowledge Retrieval (uses Graphiti + reranking)
+    - E11.5: Type-Safe Tool Definitions with Pydantic AI
+    - E11.6: Model Configuration and Switching (includes Voyage)
+    - E11.7: Context-Knowledge Integration Tests
+
+    Research foundation:
+    - LangChain Context Engineering (write, select, compress, isolate)
+    - LangGraph SummarizationMiddleware
+    - Pydantic AI type safety
+
+  # Tech Debt items discovered during Phase 1 testing
+  phase-2-tech-debt:
+    - id: TD-010
+      title: "BUG-002 Fix: Create IRL → 404"
+      status: pending
+      priority: critical
+    - id: TD-011
+      title: "UX Issues from UAT"
+      status: pending
+      priority: medium
+      items:
+        - Industry dropdown needs search
+        - Folder reordering not implemented
+        - Progress indicator formatting
+    - id: TD-012
+      title: "E7.6 Deferred Tests"
+      status: pending
+      priority: medium
+    - id: TD-013
+      title: "E5.3 Chat Component Tests"
+      status: pending
+      priority: medium
+    - id: TD-014
+      title: "LLM Integration Tests"
+      status: pending
+      priority: low

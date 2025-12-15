@@ -226,48 +226,103 @@ Agent maintains a graph of slide relationships. When user changes slide 3, agent
 
 | ID | Story | Description |
 |----|-------|-------------|
-| E9.S1 | Phase 2 Styled Output Research | PPTX/PDF extraction, styled preview, style guide ingestion |
+| E9.S1 | Phase 2 Styled Output Research | Template library parsing, visual method extraction, styled editable PPTX generation |
 
 ---
 
 ## SPIKE E9.S1: Phase 2 Styled Output Research
 
-### Inputs
-- **PPTX** (existing presentations)
-- **PDF** (brand guidelines, past decks as PDF)
+### Problem Statement
 
-### Core Requirement
-All CIM previews MUST follow the extracted/confirmed style guide.
+The ultimate goal is to produce **fully styled, professional, EDITABLE CIMs** — not images, not wireframes. Current AI tools fail because:
+1. Output looks like school presentations (amateur formatting)
+2. Generated slides are images, not editable PPTX elements
+3. Iterating via chat is painful ("move that box 10px left" doesn't work)
+
+### Core Requirements
+
+1. **Output MUST be editable PPTX** — analysts need to make final adjustments
+2. **Template-driven generation** — use the user's uploaded template library, not generic AI templates
+3. **Visual method matching** — model selects the best template for each slide's content (comparison matrix, waterfall, timeline, etc.)
+4. **Style consistency** — colors, fonts, spacing match user's brand
+
+### Inputs
+
+- **Template Library (PPTX)** — User uploads their firm's presentation templates (e.g., Deloitte deck with hundreds of visual method examples)
+- **Style Guide** — Colors, fonts, logo (extracted or manually defined)
+- **Approved Content** — Slide content from CIM Builder workflow
+
+### Two-Phase Pipeline
+
+```
+PHASE 1: Template Parsing & Indexing (Upfront)
+┌─────────────────────────────────────────────────────────────────┐
+│  User uploads template library (PPTX with 100s of examples)     │
+│                           ↓                                      │
+│  Parse & classify each template:                                 │
+│  - Visual method type (2x2 matrix, waterfall, timeline, etc.)   │
+│  - Placeholder structure (title, data points, labels)           │
+│  - Layout pattern (positioning, alignment)                       │
+│  - Style elements (colors, fonts, spacing)                       │
+│                           ↓                                      │
+│  Index templates in database with semantic descriptions          │
+│  "comparison matrix for 4 options with pros/cons"               │
+└─────────────────────────────────────────────────────────────────┘
+
+PHASE 2: Slide Generation (Per CIM)
+┌─────────────────────────────────────────────────────────────────┐
+│  For each slide in CIM:                                         │
+│                           ↓                                      │
+│  1. Analyze content requirements                                 │
+│     "This slide needs to show revenue breakdown by segment"     │
+│                           ↓                                      │
+│  2. Match to best template from user's library                  │
+│     → If match found: Use template, populate with content       │
+│     → If no match: Generate new layout (fallback)               │
+│                           ↓                                      │
+│  3. Apply style guide (colors, fonts, logo)                     │
+│                           ↓                                      │
+│  4. Export as EDITABLE PPTX                                     │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ### Research Areas
 
-#### 1. Style Extraction Pipeline
+#### 1. Template Parsing — Nano Banana Pro Evaluation
 
-**Options:**
-```
-Option A: PPTX Direct
-├── python-pptx for structure
-├── Extract: master slides, theme colors, fonts
-└── Challenge: Complex, version-dependent
+**Hypothesis:** Use Google's Nano Banana Pro vision model to "read" and understand uploaded templates.
 
-Option B: PPTX → PDF → Extract
-├── Convert PPTX to PDF (LibreOffice headless, or cloud API)
-├── Parse PDF for visual elements
-├── Extract: colors, fonts, layout regions
-└── Benefit: Consistent format, works for both inputs
+**Evaluate:**
+- Can it classify visual method type from slide image?
+- Can it identify placeholder regions and their purposes?
+- Can it describe layout patterns in structured format?
+- Accuracy on Deloitte template library (test with real examples)
 
-Option C: Image-based extraction (AI)
-├── Convert slides to images
-├── Vision model extracts: "primary blue #2E5BFF, sans-serif headings"
-├── Logo detection and extraction
-└── Benefit: Works on ANY format, handles edge cases
-```
+**Alternative approaches:**
+- python-pptx for structural parsing + LLM for classification
+- Hybrid: python-pptx for structure, Nano Banana Pro for visual understanding
 
-**Recommendation:** Hybrid Option B + C (PDF for consistency, vision for validation/fallback)
+#### 2. Editable PPTX Generation — External Tool Evaluation
 
-#### 2. Conversion Pipeline
-- LibreOffice headless (free, reliable)
-- CloudConvert API (paid, zero maintenance)
+**Critical requirement:** Output must be editable PPTX, not images.
+
+**Tools to evaluate:**
+
+| Tool | API | Editable Output | Notes |
+|------|-----|-----------------|-------|
+| **Genspark** | Yes (80+ tools, API docs) | PPTX export | $25/mo, 200 free credits/day, open-source version available |
+| **Skywork.ai** | Yes (contact for key) | PPTX export | $29/mo Pro, MCP integration, one-click generation |
+| python-pptx | N/A (library) | PPTX | Full control, but manual layout logic |
+
+**Evaluate for each:**
+- Can we pass template patterns + content → get styled PPTX?
+- Quality of output on M&A-specific visuals (waterfalls, sensitivity tables, org charts)
+- Latency and cost per slide
+- API stability and documentation quality
+
+**References:**
+- Genspark: https://www.genspark.ai/ | https://github.com/ComposioHQ/open-genspark
+- Skywork: https://skywork.ai/ | MCP integration: https://skywork.ai/blog/mcp-for-slides-2/
 
 #### 3. Style Guide Schema
 
@@ -288,71 +343,85 @@ style_guide:
   spacing:
     slide_padding: 40
     element_gap: 20
+
+template_library:
+  - id: "comparison_4x4"
+    type: "comparison_matrix"
+    description: "4-option comparison with pros/cons columns"
+    placeholders: ["title", "option1", "option2", "option3", "option4", "pros", "cons"]
+    source_slide: 47  # Reference to original template slide
+  - id: "waterfall_bridge"
+    type: "waterfall"
+    description: "Bridge chart from starting value to ending value"
+    placeholders: ["title", "start_value", "adjustments[]", "end_value"]
+    source_slide: 23
 ```
 
-#### 4. User Flow for Style Setup
+#### 4. User Flow
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  STYLE GUIDE SETUP                                  │
-│                                                     │
-│  Upload your brand materials:                       │
-│  ┌─────────────────────────────────────────────┐   │
-│  │  📎 Drop PPTX or PDF here                   │   │
-│  │     (existing presentations, brand guides)   │   │
-│  └─────────────────────────────────────────────┘   │
-│                                                     │
-│  ─────────── or ───────────                        │
-│                                                     │
-│  [ Set up manually ]                               │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  TEMPLATE LIBRARY SETUP (One-time per firm)                     │
+│                                                                  │
+│  Upload your firm's presentation templates:                      │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  📎 Drop PPTX here                                       │    │
+│  │     (deck with visual method examples — e.g., Deloitte)  │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  System parses and indexes templates...                          │
+│  Found: 127 visual templates across 15 categories               │
+│                                                                  │
+│  [Review Templates]  [Adjust Style Guide]  [Done]               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-After upload:
-- System extracts colors, fonts, logo
-- User reviews and adjusts
-- Style applied to ALL previews
-
-#### 5. Libraries to Evaluate
-
-```
-PDF Parsing:
-- pdfplumber (Python) - text, colors, positions
-- pdf2image + PIL - color palette extraction
-- PyMuPDF - fonts, images, structure
-
-PPTX Parsing:
-- python-pptx - native, but limited theme extraction
-- Aspose.Slides - commercial, more complete
-
-Vision-based:
-- Claude vision - "extract brand colors from this slide"
-
-Conversion:
-- LibreOffice headless (free, reliable)
-- CloudConvert API (paid, zero maintenance)
-```
+During CIM creation:
+- Model matches content to best template from library
+- User can override template selection
+- Preview shows wireframe (MVP) or styled preview (Phase 2)
+- Export produces editable PPTX
 
 ### Deliverables
-- [ ] Extraction pipeline prototype (PDF + PPTX)
-- [ ] Style guide schema definition
-- [ ] Styled preview of 3 sample slides
-- [ ] Accuracy report: What extracts reliably vs needs user input
-- [ ] Recommended architecture
-- [ ] Effort estimate for full implementation
+
+- [ ] **Template parsing prototype** — Parse Deloitte deck, classify 20+ templates
+- [ ] **Nano Banana Pro evaluation** — Accuracy report on template understanding
+- [ ] **Genspark API evaluation** — Test editable PPTX generation with template patterns
+- [ ] **Skywork.ai API evaluation** — Test editable PPTX generation with MCP
+- [ ] **Template library schema** — Data model for indexed templates
+- [ ] **Styled PPTX prototype** — Generate 5 sample slides from templates + content
+- [ ] **Architecture recommendation** — Recommended pipeline for production
+- [ ] **Effort estimate** — Story points for full implementation
 
 ### Timebox
 1 sprint (research + prototype)
 
-### Test Cases for Spike
-- Corporate PPTX (complex themes)
-- Simple PPTX (basic styling)
-- PDF brand guide (text + images)
-- PDF of slides (exported deck)
-- Edge cases: No clear brand colors, unusual fonts
+### Test Cases
 
-**Success Criteria:** 80%+ accurate extraction on colors/logo, with graceful fallback for fonts.
+**Template Parsing:**
+- Deloitte deck (100+ slides, complex visual methods)
+- Simple corporate deck (basic layouts)
+- Edge cases: Unusual chart types, custom graphics
+
+**PPTX Generation:**
+- Comparison matrix with 4 options
+- Waterfall/bridge chart
+- Timeline/roadmap
+- Org chart
+- Data table with highlighting
+- Executive summary (text + key metrics)
+
+**Style Application:**
+- Corporate colors applied correctly
+- Font substitution when custom fonts unavailable
+- Logo placement consistency
+
+### Success Criteria
+
+1. **Template parsing:** 80%+ accuracy classifying visual method types from Deloitte deck
+2. **PPTX generation:** Produce editable slides that match template patterns
+3. **Style consistency:** Colors/fonts match user's brand guide
+4. **Analyst acceptance:** Output quality that analysts would present to clients (not embarrassing)
 
 ---
 

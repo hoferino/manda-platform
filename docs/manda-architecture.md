@@ -3,10 +3,29 @@
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-12
+**Last Updated:** 2025-12-15
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 3.3 (Clarified pg-boss + Python Worker Architecture)
+**Version:** 4.0 (Knowledge Architecture Evolution - Graphiti + Neo4j Consolidation)
+
+---
+
+## Implementation Status
+
+> **IMPORTANT FOR DEVELOPERS:** This document describes the **target architecture** after E10/E11 completion. See below for current vs planned state.
+
+| Component | Current (MVP) | Target (E10/E11) | Status |
+|-----------|---------------|------------------|--------|
+| **Embeddings** | pgvector + OpenAI 3072d | Neo4j + Voyage 1024d | 📋 E10.2 |
+| **Knowledge Graph** | Neo4j (basic) | Graphiti + Neo4j (temporal) | 📋 E10.1 |
+| **Retrieval** | pgvector semantic | Hybrid + Voyage reranking | 📋 E10.7 |
+| **Entity Resolution** | None | Graphiti built-in | 📋 E10.6 |
+| **Schema** | Hardcoded nodes | Dynamic spine + discovery | 📋 E10.3 |
+| **Document Ingestion** | Docling → pgvector | Docling → Graphiti | 📋 E10.4 |
+| **Context Compression** | None | Post-response hooks | 📋 E11.1 |
+| **Knowledge Write-Back** | None | Chat → Graphiti | 📋 E11.3 |
+
+**Legend:** ✅ Implemented | 📋 Planned (see epic file)
 
 ---
 
@@ -28,28 +47,26 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 
 ## Decision Summary
 
-| Decision Area | Choice | Rationale |
-|--------------|--------|-----------|
-| **Backend Framework** | FastAPI 0.121+ (Python 3.11+) | Native integration with Docling, LangGraph, LLM libraries; eliminates Node.js ↔ Python bridge |
-| **Primary Database** | PostgreSQL 18 (Supabase) | Latest stable, pgvector 0.8+ support, auth built-in, storage included, RLS for data isolation |
-| **Vector Search** | pgvector 0.8+ | Latest semantic search with improved filtering; single database simplifies operations. **Note:** HNSW index limited to 2000 dims - use `halfvec` cast for 3072-dim embeddings |
-| **Graph Database** | Neo4j 2025.01 | Latest stable with Java 21; cross-domain pattern relationships, contradiction tracking |
-| **Document Parser** | Docling | RAG-optimized, preserves Excel formulas, table extraction, OCR built-in |
-| **Job Queue** | pg-boss | Postgres-based for MVP simplicity; can migrate to Redis+Bull if needed |
-| **AI Agent Framework** | LangChain 1.0 + LangGraph 1.0 | Stable v1.0 releases; workflow orchestration with human-in-the-loop interrupts, state management |
-| **Type Safety & Validation** | Pydantic v2.12+ | Latest stable; structured outputs, data validation, type-safe tool definitions |
-| **LLM Integration** | LangChain LLM Adapters | Model-agnostic interface for multiple providers (Anthropic, Google, OpenAI, etc.) with retry, fallback |
-| **LLM Provider (Default)** | Configurable | Provider-agnostic configuration (Anthropic Claude, Google Gemini, OpenAI GPT, etc.) |
-| **Conversation Model** | Configurable | Default: Claude Sonnet 4.5 or Gemini 2.5 Pro; easily swappable via config |
-| **Extraction Model** | Configurable | Default: Gemini 2.5 Flash (1M context, $0.30/1M input); high-volume extraction |
-| **Deep Analysis Model** | Configurable | Default: Gemini 2.5 Pro ($1.25/1M input); complex financial analysis |
-| **Speed Tasks Model** | Configurable | Default: Claude Haiku 4 or Gemini 2.5 Flash-Lite ($0.10/1M input); fast, cost-effective |
-| **Embeddings** | Configurable | Default: OpenAI text-embedding-3-large; industry-leading semantic search quality |
-| **Authentication** | Supabase Auth | OAuth, magic links, MFA out of the box; RLS for multi-tenant security |
-| **File Storage** | Google Cloud Storage | Scalable document storage, signed URLs, lifecycle policies for M&A documents |
-| **Frontend** | Next.js 15 (React 19.2) | Latest stable with Turbopack beta; proven production-ready, mature ecosystem, shadcn/ui |
-| **Development Environment** | Docker Compose | Local Supabase + Neo4j + Next.js orchestration, production parity |
-| **Starter Template** | Nextbase Lite | Next.js 16 + Supabase + TypeScript + Tailwind + Testing suite pre-configured |
+| Decision Area | Choice | Status | Rationale |
+|--------------|--------|--------|-----------|
+| **Backend Framework** | FastAPI 0.121+ (Python 3.11+) | ✅ | Native integration with Docling, LangGraph, LLM libraries |
+| **Primary Database** | PostgreSQL 18 (Supabase) | ✅ | Transactional data, auth, RLS for multi-tenant security |
+| **Knowledge Graph** | Graphiti + Neo4j 5.26+ | 📋 E10 | Temporal knowledge graph, entity resolution, dynamic ontology |
+| **Vector Search** | Neo4j native vector indexes | 📋 E10 | HNSW (1024d), hybrid queries. *Currently: pgvector* |
+| **Embeddings** | Voyage voyage-finance-2 (1024d) | 📋 E10 | Finance-optimized. *Currently: OpenAI 3072d* |
+| **Reranking** | Voyage rerank-2.5 | 📋 E10 | 20-35% accuracy improvement. *Currently: none* |
+| **Document Parser** | Docling | ✅ | RAG-optimized, preserves Excel formulas, table extraction, OCR |
+| **Job Queue** | pg-boss | ✅ | Postgres-based for MVP simplicity |
+| **AI Agent Framework** | LangChain 1.0 + LangGraph 1.0 | ✅ | Workflow orchestration with human-in-the-loop |
+| **Type Safety & Validation** | Pydantic v2.12+ | ✅ | Structured outputs, data validation |
+| **LLM Integration** | LangChain LLM Adapters | ✅ | Model-agnostic interface with retry, fallback |
+| **LLM Provider** | Configurable | ✅ | Provider-agnostic (Anthropic, Google, OpenAI) |
+| **Conversation Model** | Claude Sonnet / Gemini Pro | ✅ | Easily swappable via config |
+| **Extraction Model** | Gemini 2.5 Flash | ✅ | High-volume extraction ($0.30/1M input) |
+| **Authentication** | Supabase Auth | ✅ | OAuth, magic links, MFA, RLS |
+| **File Storage** | Google Cloud Storage | ✅ | Signed URLs, lifecycle policies |
+| **Frontend** | Next.js 15 (React 19.2) | ✅ | shadcn/ui, Turbopack |
+| **Development Environment** | Docker Compose | ✅ | Local Supabase + Neo4j orchestration |
 
 ---
 
@@ -75,12 +92,32 @@ Frontend:
 
 Data Layer:
   primary_database: PostgreSQL 18 (Supabase managed)
-  vector_extension: pgvector 0.8+
-  # IMPORTANT: pgvector HNSW index has 2000-dimension limit
-  # For 3072-dim embeddings (text-embedding-3-large), use halfvec cast:
-  # CREATE INDEX ... USING hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops)
-  # See: https://github.com/pgvector/pgvector/issues/461
-  graph_database: Neo4j 2025.01 (Community Edition)
+  # PostgreSQL is for TRANSACTIONAL data only: deals, users, documents metadata,
+  # qa_items, irl_items, cims, conversations, job queue. NO embeddings.
+
+  knowledge_graph: Graphiti + Neo4j 5.26+
+  # Graphiti: Temporal knowledge graph framework (open source, self-hosted)
+  # - Bi-temporal model (valid_at, invalid_at) for truth evolution
+  # - Automatic entity resolution (fuzzy + semantic)
+  # - Dynamic ontology with sell-side spine schema
+  # - Episode-based ingestion for documents, Q&A, chat
+  # Neo4j: Graph database backend for Graphiti
+  # - Native HNSW vector indexes (1024 dimensions)
+  # - BM25 full-text indexes
+  # - Hybrid queries: vector + graph + text in single Cypher
+
+  embeddings: Voyage voyage-finance-2
+  # - 1024 dimensions (finance-optimized)
+  # - 32K token context window
+  # - $0.12/1M tokens (50M free tier)
+  # - Outperforms OpenAI by ~10% on finance/legal
+
+  reranking: Voyage rerank-2.5
+  # - Always applied to all queries
+  # - 20-35% accuracy improvement
+  # - $0.05/1M tokens (200M free tier)
+  # - Pipeline: retrieve 50 → rerank → top 5-10
+
   auth_database: Supabase Auth (built-in)
   file_storage: Google Cloud Storage
 
@@ -114,7 +151,8 @@ Intelligence Layer:
       conversational: anthropic  # or google, openai
       extraction: google  # or anthropic, openai
       speed_tasks: anthropic  # or google
-      embeddings: openai
+      embeddings: voyage  # Finance-optimized
+      reranking: voyage  # Always applied
 
     example_models:
       anthropic:
@@ -126,10 +164,13 @@ Intelligence Layer:
         extraction: gemini-2.5-flash     # 1M context, $0.30/1M input - high volume
         deep_analysis: gemini-2.5-pro    # $1.25/1M input - complex reasoning
         speed: gemini-2.5-flash-lite     # $0.10/1M input - batch processing
+      voyage:
+        embeddings: voyage-finance-2     # 1024d, 32K context, $0.12/1M - finance optimized
+        reranker: rerank-2.5             # $0.05/1M - 20-35% accuracy boost
       openai:
         conversation: gpt-4-turbo
-        embeddings: text-embedding-3-large
         speed: gpt-4-mini
+        # Note: OpenAI embeddings deprecated in favor of Voyage finance-2
 
 Authentication & Authorization:
   provider: Supabase Auth
@@ -553,76 +594,175 @@ gs://manda-documents-{env}/
 - Database enforces isolation
 - GCS signed URLs for document access
 
-### Neo4j Graph Schema
+### Knowledge Graph Architecture (Graphiti + Neo4j)
 
-**Nodes:**
-```cypher
-// Deal node
-(:Deal {
-    id: UUID,
-    name: String,
-    user_id: UUID
-})
+**Architecture Decision (v4.0):** Consolidated to Graphiti + Neo4j as the single knowledge store. pgvector removed. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md).
 
-// Document node
-(:Document {
-    id: UUID,
-    name: String,
-    upload_date: DateTime,
-    doc_type: String
-})
+#### Graphiti Overview
 
-// Finding node (with temporal metadata)
-(:Finding {
-    id: UUID,
-    text: String,
-    confidence: Float,
-    date_referenced: DateTime,  // Date of the data (e.g., "Q3 2024" → 2024-09-30)
-    date_extracted: DateTime,   // When finding was extracted
-    source_document_id: UUID,
-    source_location: String     // "Page 5", "Cell B15", etc.
-})
+Graphiti is a temporal knowledge graph framework that provides:
+- **Bi-temporal model:** `valid_at` (when fact was true) and `invalid_at` (when superseded)
+- **Automatic entity resolution:** Fuzzy + semantic matching for deduplication
+- **Dynamic ontology:** LLM discovers entity types during extraction
+- **Episode-based ingestion:** Documents, Q&A, chat all become episodes
+- **Hybrid retrieval:** Vector + BM25 + graph in single query
 
-// Insight node
-(:Insight {
+#### Node Types
+
+**Episodic Nodes (raw data):**
+```
+(:Episode {
     id: UUID,
-    text: String,
-    insight_type: String        // "pattern", "contradiction", "gap"
+    content: String,           // Raw text from document chunk, Q&A, or chat
+    source_type: String,       // 'document' | 'qa_response' | 'meeting_note' | 'analyst_chat'
+    source_id: UUID,           // Reference to PostgreSQL record
+    group_id: UUID,            // Deal ID for namespacing
+    created_at: DateTime,
+    embedding: [Float]         // 1024d Voyage finance-2
 })
 ```
 
-**Relationships:**
-```cypher
-// Source attribution
-(:Finding)-[:EXTRACTED_FROM {page: Int, cell: String}]->(:Document)
-
-// Temporal contradiction (critical for date-aware validation)
-(:Finding {date_referenced: "2024-Q3"})-[:CONTRADICTS {detected_at: DateTime}]->(:Finding {date_referenced: "2024-Q2"})
-
-// Supersession (newer data replaces older)
-(:Finding {date_referenced: "2024-Q3"})-[:SUPERSEDES]->(:Finding {date_referenced: "2024-Q2"})
-
-// Supporting evidence
-(:Finding)-[:SUPPORTS {strength: Float}]->(:Finding)
-
-// Cross-domain patterns (e.g., financial × operational)
-(:Finding)-[:PATTERN_DETECTED {pattern_type: String}]->(:Finding)
-
-// Insight derivation
-(:Insight)-[:BASED_ON {relevance: Float}]->(:Finding)
+**Entity Nodes (semantic subjects/objects):**
+```
+(:Entity {
+    id: UUID,
+    name: String,              // Canonical name after resolution
+    entity_type: String,       // Dynamically discovered or from spine schema
+    summary: String,           // LLM-generated description
+    group_id: UUID,            // Deal ID
+    created_at: DateTime,
+    embedding: [Float]         // 1024d for semantic search
+})
 ```
 
-**Temporal Intelligence (Critical Feature):**
-- **date_referenced:** The date the data refers to (e.g., "Q3 2024 revenue" → 2024-09-30)
-- **date_extracted:** When the finding was extracted from documents
-- **Why This Matters:** Prevents false contradictions (Q2 vs Q3 data are different time periods, not contradictions)
-- **Validation Logic:** When user says "Q3 revenue is $5.5M", agent checks:
-  1. Is there existing Q3 revenue finding? (SUPERSEDES if newer source)
-  2. Is there Q2 revenue finding? (NOT a contradiction - different time period)
-  3. Is there conflicting Q3 revenue? (TRUE contradiction - same time period, different values)
+#### Sell-Side Spine Schema (Core Entity Types)
 
-**Phase 2 Enhancement (Research):**
-- **Graphiti by Zep:** Temporal knowledge graph library for advanced time-aware entity resolution and deduplication
+Defined as Pydantic models to guide Graphiti extraction:
+
+```python
+# Core entities - stable across all deals
+class Company(BaseModel):
+    name: str
+    role: Literal["target", "acquirer", "competitor", "customer", "supplier", "investor"]
+    industry: str | None
+
+class Person(BaseModel):
+    name: str
+    title: str | None
+    role: Literal["executive", "advisor", "board", "investor", "employee"]
+
+class FinancialMetric(BaseModel):
+    metric_type: str  # revenue, ebitda, margin, growth_rate
+    value: float
+    period: str       # Q3 2024, FY 2023
+    currency: str = "USD"
+    basis: str | None # GAAP, adjusted, pro_forma
+
+class Finding(BaseModel):
+    content: str
+    confidence: float
+    source_channel: Literal["document", "qa_response", "meeting_note", "analyst_chat"]
+
+class Risk(BaseModel):
+    description: str
+    severity: Literal["high", "medium", "low"]
+    category: str  # customer_concentration, key_person, regulatory
+```
+
+**Dynamic Discovery:** Graphiti discovers deal-specific entity types (Patent, Earnout, Regulatory Approval, etc.) that aren't in the spine schema.
+
+#### Edge Types (Relationships)
+
+```
+// Fact edges - connect entities with temporal validity
+(:Entity)-[:RELATES_TO {
+    fact: String,              // The relationship statement
+    fact_id: UUID,
+    valid_at: DateTime,        // When this became true
+    invalid_at: DateTime,      // When superseded (null if current)
+    episode_id: UUID,          // Source episode
+    embedding: [Float]         // For semantic edge search
+}]->(:Entity)
+
+// Core relationship types
+EXTRACTED_FROM    // Entity/Fact → Episode (provenance)
+MENTIONS          // Fact → Entity
+SUPERSEDES        // Newer fact → older fact
+CONTRADICTS       // Unresolved conflict between facts
+SUPPORTS          // Corroborating evidence
+WORKS_FOR         // Person → Company
+SUPPLIES          // Company → Company
+COMPETES_WITH     // Company → Company
+```
+
+#### Temporal Intelligence (Living Truth)
+
+The bi-temporal model enables "living truth" tracking:
+
+```
+Day 1:  Document says "Revenue = $4.8M"
+        → Episode created, Fact edge with valid_at=Day1
+
+Day 15: Client Q&A confirms "Revenue was $5.2M"
+        → New Episode created
+        → Old fact gets invalid_at=Day15
+        → New fact edge with valid_at=Day15
+        → SUPERSEDES relationship created
+
+Query:  "What is the revenue?"
+        → Returns $5.2M (current truth)
+        → Can trace provenance to Q&A response
+```
+
+**Why This Matters for Buy-Side (Future):**
+- "What did management claim in the CIM vs. what we found in due diligence?"
+- "How has the revenue story evolved across presentations?"
+- "Show all facts that were superseded — potential red flags"
+
+#### Retrieval Pipeline
+
+```
+User Query
+    ↓
+1. Graphiti Hybrid Search
+   - Vector similarity (Voyage finance-2, 1024d)
+   - BM25 full-text
+   - Graph traversal
+   → 50 candidates (~300ms)
+    ↓
+2. Voyage Reranker (rerank-2.5)
+   - Score and reorder by relevance
+   → Top 5-10 results (~200-300ms)
+    ↓
+3. LLM Response Generation
+   - Claude/Gemini with retrieved context
+   - Source citations included
+   → Final answer (~1-2s)
+    ↓
+Total latency: ~2-3 seconds
+```
+
+#### Vector Indexes
+
+```cypher
+-- Entity embeddings for semantic search
+CREATE VECTOR INDEX entity_embeddings FOR (e:Entity) ON (e.embedding)
+OPTIONS {indexConfig: {`vector.dimensions`: 1024, `vector.similarity_function`: 'cosine'}}
+
+-- Episode embeddings for content search
+CREATE VECTOR INDEX episode_embeddings FOR (ep:Episode) ON (ep.embedding)
+OPTIONS {indexConfig: {`vector.dimensions`: 1024, `vector.similarity_function`: 'cosine'}}
+
+-- BM25 full-text indexes
+CREATE FULLTEXT INDEX entity_names FOR (e:Entity) ON EACH [e.name, e.summary]
+CREATE FULLTEXT INDEX episode_content FOR (ep:Episode) ON EACH [ep.content]
+```
+
+#### References
+
+- [Graphiti GitHub](https://github.com/getzep/graphiti)
+- [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
+- [Voyage AI Documentation](https://docs.voyageai.com/docs/embeddings)
 
 ---
 
@@ -1489,6 +1629,97 @@ llm = FallbackLLM(llms=[llm_primary, llm_fallback])
 **When to Use Each:**
 - **Agent Executor:** Real-time chat where LLM dynamically selects tools
 - **LangGraph:** Multi-phase workflows requiring human approval between steps
+
+### Context Engineering (Phase 2 - E11)
+
+**Problem:** Current implementation keeps last 10 messages with character-based token estimation. No summarization, no intelligent pruning, no write-back to knowledge base.
+
+**LangChain Context Engineering Strategies:**
+
+| Strategy | Description | Implementation |
+|----------|-------------|----------------|
+| **Write** | Persist information outside context window | Write findings/entities to Neo4j + pgvector |
+| **Select** | Pull relevant information in | RAG from knowledge base before responding |
+| **Compress** | Token-efficient management | Summarize tool results, prune old messages |
+| **Isolate** | Strategic context splitting | Keep tool results outside context until needed |
+
+**Key Components:**
+
+1. **Tool Call Compression (E11.1):**
+   ```typescript
+   // Post-response hook compresses tool call artifacts
+   function compressToolCalls(messages: Message[]): Message[] {
+     return messages.map(msg => {
+       if (msg.role === 'tool') {
+         // "query_knowledge_base returned 5 findings about Q3 revenue"
+         return { ...msg, content: summarizeToolResult(msg) }
+       }
+       return msg
+     })
+   }
+   ```
+
+2. **Conversation Summarization (E11.2):**
+   - LangGraph SummarizationMiddleware pattern
+   - When conversation exceeds 20 messages, older messages summarized
+   - Summary includes: topics discussed, decisions made, key facts
+   - Recent 10 messages kept verbatim
+
+3. **Knowledge Base Write-Back (E11.3):**
+   - Agent detects user-provided facts in conversation
+   - Facts indexed to PostgreSQL (pgvector) + Neo4j (Information nodes)
+   - Integration with E10 ontology for semantic classification
+   - Frees context for new work, facts retrievable later
+
+4. **Intent-Aware Knowledge Retrieval (E11.4):**
+   - Classify intent before retrieval (greeting, meta, factual, task)
+   - Skip retrieval for non-knowledge intents (greetings, "summarize our chat")
+   - For factual/task queries, retrieve relevant findings from pgvector
+   - Token budget: max 2000 tokens for retrieval context
+   - Tool-based retrieval remains primary; this provides proactive retrieval
+
+**Pydantic AI Migration (E11.5):**
+
+Python backend tools will migrate to Pydantic AI for type safety:
+
+```python
+from pydantic_ai import Agent, RunContext
+from pydantic import BaseModel
+
+class AnalysisDependencies(BaseModel):
+    db: SupabaseClient
+    llm: GeminiClient
+    deal_id: str
+
+analysis_agent = Agent(
+    'google:gemini-2.5-flash',
+    deps_type=AnalysisDependencies,
+    result_type=FindingResult,
+)
+
+@analysis_agent.tool
+async def extract_finding(
+    ctx: RunContext[AnalysisDependencies],
+    chunk_content: str,
+) -> FindingResult:
+    """Type-safe access to ctx.deps.db, ctx.deps.llm"""
+    ...
+```
+
+**Model Configuration (E11.6):**
+
+```yaml
+# config/models.yaml
+agents:
+  conversational:
+    primary: 'anthropic:claude-sonnet-4-5-20250929'
+    fallback: 'google:gemini-2.5-pro'
+  extraction:
+    primary: 'google:gemini-2.5-flash'
+    fallback: 'openai:gpt-4-turbo'
+```
+
+**Reference:** See Epic 11 definition: [epic-E11.md](sprint-artifacts/epics/epic-E11.md)
 
 ---
 
@@ -2555,6 +2786,49 @@ npm install
 - Provides clear implementation guidance for developers
 - Validates architecture decision with production-tested patterns
 - Establishes type safety as first-class concern throughout the system
+
+### Version 4.0 (2025-12-15)
+**Knowledge Architecture Evolution - Graphiti + Neo4j Consolidation:**
+
+This is a major architectural change. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md) for full details.
+
+- **Consolidated to Graphiti + Neo4j:**
+  - Removed pgvector — all embeddings now stored in Neo4j native vector indexes
+  - Adopted Graphiti as temporal knowledge graph framework
+  - Single source of truth for all knowledge (entities, facts, relationships)
+  - PostgreSQL retained for transactional data only (deals, users, Q&A items, etc.)
+
+- **New Embedding Strategy:**
+  - Switched from OpenAI text-embedding-3-large (3072d) to Voyage voyage-finance-2 (1024d)
+  - Finance-optimized embeddings outperform OpenAI by ~10% on M&A documents
+  - 32K token context (4x OpenAI's 8K)
+  - Lower cost: $0.12/1M tokens (vs $0.13 for OpenAI)
+
+- **Added Reranking:**
+  - Voyage rerank-2.5 applied to all queries
+  - 20-35% accuracy improvement
+  - Pipeline: retrieve 50 → rerank → top 5-10
+  - Total latency ~2-3 seconds (acceptable for chat)
+
+- **Dynamic Ontology with Sell-Side Spine:**
+  - Core entity types defined as Pydantic models (Company, Person, FinancialMetric, Finding, Risk)
+  - Graphiti discovers deal-specific entities dynamically
+  - Prevents schema rigidity while maintaining consistency
+
+- **Bi-Temporal Model:**
+  - Facts track valid_at and invalid_at timestamps
+  - Enables "living truth" — Q&A answers supersede document facts
+  - Future-proofs for buy-side due diligence features
+
+- **E10 Epic Expanded:**
+  - Rewritten from 5 stories (26 points) to 8 stories (42 points)
+  - Covers: Graphiti setup, Voyage integration, schema, ingestion, entity resolution, retrieval
+
+**Why This Matters:**
+- Eliminates dual-database sync complexity (pgvector + Neo4j → Neo4j only)
+- Hybrid queries combine vector + BM25 + graph in single Cypher
+- Temporal model supports both sell-side (current truth) and buy-side (truth evolution)
+- Domain-optimized embeddings improve retrieval quality for M&A documents
 
 ### Version 3.3 (2025-12-12)
 **Architecture Clarification:**

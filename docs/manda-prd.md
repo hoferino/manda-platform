@@ -3,14 +3,16 @@
 
 **Document Status:** In Development
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-11
+**Last Updated:** 2025-12-15
 **Owner:** Max
 **Contributors:** PM John
-**Version:** 1.9 (Moved Styled Output Research spike from Epic 9 to Phase 2 backlog)
+**Version:** 2.1 (Phase 1 MVP Complete, Phase 2 Graphiti Architecture)
 
 ---
 
 ## Implementation Status
+
+### Phase 1: MVP (Complete)
 
 | Epic | Status | Stories | Completion Date |
 |------|--------|---------|-----------------|
@@ -20,18 +22,55 @@
 | **E4: Collaborative Knowledge Workflow** | ✅ Complete | 13/13 | 2025-11-30 |
 | **E5: Conversational Assistant** | ✅ Complete | 8/9 | 2025-12-02 |
 | **E6: IRL Management & Auto-Generation** | ✅ Complete | 7/7 | 2025-12-03 |
-| E7: Learning Loop | Contexted | 0/6 | - |
-| E8: Q&A Co-Creation Workflow | Backlog | 0/8 | - |
-| E9: CIM Builder | Backlog | 0/15 | - |
+| **E7: Learning Loop** | ✅ Complete | 6/6 | 2025-12-08 |
+| **E8: Q&A Co-Creation Workflow** | ✅ Complete | 7/7 | 2025-12-09 |
+| **E9: CIM Builder** | ✅ Complete | 15/15 | 2025-12-11 |
+
+### Phase 2: Refinement Sprint (In Progress)
+
+| Epic | Status | Stories | Notes |
+|------|--------|---------|-------|
+| **E10: Knowledge Graph Foundation** | Backlog | 0/8 | Graphiti + Neo4j, Voyage embeddings, hybrid retrieval with reranking |
+| **E11: Agent Context Engineering** | Backlog | 0/7 | Context compression, Pydantic AI, Graphiti integration |
+
+**Phase 2 Tech Debt:**
+- TD-010: BUG-002 Fix (Create IRL → 404)
+- TD-011: UX Issues from UAT
+- TD-012-014: Deferred test coverage
+
+**Reference:** [Sprint Change Proposal 2025-12-14](sprint-change-proposal-2025-12-14.md), [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
 
 ### Architecture Decisions Made
+
+**Phase 1 (MVP) — ✅ IMPLEMENTED:**
 1. **Document Storage:** Google Cloud Storage (GCS) - selected for better cost model with large files and native Gemini/Vertex AI integration
 2. **Test Infrastructure:** Vitest + React Testing Library
 3. **Error Handling:** Hierarchical error boundaries at global, app, and route levels
-4. **Database & Auth (MVP):** Supabase retained for PostgreSQL, Auth, and pgvector - stable, working, migration to Cloud SQL deferred to post-MVP
-5. **Document Processing (Epic 3):** Docling for parsing (Excel formulas, tables, OCR) + Vertex AI RAG Engine for retrieval/indexing layer - hybrid approach leveraging best of both
-6. **Deployment Target:** Google Cloud Run - scale-to-zero, cost-effective for variable traffic, native GCS integration
-7. **Future Migration Path:** Supabase → Cloud SQL for PostgreSQL when scale requires (documented for planning)
+4. **Database & Auth:** Supabase for PostgreSQL and Auth
+5. **Document Processing:** Docling for parsing (Excel formulas, tables, OCR)
+6. **Embeddings (MVP):** pgvector + OpenAI text-embedding-3-large (3072d) — *to be replaced by E10*
+7. **Knowledge Graph (MVP):** Neo4j for relationship mapping — *to be enhanced by E10*
+8. **Deployment Target:** Google Cloud Run - scale-to-zero, cost-effective for variable traffic
+
+**Phase 2 (E10 Knowledge Graph Foundation) — 📋 PLANNED:**
+
+> These decisions are approved but NOT YET IMPLEMENTED. E10 will replace the MVP embedding/knowledge architecture.
+
+9. **Graphiti + Neo4j:** Temporal knowledge graph framework consolidating all knowledge storage. Bi-temporal model (valid_at, invalid_at) tracks truth evolution. Single source of truth replacing pgvector dual-database approach. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
+10. **Voyage Embeddings:** voyage-finance-2 model (1024d, 32K context) — replaces OpenAI embeddings. Finance-optimized, $0.12/1M tokens.
+11. **Hybrid Retrieval with Reranking:** Graphiti hybrid search (vector + BM25 + graph) + Voyage rerank-2.5. 20-35% accuracy improvement.
+12. **Sell-Side Spine Schema:** Core Pydantic entity types guide extraction while allowing dynamic discovery.
+13. **Entity Resolution:** Graphiti's built-in resolution tuned for M&A naming variations.
+
+**Phase 2 (E11 Agent Context Engineering) — 📋 PLANNED:**
+
+> These decisions are approved but NOT YET IMPLEMENTED. E11 depends on E10 completion.
+
+14. **Context Compression:** Post-response hook compresses tool call artifacts.
+15. **Conversation Summarization:** LangGraph SummarizationMiddleware for older messages.
+16. **Knowledge Write-Back:** Agent indexes user-provided facts to Graphiti.
+17. **Type-Safe Agent Tools:** Pydantic AI for Python backend tools.
+18. **Model Configuration:** Provider-agnostic model switching via config.
 
 ---
 
@@ -69,10 +108,10 @@ The magic moment occurs when an analyst realizes the system has already analyzed
 
 Unlike generic AI assistants that start fresh each conversation, or traditional data rooms that only organize files:
 
-- **Persistent Memory**: Builds cumulative knowledge across all conversations and documents - never forgets previous insights, contradictions, or analyst decisions
+- **Structured Deal Intelligence**: Every finding stored with precise source attribution (document, page, cell), confidence scoring, and relationship mapping to other findings. The system knows not just what you learned, but where it came from, how confident it is, and what it contradicts — building a queryable knowledge graph, not just a memory.
 - **Background Intelligence**: Continuously processes new information, performs cross-domain analysis, and synthesizes insights even when analysts aren't actively engaged
 - **Proactive + Reactive**: Surfaces insights bi-directionally (system initiates "I noticed..." alongside analyst queries)
-- **Domain Expertise Built-In**: Configurable M&A-specific cross-domain intelligence pattern library (Financial × Operational, Growth × Quality, Contracts × Projections, Market × Valuation, and more) that transforms raw data into actionable insights
+- **Semantic Understanding**: Deep contextual analysis at ingestion — the system understands time periods, entities, accounting bases, and how facts relate to each other. Contradictions and gaps are detected organically, not through pre-defined pattern matching.
 - **Source Attribution**: Every finding traced to source with confidence scoring - critical for banking credibility
 - **Platform Integration**: Combines conversational interface with data room organization, IRL tracking, Q&A co-creation, and CIM generation in one unified experience
 
@@ -147,8 +186,8 @@ Unlike generic AI assistants that start fresh each conversation, or traditional 
 **Primary Success Metrics:**
 
 1. **Time Savings (Efficiency)**
-   - **CIM Storybook Creation**: Cut narrative planning time by 60-70% through AI-guided outline and blueprint generation
-   - **Visual Styling**: Reduce formatting time by 80% through style template extraction and reuse
+   - **CIM Storybook Creation**: Reduce narrative planning time through AI-guided outline and blueprint generation
+   - **Visual Styling**: Reduce formatting time through style template extraction and reuse
    - **Document Processing Speed**: Faster turnaround from document receipt to insights
    - **Task Automation**: Reduce analyst time on repetitive synthesis tasks while preserving analyst judgment on original document review
 
@@ -464,21 +503,22 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
 
 **Features:**
 
-1. **Cross-Domain Intelligence Engine**
-   - 11+ sophisticated cross-check patterns:
-     - Financial × Operational Efficiency
-     - Growth × Quality
-     - Contracts × Financial Projections
-     - M&A History × Synergy Claims
-     - Key Person × Technical Risks
-     - Market × Valuation
-     - Compliance × Financial Reserves
-     - Technical Debt × Growth Capacity
-     - Customer Concentration × Contract Flexibility
-     - Supply Chain × Geopolitical
-     - Valuation Multiple × Growth Maturity
-   - Configurable rules engine
-   - Confidence scoring with thresholds (>60-70% to surface)
+1. **Semantic Intelligence Engine**
+
+   Rather than relying on pre-defined pattern matching, Manda builds deep semantic understanding during document analysis. Each finding is stored with:
+   - **Contextual metadata**: Time period, entity, accounting basis, source reliability
+   - **Semantic classification**: What type of fact this is (revenue figure, contract term, headcount, assumption)
+   - **Relationship mapping**: How this finding connects to others (supports, contradicts, depends on)
+
+   This enables the system to detect contradictions and gaps organically — not because it was programmed to check "Revenue × Contracts," but because it understands that a $10M revenue projection for Customer X is inconsistent with a $2M/year contract that expires in 6 months.
+
+   **Key capabilities:**
+   - Contradiction detection across any domain combination
+   - Automatic identification of unstated assumptions
+   - Gap detection (what's missing given what we know)
+   - Confidence degradation when sources conflict
+
+   The intelligence emerges from understanding, not from rules.
 
 2. **Proactive Insight Surfacing**
    - Bi-directional intelligence (system initiates + analyst queries)
@@ -782,7 +822,7 @@ The workflow consists of flexible stages that users progress through conversatio
 
 **Stage: Slide Content Creation (Iterative)**
 - Agent initiates content ideation with clear opening for each section
-- Hybrid content retrieval: pgvector semantic search + Neo4j relationship queries
+- Hybrid content retrieval: Graphiti search (vector + BM25 + graph traversal) with Voyage reranking
 - Q&A answers prioritized (most recent client data) over findings and document chunks
 - AI presents 2-3 content options with source citations: `(qa: question)`, `(finding: excerpt)`, `(source: file, page)`
 - User selects, modifies, or requests alternative content approaches
@@ -808,10 +848,10 @@ The workflow consists of flexible stages that users progress through conversatio
 - Version automatically saved with timestamp
 
 **FR-CIM-003: Agent Intelligence and Tools**
-- Agent queries knowledge base (RAG via pgvector semantic search) throughout workflow
+- Agent queries knowledge base (Graphiti hybrid retrieval with reranking) throughout workflow
 - Agent validates narrative coherence continuously
 - Agent generates slide blueprints with extreme visual precision
-- Source citations link to PostgreSQL findings from RAG queries
+- Source citations link to Graphiti entities/facts with provenance chain
 - 3 CIM-specific agent tools:
   - `suggest_narrative_outline(buyer_persona, context)` - Propose story arc
   - `validate_idea_coherence(narrative, proposed_idea)` - Check narrative alignment
@@ -1661,6 +1701,17 @@ M&A transactions involve analyzing companies across multiple dimensions to asses
 ### References
 - [Brainstorming Session Results - 2025-11-19](brainstorming-session-results-2025-11-19.md)
 - [Project Documentation Index](manda-index.md)
+- [Sprint Change Proposal 2025-12-14](sprint-change-proposal-2025-12-14.md)
+- [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
+
+### Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | 2025-11-19 | Initial PRD creation |
+| 1.5 | 2025-12-09 | Phase 1 MVP complete (E1-E9) |
+| 2.0 | 2025-12-14 | Phase 2 planning: E10 Knowledge Base 2.0, E11 Agent Context Engineering. PRD differentiator language updated, pattern matching approach replaced with semantic intelligence |
+| 2.1 | 2025-12-15 | **Knowledge Architecture Evolution:** Consolidated to Graphiti + Neo4j (replacing pgvector dual-database). Switched to Voyage finance-2 embeddings (1024d). Added Voyage rerank-2.5 to retrieval pipeline. E10 renamed to "Knowledge Graph Foundation" with 8 stories. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md) |
 
 ---
 
