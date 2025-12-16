@@ -21,6 +21,9 @@ dependencies = [
     "supabase>=2.10.0",
     "neo4j>=5.15.0",  # Neo4j graph database driver (E4.15)
 
+    # Graphiti - Temporal Knowledge Graph (E10.1, E10.2)
+    "graphiti-core[google-genai,voyageai]>=0.3.0",  # Google Gemini for entity extraction + VoyageAI for embeddings
+
     # Document parsing (E3.2: Docling Integration)
     "docling>=2.15.0",
     "openpyxl>=3.1.5",

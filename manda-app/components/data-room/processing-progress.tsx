@@ -2,6 +2,7 @@
  * Processing Progress Component
  * Shows visual pipeline stages for document processing
  * Story: E3.6 - Create Processing Status Tracking and WebSocket Updates (AC: #3)
+ * Fix: TD-011.3 - Improved formatting with properly aligned stages and labels
  *
  * Features:
  * - Visual stages: Upload → Parse → Embed → Analyze → Complete
@@ -115,28 +116,21 @@ export function ProcessingProgress({
   const currentStageIndex = getCurrentStageIndex(status)
   const failed = isFailed(status)
 
-  return (
-    <div
-      className={cn(
-        'flex items-center',
-        compact ? 'gap-1' : 'gap-2',
-        className
-      )}
-    >
-      {PIPELINE_STAGES.map((stage, index) => {
-        const isCompleted = index < currentStageIndex
-        const isCurrent = index === currentStageIndex
-        const isActive = isStageActive(status, stage)
-        const isCurrentFailed = isCurrent && failed
+  // Compact mode: inline icons only
+  if (compact) {
+    return (
+      <div className={cn('flex items-center gap-1', className)}>
+        {PIPELINE_STAGES.map((stage, index) => {
+          const isCompleted = index < currentStageIndex
+          const isCurrent = index === currentStageIndex
+          const isActive = isStageActive(status, stage)
+          const isCurrentFailed = isCurrent && failed
 
-        return (
-          <div key={stage.id} className="flex items-center">
-            {/* Stage indicator */}
-            <div className="flex flex-col items-center">
+          return (
+            <div key={stage.id} className="flex items-center">
               <div
                 className={cn(
-                  'flex items-center justify-center rounded-full',
-                  compact ? 'h-5 w-5' : 'h-6 w-6',
+                  'flex h-5 w-5 items-center justify-center rounded-full',
                   isCompleted && 'bg-green-100 text-green-600',
                   isCurrent && !isCurrentFailed && 'bg-blue-100 text-blue-600',
                   isCurrentFailed && 'bg-red-100 text-red-600',
@@ -144,46 +138,86 @@ export function ProcessingProgress({
                 )}
               >
                 {isCompleted ? (
-                  <CheckCircle2 className={compact ? 'h-3 w-3' : 'h-4 w-4'} />
+                  <CheckCircle2 className="h-3 w-3" />
                 ) : isActive ? (
-                  <Loader2
-                    className={cn(
-                      'animate-spin',
-                      compact ? 'h-3 w-3' : 'h-4 w-4'
-                    )}
-                  />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <Circle className={compact ? 'h-3 w-3' : 'h-4 w-4'} />
+                  <Circle className="h-3 w-3" />
                 )}
               </div>
-              {/* Stage label (only in non-compact mode) */}
-              {!compact && (
-                <span
+              {index < PIPELINE_STAGES.length - 1 && (
+                <div
                   className={cn(
-                    'mt-1 text-xs',
-                    isCompleted && 'text-green-600',
-                    isCurrent && !isCurrentFailed && 'font-medium text-blue-600',
-                    isCurrentFailed && 'font-medium text-red-600',
-                    !isCompleted && !isCurrent && 'text-gray-400'
+                    'mx-0.5 h-0.5 w-3',
+                    index < currentStageIndex ? 'bg-green-300' : 'bg-gray-200'
                   )}
-                >
-                  {stage.label}
-                </span>
+                />
               )}
             </div>
+          )
+        })}
+      </div>
+    )
+  }
 
-            {/* Connector line (except after last stage) */}
-            {index < PIPELINE_STAGES.length - 1 && (
+  // Full mode: stages with labels and progress bar
+  return (
+    <div className={cn('space-y-2', className)}>
+      {/* Progress bar */}
+      <div className="relative h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className={cn(
+            'h-full rounded-full transition-all duration-300',
+            failed ? 'bg-red-500' : 'bg-green-500'
+          )}
+          style={{ width: `${getProcessingProgressPercent(status)}%` }}
+        />
+      </div>
+
+      {/* Stage indicators row */}
+      <div className="flex items-start justify-between">
+        {PIPELINE_STAGES.map((stage, index) => {
+          const isCompleted = index < currentStageIndex
+          const isCurrent = index === currentStageIndex
+          const isActive = isStageActive(status, stage)
+          const isCurrentFailed = isCurrent && failed
+
+          return (
+            <div key={stage.id} className="flex flex-col items-center gap-1 min-w-0">
+              {/* Stage icon */}
               <div
                 className={cn(
-                  compact ? 'mx-0.5 h-0.5 w-3' : 'mx-1 h-0.5 w-6',
-                  index < currentStageIndex ? 'bg-green-300' : 'bg-gray-200'
+                  'flex h-6 w-6 items-center justify-center rounded-full',
+                  isCompleted && 'bg-green-100 text-green-600',
+                  isCurrent && !isCurrentFailed && 'bg-blue-100 text-blue-600',
+                  isCurrentFailed && 'bg-red-100 text-red-600',
+                  !isCompleted && !isCurrent && 'bg-gray-100 text-gray-400'
                 )}
-              />
-            )}
-          </div>
-        )
-      })}
+              >
+                {isCompleted ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : isActive ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Circle className="h-4 w-4" />
+                )}
+              </div>
+              {/* Stage label */}
+              <span
+                className={cn(
+                  'text-[10px] leading-tight text-center',
+                  isCompleted && 'text-green-600',
+                  isCurrent && !isCurrentFailed && 'font-medium text-blue-600',
+                  isCurrentFailed && 'font-medium text-red-600',
+                  !isCompleted && !isCurrent && 'text-gray-400'
+                )}
+              >
+                {stage.label}
+              </span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

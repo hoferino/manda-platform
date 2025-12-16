@@ -2,21 +2,32 @@
  * Step 1: Basic Information
  * Collects project name, company name, and industry
  * Story: E1.5 - Implement Project Creation Wizard (AC: #2, #5)
+ * Fix: TD-011.1 - Added searchable combobox for industry dropdown
  *
  * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
  */
 
 'use client'
 
+import { useState } from 'react'
+import { Check, ChevronsUpDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 
 export const INDUSTRIES = [
   { value: 'technology', label: 'Technology & Software' },
@@ -72,6 +83,8 @@ export function Step1BasicInfo({
   onIndustryChange,
   errors,
 }: Step1BasicInfoProps) {
+  const [industryOpen, setIndustryOpen] = useState(false)
+
   const handleProjectNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     if (value.length <= MAX_NAME_LENGTH) {
@@ -85,6 +98,8 @@ export function Step1BasicInfo({
       onCompanyNameChange(value)
     }
   }
+
+  const selectedIndustry = INDUSTRIES.find((ind) => ind.value === industry)
 
   return (
     <div className="space-y-6">
@@ -152,23 +167,53 @@ export function Step1BasicInfo({
           </div>
         </div>
 
-        {/* Industry */}
+        {/* Industry - Searchable Combobox (TD-011.1 fix) */}
         <div className="space-y-2">
           <Label htmlFor="industry">Industry</Label>
-          <Select value={industry} onValueChange={onIndustryChange}>
-            <SelectTrigger id="industry">
-              <SelectValue placeholder="Select an industry" />
-            </SelectTrigger>
-            <SelectContent>
-              {INDUSTRIES.map((ind) => (
-                <SelectItem key={ind.value} value={ind.value}>
-                  {ind.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={industryOpen} onOpenChange={setIndustryOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                id="industry"
+                variant="outline"
+                role="combobox"
+                aria-expanded={industryOpen}
+                className="w-full justify-between font-normal"
+              >
+                {selectedIndustry?.label || "Select an industry..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search industries..." />
+                <CommandList>
+                  <CommandEmpty>No industry found.</CommandEmpty>
+                  <CommandGroup>
+                    {INDUSTRIES.map((ind) => (
+                      <CommandItem
+                        key={ind.value}
+                        value={ind.label}
+                        onSelect={() => {
+                          onIndustryChange(ind.value)
+                          setIndustryOpen(false)
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            industry === ind.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {ind.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <p className="text-xs text-muted-foreground">
-            Select the industry category (optional)
+            Type to search or select from the list (optional)
           </p>
         </div>
       </div>

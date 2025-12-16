@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str = ""
+    neo4j_database: str = "neo4j"  # E10.1: Custom database name for Graphiti
+
+    # Graphiti Configuration (E10.1)
+    graphiti_semaphore_limit: int = 10  # Concurrency limit to prevent rate limits
 
     # pg-boss configuration
     pgboss_schema: str = "pgboss"
@@ -74,6 +78,11 @@ class Settings(BaseSettings):
     gemini_pro_model: str = "gemini-2.5-pro"  # For financial/deep analysis
     gemini_lite_model: str = "gemini-2.5-flash-lite"  # For batch processing
     llm_analysis_batch_size: int = 5  # Chunks per LLM call
+
+    # Voyage AI Embeddings (E10.2)
+    voyage_api_key: str = ""
+    voyage_embedding_model: str = "voyage-finance-2"
+    voyage_embedding_dimensions: int = 1024
 
     @property
     def is_development(self) -> bool:

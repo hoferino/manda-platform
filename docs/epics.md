@@ -1,10 +1,10 @@
 # Manda - Epic and Story Breakdown
 
-**Document Status:** Complete (MVP Epics E1-E9)
+**Document Status:** Complete (MVP Epics E1-E9, Refinement E10-E11)
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-09
+**Last Updated:** 2025-12-15
 **Owner:** Max
-**Version:** 2.3 (Epic 9 redesigned to CIM Builder based on Party Mode findings — full CIM framework with 3-panel UI, 15 stories)
+**Version:** 2.4 (Added E10 Knowledge Graph Foundation, E11 Agent Context Engineering as Phase 1.5 Refinement; renumbered Phase 2/3 epics)
 
 ---
 
@@ -41,16 +41,27 @@ This document breaks down the Manda M&A Intelligence Platform into epics and sto
 | E8 | Q&A Co-Creation Workflow | Users can collaboratively build Q&A lists with AI assistance | 8 | P1 |
 | E9 | CIM Builder | Users can create complete CIMs through agent-guided workflow with 3-panel UI | 15 | P1 |
 
-**Total Stories (MVP):** 86
+**Total Stories (Phase 1 MVP):** 86
+
+### Phase 1.5: Refinement Sprint (Architecture Evolution)
+
+> Course correction epics from [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md). These epics upgrade the MVP knowledge architecture before Phase 2 enhancements.
+
+| Epic # | Epic Name | User Value | Stories | Priority |
+|--------|-----------|------------|---------|----------|
+| E10 | Knowledge Graph Foundation | System builds temporal knowledge graph with Graphiti + Neo4j for hybrid retrieval | 8 | P0 |
+| E11 | Agent Context Engineering | Agent maintains coherent context, writes back to knowledge base, enables chat-from-anywhere | 7 | P1 |
+
+**Total Stories (Phase 1.5 Refinement):** 15
 
 ### Phase 2: Enhancement Epics (Platform Enhancement)
 
 | Epic # | Epic Name | User Value | Stories | Priority |
 |--------|-----------|------------|---------|----------|
-| E10 | Smart Document Classification | Users get AI-assisted document classification with approval workflow | 8 | P2 |
-| E11 | Advanced Data Room Features | Users get enhanced organization and collaboration | 6 | P2 |
-| E12 | External Data Integration | Users can connect external data sources | 5 | P2 |
-| E13 | Advanced CIM Features | Users get richer CIM capabilities | 6 | P2 |
+| E12 | Smart Document Classification | Users get AI-assisted document classification with approval workflow | 8 | P2 |
+| E13 | Advanced Data Room Features | Users get enhanced organization and collaboration | 6 | P2 |
+| E14 | External Data Integration | Users can connect external data sources | 5 | P2 |
+| E15 | Advanced CIM Features | Users get richer CIM capabilities | 6 | P2 |
 
 **Total Stories (Phase 2):** 25
 
@@ -58,8 +69,8 @@ This document breaks down the Manda M&A Intelligence Platform into epics and sto
 
 | Epic # | Epic Name | User Value | Stories | Priority |
 |--------|-----------|------------|---------|----------|
-| E14 | Cross-Domain Intelligence Engine | Users get proactive pattern detection across domains (11+ patterns) | 12 | P3 |
-| E15 | Proactive Insight Surfacing | System proactively alerts users to critical patterns | 5 | P3 |
+| E16 | Cross-Domain Intelligence Engine | Users get proactive pattern detection across domains (11+ patterns) | 12 | P3 |
+| E17 | Proactive Insight Surfacing | System proactively alerts users to critical patterns | 5 | P3 |
 
 **Total Stories (Phase 3):** 17
 

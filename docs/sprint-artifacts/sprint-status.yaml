@@ -1764,85 +1764,126 @@ development_status:
   # Sprint Change Proposal: docs/sprint-change-proposal-2025-12-15.md (architecture evolution - APPROVED)
   # Research: docs/research/knowledge-base-architecture-research.md
 
-  epic-10: backlog
+  # Epic 10: Knowledge Graph Foundation (Graphiti + Neo4j)
+  # REWRITTEN 2025-12-15: Major architecture evolution per sprint-change-proposal-2025-12-15.md
+  # Consolidates to Graphiti + Neo4j as single knowledge store (removes pgvector)
+  # Priority: P0 | Points: 42 | Stories: 8
+  epic-10: in-progress
   epic-10-jira-id: SCRUM-10
   epic-10-name: "Knowledge Graph Foundation (Graphiti + Neo4j)"
   epic-10-priority: P0
   epic-10-epic-file: docs/sprint-artifacts/epics/epic-E10.md
   epic-10-stories: 8
   epic-10-points: 42
-  epic-10-notes: |
-    REWRITTEN 2025-12-15: Major architecture evolution per sprint-change-proposal-2025-12-15.md
+  e10-1-graphiti-infrastructure-setup: done
+  e10-1-points: 5
+  e10-2-voyage-embedding-integration: done
+  e10-2-points: 3
+  e10-2-completion-notes: |
+    - Integrated VoyageAI voyage-finance-2 embeddings (1024d) via graphiti-core[voyageai] extra
+    - Implemented init-time fallback to Gemini text-embedding-004 (768d) when VOYAGE_API_KEY missing
+    - Added cost tracking logging with provider, model, texts_count, dimensions, estimated_cost_usd
+    - Created 13 unit tests (1 integration test skipped - requires API key)
+    - Code review fixes: Added texts_count to logs, removed dead code, fixed placeholder test, added cost logging test
+  e10-3-sell-side-spine-schema: done
+  e10-3-points: 5
+  e10-3-completion-notes: |
+    - Created schema module at manda-processing/src/graphiti/schema/
+    - Implemented 5 entity Pydantic models: Company, Person, FinancialMetric, Finding, Risk
+    - Implemented 9 edge Pydantic models: WorksFor, SupersedesEdge, ContradictsEdge, SupportsEdge, ExtractedFrom, CompetesWith, InvestsIn, MentionsEdge, SuppliesEdge
+    - Created helper functions: get_entity_types(), get_edge_types(), get_edge_type_map()
+    - Updated GraphitiClient.add_episode() to accept entity/edge type parameters
+    - Created 73 unit tests for schema validation (includes bounds validation and new edge models)
+    - Created 7 integration tests for Graphiti schema integration
+    - Added comprehensive schema extension documentation to graphiti-local-setup.md
+    - Code review fixes: Added MentionsEdge, SuppliesEdge, bounds validation, exported EntityType/EdgeType
+  e10-4-document-ingestion-pipeline: ready-for-dev
+  e10-4-points: 8
+  e10-5-qa-and-chat-ingestion: backlog
+  e10-5-points: 5
+  e10-6-entity-resolution: backlog
+  e10-6-points: 5
+  e10-7-hybrid-retrieval-with-reranking: backlog
+  e10-7-points: 8
+  e10-8-postgresql-cleanup: backlog
+  e10-8-points: 3
+  epic-10-retrospective: optional
 
-    Consolidates to Graphiti + Neo4j as single knowledge store (removes pgvector).
-    Implements temporal knowledge graph with bi-temporal model for "living truth".
-
-    Key changes from original E10:
-    - pgvector removed, embeddings in Neo4j native vector indexes
-    - Voyage finance-2 embeddings (1024d, finance-optimized) replace OpenAI
-    - Graphiti framework for entity extraction, resolution, temporal tracking
-    - Reranking pipeline (Voyage rerank-2.5) for 20-35% accuracy improvement
-    - Dynamic ontology with sell-side spine schema
-
-    Stories:
-    - E10.1: Graphiti Infrastructure Setup (5 pts)
-    - E10.2: Voyage Embedding Integration (3 pts)
-    - E10.3: Sell-Side Spine Schema (5 pts)
-    - E10.4: Document Ingestion Pipeline (8 pts)
-    - E10.5: Q&A and Chat Ingestion (5 pts)
-    - E10.6: Entity Resolution (5 pts)
-    - E10.7: Hybrid Retrieval with Reranking (8 pts)
-    - E10.8: PostgreSQL Cleanup (3 pts)
-
+  # Epic 11: Agent Context Engineering
+  # UPDATED 2025-12-15: Aligned with Graphiti architecture
+  # Depends on E10 for Graphiti infrastructure
+  # Priority: P1 | Points: 39 | Stories: 7
   epic-11: backlog
   epic-11-jira-id: SCRUM-11
   epic-11-name: "Agent Context Engineering"
   epic-11-priority: P1
   epic-11-epic-file: docs/sprint-artifacts/epics/epic-E11.md
   epic-11-stories: 7
-  epic-11-notes: |
-    UPDATED 2025-12-15: Aligned with Graphiti architecture (sprint-change-proposal-2025-12-15.md)
-
-    Enables "agent chat from anywhere" vision with seamless context-knowledge flow.
-    Depends on E10 for Graphiti infrastructure.
-
-    Key deliverables:
-    - E11.1: Tool Call Context Compression
-    - E11.2: Conversation Summarization
-    - E11.3: Knowledge Base Write-Back from Chat (uses Graphiti ingestion)
-    - E11.4: Intent-Aware Knowledge Retrieval (uses Graphiti + reranking)
-    - E11.5: Type-Safe Tool Definitions with Pydantic AI
-    - E11.6: Model Configuration and Switching (includes Voyage)
-    - E11.7: Context-Knowledge Integration Tests
-
-    Research foundation:
-    - LangChain Context Engineering (write, select, compress, isolate)
-    - LangGraph SummarizationMiddleware
-    - Pydantic AI type safety
+  epic-11-points: 39
+  e11-1-tool-call-context-compression: backlog
+  e11-1-points: 5
+  e11-2-conversation-summarization: backlog
+  e11-2-points: 5
+  e11-3-knowledge-base-write-back-from-chat: backlog
+  e11-3-points: 8
+  e11-4-intent-aware-knowledge-retrieval: backlog
+  e11-4-points: 5
+  e11-5-type-safe-tool-definitions-with-pydantic-ai: backlog
+  e11-5-points: 8
+  e11-6-model-configuration-and-switching: backlog
+  e11-6-points: 3
+  e11-7-context-knowledge-integration-tests: backlog
+  e11-7-points: 5
+  epic-11-retrospective: optional
 
   # Tech Debt items discovered during Phase 1 testing
   phase-2-tech-debt:
     - id: TD-010
       title: "BUG-002 Fix: Create IRL → 404"
-      status: pending
+      status: completed
       priority: critical
+      completed_date: 2025-12-15
+      fix_summary: "Replaced broken link with dialog-based IRL creation using existing IRLTemplateSelector"
     - id: TD-011
       title: "UX Issues from UAT"
-      status: pending
+      status: completed
       priority: medium
+      completed_date: 2025-12-15
       items:
-        - Industry dropdown needs search
-        - Folder reordering not implemented
-        - Progress indicator formatting
+        - "Industry dropdown needs search (FIXED: searchable combobox with @dnd-kit)"
+        - "Folder reordering not implemented (FIXED: drag-and-drop with sort_order)"
+        - "Progress indicator formatting (FIXED: improved layout with progress bar)"
+      fix_summary: |
+        TD-011.1: Step1BasicInfo now uses Command/Popover combobox for searchable industry selection
+        TD-011.2: FolderTree uses @dnd-kit for drag-and-drop reordering, API endpoint added, migration 00040
+        TD-011.3: ProcessingProgress redesigned with progress bar and properly aligned stage icons
     - id: TD-012
       title: "E7.6 Deferred Tests"
-      status: pending
+      status: completed
       priority: medium
+      completed_date: "2025-12-15"
+      fix_summary: |
+        Created correction-propagation.test.ts with 19 tests for generateImpactSummary,
+        DependentInsight/ReviewQueueCount/ReviewQueueItem types, PropagationResult handling.
+        Created regeneration.test.ts with 18 tests for RegenerationResult types,
+        QARegenerationContext/CIMRegenerationContext, regeneration service behavior.
     - id: TD-013
       title: "E5.3 Chat Component Tests"
-      status: pending
+      status: completed
       priority: medium
+      completed_date: "2025-12-15"
+      fix_summary: |
+        Created ChatInput.test.tsx (24 tests): rendering, submission, keyboard shortcuts,
+        disabled/loading states, character limits, file upload, accessibility.
+        Created MessageList.test.tsx (18 tests): empty state, rendering, streaming, scroll behavior.
+        Created ToolIndicator.test.tsx (31 tests): rendering, tool messages, icons, animations.
     - id: TD-014
       title: "LLM Integration Tests"
-      status: pending
+      status: completed
       priority: low
+      completed_date: "2025-12-15"
+      fix_summary: |
+        Verified existing comprehensive test suite in __tests__/llm/ including:
+        integration.test.ts (provider tests), client.test.ts, config.test.ts,
+        callbacks.test.ts, types.test.ts, agent-tools.test.ts. Tests skip by default
+        and run with RUN_INTEGRATION_TESTS=true for manual API verification.
