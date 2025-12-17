@@ -10,7 +10,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import health, webhooks, search, processing, financial_metrics
+from src.api.routes import health, webhooks, search, processing, financial_metrics, entities
 from src.config import get_settings
 
 # Configure structured logging
@@ -92,6 +92,7 @@ def create_app() -> FastAPI:
     app.include_router(search.router, tags=["Search"])
     app.include_router(processing.router, tags=["Processing"])
     app.include_router(financial_metrics.router, tags=["Financial Metrics"])  # E3.9
+    app.include_router(entities.router, tags=["Entities"])  # E10.6: Entity resolution
 
     return app
 

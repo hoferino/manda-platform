@@ -2,9 +2,11 @@
 Webhook endpoints for external triggers.
 Story: E3.3 - Implement Document Parsing Job Handler (AC: #1, #5)
 Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #5)
+Story: E10.5 - Q&A and Chat Ingestion (AC: #1)
 
 This module provides webhook endpoints that trigger job processing:
 - /webhooks/document-uploaded: Triggered when a document is uploaded
+- /webhooks/qa-answered: Triggered when a Q&A item is answered (E10.5)
 - /api/processing/retry/*: Stage-aware retry endpoints (E3.8)
 """
 
@@ -196,6 +198,91 @@ async def document_uploaded_batch(
     )
 
     return results
+
+
+# ============================================================================
+# E10.5: Q&A Answer Ingestion Webhook
+# ============================================================================
+
+class QAAnsweredPayload(BaseModel):
+    """
+    Payload for qa-answered webhook.
+
+    Story: E10.5 - Q&A and Chat Ingestion (AC: #1)
+    """
+
+    qa_item_id: str = Field(..., description="UUID of the Q&A item")
+    deal_id: str = Field(..., description="UUID of the parent deal")
+    question: str = Field(..., description="The question text")
+    answer: str = Field(..., description="The answer text provided by user")
+
+
+@router.post(
+    "/qa-answered",
+    status_code=202,
+    response_model=WebhookResponse,
+    summary="Trigger Q&A answer ingestion",
+    description="E10.5: Webhook called when a Q&A item is answered to ingest into Graphiti.",
+)
+async def qa_answered(
+    payload: QAAnsweredPayload,
+    api_key: str = Depends(verify_api_key),
+) -> WebhookResponse:
+    """
+    Handle qa-answered webhook (E10.5).
+
+    Enqueues ingest-qa-response job for async processing.
+    Returns 202 Accepted immediately (fire-and-forget pattern).
+
+    Args:
+        payload: Q&A answer details
+        api_key: API key from Authorization header
+
+    Returns:
+        WebhookResponse with job_id
+    """
+    logger.info(
+        "Received qa-answered webhook",
+        qa_item_id=payload.qa_item_id,
+        deal_id=payload.deal_id,
+    )
+
+    try:
+        queue = await get_job_queue()
+
+        job_data = {
+            "qa_item_id": payload.qa_item_id,
+            "deal_id": payload.deal_id,
+            "question": payload.question,
+            "answer": payload.answer,
+        }
+
+        job_id = await queue.enqueue("ingest-qa-response", job_data)
+
+        logger.info(
+            "Q&A answer ingestion job enqueued",
+            qa_item_id=payload.qa_item_id,
+            deal_id=payload.deal_id,
+            job_id=job_id,
+        )
+
+        return WebhookResponse(
+            success=True,
+            message="Q&A answer ingestion job enqueued",
+            job_id=job_id,
+        )
+
+    except Exception as e:
+        logger.error(
+            "Failed to enqueue Q&A ingestion job",
+            qa_item_id=payload.qa_item_id,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to enqueue Q&A ingestion job: {str(e)}",
+        )
 
 
 # ============================================================================

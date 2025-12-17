@@ -2,6 +2,7 @@
  * Q&A Item API Route - Single Item Operations
  * Handles GET (single), PUT (update with optimistic locking), DELETE operations
  * Story: E8.1 - Q&A Data Model and CRUD API
+ * Story: E10.5 - Q&A and Chat Ingestion (AC: #1) - Triggers Graphiti ingestion on answer
  * AC: #3 (PUT succeeds with current updated_at), #4 (PUT returns 409 on conflict), #5 (DELETE returns 204)
  */
 
@@ -153,6 +154,49 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const item = mapDbRowToQAItem(updatedRow)
+
+    // E10.5: Fire-and-forget Graphiti ingestion for Q&A answer
+    // Trigger when an answer is provided (date_answered is set)
+    if (input.answer && updatedRow.date_answered) {
+      const processingApiUrl = process.env.PROCESSING_API_URL
+      const processingApiKey = process.env.PROCESSING_API_KEY
+
+      if (processingApiUrl && processingApiKey) {
+        // Fire-and-forget: Don't await - let it process asynchronously
+        fetch(`${processingApiUrl}/webhooks/qa-answered`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${processingApiKey}`,
+          },
+          body: JSON.stringify({
+            qa_item_id: itemId,
+            deal_id: projectId,
+            question: updatedRow.question,
+            answer: input.answer,
+          }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              console.error(
+                `[api/qa/[itemId]] Graphiti ingestion webhook failed: ${response.status} ${response.statusText}`
+              )
+            }
+          })
+          .catch((err) => {
+            // Log but don't fail the response - ingestion is best-effort
+            console.error('[api/qa/[itemId]] Failed to trigger Graphiti ingestion:', err)
+          })
+      } else {
+        // Log which specific env var is missing for easier debugging
+        const missing = []
+        if (!processingApiUrl) missing.push('PROCESSING_API_URL')
+        if (!processingApiKey) missing.push('PROCESSING_API_KEY')
+        console.warn(
+          `[api/qa/[itemId]] Missing env vars: ${missing.join(', ')} - skipping Graphiti ingestion for Q&A ${itemId}`
+        )
+      }
+    }
 
     return NextResponse.json({ item })
   } catch (err) {

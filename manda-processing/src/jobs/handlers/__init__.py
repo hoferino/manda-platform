@@ -5,6 +5,8 @@ Story: E3.4 - Generate Embeddings for Semantic Search (AC: #1)
 Story: E3.5 - Implement LLM Analysis with Gemini 2.5 (AC: #1)
 Story: E3.9 - Financial Model Integration (AC: #1)
 Story: E4.7 - Detect Contradictions Using Neo4j (AC: #1)
+Story: E10.4 - Document Ingestion Pipeline (AC: #1)
+Story: E10.5 - Q&A and Chat Ingestion (AC: #1, #2)
 
 This module contains handlers for various job types processed by the worker.
 Each handler is registered with the Worker class for automatic invocation.
@@ -97,6 +99,44 @@ def handle_analyze_feedback_all(job):
     return _handler(job)
 
 
+def get_handle_ingest_graphiti():
+    """Get the ingest_graphiti handler (lazy import)."""
+    from src.jobs.handlers.ingest_graphiti import handle_ingest_graphiti
+    return handle_ingest_graphiti
+
+
+def handle_ingest_graphiti(job):
+    """Handle an ingest-graphiti job (lazy wrapper)."""
+    from src.jobs.handlers.ingest_graphiti import handle_ingest_graphiti as _handler
+    return _handler(job)
+
+
+# E10.5: Q&A response ingestion handler
+def get_handle_ingest_qa_response():
+    """Get the ingest_qa_response handler (lazy import)."""
+    from src.jobs.handlers.ingest_qa_response import handle_ingest_qa_response
+    return handle_ingest_qa_response
+
+
+def handle_ingest_qa_response(job):
+    """Handle an ingest-qa-response job (lazy wrapper)."""
+    from src.jobs.handlers.ingest_qa_response import handle_ingest_qa_response as _handler
+    return _handler(job)
+
+
+# E10.5: Chat fact ingestion handler
+def get_handle_ingest_chat_fact():
+    """Get the ingest_chat_fact handler (lazy import)."""
+    from src.jobs.handlers.ingest_chat_fact import handle_ingest_chat_fact
+    return handle_ingest_chat_fact
+
+
+def handle_ingest_chat_fact(job):
+    """Handle an ingest-chat-fact job (lazy wrapper)."""
+    from src.jobs.handlers.ingest_chat_fact import handle_ingest_chat_fact as _handler
+    return _handler(job)
+
+
 __all__ = [
     "handle_parse_document",
     "get_handle_parse_document",
@@ -112,4 +152,11 @@ __all__ = [
     "get_handle_analyze_feedback",
     "handle_analyze_feedback_all",
     "get_handle_analyze_feedback_all",
+    "handle_ingest_graphiti",
+    "get_handle_ingest_graphiti",
+    # E10.5: Q&A and Chat ingestion
+    "handle_ingest_qa_response",
+    "get_handle_ingest_qa_response",
+    "handle_ingest_chat_fact",
+    "get_handle_ingest_chat_fact",
 ]

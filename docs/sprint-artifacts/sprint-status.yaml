@@ -1799,10 +1799,25 @@ development_status:
     - Code review fixes: Added MentionsEdge, SuppliesEdge, bounds validation, exported EntityType/EdgeType
   e10-4-document-ingestion-pipeline: ready-for-dev
   e10-4-points: 8
-  e10-5-qa-and-chat-ingestion: backlog
+  e10-5-qa-and-chat-ingestion: complete
   e10-5-points: 5
-  e10-6-entity-resolution: backlog
+  e10-5-completion-notes: |
+    - Extended GraphitiIngestionService with ingest_qa_response() and ingest_chat_fact() methods
+    - Defined confidence constants: QA_CONFIDENCE=0.95, CHAT_CONFIDENCE=0.90, DOCUMENT_CONFIDENCE=0.85
+    - Created ingest-qa-response and ingest-chat-fact job handlers following E10.4 patterns
+    - Added /webhooks/qa-answered endpoint (202 Accepted, fire-and-forget)
+    - Updated Q&A API (manda-app) to trigger ingestion on answer submission
+    - Created 24 unit tests (all passing) and comprehensive integration tests
+    - Supersession handled automatically by Graphiti's temporal model
+    - Task 5.4 (chat trigger in knowledge.ts) deferred to E10.6+ - handler infrastructure ready
+  e10-6-entity-resolution: done
   e10-6-points: 5
+  e10-6-notes: |
+    - Created resolution.py with M&A-specific entity resolution configuration
+    - Added aliases field to Person entity for name variations
+    - Implemented manual merge/split API endpoints with audit trail
+    - Created 69 unit tests for resolution module (all passing)
+    - Added E10.6 integration tests for entity resolution scenarios
   e10-7-hybrid-retrieval-with-reranking: backlog
   e10-7-points: 8
   e10-8-postgresql-cleanup: backlog

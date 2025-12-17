@@ -98,6 +98,7 @@ class TestPersonEntity:
         assert person.role == "executive"
         assert person.title is None
         assert person.company_id is None
+        assert person.aliases == []  # E10.6: aliases defaults to empty list
 
     def test_valid_person_full(self):
         """Person with all fields populated."""
@@ -106,11 +107,13 @@ class TestPersonEntity:
             title="CEO",
             role="executive",
             company_id="company-123",
+            aliases=["J. Smith", "Johnny Smith"],  # E10.6: aliases field
         )
         assert person.name == "John Smith"
         assert person.title == "CEO"
         assert person.role == "executive"
         assert person.company_id == "company-123"
+        assert person.aliases == ["J. Smith", "Johnny Smith"]
 
     def test_valid_person_roles(self):
         """All valid person roles work."""

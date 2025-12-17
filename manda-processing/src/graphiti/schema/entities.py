@@ -50,12 +50,14 @@ class Person(BaseModel):
         title: Job title (optional)
         role: Person's role in M&A context
         company_id: Reference to associated Company entity (optional)
+        aliases: Alternative names for entity resolution (e.g., "J. Smith" for "John Smith")
     """
 
     name: str
     title: str | None = None
     role: Literal["executive", "advisor", "board", "investor", "employee"]
     company_id: str | None = None
+    aliases: list[str] = Field(default_factory=list)
 
 
 class FinancialMetric(BaseModel):

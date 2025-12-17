@@ -2,13 +2,14 @@
 Embedding generation job handler.
 Story: E3.4 - Generate Embeddings for Semantic Search (AC: #1, #5)
 Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
+Story: E10.4 - Document Ingestion Pipeline (AC: #1)
 
 This handler processes generate_embeddings jobs from the pg-boss queue:
 1. Loads document chunks from database
 2. Generates embeddings using OpenAI text-embedding-3-large
 3. Stores embeddings in pgvector column
 4. Updates document status
-5. Enqueues next job (analyze_document)
+5. Enqueues next job (ingest-graphiti) - E10.4 pipeline change
 
 Enhanced with E3.8:
 - Stage tracking via last_completed_stage
@@ -291,11 +292,17 @@ class GenerateEmbeddingsHandler:
         user_id: Optional[str] = None,
     ) -> str:
         """
-        Enqueue the analyze_document job.
+        Enqueue the ingest-graphiti job.
+
+        Story: E10.4 - Document Ingestion Pipeline (AC: #1)
+
+        Pipeline change: generate-embeddings now enqueues ingest-graphiti
+        instead of analyze-document. The ingest-graphiti handler will
+        then enqueue analyze-document after Graphiti ingestion completes.
 
         Args:
             document_id: UUID of the processed document
-            deal_id: Parent deal ID
+            deal_id: Parent deal ID (required for Graphiti namespace isolation)
             user_id: User who uploaded
 
         Returns:
@@ -307,15 +314,16 @@ class GenerateEmbeddingsHandler:
             "document_id": str(document_id),
         }
 
+        # deal_id is required for Graphiti ingestion (namespace isolation)
         if deal_id:
             job_data["deal_id"] = deal_id
         if user_id:
             job_data["user_id"] = user_id
 
-        job_id = await queue.enqueue("analyze-document", job_data)
+        job_id = await queue.enqueue("ingest-graphiti", job_data)
 
         logger.info(
-            "Enqueued analyze-document job",
+            "Enqueued ingest-graphiti job",
             document_id=str(document_id),
             next_job_id=job_id,
         )

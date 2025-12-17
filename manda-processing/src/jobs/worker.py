@@ -32,6 +32,10 @@ DEFAULT_WORKER_CONFIG: dict[str, WorkerConfig] = {
     "analyze-document": WorkerConfig(batch_size=3, polling_interval_seconds=5),
     "extract-financials": WorkerConfig(batch_size=3, polling_interval_seconds=5),
     "update-graph": WorkerConfig(batch_size=10, polling_interval_seconds=1),
+    "ingest-graphiti": WorkerConfig(batch_size=3, polling_interval_seconds=5),  # E10.4
+    # E10.5: Q&A and Chat ingestion
+    "ingest-qa-response": WorkerConfig(batch_size=5, polling_interval_seconds=3),
+    "ingest-chat-fact": WorkerConfig(batch_size=10, polling_interval_seconds=2),
 }
 
 
@@ -282,3 +286,18 @@ def setup_default_handlers(worker: Worker) -> None:
     from src.jobs.handlers import handle_extract_financials
 
     worker.register("extract-financials", handle_extract_financials)
+
+    # Graphiti ingestion handler (E10.4)
+    from src.jobs.handlers import handle_ingest_graphiti
+
+    worker.register("ingest-graphiti", handle_ingest_graphiti)
+
+    # Q&A response ingestion handler (E10.5)
+    from src.jobs.handlers import handle_ingest_qa_response
+
+    worker.register("ingest-qa-response", handle_ingest_qa_response)
+
+    # Chat fact ingestion handler (E10.5)
+    from src.jobs.handlers import handle_ingest_chat_fact
+
+    worker.register("ingest-chat-fact", handle_ingest_chat_fact)
