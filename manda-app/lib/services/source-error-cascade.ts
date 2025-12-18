@@ -22,7 +22,7 @@ import {
   isSourceErrorCascadeAllowed,
   isAutoFlagDocumentFindingsAllowed,
 } from '@/lib/config/feature-flags'
-import { generateEmbedding } from '@/lib/services/embeddings'
+// E10.8: generateEmbedding removed - Graphiti handles all embeddings via Voyage AI
 import { updateNode, getNodeById } from '@/lib/neo4j/operations'
 import { NODE_LABELS, type FindingNode, type DocumentNode } from '@/lib/neo4j/types'
 
@@ -146,51 +146,28 @@ export async function flagAllFindingsFromDocument(
 /**
  * Regenerate embedding for a corrected finding (AC: #14)
  *
- * @param supabase - Supabase client
- * @param findingId - Finding ID
- * @param correctedText - The corrected text to embed
- * @returns Success status
+ * @deprecated E10.8 - pgvector embeddings removed, Graphiti handles embeddings
+ *
+ * This function is now a no-op. Graphiti handles all embeddings via Voyage AI
+ * during document ingestion. Corrections to findings should trigger Graphiti
+ * re-ingestion instead of direct embedding updates.
+ *
+ * @param supabase - Supabase client (unused)
+ * @param findingId - Finding ID (unused)
+ * @param correctedText - The corrected text (unused)
+ * @returns Success status (always true as no-op)
  */
 export async function regenerateFindingEmbedding(
-  supabase: SupabaseClient<Database>,
-  findingId: string,
-  correctedText: string
+  _supabase: SupabaseClient<Database>,
+  _findingId: string,
+  _correctedText: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Check if auto-reembed is enabled
-    const reembedEnabled = await getFeatureFlag('autoReembedCorrections')
-    if (!reembedEnabled) {
-      console.warn('[source-error-cascade] Auto-reembed disabled by feature flag')
-      return { success: false, error: 'Auto-reembed is disabled' }
-    }
-
-    // Generate new embedding
-    let embedding: number[]
-    try {
-      embedding = await generateEmbedding(correctedText)
-    } catch (embErr) {
-      console.error('[source-error-cascade] Embedding generation failed:', embErr)
-      return { success: false, error: 'Embedding generation failed' }
-    }
-
-    // Update finding with new embedding
-    const { error: updateError } = await supabase
-      .from('findings')
-      .update({
-        embedding: JSON.stringify(embedding),
-      })
-      .eq('id', findingId)
-
-    if (updateError) {
-      console.error('[source-error-cascade] Failed to update embedding:', updateError)
-      return { success: false, error: 'Failed to update embedding' }
-    }
-
-    return { success: true }
-  } catch (err) {
-    console.error('[source-error-cascade] Error regenerating embedding:', err)
-    return { success: false, error: 'Internal error' }
-  }
+  // E10.8: This function is deprecated.
+  // pgvector embeddings have been removed from findings table.
+  // Graphiti now handles all embeddings via Voyage AI during ingestion.
+  // TODO: Implement Graphiti episode update for corrected findings
+  console.info('[source-error-cascade] E10.8: regenerateFindingEmbedding is now a no-op')
+  return { success: true }
 }
 
 /**

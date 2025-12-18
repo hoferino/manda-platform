@@ -1,6 +1,11 @@
 /**
  * Embedding Service Tests
  * Story: E4.2 - Implement Semantic Search for Findings (AC: #2, #7)
+ *
+ * @deprecated E10.8 - PostgreSQL Cleanup
+ * These tests are for the deprecated OpenAI embeddings service.
+ * Graphiti now handles all embeddings via Voyage AI.
+ * Keeping tests for backwards compatibility during transition.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'

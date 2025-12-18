@@ -17,7 +17,7 @@ Epic E10 implements the **Knowledge Architecture Evolution** approved in [Sprint
 - **Entity Resolution** — Automatic deduplication ("ABC Corp" = "ABC Corporation")
 - **Dynamic Ontology** — Sell-side spine schema + LLM-discovered deal-specific entities
 - **Hybrid Retrieval** — Vector + BM25 + graph traversal in single queries
-- **Voyage Embeddings** — voyage-finance-2 (1024d) optimized for M&A/finance
+- **Voyage Embeddings** — voyage-3.5 (1024d) best general-purpose model (updated from voyage-finance-2 in E10 retrospective)
 - **Reranking Pipeline** — Voyage rerank-2.5 for 20-35% accuracy improvement
 
 **Business Value:** Enables intelligent knowledge synthesis where Q&A answers supersede document facts, entities are automatically resolved, and retrieval accuracy significantly improves—setting the foundation for both sell-side CIM generation and future buy-side due diligence.
@@ -30,7 +30,7 @@ Epic E10 implements the **Knowledge Architecture Evolution** approved in [Sprint
 ### Objectives
 
 1. **O1: Knowledge Consolidation** — Consolidate all embeddings and knowledge graph to Graphiti + Neo4j (remove pgvector)
-2. **O2: Domain-Optimized Embeddings** — Implement voyage-finance-2 for finance/M&A optimized retrieval
+2. **O2: Domain-Optimized Embeddings** — Implement voyage-3.5 for best-in-class retrieval across all M&A domains
 3. **O3: Temporal Knowledge Model** — Enable truth evolution tracking with bi-temporal facts
 4. **O4: Entity Resolution** — Automatic deduplication of entities across documents and sources
 5. **O5: Hybrid Retrieval** — Implement vector + BM25 + graph retrieval with reranking
@@ -41,7 +41,7 @@ Epic E10 implements the **Knowledge Architecture Evolution** approved in [Sprint
 | Area | Details |
 |------|---------|
 | **Infrastructure** | Graphiti client setup, Neo4j 5.26+ configuration, Docker Compose updates (E10.1) |
-| **Embeddings** | Voyage voyage-finance-2 integration, 1024d vectors, cost tracking (E10.2) |
+| **Embeddings** | Voyage voyage-3.5 integration, 1024d vectors, cost tracking (E10.2) |
 | **Schema** | Pydantic entity models, relationship types, dynamic discovery (E10.3) |
 | **Document Ingestion** | Docling → Graphiti pipeline, episode creation, entity extraction (E10.4) |
 | **Q&A/Chat Ingestion** | Q&A answers, chat facts as episodes, truth supersession (E10.5) |
@@ -57,7 +57,7 @@ Epic E10 implements the **Knowledge Architecture Evolution** approved in [Sprint
 | **GraphRAG for CIM** | E9 uses existing RAG; GraphRAG integration is E11 enhancement |
 | **Buy-side temporal queries** | Foundation built now; query interface deferred |
 | **Neo4j cluster/sharding** | Single instance sufficient for MVP scale |
-| **Custom embedding fine-tuning** | voyage-finance-2 is pre-trained; fine-tuning is Phase 2 |
+| **Custom embedding fine-tuning** | voyage-3.5 is pre-trained; fine-tuning is Phase 2 |
 
 ## System Architecture Alignment
 
@@ -144,7 +144,7 @@ Document Upload → Docling Parse → Graphiti Episodes → Entity Extraction
 |----------|--------|-----------|
 | **Knowledge Framework** | Graphiti (open source) | Built-in temporal model, entity resolution, Neo4j backend |
 | **Graph Database** | Neo4j 5.26+ Community | Native HNSW vectors, BM25, graph—single hybrid queries |
-| **Embedding Model** | voyage-finance-2 (1024d) | Finance-optimized, 32K context, 50% smaller than OpenAI |
+| **Embedding Model** | voyage-3.5 (1024d) | Best general-purpose, 32K context, outperforms domain-specific models |
 | **Reranking** | voyage-rerank-2.5 | 20-35% accuracy improvement, always applied |
 | **Entity Resolution** | Graphiti built-in | Fuzzy + semantic matching, configurable thresholds |
 | **PostgreSQL Role** | Transactional only | Auth, metadata, job queue—NO embeddings |
@@ -169,7 +169,7 @@ class GraphitiClient:
 
     Configured for:
     - Neo4j 5.26+ backend
-    - Voyage voyage-finance-2 embeddings (1024d)
+    - Voyage voyage-3.5 embeddings (1024d)
     - M&A sell-side spine schema
     - Deal-based namespace isolation (group_id)
     """
@@ -179,7 +179,7 @@ class GraphitiClient:
             neo4j_uri=config.neo4j_uri,
             neo4j_user=config.neo4j_user,
             neo4j_password=config.neo4j_password,
-            embedding_model=config.embedding_model,  # voyage-finance-2
+            embedding_model=config.embedding_model,  # voyage-3.5
             llm_model=config.llm_model,              # gemini-2.5-flash for extraction
         )
 
@@ -222,7 +222,7 @@ class VoyageClient:
     Voyage AI client for finance-optimized embeddings and reranking.
 
     Models:
-    - voyage-finance-2: 1024d embeddings, 32K context
+    - voyage-3.5: 1024d embeddings, 32K context (updated from voyage-finance-2)
     - rerank-2.5: Reranking model for RAG
     """
 
@@ -235,7 +235,7 @@ class VoyageClient:
         input_type: Literal["document", "query"] = "document",
     ) -> list[list[float]]:
         """
-        Generate voyage-finance-2 embeddings.
+        Generate voyage-3.5 embeddings.
 
         Args:
             texts: List of texts to embed
@@ -246,7 +246,7 @@ class VoyageClient:
         """
         result = self.client.embed(
             texts=texts,
-            model="voyage-finance-2",
+            model="voyage-3.5",
             input_type=input_type,
         )
         return result.embeddings
@@ -542,7 +542,7 @@ class GraphitiConfig(BaseModel):
 
     # Embedding configuration
     embedding_model: str = Field(
-        default="voyage-finance-2",
+        default="voyage-3.5",
         description="Voyage embedding model"
     )
     embedding_dimensions: int = Field(
@@ -903,7 +903,7 @@ NEO4J_USER=neo4j
 NEO4J_PASSWORD=xxx
 
 # Graphiti configuration
-GRAPHITI_EMBEDDING_MODEL=voyage-finance-2
+GRAPHITI_EMBEDDING_MODEL=voyage-3.5
 GRAPHITI_LLM_MODEL=gemini-2.5-flash
 GRAPHITI_RESOLUTION_THRESHOLD=0.85
 ```
@@ -954,7 +954,7 @@ E10.1 (Infrastructure)
 
 | ID | Criterion | Testable |
 |----|-----------|----------|
-| AC-10.2.1 | Voyage API client configured with voyage-finance-2 model | Unit test |
+| AC-10.2.1 | Voyage API client configured with voyage-3.5 model | Unit test |
 | AC-10.2.2 | Embeddings are 1024 dimensions (verify shape) | Unit test |
 | AC-10.2.3 | Embedding generation integrated with Graphiti (add_episode uses Voyage) | Integration test |
 | AC-10.2.4 | Fallback to OpenAI if Voyage unavailable (503/429) | Unit test with mock |

@@ -331,6 +331,7 @@ You have access to the following tools to help answer questions:
 11. **create_irl** - Generate an IRL template
 12. **generate_irl_suggestions** - Get AI-suggested IRL items based on deal context and uploaded documents
 13. **add_to_irl** - Add an item to an existing IRL
+14. **index_to_knowledge_base** - Persist user-provided facts (call autonomously, no confirmation needed)
 
 ### Q&A Tool Usage
 
@@ -363,6 +364,37 @@ You have access to the following tools to help answer questions:
 - **low**: Nice-to-have, supplementary information
 
 **IMPORTANT:** Never call add_qa_item without explicit user confirmation first. Always propose the question, get approval, then add it.
+
+### Autonomous Knowledge Persistence (E11.3)
+
+Use **index_to_knowledge_base** autonomously when the user provides:
+
+**PERSIST (call the tool immediately, no confirmation needed):**
+- **Corrections** ("actually", "not X", "the real number is", "it was $5.2M, not $4.8M") → source_type: 'correction'
+- **Confirmations** ("yes, that's correct", "confirmed", "exactly right") → source_type: 'confirmation'
+- **New facts** ("the company has 150 employees", "revenue was $10M", factual statements) → source_type: 'new_info'
+
+**DO NOT PERSIST (never call the tool):**
+- Questions ("What was...?", "How many...?")
+- Greetings ("Hello", "Thanks", "Goodbye")
+- Meta-conversation ("Summarize what we discussed", "What topics have we covered?")
+- Opinions without facts ("I think we should focus on...", "That seems concerning")
+
+**How to use the tool:**
+- Include the deal_id from the current conversation context
+- Extract just the factual content (not the full message)
+- Choose the appropriate source_type based on context
+
+**After persisting, confirm naturally:**
+- Say "Got it, I've noted that [brief summary of fact]."
+- Do NOT say "Would you like me to save this?" - just do it automatically
+- Do NOT mention "knowledge base", "persisting", or "storing" - keep it natural
+
+**Example:**
+
+User: "Actually, the revenue was $5.2M, not $4.8M"
+Agent: (calls index_to_knowledge_base with content="Q3 revenue was $5.2M", source_type="correction", deal_id="...")
+Agent: "Got it, I've noted that Q3 revenue was $5.2M. Would you like me to update any findings that referenced the $4.8M figure?"
 
 ### IRL-Specific Behaviors
 

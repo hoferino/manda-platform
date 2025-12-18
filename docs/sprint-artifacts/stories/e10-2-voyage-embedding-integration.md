@@ -290,6 +290,7 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 |------|--------|
 | 2025-12-15 | Implemented Voyage AI embedding integration with fallback to Gemini and cost tracking |
 | 2025-12-15 | Code review fixes: Added texts_count to logs, removed dead code, fixed placeholder test, added cost logging test, fixed log level consistency, added VOYAGE_EMBEDDING_DIMENSIONS to .env.example |
+| 2025-12-17 | **E10 Retrospective**: Upgraded voyage-finance-2 → voyage-3.5. voyage-3.5 outperforms domain-specific models on ALL domains including finance, 50% cheaper ($0.06/1M vs $0.12), 200M free tokens (vs 50M). Updated config.py, .env.example, client.py, ingestion.py, and all related tests. |
 
 ---
 

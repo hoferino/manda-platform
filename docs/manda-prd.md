@@ -3,10 +3,10 @@
 
 **Document Status:** In Development
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-15
+**Last Updated:** 2025-12-17
 **Owner:** Max
 **Contributors:** PM John
-**Version:** 2.1 (Phase 1 MVP Complete, Phase 2 Graphiti Architecture)
+**Version:** 2.3 (Phase 1 MVP Complete, E11 Reprioritized)
 
 ---
 
@@ -52,12 +52,12 @@
 7. **Knowledge Graph (MVP):** Neo4j for relationship mapping — *to be enhanced by E10*
 8. **Deployment Target:** Google Cloud Run - scale-to-zero, cost-effective for variable traffic
 
-**Phase 2 (E10 Knowledge Graph Foundation) — 📋 PLANNED:**
+**Phase 2 (E10 Knowledge Graph Foundation) — ✅ IMPLEMENTED:**
 
-> These decisions are approved but NOT YET IMPLEMENTED. E10 will replace the MVP embedding/knowledge architecture.
+> E10 completed 2025-12-17. Knowledge architecture consolidated to Graphiti + Neo4j.
 
 9. **Graphiti + Neo4j:** Temporal knowledge graph framework consolidating all knowledge storage. Bi-temporal model (valid_at, invalid_at) tracks truth evolution. Single source of truth replacing pgvector dual-database approach. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
-10. **Voyage Embeddings:** voyage-finance-2 model (1024d, 32K context) — replaces OpenAI embeddings. Finance-optimized, $0.12/1M tokens.
+10. **Voyage Embeddings:** voyage-3.5 model (1024d, 32K context) — replaces OpenAI embeddings. Best general-purpose model, outperforms domain-specific models, $0.06/1M tokens. *(Updated from voyage-finance-2 in E10 retrospective)*
 11. **Hybrid Retrieval with Reranking:** Graphiti hybrid search (vector + BM25 + graph) + Voyage rerank-2.5. 20-35% accuracy improvement.
 12. **Sell-Side Spine Schema:** Core Pydantic entity types guide extraction while allowing dynamic discovery.
 13. **Entity Resolution:** Graphiti's built-in resolution tuned for M&A naming variations.
@@ -65,12 +65,19 @@
 **Phase 2 (E11 Agent Context Engineering) — 📋 PLANNED:**
 
 > These decisions are approved but NOT YET IMPLEMENTED. E11 depends on E10 completion.
+> **Reprioritized (2025-12-17):** Retrieval quality and autonomous persistence are now P0. Token optimization (isolation, summarization) moved to backlog — M&A conversations are typically short sessions.
 
-14. **Context Compression:** Post-response hook compresses tool call artifacts.
-15. **Conversation Summarization:** LangGraph SummarizationMiddleware for older messages.
-16. **Knowledge Write-Back:** Agent indexes user-provided facts to Graphiti.
-17. **Type-Safe Agent Tools:** Pydantic AI for Python backend tools.
-18. **Model Configuration:** Provider-agnostic model switching via config.
+**P0 - Critical:**
+14. **Intent-Aware Retrieval (Select strategy):** Pre-model hook retrieves relevant KB context for factual queries. Primary defense against hallucinations.
+15. **Agent-Autonomous Write-Back (Write strategy):** Agent autonomously indexes user-provided facts to Graphiti — no user confirmation needed. Graphiti handles entity extraction, deduplication, and contradiction detection.
+
+**P1 - Important:**
+16. **Type-Safe Agent Tools:** Pydantic AI for Python backend tools.
+17. **Model Configuration:** Provider-agnostic model switching via config.
+
+**P2/P3 - Backlog:**
+18. **Conversation Summarization (Compress strategy):** LangGraph `trimMessages` + LLM summarization for older messages.
+19. **Tool Result Isolation (Isolate strategy):** Tool executions return concise summaries to LLM context. (Lower priority — context window isn't the bottleneck for typical M&A sessions.)
 
 ---
 
@@ -1712,6 +1719,8 @@ M&A transactions involve analyzing companies across multiple dimensions to asses
 | 1.5 | 2025-12-09 | Phase 1 MVP complete (E1-E9) |
 | 2.0 | 2025-12-14 | Phase 2 planning: E10 Knowledge Base 2.0, E11 Agent Context Engineering. PRD differentiator language updated, pattern matching approach replaced with semantic intelligence |
 | 2.1 | 2025-12-15 | **Knowledge Architecture Evolution:** Consolidated to Graphiti + Neo4j (replacing pgvector dual-database). Switched to Voyage finance-2 embeddings (1024d). Added Voyage rerank-2.5 to retrieval pipeline. E10 renamed to "Knowledge Graph Foundation" with 8 stories. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md) |
+| 2.2 | 2025-12-17 | **E11 Context Engineering Research:** Updated E11 with LangChain's 4 context engineering strategies (Write, Select, Compress, Isolate). E11.1 renamed from "Context Compression" to "Tool Result Isolation" following Isolate pattern. Added E11.4 Intent-Aware Retrieval for Select strategy. |
+| 2.3 | 2025-12-17 | **E11 Reprioritization:** Based on research into Graphiti, LangGraph memory, and M&A workflow analysis. E11.4 (retrieval) and E11.3 (autonomous write-back) now P0. E11.1/E11.2 (token optimization) moved to backlog — conversations aren't long enough to be the bottleneck. E11.3 revised to agent-autonomous persistence (no user confirmation). |
 
 ---
 

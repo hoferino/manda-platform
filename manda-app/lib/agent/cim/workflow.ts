@@ -3,12 +3,14 @@
  *
  * Defines the state machine for CIM creation workflow.
  * Story: E9.4 - Agent Orchestration Core
+ * Story: E11.1 - Tool Result Isolation
  *
  * Features:
  * - Phase-based sequential workflow
  * - Human-in-the-loop checkpoints
  * - State persistence
  * - Error handling with retry
+ * - Tool result isolation (E11.1) - summaries in context, full results in cache
  */
 
 import { StateGraph, END, START, MemorySaver } from '@langchain/langgraph'
@@ -20,6 +22,12 @@ import { getCIMSystemPrompt, getPhaseIntroduction, getTransitionGuidance } from 
 import { cimTools } from './tools'
 import { CIMPhase, CIM_PHASES } from '@/lib/types/cim'
 import { queryKnowledgeBaseTool } from '@/lib/agent/tools/knowledge-tools'
+import {
+  createToolResultCache,
+  isolateAllTools,
+  type ToolResultCache,
+  DEFAULT_ISOLATION_CONFIG,
+} from '@/lib/agent/tool-isolation'
 
 // ============================================================================
 // Configuration
@@ -35,6 +43,32 @@ export interface CIMAgentConfig {
   dealName?: string
   llmConfig?: Partial<LLMConfig>
   verbose?: boolean
+  /** Disable tool isolation (for debugging) - E11.1 */
+  disableIsolation?: boolean
+}
+
+/**
+ * Module-level tool result cache for CIM workflow
+ * Shared across all agent node invocations within a workflow instance
+ * Story: E11.1 - Tool Result Isolation
+ */
+let cimToolResultCache: ToolResultCache | null = null
+
+/**
+ * Get or create the CIM tool result cache
+ */
+export function getCIMToolResultCache(): ToolResultCache {
+  if (!cimToolResultCache) {
+    cimToolResultCache = createToolResultCache()
+  }
+  return cimToolResultCache
+}
+
+/**
+ * Clear the CIM tool result cache (e.g., on workflow completion)
+ */
+export function clearCIMToolResultCache(): void {
+  cimToolResultCache = null
 }
 
 /**
@@ -92,8 +126,12 @@ async function errorHandlerNode(state: CIMAgentStateType): Promise<Partial<CIMAg
 
 /**
  * Create the main agent node with phase-aware prompts
+ * Story: E11.1 - Tool Result Isolation
  */
 function createAgentNode(config: CIMAgentConfig) {
+  // Get or create shared cache for this workflow
+  const toolResultCache = getCIMToolResultCache()
+
   return async (state: CIMAgentStateType): Promise<Partial<CIMAgentStateType>> => {
     try {
       // Get phase-specific system prompt
@@ -103,10 +141,18 @@ function createAgentNode(config: CIMAgentConfig) {
       const llm = createLLMClient(config.llmConfig)
 
       // Combine CIM tools with knowledge tools
-      const allTools = [
+      const baseTools = [
         ...cimTools,
         queryKnowledgeBaseTool,
       ]
+
+      // Apply tool isolation unless disabled (E11.1)
+      const allTools = config.disableIsolation
+        ? baseTools
+        : isolateAllTools(baseTools, toolResultCache, {
+            ...DEFAULT_ISOLATION_CONFIG,
+            verbose: config.verbose ?? false,
+          })
 
       // Create agent with current phase context
       const agent = createReactAgent({

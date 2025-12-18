@@ -59,7 +59,7 @@ import {
   formatNavigationWarnings,
   getRecommendedNextSection,
 } from '@/lib/agent/cim/utils/navigation-coherence'
-import { generateEmbedding } from '@/lib/services/embeddings'
+// E10.8: generateEmbedding removed - Graphiti handles embeddings via hybrid search
 import {
   retrieveContentForSlide,
   RankedContentItem,

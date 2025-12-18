@@ -91,20 +91,25 @@ Set up Graphiti with Neo4j backend, configure for M&A use case.
 **Points:** 3
 
 **Description:**
-Replace OpenAI embeddings with voyage-finance-2 for domain-optimized retrieval.
+Replace OpenAI embeddings with Voyage for domain-optimized retrieval.
+
+> **Updated 2025-12-17 (E10 Retrospective):** Upgraded from voyage-finance-2 to voyage-3.5
+> - voyage-3.5 outperforms domain-specific models on ALL domains including finance
+> - 50% cheaper: $0.06/1M tokens (vs $0.12)
+> - 200M free tokens (vs 50M)
 
 **Acceptance Criteria:**
-- [ ] Voyage API client configured
-- [ ] voyage-finance-2 model selected (1024 dimensions)
-- [ ] Embedding generation integrated with Graphiti pipeline
-- [ ] Fallback to OpenAI if Voyage unavailable
-- [ ] Cost tracking per embedding call
-- [ ] Environment variable configuration (VOYAGE_API_KEY)
+- [x] Voyage API client configured
+- [x] voyage-3.5 model selected (1024 dimensions, configurable 256-2048)
+- [x] Embedding generation integrated with Graphiti pipeline
+- [x] Fallback to Gemini if Voyage unavailable
+- [x] Cost tracking per embedding call
+- [x] Environment variable configuration (VOYAGE_API_KEY)
 
 **Technical Notes:**
-- Voyage dimensions: 1024 (down from 3072)
+- Voyage dimensions: 1024 (down from 3072), configurable
 - Context window: 32K tokens
-- Cost: $0.12/1M tokens (50M free tier)
+- Cost: $0.06/1M tokens (200M free tier) - voyage-3.5
 - Update all dimension references throughout codebase
 
 **Files to create/modify:**

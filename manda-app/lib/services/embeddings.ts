@@ -1,13 +1,22 @@
 /**
  * Embedding Service
  *
- * Generates embeddings using OpenAI's text-embedding-3-large model.
+ * @deprecated E10.8 - This service is deprecated. Use Graphiti hybrid search instead.
+ *
+ * Previously: Generated embeddings using OpenAI's text-embedding-3-large model.
  * Story: E4.2 - Implement Semantic Search for Findings (AC: #2, #7)
  *
- * Features:
- * - OpenAI text-embedding-3-large (3072 dimensions)
- * - LRU cache for recent query embeddings
- * - Retry logic for transient failures
+ * NOW: All embeddings are handled by Graphiti + Voyage AI (1024d) server-side.
+ * Use the hybrid search endpoint instead:
+ *   POST /api/search/hybrid (manda-processing)
+ *
+ * This service remains for backwards compatibility during migration.
+ * It will be removed in a future release.
+ *
+ * Old Features (no longer needed):
+ * - OpenAI text-embedding-3-large (3072 dimensions) - REPLACED by Voyage 1024d
+ * - LRU cache for recent query embeddings - REPLACED by Graphiti caching
+ * - Retry logic for transient failures - HANDLED by manda-processing
  */
 
 import OpenAI from 'openai'
@@ -87,6 +96,9 @@ function createOpenAIClient(): OpenAI {
 
 /**
  * Generate embedding for a text query
+ *
+ * @deprecated E10.8 - Use Graphiti hybrid search instead (POST /api/search/hybrid)
+ * This function remains for backwards compatibility only.
  *
  * @param text - The text to embed
  * @param useCache - Whether to use the LRU cache (default: true)

@@ -1,15 +1,29 @@
 """
-Embedding generation job handler.
-Story: E3.4 - Generate Embeddings for Semantic Search (AC: #1, #5)
+DEPRECATED: Embedding generation job handler.
+
+@deprecated E10.8 - This handler is deprecated. The pipeline now skips
+generate_embeddings and goes directly from parse_document to ingest-graphiti.
+Graphiti handles all embeddings internally via Voyage AI (1024d).
+
+Old pipeline: parse_document -> generate_embeddings -> ingest_graphiti -> analyze_document
+New pipeline: parse_document -> ingest_graphiti -> analyze_document
+
+This file is kept for backwards compatibility with any in-flight jobs
+but should not be used for new document processing.
+
+---
+
+Story: E3.4 - Generate Embeddings for Semantic Search (AC: #1, #5) - OBSOLETE
 Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
 Story: E10.4 - Document Ingestion Pipeline (AC: #1)
+Story: E10.8 - PostgreSQL Cleanup (DEPRECATED this handler)
 
-This handler processes generate_embeddings jobs from the pg-boss queue:
+This handler processed generate_embeddings jobs from the pg-boss queue:
 1. Loads document chunks from database
-2. Generates embeddings using OpenAI text-embedding-3-large
+2. Generates embeddings using OpenAI text-embedding-3-large (3072d)
 3. Stores embeddings in pgvector column
 4. Updates document status
-5. Enqueues next job (ingest-graphiti) - E10.4 pipeline change
+5. Enqueues next job (ingest-graphiti)
 
 Enhanced with E3.8:
 - Stage tracking via last_completed_stage

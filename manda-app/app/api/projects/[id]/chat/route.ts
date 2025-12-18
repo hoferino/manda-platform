@@ -7,9 +7,11 @@
  * Story: E5.3 - Build Chat Interface with Conversation History
  * Story: E5.6 - Add Conversation Context and Multi-turn Support
  * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
+ * Story: E11.4 - Intent-Aware Knowledge Retrieval
  * AC: #2 (Message Submission), #3 (Streaming Responses), #8 (API Routes)
  * AC: E5.6 #1 (Last N Messages), #3 (Context Persists), #4 (Long Conversations), #5 (Token Management)
  * AC: E5.7 #1 (Confidence Score Extraction), #6 (Multiple Finding Aggregation)
+ * AC: E11.4 #3 (Graphiti hybrid retrieval), #4 (Context injection), #7 (Latency tracking)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -189,12 +191,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // Start streaming in the background
     const streamPromise = (async () => {
       try {
-        await streamChat(agent, message, chatHistory, {
-          onToken: (token) => handler.onToken(token),
-          onToolStart: (tool, input) => handler.onToolStart(tool, input),
-          onToolEnd: (tool, output) => handler.onToolEnd(tool, output as string),
-          onError: (error) => handler.onError(error),
-        })
+        // E11.4: Pass dealId to enable pre-model retrieval
+        await streamChat(
+          agent,
+          message,
+          chatHistory,
+          {
+            onToken: (token) => handler.onToken(token),
+            onToolStart: (tool, input) => handler.onToolStart(tool, input),
+            onToolEnd: (tool, output) => handler.onToolEnd(tool, output as string),
+            onError: (error) => handler.onError(error),
+            // E11.4: Track retrieval metrics (AC: #7)
+            onRetrievalComplete: (metrics) => {
+              console.log(
+                `[api/chat] Pre-model retrieval: ${metrics.latencyMs}ms, ` +
+                `intent=${metrics.intent}, cache=${metrics.cacheHit}, skipped=${metrics.skipped}`
+              )
+            },
+          },
+          { dealId: projectId } // E11.4: Enable pre-model retrieval
+        )
 
         // Generate follow-up suggestions
         const content = handler.getContent()

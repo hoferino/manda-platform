@@ -378,7 +378,6 @@ export type Database = {
           content: string
           created_at: string
           document_id: string
-          embedding: string | null
           id: string
           metadata: Json | null
           page_number: number | null
@@ -392,7 +391,6 @@ export type Database = {
           content: string
           created_at?: string
           document_id: string
-          embedding?: string | null
           id?: string
           metadata?: Json | null
           page_number?: number | null
@@ -406,7 +404,6 @@ export type Database = {
           content?: string
           created_at?: string
           document_id?: string
-          embedding?: string | null
           id?: string
           metadata?: Json | null
           page_number?: number | null
@@ -818,7 +815,6 @@ export type Database = {
           deal_id: string
           document_id: string | null
           domain: Database["public"]["Enums"]["finding_domain_enum"] | null
-          embedding: string | null
           finding_type: Database["public"]["Enums"]["finding_type_enum"] | null
           id: string
           last_corrected_at: string | null
@@ -840,7 +836,6 @@ export type Database = {
           deal_id: string
           document_id?: string | null
           domain?: Database["public"]["Enums"]["finding_domain_enum"] | null
-          embedding?: string | null
           finding_type?: Database["public"]["Enums"]["finding_type_enum"] | null
           id?: string
           last_corrected_at?: string | null
@@ -862,7 +857,6 @@ export type Database = {
           deal_id?: string
           document_id?: string | null
           domain?: Database["public"]["Enums"]["finding_domain_enum"] | null
-          embedding?: string | null
           finding_type?: Database["public"]["Enums"]["finding_type_enum"] | null
           id?: string
           last_corrected_at?: string | null
@@ -1477,38 +1471,8 @@ export type Database = {
       }
     }
     Functions: {
-      match_findings: {
-        Args: {
-          match_count?: number
-          match_threshold?: number
-          p_confidence_max?: number
-          p_confidence_min?: number
-          p_deal_id?: string
-          p_document_id?: string
-          p_domains?: string[]
-          p_statuses?: string[]
-          query_embedding: string
-        }
-        Returns: {
-          chunk_id: string
-          confidence: number
-          created_at: string
-          deal_id: string
-          document_id: string
-          domain: Database["public"]["Enums"]["finding_domain_enum"]
-          finding_type: Database["public"]["Enums"]["finding_type_enum"]
-          id: string
-          metadata: Json
-          page_number: number
-          similarity: number
-          source_document: string
-          status: string
-          text: string
-          updated_at: string
-          user_id: string
-          validation_history: Json
-        }[]
-      }
+      // match_findings removed in E10.8 - replaced by Graphiti hybrid search
+      // See: POST /api/search/hybrid in manda-processing
     }
     Enums: {
       finding_domain_enum:

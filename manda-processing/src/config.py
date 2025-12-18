@@ -79,10 +79,20 @@ class Settings(BaseSettings):
     gemini_lite_model: str = "gemini-2.5-flash-lite"  # For batch processing
     llm_analysis_batch_size: int = 5  # Chunks per LLM call
 
-    # Voyage AI Embeddings (E10.2)
+    # Voyage AI Embeddings (E10.2, updated E10 retrospective)
+    # voyage-3.5 outperforms voyage-finance-2 on finance AND all other domains
+    # while being 50% cheaper ($0.06 vs $0.12 per 1M tokens)
+    # See: https://blog.voyageai.com/2025/05/20/voyage-3-5/
     voyage_api_key: str = ""
-    voyage_embedding_model: str = "voyage-finance-2"
-    voyage_embedding_dimensions: int = 1024
+    voyage_embedding_model: str = "voyage-3.5"
+    voyage_embedding_dimensions: int = 1024  # voyage-3.5 supports 256-2048, keeping 1024 for compatibility
+
+    # Voyage AI Reranking (E10.7)
+    voyage_rerank_model: str = "rerank-2.5"
+    voyage_rerank_top_k: int = 10
+
+    # Retrieval Configuration (E10.7)
+    retrieval_num_candidates: int = 50
 
     @property
     def is_development(self) -> bool:

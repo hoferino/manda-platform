@@ -1,30 +1,71 @@
 /**
  * Hybrid Content Retrieval Pipeline
  *
- * Combines pgvector semantic search (Supabase) with Neo4j relationship queries
+ * Story: E9.7 - Slide Content Creation (RAG-powered)
+ * Updated: E10.8 - PostgreSQL Cleanup (switched to Graphiti hybrid search)
+ *
+ * Uses Graphiti hybrid search (vector + BM25 + graph) with Voyage reranking
  * for comprehensive content retrieval in CIM Builder.
  *
- * Story: E9.7 - Slide Content Creation (RAG-powered)
- *
  * Priority Order:
- * 1. Q&A Answers (HIGHEST - most recent client data)
- * 2. Findings (validated facts from documents)
- * 3. Document Chunks (raw document content)
+ * 1. Q&A Answers (from Supabase text search + Graphiti qa_response channel)
+ * 2. Facts (from Graphiti fact edges - validated findings)
+ * 3. Episodes (from Graphiti EpisodicNodes - document chunks)
  *
  * Features:
- * - Text search on Q&A items
- * - Semantic search on findings (pgvector)
- * - Semantic search on document chunks (pgvector)
- * - Neo4j relationship enrichment (SUPPORTS, CONTRADICTS, SUPERSEDES)
+ * - Graphiti hybrid search with Voyage reranking (20-35% accuracy improvement)
+ * - Temporal filtering via Graphiti's invalid_at (SUPERSEDES awareness)
+ * - Source citations from Graphiti episode metadata
+ * - Neo4j relationship enrichment (via Graphiti graph traversal)
  * - Priority-based merging and ranking
- * - Contradiction flagging
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/supabase/database.types'
-import { generateEmbedding } from '@/lib/services/embeddings'
-import { getRelatedNodes, getContradictions } from '@/lib/neo4j/operations'
+import { getRelatedNodes } from '@/lib/neo4j/operations'
 import { NODE_LABELS, RELATIONSHIP_TYPES, FindingNode } from '@/lib/neo4j/types'
+
+// E10.8: Graphiti hybrid search endpoint configuration
+const PROCESSING_API_URL = process.env.PROCESSING_API_URL || 'http://localhost:8000'
+const PROCESSING_API_KEY = process.env.PROCESSING_API_KEY || ''
+
+/**
+ * Graphiti hybrid search response (E10.7)
+ */
+interface GraphitiSearchResult {
+  id: string
+  content: string
+  score: number
+  source_type: 'episode' | 'entity' | 'fact'
+  source_channel: string
+  confidence: number
+  citation: {
+    type: 'document' | 'qa' | 'chat'
+    id: string
+    title: string
+    excerpt?: string
+    page?: number
+    chunk_index?: number
+    confidence: number
+  } | null
+}
+
+interface GraphitiSearchResponse {
+  query: string
+  results: GraphitiSearchResult[]
+  sources: Array<{
+    type: 'document' | 'qa' | 'chat'
+    id: string
+    title: string
+    excerpt?: string
+    page?: number
+    chunk_index?: number
+    confidence: number
+  }>
+  entities: string[]
+  latency_ms: number
+  result_count: number
+}
 
 // ============================================================================
 // Types
@@ -136,17 +177,84 @@ export async function searchQAItems(
 }
 
 // ============================================================================
-// Findings Search (Priority 2 - Validated Facts)
+// Graphiti Hybrid Search (E10.8 - replaces pgvector search)
 // ============================================================================
 
 /**
- * Semantic search on findings using pgvector match_findings RPC
+ * Search Graphiti for findings (facts) and document content
+ * E10.8: Replaces searchFindings and searchDocumentChunks with unified Graphiti search
  *
- * @param supabase - Supabase client
- * @param dealId - Deal UUID to filter by
- * @param query - Search query text (will be embedded)
- * @param threshold - Minimum similarity threshold (default 0.3)
+ * @param dealId - Deal UUID to filter by (Graphiti namespace)
+ * @param query - Search query text
  * @param limit - Maximum results to return
+ */
+export async function searchGraphiti(
+  dealId: string,
+  query: string,
+  limit: number = 20
+): Promise<{ findings: FindingResult[]; chunks: DocumentChunkResult[] }> {
+  try {
+    const response = await fetch(`${PROCESSING_API_URL}/api/search/hybrid`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': PROCESSING_API_KEY,
+      },
+      body: JSON.stringify({
+        query,
+        deal_id: dealId,
+        num_results: limit,
+      }),
+    })
+
+    if (!response.ok) {
+      console.warn('[searchGraphiti] Error:', response.status)
+      return { findings: [], chunks: [] }
+    }
+
+    const data: GraphitiSearchResponse = await response.json()
+
+    // Separate results into findings (facts) and chunks (episodes)
+    const findings: FindingResult[] = []
+    const chunks: DocumentChunkResult[] = []
+
+    for (const result of data.results) {
+      if (result.source_type === 'fact') {
+        // Fact edges are validated findings
+        findings.push({
+          id: result.id,
+          text: result.content,
+          sourceDocument: result.citation?.title || 'Unknown source',
+          pageNumber: result.citation?.page,
+          confidence: result.confidence,
+          domain: undefined, // Graphiti doesn't use domains
+          sourceType: 'finding' as const,
+        })
+      } else if (result.source_type === 'episode') {
+        // Episodes are document chunks
+        chunks.push({
+          id: result.id,
+          content: result.content,
+          documentId: result.citation?.id || '',
+          documentName: result.citation?.title,
+          pageNumber: result.citation?.page,
+          chunkType: 'text', // Default, Graphiti tracks this internally
+          sourceType: 'document' as const,
+        })
+      }
+      // Entity nodes are skipped for content retrieval (they're for entity resolution)
+    }
+
+    return { findings, chunks }
+  } catch (err) {
+    console.error('[searchGraphiti] Exception:', err)
+    return { findings: [], chunks: [] }
+  }
+}
+
+/**
+ * @deprecated E10.8 - Use searchGraphiti instead
+ * Legacy function signature for backwards compatibility
  */
 export async function searchFindings(
   supabase: SupabaseClient<Database>,
@@ -155,49 +263,13 @@ export async function searchFindings(
   threshold: number = 0.3,
   limit: number = 10
 ): Promise<FindingResult[]> {
-  try {
-    const queryEmbedding = await generateEmbedding(query)
-
-    const { data, error } = await supabase.rpc('match_findings', {
-      query_embedding: JSON.stringify(queryEmbedding),
-      match_threshold: threshold,
-      match_count: limit,
-      p_deal_id: dealId,
-    })
-
-    if (error) {
-      console.warn('[searchFindings] Error:', error)
-      return []
-    }
-
-    return (data || []).map((f) => ({
-      id: f.id,
-      text: f.text,
-      sourceDocument: f.source_document,
-      pageNumber: f.page_number,
-      confidence: f.confidence,
-      domain: f.domain,
-      sourceType: 'finding' as const,
-    }))
-  } catch (err) {
-    console.error('[searchFindings] Exception:', err)
-    return []
-  }
+  const { findings } = await searchGraphiti(dealId, query, limit)
+  return findings
 }
 
-// ============================================================================
-// Document Chunks Search (Priority 3 - Raw Document Content)
-// ============================================================================
-
 /**
- * Semantic search on document chunks
- * Since match_document_chunks RPC may not exist, we use direct query with embedding
- *
- * @param supabase - Supabase client
- * @param dealId - Deal UUID to filter by
- * @param query - Search query text (will be embedded)
- * @param threshold - Minimum similarity threshold (default 0.3)
- * @param limit - Maximum results to return
+ * @deprecated E10.8 - Use searchGraphiti instead
+ * Legacy function signature for backwards compatibility
  */
 export async function searchDocumentChunks(
   supabase: SupabaseClient<Database>,
@@ -206,55 +278,8 @@ export async function searchDocumentChunks(
   threshold: number = 0.3,
   limit: number = 10
 ): Promise<DocumentChunkResult[]> {
-  try {
-    const queryEmbedding = await generateEmbedding(query)
-
-    // Try RPC first (if it exists), otherwise fall back to direct query
-    // For now, use direct query with embedding similarity
-    const { data: chunks, error } = await supabase
-      .from('document_chunks')
-      .select(`
-        id,
-        content,
-        document_id,
-        page_number,
-        chunk_type,
-        documents!inner(name, deal_id)
-      `)
-      .eq('documents.deal_id', dealId)
-      .not('embedding', 'is', null)
-      .limit(limit * 2) // Get more and filter by relevance
-
-    if (error) {
-      console.warn('[searchDocumentChunks] Error:', error)
-      return []
-    }
-
-    // Since we can't do similarity search without RPC, return chunks that have content
-    // matching the query keywords as a fallback
-    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2)
-
-    const filtered = (chunks || [])
-      .filter(chunk => {
-        const content = chunk.content.toLowerCase()
-        return queryWords.some(word => content.includes(word))
-      })
-      .slice(0, limit)
-      .map((chunk) => ({
-        id: chunk.id,
-        content: chunk.content,
-        documentId: chunk.document_id,
-        documentName: (chunk.documents as { name?: string })?.name,
-        pageNumber: chunk.page_number ?? undefined,
-        chunkType: chunk.chunk_type,
-        sourceType: 'document' as const,
-      }))
-
-    return filtered
-  } catch (err) {
-    console.error('[searchDocumentChunks] Exception:', err)
-    return []
-  }
+  const { chunks } = await searchGraphiti(dealId, query, limit)
+  return chunks
 }
 
 // ============================================================================

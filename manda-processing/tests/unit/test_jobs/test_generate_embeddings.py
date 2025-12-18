@@ -1,6 +1,11 @@
 """
 Tests for the generate_embeddings job handler.
 Story: E3.4 - Generate Embeddings for Semantic Search (AC: #6)
+
+DEPRECATED: E10.8 - PostgreSQL Cleanup
+This handler is deprecated. Graphiti now handles all embeddings via Voyage AI.
+The generate-embeddings job step has been removed from the processing pipeline.
+These tests are kept for reference but are marked as deprecated.
 """
 
 import os

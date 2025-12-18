@@ -2,13 +2,19 @@
 Document parsing job handler.
 Story: E3.3 - Implement Document Parsing Job Handler (AC: #1-6)
 Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
+Story: E10.8 - PostgreSQL Cleanup (pipeline update)
 
 This handler processes parse_document jobs from the pg-boss queue:
 1. Downloads document from GCS
 2. Parses document using Docling parser
 3. Stores chunks in database
 4. Updates document status
-5. Enqueues next job (generate_embeddings)
+5. Enqueues next job (ingest-graphiti)
+
+E10.8 Pipeline Change:
+- Old: parse_document -> generate_embeddings -> ingest_graphiti -> analyze_document
+- New: parse_document -> ingest_graphiti -> analyze_document
+- Graphiti now handles all embeddings internally via Voyage AI
 
 Enhanced with E3.8:
 - Stage tracking via last_completed_stage
@@ -274,12 +280,20 @@ class ParseDocumentHandler:
         user_id: Optional[str] = None,
     ) -> str:
         """
-        Enqueue the generate_embeddings job.
+        Enqueue the ingest-graphiti job.
+
+        E10.8: Updated to skip generate-embeddings and go directly to ingest-graphiti.
+        Graphiti now handles all embeddings internally via Voyage AI (1024d).
+        The old OpenAI pgvector embeddings (3072d) are deprecated.
+
+        Pipeline change:
+        - Old: parse_document -> generate_embeddings -> ingest_graphiti -> analyze_document
+        - New: parse_document -> ingest_graphiti -> analyze_document
 
         Args:
             document_id: UUID of the processed document
-            chunks_count: Number of chunks to embed
-            deal_id: Parent deal ID
+            chunks_count: Number of chunks (passed for logging/metrics)
+            deal_id: Parent deal ID (REQUIRED for Graphiti namespace isolation)
             user_id: User who uploaded
 
         Returns:
@@ -289,18 +303,19 @@ class ParseDocumentHandler:
 
         job_data = {
             "document_id": str(document_id),
-            "chunks_count": chunks_count,
         }
 
+        # deal_id is REQUIRED for Graphiti namespace isolation
         if deal_id:
             job_data["deal_id"] = deal_id
         if user_id:
             job_data["user_id"] = user_id
 
-        job_id = await queue.enqueue("generate-embeddings", job_data)
+        # E10.8: Skip generate-embeddings, go directly to ingest-graphiti
+        job_id = await queue.enqueue("ingest-graphiti", job_data)
 
         logger.info(
-            "Enqueued generate-embeddings job",
+            "Enqueued ingest-graphiti job (E10.8: skipping generate-embeddings)",
             document_id=str(document_id),
             next_job_id=job_id,
             chunks_count=chunks_count,

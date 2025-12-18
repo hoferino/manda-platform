@@ -3,12 +3,16 @@
  *
  * LangChain tool-calling agent with streaming support.
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E11.1 - Tool Result Isolation
+ * Story: E11.4 - Intent-Aware Knowledge Retrieval
  *
  * Features:
  * - Tool-calling agent with createReactAgent (LangGraph)
  * - Streaming token generation
  * - Context management for multi-turn conversations
  * - Error handling with graceful degradation
+ * - Tool result isolation (E11.1) - summaries in context, full results in cache
+ * - Pre-model retrieval hook (E11.4) - proactive knowledge injection
  */
 
 import { createReactAgent } from '@langchain/langgraph/prebuilt'
@@ -17,6 +21,18 @@ import type { BaseMessage } from '@langchain/core/messages'
 import { createLLMClient, type LLMConfig } from '@/lib/llm/client'
 import { allChatTools, validateToolCount } from './tools/all-tools'
 import { getSystemPrompt, getSystemPromptWithContext } from './prompts'
+import {
+  createToolResultCache,
+  isolateAllTools,
+  type ToolResultCache,
+  type IsolationConfig,
+  DEFAULT_ISOLATION_CONFIG,
+} from './tool-isolation'
+import {
+  preModelRetrievalHook,
+  type PreModelHookResult,
+  type RetrievalMetrics,
+} from './retrieval'
 
 /**
  * Agent type returned by createReactAgent
@@ -33,6 +49,19 @@ export interface ChatAgentConfig {
   dealName?: string
   llmConfig?: Partial<LLMConfig>
   verbose?: boolean
+  /** Tool isolation config (enabled by default) - E11.1 */
+  isolation?: Partial<IsolationConfig>
+  /** Disable tool isolation (for debugging) - E11.1 */
+  disableIsolation?: boolean
+}
+
+/**
+ * Extended agent type with tool result cache access
+ * Story: E11.1 - Tool Result Isolation
+ */
+export interface ChatAgentWithCache {
+  agent: ReactAgentType
+  toolResultCache: ToolResultCache
 }
 
 /**
@@ -65,24 +94,28 @@ export function convertToLangChainMessages(messages: ConversationMessage[]): Bas
 /**
  * Create a chat agent for M&A due diligence
  *
+ * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E11.1 - Tool Result Isolation
+ *
  * @param config - Agent configuration
- * @returns ReactAgent instance with all 11 chat tools
+ * @returns ChatAgentWithCache containing agent and tool result cache
  *
  * @example
  * ```typescript
- * const agent = await createChatAgent({
+ * const { agent, toolResultCache } = createChatAgent({
  *   dealId: 'uuid-1234',
  *   userId: 'uuid-5678',
  *   dealName: 'Project Alpha',
  * })
  *
  * const result = await executeChat(agent, "What's the Q3 revenue?")
+ * // Access full tool results via toolResultCache if needed
  * ```
  */
-export function createChatAgent(config: ChatAgentConfig): ReactAgentType {
-  // Validate that all 11 tools are present
+export function createChatAgent(config: ChatAgentConfig): ChatAgentWithCache {
+  // Validate that all 17 tools are present
   if (!validateToolCount()) {
-    throw new Error('Tool validation failed: Expected 11 tools')
+    throw new Error('Tool validation failed: Expected 17 tools')
   }
 
   // Create LLM client
@@ -93,32 +126,58 @@ export function createChatAgent(config: ChatAgentConfig): ReactAgentType {
     ? getSystemPromptWithContext(config.dealName)
     : getSystemPrompt()
 
+  // Create tool result cache for isolation (E11.1)
+  const toolResultCache = createToolResultCache()
+
+  // Determine tools to use - isolated or raw
+  const isolationConfig: IsolationConfig = {
+    ...DEFAULT_ISOLATION_CONFIG,
+    ...config.isolation,
+    verbose: config.verbose ?? false,
+  }
+
+  const tools = config.disableIsolation
+    ? allChatTools
+    : isolateAllTools(allChatTools, toolResultCache, isolationConfig)
+
   // Create the agent using LangGraph's createReactAgent
   const agent = createReactAgent({
     llm,
-    tools: allChatTools,
+    tools,
     messageModifier: systemPrompt,
   })
 
-  return agent
+  return { agent, toolResultCache }
+}
+
+/**
+ * Get the tool result cache from a ChatAgentWithCache
+ *
+ * Story: E11.1 - Tool Result Isolation (AC: #4)
+ */
+export function getAgentToolCache(agentWithCache: ChatAgentWithCache): ToolResultCache {
+  return agentWithCache.toolResultCache
 }
 
 /**
  * Execute a chat query with the agent
  *
- * @param agent - ReactAgent instance
+ * @param agentOrWithCache - ReactAgent instance or ChatAgentWithCache
  * @param input - User input message
  * @param chatHistory - Previous conversation messages
  * @returns Agent response with tool calls
  */
 export async function executeChat(
-  agent: ReactAgentType,
+  agentOrWithCache: ReactAgentType | ChatAgentWithCache,
   input: string,
   chatHistory: ConversationMessage[] = []
 ): Promise<{
   output: string
   intermediateSteps: Array<{ action: { tool: string; toolInput: unknown }; observation: string }>
 }> {
+  // Support both raw agent and ChatAgentWithCache (E11.1)
+  const agent = 'agent' in agentOrWithCache ? agentOrWithCache.agent : agentOrWithCache
+
   const langChainHistory = convertToLangChainMessages(chatHistory)
 
   try {
@@ -151,15 +210,30 @@ export async function executeChat(
 }
 
 /**
+ * Options for streamChat and executeChat
+ * Story: E11.4 - Intent-Aware Knowledge Retrieval
+ */
+export interface ChatExecutionOptions {
+  /** Deal ID for pre-model retrieval namespace isolation */
+  dealId?: string
+  /** Disable pre-model retrieval (for debugging) */
+  disableRetrieval?: boolean
+}
+
+/**
  * Stream chat execution with token-by-token output
  *
- * @param agent - ReactAgent instance
+ * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E11.4 - Intent-Aware Knowledge Retrieval (AC: #3, #4)
+ *
+ * @param agentOrWithCache - ReactAgent instance or ChatAgentWithCache
  * @param input - User input message
  * @param chatHistory - Previous conversation messages
  * @param callbacks - Streaming callbacks
+ * @param options - Execution options (dealId for pre-model retrieval)
  */
 export async function streamChat(
-  agent: ReactAgentType,
+  agentOrWithCache: ReactAgentType | ChatAgentWithCache,
   input: string,
   chatHistory: ConversationMessage[] = [],
   callbacks: {
@@ -167,12 +241,34 @@ export async function streamChat(
     onToolStart?: (tool: string, input: unknown) => void
     onToolEnd?: (tool: string, output: string) => void
     onError?: (error: Error) => void
-  } = {}
+    /** Callback when pre-model retrieval completes (E11.4) */
+    onRetrievalComplete?: (metrics: RetrievalMetrics) => void
+  } = {},
+  options?: ChatExecutionOptions
 ): Promise<string> {
+  // Support both raw agent and ChatAgentWithCache (E11.1)
+  const agent = 'agent' in agentOrWithCache ? agentOrWithCache.agent : agentOrWithCache
+
   const langChainHistory = convertToLangChainMessages(chatHistory)
 
   try {
-    const messages = [...langChainHistory, new HumanMessage(input)]
+    let messages: BaseMessage[] = [...langChainHistory, new HumanMessage(input)]
+
+    // E11.4: Pre-model retrieval hook
+    // Proactively retrieve relevant knowledge before LLM generation
+    if (options?.dealId && !options?.disableRetrieval) {
+      const hookResult = await preModelRetrievalHook(messages, options.dealId)
+      messages = hookResult.messages
+
+      // Notify callback of retrieval metrics
+      callbacks.onRetrievalComplete?.({
+        latencyMs: hookResult.retrievalLatencyMs,
+        cacheHit: hookResult.cacheHit,
+        skipped: hookResult.skipped,
+        intent: hookResult.intent,
+        resultCount: hookResult.entities?.length,
+      })
+    }
 
     // Use streaming with events
     const eventStream = agent.streamEvents(

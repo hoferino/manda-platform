@@ -502,14 +502,14 @@ class TestIngestionResultMetrics:
 
     def test_cost_estimation_formula(self):
         """Cost estimation uses Voyage pricing formula."""
-        # For 1000 tokens at $0.12 per 1M tokens
-        # Expected cost: 1000 * 0.00000012 = 0.00012
+        # For 1000 tokens at $0.06 per 1M tokens (voyage-3.5)
+        # Expected cost: 1000 * 0.00000006 = 0.00006
         result = IngestionResult(
             episode_count=1,
             elapsed_ms=100,
-            estimated_cost_usd=0.00012,
+            estimated_cost_usd=0.00006,
         )
-        assert result.estimated_cost_usd == pytest.approx(0.00012, rel=0.01)
+        assert result.estimated_cost_usd == pytest.approx(0.00006, rel=0.01)
 
 
 # ============================================================================

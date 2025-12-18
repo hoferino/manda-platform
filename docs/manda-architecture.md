@@ -3,10 +3,10 @@
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-15
+**Last Updated:** 2025-12-17
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 4.0 (Knowledge Architecture Evolution - Graphiti + Neo4j Consolidation)
+**Version:** 4.1 (E11 Context Engineering - Tool Result Isolation Pattern)
 
 ---
 
@@ -22,7 +22,7 @@
 | **Entity Resolution** | None | Graphiti built-in | 📋 E10.6 |
 | **Schema** | Hardcoded nodes | Dynamic spine + discovery | 📋 E10.3 |
 | **Document Ingestion** | Docling → pgvector | Docling → Graphiti | 📋 E10.4 |
-| **Context Compression** | None | Post-response hooks | 📋 E11.1 |
+| **Tool Result Isolation** | None | Summaries in context, full data cached | 📋 E11.1 |
 | **Knowledge Write-Back** | None | Chat → Graphiti | 📋 E11.3 |
 
 **Legend:** ✅ Implemented | 📋 Planned (see epic file)
@@ -53,7 +53,7 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 | **Primary Database** | PostgreSQL 18 (Supabase) | ✅ | Transactional data, auth, RLS for multi-tenant security |
 | **Knowledge Graph** | Graphiti + Neo4j 5.26+ | 📋 E10 | Temporal knowledge graph, entity resolution, dynamic ontology |
 | **Vector Search** | Neo4j native vector indexes | 📋 E10 | HNSW (1024d), hybrid queries. *Currently: pgvector* |
-| **Embeddings** | Voyage voyage-finance-2 (1024d) | 📋 E10 | Finance-optimized. *Currently: OpenAI 3072d* |
+| **Embeddings** | Voyage voyage-3.5 (1024d) | ✅ E10 | General-purpose, outperforms domain-specific models |
 | **Reranking** | Voyage rerank-2.5 | 📋 E10 | 20-35% accuracy improvement. *Currently: none* |
 | **Document Parser** | Docling | ✅ | RAG-optimized, preserves Excel formulas, table extraction, OCR |
 | **Job Queue** | pg-boss | ✅ | Postgres-based for MVP simplicity |
@@ -106,11 +106,12 @@ Data Layer:
   # - BM25 full-text indexes
   # - Hybrid queries: vector + graph + text in single Cypher
 
-  embeddings: Voyage voyage-finance-2
-  # - 1024 dimensions (finance-optimized)
+  embeddings: Voyage voyage-3.5
+  # - 1024 dimensions (configurable 256-2048)
   # - 32K token context window
-  # - $0.12/1M tokens (50M free tier)
-  # - Outperforms OpenAI by ~10% on finance/legal
+  # - $0.06/1M tokens (200M free tier)
+  # - Outperforms domain-specific models (voyage-finance-2, voyage-law-2) on ALL domains
+  # - Updated from voyage-finance-2 during E10 retrospective (2025-12-17)
 
   reranking: Voyage rerank-2.5
   # - Always applied to all queries
@@ -165,12 +166,12 @@ Intelligence Layer:
         deep_analysis: gemini-2.5-pro    # $1.25/1M input - complex reasoning
         speed: gemini-2.5-flash-lite     # $0.10/1M input - batch processing
       voyage:
-        embeddings: voyage-finance-2     # 1024d, 32K context, $0.12/1M - finance optimized
+        embeddings: voyage-3.5           # 1024d, 32K context, $0.06/1M - best general-purpose
         reranker: rerank-2.5             # $0.05/1M - 20-35% accuracy boost
       openai:
         conversation: gpt-4-turbo
         speed: gpt-4-mini
-        # Note: OpenAI embeddings deprecated in favor of Voyage finance-2
+        # Note: OpenAI embeddings deprecated in favor of Voyage
 
 Authentication & Authorization:
   provider: Supabase Auth
@@ -2799,10 +2800,12 @@ This is a major architectural change. See [Sprint Change Proposal 2025-12-15](sp
   - PostgreSQL retained for transactional data only (deals, users, Q&A items, etc.)
 
 - **New Embedding Strategy:**
-  - Switched from OpenAI text-embedding-3-large (3072d) to Voyage voyage-finance-2 (1024d)
-  - Finance-optimized embeddings outperform OpenAI by ~10% on M&A documents
+  - Switched from OpenAI text-embedding-3-large (3072d) to Voyage embeddings (1024d)
+  - **Updated 2025-12-17:** voyage-finance-2 → voyage-3.5 (E10 retrospective)
+    - voyage-3.5 outperforms domain-specific models on ALL domains including finance
+    - 50% cheaper: $0.06/1M tokens (vs $0.12 for voyage-finance-2)
+    - 200M free tokens (vs 50M for voyage-finance-2)
   - 32K token context (4x OpenAI's 8K)
-  - Lower cost: $0.12/1M tokens (vs $0.13 for OpenAI)
 
 - **Added Reranking:**
   - Voyage rerank-2.5 applied to all queries

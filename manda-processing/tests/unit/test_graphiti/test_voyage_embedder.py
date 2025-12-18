@@ -226,15 +226,15 @@ class TestCostTracking:
 
     def test_cost_calculation_voyage(self):
         """Test cost calculation for Voyage embeddings."""
-        # voyage-finance-2 pricing: $0.12 per 1M tokens
+        # voyage-3.5 pricing: $0.06 per 1M tokens
         content_length = 4000  # 4000 chars
         estimated_tokens = content_length // 4  # ~1000 tokens
-        cost_per_token = 0.00000012  # $0.12 / 1M
+        cost_per_token = 0.00000006  # $0.06 / 1M
 
         estimated_cost = estimated_tokens * cost_per_token
 
-        # 1000 tokens * $0.00000012 = $0.00012
-        assert abs(estimated_cost - 0.00012) < 0.000001
+        # 1000 tokens * $0.00000006 = $0.00006
+        assert abs(estimated_cost - 0.00006) < 0.000001
 
     def test_cost_calculation_gemini_fallback(self):
         """Test cost calculation for Gemini fallback (free tier)."""

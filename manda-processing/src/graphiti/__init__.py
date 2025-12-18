@@ -64,6 +64,14 @@ from src.graphiti.ingestion import (
     IngestionResult,
 )
 
+# E10.7: Hybrid retrieval module
+from src.graphiti.retrieval import (
+    HybridRetrievalService,
+    KnowledgeItem,
+    RetrievalResult,
+    SourceCitation,
+)
+
 # E10.6: Entity resolution module
 from src.graphiti.resolution import (
     COMPANY_SUFFIX_VARIATIONS,
@@ -113,6 +121,11 @@ __all__ = [
     # Ingestion (E10.4)
     "GraphitiIngestionService",
     "IngestionResult",
+    # Retrieval (E10.7)
+    "HybridRetrievalService",
+    "RetrievalResult",
+    "KnowledgeItem",
+    "SourceCitation",
     # Confidence constants (E10.5)
     "QA_CONFIDENCE",
     "CHAT_CONFIDENCE",

@@ -65,6 +65,20 @@ export type RelationshipType = z.infer<typeof RelationshipTypeSchema>
 // =============================================================================
 
 /**
+ * index_to_knowledge_base - Persist facts to Graphiti (E11.3)
+ * AC: #2, #7 - Agent autonomously persists user-provided facts
+ */
+export const IndexToKnowledgeBaseInputSchema = z.object({
+  content: z.string().min(10).describe('Factual content to persist (min 10 chars)'),
+  source_type: z
+    .enum(['correction', 'confirmation', 'new_info'])
+    .describe('Type of knowledge: correction (user corrected a fact), confirmation (user confirmed a fact), new_info (new factual information)'),
+  deal_id: z.string().uuid().describe('Deal UUID for namespace isolation'),
+})
+
+export type IndexToKnowledgeBaseInput = z.infer<typeof IndexToKnowledgeBaseInputSchema>
+
+/**
  * query_knowledge_base - Semantic search for findings
  * AC: #1 - Performs semantic search via pgvector match_findings RPC
  */
@@ -201,11 +215,12 @@ export type GetDocumentInfoInput = z.infer<typeof GetDocumentInfoInputSchema>
 /**
  * trigger_analysis - Enqueue document processing job
  * AC: #8 - Triggers document analysis via pg-boss
+ * E10.8: 'embedding' type removed - Graphiti handles embeddings during ingestion
  */
 export const TriggerAnalysisInputSchema = z.object({
   documentId: z.string().uuid().describe('Document UUID to analyze'),
   analysisType: z
-    .enum(['full', 'financial', 'embedding'])
+    .enum(['full', 'financial'])
     .default('full')
     .describe('Type of analysis to perform'),
 })
@@ -509,6 +524,7 @@ export type QASuggestion = z.infer<typeof QASuggestionSchema>
 
 export const ToolSchemas = {
   // Inputs
+  IndexToKnowledgeBaseInput: IndexToKnowledgeBaseInputSchema,
   QueryKnowledgeBaseInput: QueryKnowledgeBaseInputSchema,
   UpdateKnowledgeBaseInput: UpdateKnowledgeBaseInputSchema,
   ValidateFindingInput: ValidateFindingInputSchema,

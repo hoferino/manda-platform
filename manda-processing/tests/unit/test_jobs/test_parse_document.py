@@ -277,7 +277,10 @@ class TestParseDocumentHandlerSuccess:
         mock_job_queue: MagicMock,
         sample_job: Job,
     ) -> None:
-        """Test that handler enqueues generate-embeddings job."""
+        """Test that handler enqueues ingest-graphiti job.
+
+        Note: E10.8 changed pipeline from generate-embeddings to ingest-graphiti.
+        """
         from src.jobs.handlers.parse_document import ParseDocumentHandler
 
         with patch("src.jobs.handlers.parse_document.get_job_queue", return_value=mock_job_queue):
@@ -291,7 +294,8 @@ class TestParseDocumentHandlerSuccess:
 
         mock_job_queue.enqueue.assert_called_once()
         call_args = mock_job_queue.enqueue.call_args
-        assert call_args[0][0] == "generate-embeddings"
+        # E10.8: Pipeline now goes to ingest-graphiti instead of generate-embeddings
+        assert call_args[0][0] == "ingest-graphiti"
 
 
 class TestParseDocumentHandlerGCSErrors:

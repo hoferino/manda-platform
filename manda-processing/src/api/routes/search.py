@@ -1,18 +1,21 @@
 """
 Semantic search API endpoints.
 Story: E3.4 - Generate Embeddings for Semantic Search (AC: #4)
+Story: E10.7 - Hybrid Retrieval with Reranking (AC: #1, #5, #7)
 
 This module provides API endpoints for vector similarity search:
 - GET /api/search/similar - Search for similar document chunks
+- POST /api/search/hybrid - Hybrid search using Graphiti + Voyage reranking
 """
 
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 
+from src.api.dependencies import ApiKeyDep
 from src.config import Settings, get_settings
 from src.storage.supabase_client import (
     SupabaseClient,
@@ -56,7 +59,7 @@ def get_embedding_client():
     return _get_client()
 
 
-@router.get("/similar", response_model=SimilarSearchResponse)
+@router.get("/similar", response_model=SimilarSearchResponse, deprecated=True)
 async def search_similar(
     query: str = Query(..., min_length=1, max_length=10000, description="Search query text"),
     project_id: Optional[UUID] = Query(None, description="Filter by project ID"),
@@ -66,7 +69,20 @@ async def search_similar(
     settings: Settings = Depends(get_settings),
 ) -> SimilarSearchResponse:
     """
-    Search for similar document chunks using semantic similarity.
+    DEPRECATED: Use POST /api/search/hybrid instead.
+
+    E10.8: This endpoint is deprecated. The pgvector embeddings have been removed.
+    Use the new Graphiti hybrid search endpoint (POST /api/search/hybrid) which provides:
+    - Vector + BM25 + graph search
+    - Voyage AI reranking (20-35% accuracy improvement)
+    - Temporal awareness via invalid_at filtering
+    - Deal isolation via namespace
+
+    This endpoint will be removed in a future release.
+
+    ---
+
+    [LEGACY] Search for similar document chunks using semantic similarity.
 
     The query text is converted to an embedding vector using OpenAI's
     text-embedding-3-large model, then compared against stored chunk
@@ -82,7 +98,7 @@ async def search_similar(
         SimilarSearchResponse with ranked results and similarity scores
 
     Raises:
-        HTTPException: On embedding generation or search errors
+        HTTPException: On embedding generation or search errors (503 expected after E10.8)
     """
     logger.info(
         "Similarity search request",
@@ -175,6 +191,208 @@ async def search_similar(
         raise HTTPException(
             status_code=500,
             detail="Internal server error",
+        )
+
+
+# =============================================================================
+# Hybrid Search (E10.7 - Graphiti + Voyage Reranking)
+# =============================================================================
+
+
+class HybridSearchRequest(BaseModel):
+    """Request for hybrid search using Graphiti + Voyage reranking."""
+
+    query: str = Field(..., min_length=1, max_length=10000, description="Search query text")
+    deal_id: str = Field(..., description="Deal UUID for namespace isolation")
+    num_results: int = Field(default=10, ge=1, le=50, description="Number of results to return")
+
+
+class HybridSourceCitation(BaseModel):
+    """Citation information for a search result."""
+
+    type: Literal["document", "qa", "chat"]
+    id: str
+    title: str
+    excerpt: Optional[str] = None
+    page: Optional[int] = None
+    chunk_index: Optional[int] = None
+    confidence: float = Field(ge=0, le=1)
+
+
+class HybridSearchResult(BaseModel):
+    """A single hybrid search result."""
+
+    id: str
+    content: str
+    score: float = Field(ge=0, le=1, description="Reranker relevance score")
+    source_type: Literal["episode", "entity", "fact"]
+    source_channel: str
+    confidence: float = Field(ge=0, le=1)
+    citation: Optional[HybridSourceCitation] = None
+
+
+class HybridSearchResponse(BaseModel):
+    """Response from hybrid search endpoint."""
+
+    query: str
+    results: list[HybridSearchResult]
+    sources: list[HybridSourceCitation]
+    entities: list[str]
+    latency_ms: int
+    result_count: int
+
+
+async def verify_deal_exists(deal_id: str, db: SupabaseClient) -> bool:
+    """
+    Verify that a deal exists in the database.
+
+    Note: User-level authorization is handled by the frontend via RLS.
+    This service validates API key auth and that the deal exists.
+
+    Args:
+        deal_id: The deal UUID to verify
+        db: Supabase client
+
+    Returns:
+        True if deal exists, False otherwise
+    """
+    try:
+        result = await db.client.table("deals").select("id").eq("id", deal_id).execute()
+        return len(result.data) > 0
+    except Exception as e:
+        logger.error("Failed to verify deal exists", deal_id=deal_id, error=str(e))
+        return False
+
+
+@router.post("/hybrid", response_model=HybridSearchResponse)
+async def hybrid_search(
+    request: HybridSearchRequest,
+    api_key: ApiKeyDep,  # Require API key authentication
+    db: SupabaseClient = Depends(get_supabase_client),
+) -> HybridSearchResponse:
+    """
+    Hybrid search using Graphiti knowledge graph + Voyage reranking.
+
+    Story: E10.7 - Hybrid Retrieval with Reranking
+
+    Pipeline:
+    1. Graphiti hybrid search (vector + BM25 + graph) → 50 candidates
+    2. Voyage reranker (rerank-2.5) scores and reorders → Top N
+    3. Filter superseded facts and format with citations
+
+    Target latency: < 3 seconds
+
+    Args:
+        request: HybridSearchRequest with query, deal_id, num_results
+
+    Returns:
+        HybridSearchResponse with ranked results and citations
+
+    Raises:
+        HTTPException: On validation errors or search failures
+    """
+    logger.info(
+        "Hybrid search request",
+        query_length=len(request.query),
+        deal_id=request.deal_id,
+        num_results=request.num_results,
+    )
+
+    # Verify deal exists (API key validates service-to-service auth)
+    if not await verify_deal_exists(request.deal_id, db):
+        logger.warning(
+            "Hybrid search for non-existent deal",
+            deal_id=request.deal_id,
+        )
+        raise HTTPException(
+            status_code=404,
+            detail=f"Deal not found: {request.deal_id}",
+        )
+
+    try:
+        # Import here to avoid circular imports and lazy load
+        from src.graphiti.retrieval import HybridRetrievalService
+
+        service = HybridRetrievalService()
+        result = await service.retrieve(
+            query=request.query,
+            deal_id=request.deal_id,
+            num_results=request.num_results,
+        )
+
+        # Transform results to response model
+        response_results = []
+        response_sources = []
+
+        for item in result.results:
+            # Convert citation
+            citation = None
+            if item.citation:
+                citation = HybridSourceCitation(
+                    type=item.citation.type,
+                    id=item.citation.id,
+                    title=item.citation.title,
+                    excerpt=item.citation.excerpt,
+                    page=item.citation.page,
+                    chunk_index=item.citation.chunk_index,
+                    confidence=item.citation.confidence,
+                )
+
+            response_results.append(
+                HybridSearchResult(
+                    id=item.id,
+                    content=item.content,
+                    score=item.score,
+                    source_type=item.source_type,
+                    source_channel=item.source_channel,
+                    confidence=item.confidence,
+                    citation=citation,
+                )
+            )
+
+        for source in result.sources:
+            response_sources.append(
+                HybridSourceCitation(
+                    type=source.type,
+                    id=source.id,
+                    title=source.title,
+                    excerpt=source.excerpt,
+                    page=source.page,
+                    chunk_index=source.chunk_index,
+                    confidence=source.confidence,
+                )
+            )
+
+        response = HybridSearchResponse(
+            query=request.query,
+            results=response_results,
+            sources=response_sources,
+            entities=result.entities,
+            latency_ms=result.latency_ms,
+            result_count=len(response_results),
+        )
+
+        logger.info(
+            "Hybrid search completed",
+            result_count=len(response_results),
+            latency_ms=result.latency_ms,
+            top_score=response_results[0].score if response_results else None,
+        )
+
+        return response
+
+    except HTTPException:
+        raise  # Re-raise HTTP errors
+    except Exception as e:
+        logger.error(
+            "Hybrid search failed",
+            error=str(e),
+            error_type=type(e).__name__,
+            deal_id=request.deal_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Hybrid search service unavailable",
         )
 
 

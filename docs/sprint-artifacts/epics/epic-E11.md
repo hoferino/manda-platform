@@ -4,39 +4,99 @@
 **Jira Issue:** SCRUM-11
 **Priority:** P1
 
-**User Value:** The conversational agent maintains coherent context across long sessions, efficiently retrieves knowledge from the persistent store, and seamlessly indexes user-provided information — enabling the "agent chat from anywhere" vision where users can accomplish any platform task through natural conversation.
+**User Value:** The conversational agent retrieves relevant knowledge to prevent hallucinations, autonomously persists valuable insights from conversations, and maintains coherent context — enabling the "agent chat from anywhere" vision where users can accomplish any platform task through natural conversation.
 
 > **Note (v4.0):** This epic updated to integrate with Graphiti + Neo4j knowledge architecture. References to pgvector replaced with Graphiti. See [Sprint Change Proposal 2025-12-15](../../sprint-change-proposal-2025-12-15.md).
+>
+> **Note (v5.0):** Epic reprioritized based on research (2025-12-17). **Retrieval quality** (E11.4) and **agent-autonomous persistence** (E11.3) are now highest priority. Token optimization stories (E11.1, E11.2) moved to backlog — M&A conversations are typically short-to-medium sessions where context window isn't the bottleneck.
 
 ---
 
 ## Problem Statement
 
-### Current Limitations
+### Current Limitations (Prioritized)
 
-1. **Context bloat from tool calls** — Each tool invocation adds ~500 tokens (request + result). After 5 tool calls, context is polluted with verbose intermediate data that's no longer needed.
+1. **🔴 No intelligent retrieval** — Agent relies on tool-based search but may not know when to search. Complex queries may miss relevant context, leading to hallucinations or incomplete answers.
 
-2. **Naive message history** — Current implementation keeps last 10 messages with character-based token estimation. No summarization, no intelligent pruning.
+2. **🔴 No write-back to knowledge base** — User insights from chat aren't persisted. When a user says "Revenue for Q3 was actually $5.2M, not $4.8M", this correction exists only in chat context, not in the knowledge base.
 
-3. **No write-back to knowledge base** — User insights from chat aren't persisted. When a user says "Revenue for Q3 was actually $5.2M, not $4.8M", this correction exists only in chat context, not in the knowledge base.
+3. **🟡 Naive message history** — Current implementation keeps last 10 messages with character-based token estimation. No summarization, no intelligent pruning.
 
-4. **Context-Knowledge Base disconnect** — The agent queries the knowledge base but doesn't dynamically offload learned information back to it. Context and storage are separate systems.
+4. **🟢 Context bloat from tool calls** — Each tool invocation adds ~500 tokens. Lower priority since typical M&A sessions are 10-30 messages, well within context limits.
 
-### Vision: Seamless Context-Knowledge Flow
+### Vision: Agent-Autonomous Knowledge Flow
 
 ```
-User Input → Agent understands → Indexes to Knowledge Base → Available for future retrieval
+User Input → Agent evaluates → Autonomously persists to Graphiti → Available for future retrieval
                                        ↓
-                          Frees context for new work
+                       No user confirmation needed
                                        ↓
-                        Long conversation remains coherent
+                      Agent informs: "I've noted that..."
 ```
 
-**Key Insight:** The Knowledge Base (E10) and Agent Context (E11) are complementary. E10 provides the persistent store; E11 provides the dynamic flow between conversation and storage.
+**Key Insight:** Graphiti already handles the hard parts (entity extraction, deduplication, contradiction handling via temporal invalidation). The agent just needs to decide **when** to call `add_episode` — not **how** to extract facts.
+
+**Design Principle:** Users shouldn't validate storage decisions. The agent evaluates autonomously based on:
+- Is this a factual assertion (not a question)?
+- Is this novel information (not already known)?
+- What's the confidence level (analyst source = high)?
 
 ---
 
 ## Research Foundation
+
+### Story Priority (Revised 2025-12-17)
+
+Based on research into LangChain/LangGraph best practices, Graphiti architecture, and M&A workflow analysis:
+
+| Priority | Story | Rationale |
+|----------|-------|-----------|
+| **P0** | E11.4 Intent-Aware Retrieval | Prevents hallucinations — the core problem |
+| **P0** | E11.3 Agent-Autonomous Write-Back | Captures valuable insights without user friction |
+| **P1** | E11.5 Pydantic AI Tools | Type safety for Python backend |
+| **P1** | E11.6 Model Configuration | Easy provider switching |
+| **P2** | E11.2 Conversation Summarization | Nice-to-have for long sessions |
+| **P3** | E11.1 Tool Result Isolation | Token optimization — not the bottleneck |
+| **P3** | E11.7 Integration Tests | After core features implemented |
+
+### Graphiti Episode Architecture
+
+Based on [Zep's Temporal Knowledge Graph paper](https://arxiv.org/html/2501.13956v1) and [Graphiti documentation](https://github.com/getzep/graphiti):
+
+**Key Insight:** Graphiti processes "episodes" (text or JSON) and **automatically** handles:
+- Entity extraction via LLM (zero-shot, no predefined types)
+- Entity resolution via cosine similarity + full-text search
+- Fact extraction between resolved entities
+- Contradiction handling via **temporal edge invalidation** (not user prompts)
+- Graph persistence via predefined Cypher queries
+
+```python
+# All the agent needs to do is call add_episode
+# Graphiti handles extraction, resolution, and contradiction detection
+await graphiti.add_episode(
+    name="analyst_insight",
+    episode_body="Q3 revenue was $5.2M, not $4.8M as stated in financials.xlsx",
+    source=EpisodeType.text,
+    reference_time=datetime.now(),
+    source_description="Analyst correction via chat"
+)
+# → Graphiti auto-extracts: Q3, Revenue, $5.2M, financials.xlsx
+# → Graphiti auto-detects: conflict with existing $4.8M edge
+# → Graphiti auto-invalidates: old edge marked invalid_at = now
+# → User sees: nothing (no confirmation needed)
+```
+
+**Implication for E11.3:** The "intelligent evaluation" happens at the agent prompt level (should I persist this?), not in extraction logic (how do I parse this?).
+
+### LangGraph Long-Term Memory
+
+Based on [LangGraph Long-Term Memory announcement](https://blog.langchain.com/launching-long-term-memory-support-in-langgraph/):
+
+**Two approaches for when to persist:**
+- **Hot path:** Agent decides before responding (adds latency, immediate persistence)
+- **Background:** Async process after response (no latency, delayed persistence)
+
+**For M&A use case:** Hot path is preferred — analyst corrections should be immediately available for follow-up queries in the same session.
 
 ### LangChain Context Engineering Framework
 
@@ -44,10 +104,10 @@ Based on [LangChain's Context Engineering blog post](https://blog.langchain.com/
 
 | Strategy | Description | Our Application |
 |----------|-------------|-----------------|
-| **Write** | Persist information outside context window | Write findings/entities to Graphiti + Neo4j (E10) |
-| **Select** | Pull relevant information in | Graphiti hybrid retrieval + reranking before responding |
-| **Compress** | Token-efficient management | Summarize tool results, prune old messages |
-| **Isolate** | Strategic context splitting | Keep tool results outside context until needed |
+| **Write** | Persist information outside context window | Write findings/entities to Graphiti + Neo4j (E10, E11.3) |
+| **Select** | Pull relevant information in | Graphiti hybrid retrieval + reranking before responding (E11.4) |
+| **Compress** | Token-efficient management | Summarize long conversations (E11.2) |
+| **Isolate** | Strategic context splitting | **Tool Result Isolation (E11.1)** - Return summaries, cache full results |
 
 ### LangGraph Memory Capabilities
 
@@ -88,55 +148,63 @@ Type safety means catching errors at write-time (in your IDE) rather than runtim
 
 ## Functional Requirements
 
-- **FR-CTX-001:** Tool call results compressed or pruned after agent responds
-- **FR-CTX-002:** Long conversations summarized to maintain coherence
-- **FR-CTX-003:** User-provided facts indexed to knowledge base from chat
-- **FR-CTX-004:** Context retrieves relevant knowledge before each response
-- **FR-CTX-005:** Type-safe tool definitions with validation
+- **FR-CTX-001:** Tool results isolated at execution time — summaries in context, full data in cache
+- **FR-CTX-002:** Long conversations summarized using LangGraph patterns to maintain coherence
+- **FR-CTX-003:** User-provided facts indexed to knowledge base from chat (Write strategy)
+- **FR-CTX-004:** Context retrieves relevant knowledge before each response (Select strategy)
+- **FR-CTX-005:** Type-safe tool definitions with Pydantic AI validation (Python backend)
 - **FR-CTX-006:** Model switching without code changes
 
 ---
 
 ## Stories
 
-### E11.1: Tool Call Context Compression
+### E11.1: Tool Result Isolation
 
 **Story ID:** E11.1
 **Points:** 5
+**Priority:** P3 (Backlog)
+
+> **Note:** Deprioritized (2025-12-17). M&A conversations are typically 10-30 messages — context window isn't the bottleneck. Focus on retrieval quality (E11.4) and autonomous persistence (E11.3) first.
 
 **Description:**
-Implement post-response hook that compresses or removes tool call artifacts from conversation history after the agent produces a final response.
+Implement tool result isolation pattern where tool executions return concise summaries to the LLM context while storing full results in a separate cache. This follows LangChain's "Isolate" context engineering strategy.
 
 **Acceptance Criteria:**
-- [ ] After agent response, tool calls and results are summarized or removed
-- [ ] Summary preserves key information (what tool was used, key result)
-- [ ] Full tool results available in debug logs but not in context
-- [ ] Configurable: full removal vs. compression
+- [ ] Tool executions return concise summaries (~50-100 tokens) as ToolMessage content
+- [ ] Full tool results stored in separate `ToolResultCache` outside message array
+- [ ] Summaries preserve key information (count, confidence, key snippet, sources)
+- [ ] Full results accessible via `getToolResult(toolCallId)` for debugging
 - [ ] Token savings measured and logged
 
 **Technical Notes:**
 ```typescript
-// Post-response hook
-const postResponseHook = (state: AgentState) => {
-  const compressed = compressToolCalls(state.messages)
-  return { messages: compressed }
+// Tool isolation at execution time (not post-hoc compression)
+export function createIsolatedTool(tool: StructuredTool, cache: ToolResultCache) {
+  return {
+    ...tool,
+    invoke: async (input, options) => {
+      const fullResult = await tool.invoke(input, options)
+      const summary = summarizeForLLM(tool.name, fullResult)
+      cache.set(options.tool_call_id, { fullResult, summary })
+      return summary // LLM sees concise summary
+    }
+  }
 }
 
-function compressToolCalls(messages: Message[]): Message[] {
-  return messages.map(msg => {
-    if (msg.role === 'tool') {
-      // Compress: "query_knowledge_base returned 5 findings about Q3 revenue"
-      return { ...msg, content: summarizeToolResult(msg) }
-    }
-    return msg
-  })
-}
+// Example: 800 tokens → 50 tokens
+// Full: { success: true, data: { findings: [...5 items with metadata...] } }
+// Summary: "[query_knowledge_base] 5 findings (conf: 0.89-0.95). Key: Q3 revenue $5.2M..."
 ```
 
+**Why Isolation Instead of Compression:**
+- **Compression (old):** Modify messages after agent responds → breaks message integrity
+- **Isolation (new):** Return summaries from start → message history stays valid
+
 **Files to modify:**
+- New: `manda-app/lib/agent/tool-isolation.ts`
 - `manda-app/lib/agent/executor.ts`
-- `manda-app/lib/agent/context.ts`
-- New: `manda-app/lib/agent/compression.ts`
+- `manda-app/lib/agent/cim/workflow.ts`
 
 ---
 
@@ -144,9 +212,12 @@ function compressToolCalls(messages: Message[]): Message[] {
 
 **Story ID:** E11.2
 **Points:** 5
+**Priority:** P2 (Nice-to-have)
+
+> **Note:** Lower priority than E11.3/E11.4. Useful for extended sessions but not critical for typical M&A workflows.
 
 **Description:**
-Implement LangGraph's SummarizationMiddleware pattern to summarize older conversation segments, preserving context while freeing tokens.
+Implement conversation summarization using LangGraph's built-in utilities (`trim_messages`, summarization patterns) to compress older conversation segments while preserving context. This implements the **Compress** strategy from LangChain's context engineering framework.
 
 **Acceptance Criteria:**
 - [ ] When conversation exceeds threshold (e.g., 20 messages), older messages summarized
@@ -154,14 +225,25 @@ Implement LangGraph's SummarizationMiddleware pattern to summarize older convers
 - [ ] Recent messages (last 10) kept verbatim
 - [ ] Summarization runs asynchronously, doesn't block response
 - [ ] Summary stored in agent state for retrieval
+- [ ] Uses LangGraph's `trim_messages` for token-aware pruning
 
 **Technical Notes:**
 ```typescript
-// LangGraph summarization pattern
+// LangGraph summarization pattern with trim_messages
+import { trimMessages } from '@langchain/core/messages'
+
 const summarizationNode = async (state: AgentState) => {
-  if (state.messages.length > 20) {
-    const toSummarize = state.messages.slice(0, -10)
-    const recent = state.messages.slice(-10)
+  // First, trim to token budget
+  const trimmed = await trimMessages(state.messages, {
+    maxTokens: 4000,
+    strategy: 'last', // Keep recent messages
+    includeSystem: true,
+  })
+
+  // If still too many messages, summarize older ones
+  if (trimmed.length > 20) {
+    const toSummarize = trimmed.slice(0, -10)
+    const recent = trimmed.slice(-10)
 
     const summary = await llm.invoke([
       { role: 'system', content: SUMMARIZATION_PROMPT },
@@ -176,9 +258,14 @@ const summarizationNode = async (state: AgentState) => {
       summaryCreatedAt: new Date()
     }
   }
-  return state
+  return { messages: trimmed }
 }
 ```
+
+**Key LangGraph Utilities:**
+- `trimMessages` — Token-aware message pruning (built-in)
+- State checkpointing — Persist summaries across sessions
+- Async node execution — Non-blocking summarization
 
 **Files to modify:**
 - `manda-app/lib/agent/executor.ts`
@@ -187,40 +274,118 @@ const summarizationNode = async (state: AgentState) => {
 
 ---
 
-### E11.3: Knowledge Base Write-Back from Chat
+### E11.3: Agent-Autonomous Knowledge Write-Back
 
 **Story ID:** E11.3
 **Points:** 8
+**Priority:** P0 (Critical)
 
 **Description:**
-Enable the agent to recognize user-provided facts in conversation and index them to the knowledge base (Graphiti + Neo4j), making them available for future retrieval.
+Enable the agent to **autonomously** recognize and persist user-provided facts to Graphiti without requiring user confirmation. The agent evaluates whether information is worth persisting and calls `add_episode` directly. Graphiti handles entity extraction, resolution, and contradiction detection automatically.
+
+**Design Principle:** Users shouldn't validate storage decisions. They don't know what Graphiti is, nor should they care. The agent makes intelligent autonomous decisions.
 
 **Acceptance Criteria:**
-- [ ] Agent detects when user provides factual information (not questions)
-- [ ] Facts extracted with: content, source="analyst_chat", confidence, time_period
-- [ ] Facts ingested to Graphiti as episodes (E10.5 integration)
-- [ ] Entities extracted and resolved automatically
-- [ ] Agent confirms: "I've noted that Q3 revenue was $5.2M in the knowledge base"
-- [ ] Duplicate detection: don't re-index known facts
+- [ ] Agent autonomously detects factual assertions (not questions, greetings, or meta-conversation)
+- [ ] Agent calls `add_episode` for: analyst corrections, confirmed facts, new information
+- [ ] Agent does NOT persist: questions, greetings, opinions without facts, conversation meta
+- [ ] Graphiti auto-handles: entity extraction, resolution, deduplication, contradiction invalidation
+- [ ] Agent confirms naturally: "Got it, I've noted that..." (no "do you want me to save this?")
+- [ ] Persisted facts immediately retrievable in same session (hot path, not background)
+
+**What to Persist (Agent Decides Autonomously):**
+| Trigger | Example | Action |
+|---------|---------|--------|
+| Analyst correction | "Actually it was $5.2M, not $4.8M" | Persist (confidence: 0.95) |
+| Analyst confirmation | "Yes, that revenue figure is correct" | Persist (confidence: 0.90) |
+| New factual info | "The company has 150 employees" | Persist (confidence: 0.85) |
+| Tool-discovered contradiction | detect_contradictions returns conflict | Persist (confidence: 0.80) |
+
+**What NOT to Persist:**
+| Type | Example | Reason |
+|------|---------|--------|
+| Questions | "What was Q3 revenue?" | Not factual |
+| Greetings | "Hello", "Thanks" | Not valuable |
+| Meta-conversation | "Summarize what we discussed" | About conversation, not facts |
+| Opinions | "I think we should focus on..." | Not verifiable facts |
 
 **Example Flow:**
 ```
-User: "Actually, the Q3 revenue was $5.2M, not $4.8M as stated in the document"
-Agent: [Extracts fact] → [Creates Graphiti episode] → [Entity resolution]
-       → [Old fact marked invalid_at, SUPERSEDES relationship created]
-       → "Got it. I've updated the knowledge base with Q3 revenue of $5.2M
-          and noted this supersedes the previous $4.8M figure from financials.xlsx"
+User: "The Q3 revenue was actually $5.2M, not $4.8M as stated in the document"
+
+Agent evaluates (internally, not shown to user):
+  ✓ Factual assertion (contains specific data)
+  ✓ Correction pattern ("actually", "not X as stated")
+  ✓ High confidence source (analyst)
+  → Decision: PERSIST
+
+Agent calls:
+  graphiti.add_episode(
+    episode_body="Q3 revenue was $5.2M (analyst correction, supersedes $4.8M)",
+    source_description="Analyst chat correction",
+    reference_time=datetime.now()
+  )
+
+Graphiti auto-handles:
+  → Entity extraction: Q3, Revenue, $5.2M, Company
+  → Conflict detection: finds existing $4.8M edge
+  → Temporal invalidation: old edge marked invalid_at = now
+
+Agent responds:
+  "Got it. I've updated the knowledge base — Q3 revenue is now $5.2M."
+  (No "Would you like me to save this?" friction)
 ```
 
 **Technical Notes:**
-- New tool: `index_user_fact` — calls Graphiti ingestion API (E10.5)
-- Integrate with E10 Graphiti pipeline for entity extraction and resolution
-- Confidence score: 0.95 for analyst-provided facts (higher than document-extracted)
+```typescript
+// Agent prompt includes persistence decision logic
+const PERSISTENCE_PROMPT = `
+When the user provides factual information, autonomously persist it to the knowledge base.
+
+PERSIST when user:
+- Corrects existing information ("actually", "not X", "the real number is")
+- Confirms a fact ("yes, that's correct", "confirmed")
+- Provides new data ("the company has", "revenue was", "they acquired")
+
+DO NOT PERSIST when user:
+- Asks questions
+- Greets or thanks
+- Discusses the conversation itself
+- Expresses opinions without facts
+
+When persisting, call index_to_knowledge_base and then inform the user naturally:
+"Got it, I've noted that [fact]."
+DO NOT ask "Would you like me to save this?" — just do it.
+`
+
+// Tool implementation (simplified — calls Graphiti)
+const indexToKnowledgeBaseTool = tool(
+  async ({ content, source_type }: { content: string; source_type: string }) => {
+    await graphiti.addEpisode({
+      name: `analyst_${source_type}`,
+      episodeBody: content,
+      source: EpisodeType.text,
+      referenceTime: new Date(),
+      sourceDescription: `Analyst ${source_type} via chat`
+    })
+    return { success: true, message: 'Indexed to knowledge base' }
+  },
+  {
+    name: 'index_to_knowledge_base',
+    description: 'Persist a fact from conversation to the knowledge base. Call autonomously when user provides valuable information.',
+    schema: z.object({
+      content: z.string().describe('The factual content to persist'),
+      source_type: z.enum(['correction', 'confirmation', 'new_info']).describe('Type of information')
+    })
+  }
+)
+```
 
 **Files to modify:**
-- `manda-app/lib/agent/tools/knowledge.ts` — add `index_user_fact` tool
-- `manda-app/lib/agent/tools/index.ts` — register tool
-- Integration with E10 Neo4j sync
+- `manda-app/lib/agent/tools/knowledge-tools.ts` — add `index_to_knowledge_base` tool
+- `manda-app/lib/agent/tools/all-tools.ts` — register tool
+- `manda-app/lib/agent/prompts.ts` — add persistence decision logic to system prompt
+- `manda-processing/src/api/routes/graphiti.py` — expose add_episode endpoint if not exists
 
 ---
 
@@ -228,9 +393,10 @@ Agent: [Extracts fact] → [Creates Graphiti episode] → [Entity resolution]
 
 **Story ID:** E11.4
 **Points:** 5
+**Priority:** P0 (Critical)
 
 **Description:**
-Implement intent-aware pre-model hook that retrieves relevant context from the knowledge base only when the user query requires factual knowledge. Skip retrieval for greetings, meta-questions, and conversation management.
+Implement intent-aware pre-model hook that retrieves relevant context from the knowledge base only when the user query requires factual knowledge. Skip retrieval for greetings, meta-questions, and conversation management. **This is the primary defense against hallucinations** — ensuring the agent has relevant facts before responding.
 
 **Acceptance Criteria:**
 - [ ] Intent classification before retrieval (greeting, meta, factual, task)
@@ -294,13 +460,20 @@ const preModelHook = async (state: AgentState) => {
 **Points:** 8
 
 **Description:**
-Migrate Python backend (manda-processing) to Pydantic AI for type-safe agent tool definitions, enabling compile-time error detection and improved developer experience.
+Migrate Python backend (manda-processing) to Pydantic AI for type-safe agent tool definitions, enabling compile-time error detection and improved developer experience. **Note:** This applies to Python only — TypeScript tools in manda-app continue using Zod schemas.
+
+**Why Pydantic AI (Python Backend Only):**
+- **Type safety** — Catch errors at write-time in IDE, not runtime in production
+- **Dependency injection** — `RunContext[Deps]` ensures type-safe access to DB, LLM
+- **Structured outputs** — Pydantic models guarantee response format
+- **Model agnostic** — Switch between Anthropic, OpenAI, Gemini via config string
+- **Observability** — Native Logfire integration for tracing
 
 **Acceptance Criteria:**
 - [ ] Pydantic AI installed and configured in manda-processing
-- [ ] Existing analysis tools migrated to Pydantic AI pattern
-- [ ] Type-safe dependency injection for database, LLM client
-- [ ] IDE autocomplete works for tool parameters
+- [ ] Document analysis pipeline migrated to Pydantic AI pattern
+- [ ] Type-safe dependency injection for Supabase client, Graphiti client, LLM
+- [ ] IDE autocomplete works for tool parameters and dependencies
 - [ ] Logfire integration for observability (optional)
 - [ ] Documentation for extending with new tools
 
@@ -310,36 +483,48 @@ from pydantic_ai import Agent, RunContext
 from pydantic import BaseModel
 
 class AnalysisDependencies(BaseModel):
+    """Type-safe dependencies injected into tools"""
     db: SupabaseClient
-    llm: GeminiClient
+    graphiti: GraphitiClient
     deal_id: str
 
 class FindingResult(BaseModel):
+    """Structured output validated by Pydantic"""
     content: str
     finding_type: str
     confidence: float
     source_reference: dict
 
+# Model string syntax enables easy switching
 analysis_agent = Agent(
-    'google:gemini-2.5-flash',
+    'google:gemini-2.5-flash',  # or 'anthropic:claude-sonnet-4-0'
     deps_type=AnalysisDependencies,
     result_type=FindingResult,
 )
 
 @analysis_agent.tool
 async def extract_finding(
-    ctx: RunContext[AnalysisDependencies],
+    ctx: RunContext[AnalysisDependencies],  # Type-checked!
     chunk_content: str,
 ) -> FindingResult:
-    """Extract a finding from document chunk."""
-    # Type-safe access to ctx.deps.db, ctx.deps.llm
+    """Extract a finding from document chunk.
+
+    Docstring becomes tool description for LLM.
+    """
+    # IDE autocomplete: ctx.deps.db, ctx.deps.graphiti, ctx.deps.deal_id
+    findings = await ctx.deps.graphiti.search(chunk_content)
     ...
 ```
+
+**Scope:**
+- **In scope:** Python backend (manda-processing) document analysis, extraction pipelines
+- **Out of scope:** TypeScript tools (continue using Zod + LangChain StructuredTool)
 
 **Files to modify:**
 - `manda-processing/pyproject.toml` — add pydantic-ai dependency
 - `manda-processing/src/llm/agent.py` (new) — Pydantic AI agent
 - `manda-processing/src/llm/tools/` (new) — type-safe tools
+- `manda-processing/src/jobs/handlers/` — migrate extraction handlers
 
 ---
 
@@ -392,7 +577,7 @@ Create comprehensive integration tests validating the flow between conversation 
 **Acceptance Criteria:**
 - [ ] Test: User provides fact → indexed to KB → retrievable in new session
 - [ ] Test: Long conversation → summarization → context remains coherent
-- [ ] Test: Tool calls → compression → token count reduced
+- [ ] Test: Tool calls → isolation → token count reduced in LLM context
 - [ ] Test: Model switch → same behavior with different provider
 - [ ] Test: E10 + E11 integration — entities resolved, facts linked
 
@@ -406,10 +591,12 @@ describe('Context-Knowledge Integration', () => {
     // Verify retrievable via query_knowledge_base
   })
 
-  it('compresses tool calls after response', async () => {
-    // Trigger 3 tool calls
-    // Verify token count before and after compression
-    // Verify key information preserved in summary
+  it('isolates tool results at execution time', async () => {
+    // Trigger 3 tool calls via isolated tools
+    // Verify LLM context receives concise summaries (~50-100 tokens each)
+    // Verify full results stored in ToolResultCache
+    // Verify getToolResult(toolCallId) returns complete data
+    // Verify token savings logged (expected: 70-80% reduction)
   })
 
   it('summarizes long conversations', async () => {
@@ -433,32 +620,47 @@ describe('Context-Knowledge Integration', () => {
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                        AGENT CONTEXT LAYER (E11)                         │
 │                                                                          │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────┐ │
-│  │ Pre-Model Hook │  │ Post-Response  │  │ Summarization Middleware   │ │
-│  │                │  │ Hook           │  │                            │ │
-│  │ • Retrieve KB  │  │ • Compress     │  │ • Summarize older msgs     │ │
-│  │ • Inject ctx   │  │   tool calls   │  │ • Preserve recent context  │ │
-│  └───────┬────────┘  └───────┬────────┘  └─────────────┬──────────────┘ │
-│          │                   │                         │                 │
-│          └───────────────────┼─────────────────────────┘                 │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                  CONTEXT ENGINEERING STRATEGIES                  │    │
+│  │                                                                  │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────┐ │    │
+│  │  │   ISOLATE   │  │   SELECT    │  │  COMPRESS   │  │  WRITE  │ │    │
+│  │  │   (E11.1)   │  │   (E11.4)   │  │   (E11.2)   │  │ (E11.3) │ │    │
+│  │  │             │  │             │  │             │  │         │ │    │
+│  │  │ Tool result │  │ Pre-model   │  │ Summarize   │  │ Index   │ │    │
+│  │  │ summaries   │  │ retrieval   │  │ older msgs  │  │ facts   │ │    │
+│  │  │ + cache     │  │ from KB     │  │ trim_msgs   │  │ to KB   │ │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────┘ │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                              │                                           │
 │                              ▼                                           │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │                    AGENT EXECUTOR (LangGraph)                      │  │
-│  │  • ReAct pattern with tool calling                                 │  │
-│  │  • SSE streaming                                                   │  │
+│  │  • ReAct pattern with isolated tools (summaries in context)        │  │
+│  │  • SSE streaming with token savings metrics                        │  │
 │  │  • Checkpointing (short-term memory)                               │  │
+│  │  • ToolResultCache (full results for debugging)                    │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 │                              │                                           │
 │                              ▼                                           │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │                    KNOWLEDGE BASE (E10)                            │  │
-│  │  • pgvector: semantic search                                       │  │
-│  │  • Neo4j: entity relationships                                     │  │
-│  │  • Ontology: concept-aware extraction                              │  │
+│  │  • Graphiti: hybrid retrieval (vector + BM25 + graph)              │  │
+│  │  • Neo4j: entity relationships and temporal edges                  │  │
+│  │  • Voyage AI: embeddings with reranking                            │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Four Context Engineering Strategies (LangChain Framework)
+
+| Strategy | Story | Implementation |
+|----------|-------|----------------|
+| **Isolate** | E11.1 | Tool wrapper returns summaries, caches full results |
+| **Select** | E11.4 | Pre-model hook retrieves relevant KB context |
+| **Compress** | E11.2 | `trimMessages` + LLM summarization for long conversations |
+| **Write** | E11.3 | Index user-provided facts to Graphiti |
 
 ---
 
@@ -496,13 +698,18 @@ describe('Context-Knowledge Integration', () => {
 ## References
 
 - [Context Engineering for Agents - LangChain Blog](https://blog.langchain.com/context-engineering-for-agents/)
+- [Memory for Agents - LangChain Blog](https://blog.langchain.com/memory-for-agents/)
+- [Long-Term Memory Support in LangGraph](https://blog.langchain.com/launching-long-term-memory-support-in-langgraph/)
+- [Zep: Temporal Knowledge Graph Architecture (arXiv)](https://arxiv.org/html/2501.13956v1)
+- [Graphiti GitHub Repository](https://github.com/getzep/graphiti)
 - [LangGraph Short-term Memory Docs](https://docs.langchain.com/oss/python/langchain/short-term-memory)
 - [Pydantic AI Documentation](https://ai.pydantic.dev/)
 - [LangGraph Message History Management](https://langchain-ai.github.io/langgraph/how-tos/create-react-agent-manage-message-history/)
-- [LangChain Context Engineering Repository](https://github.com/langchain-ai/context_engineering)
 
 ---
 
 *Epic created: 2025-12-14*
 *Updated: 2025-12-15 (Graphiti integration)*
+*Updated: 2025-12-17 (E11.1 Tool Result Isolation pattern, LangChain context engineering research)*
+*Updated: 2025-12-17 (v5.0) **Major reprioritization:** E11.4 (retrieval) and E11.3 (autonomous write-back) now P0. E11.1/E11.2 moved to backlog. Research added: Graphiti episode architecture, LangGraph long-term memory, agent-autonomous persistence patterns.*
 *Status: Backlog*

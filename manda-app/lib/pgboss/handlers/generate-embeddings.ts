@@ -1,7 +1,18 @@
 /**
- * Generate Embeddings Job Handler (Placeholder)
- * Will be implemented in Epic 3 with OpenAI integration
- * Story: E1.8 - Configure pg-boss Job Queue (AC: #4)
+ * Generate Embeddings Job Handler
+ *
+ * @deprecated E10.8 - PostgreSQL Cleanup
+ * This handler is deprecated. The pipeline now skips generate-embeddings
+ * and goes directly from parse_document to ingest-graphiti.
+ * Graphiti handles all embeddings internally via Voyage AI (1024d).
+ *
+ * Old pipeline: parse_document -> generate_embeddings -> ingest_graphiti -> analyze_document
+ * New pipeline: parse_document -> ingest_graphiti -> analyze_document
+ *
+ * This file is kept for backwards compatibility with any in-flight jobs.
+ *
+ * Story: E1.8 - Configure pg-boss Job Queue (AC: #4) - OBSOLETE
+ * Story: E10.8 - PostgreSQL Cleanup (DEPRECATED this handler)
  */
 
 import type { Job } from 'pg-boss'
@@ -12,7 +23,9 @@ import type {
 
 /**
  * Generate embeddings job handler
- * Placeholder implementation - will be replaced in Epic 3
+ *
+ * @deprecated E10.8 - Use Graphiti ingestion instead (ingest-graphiti job)
+ * This is now a no-op that just logs deprecation and returns success.
  */
 export async function generateEmbeddingsHandler(
   jobs: Job<GenerateEmbeddingsJobPayload>[]
@@ -20,27 +33,19 @@ export async function generateEmbeddingsHandler(
   const results: GenerateEmbeddingsResult[] = []
 
   for (const job of jobs) {
-    const { document_id, deal_id, chunks } = job.data
+    const { document_id, deal_id } = job.data
 
-    console.log(
-      `[generate-embeddings] Processing ${chunks.length} chunks for document ${document_id}`
-    )
-    console.log(`[generate-embeddings] Deal: ${deal_id}`)
-
-    // TODO: Implement in Epic 3
-    // 1. Batch chunks for efficient API calls
-    // 2. Generate embeddings with OpenAI text-embedding-3-small
-    // 3. Store embeddings in Supabase pgvector
-    // 4. Update document status
-
-    console.log(
-      `[generate-embeddings] Job ${job.id} completed (placeholder implementation)`
+    // E10.8: This handler is deprecated - log warning and return success
+    console.warn(
+      `[generate-embeddings] DEPRECATED: Job ${job.id} skipped. ` +
+      `Pipeline now uses ingest-graphiti for embeddings. ` +
+      `Document: ${document_id}, Deal: ${deal_id}`
     )
 
     results.push({
       document_id,
       embeddings_created: 0,
-      model_used: 'placeholder',
+      model_used: 'deprecated-e10.8',
     })
   }
 

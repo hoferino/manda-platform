@@ -3,6 +3,7 @@
  *
  * Exports all agent-related functionality for the M&A Due Diligence Assistant.
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E11.4 - Intent-Aware Knowledge Retrieval
  */
 
 // Agent executor and core functionality
@@ -11,11 +12,58 @@ export {
   executeChat,
   streamChat,
   getAvailableTools,
+  getAgentToolCache,
   ConversationContext,
   convertToLangChainMessages,
   type ChatAgentConfig,
+  type ChatAgentWithCache,
   type ConversationMessage,
+  type ChatExecutionOptions,
 } from './executor'
+
+// Intent classification (E11.4)
+export {
+  classifyIntent,
+  shouldRetrieve,
+  getIntentDescription,
+  SKIP_RETRIEVAL_PATTERNS,
+  type IntentType,
+} from './intent'
+
+// Pre-model retrieval (E11.4)
+export {
+  preModelRetrievalHook,
+  RetrievalCache,
+  retrievalCache,
+  formatRetrievedContext,
+  RETRIEVAL_MAX_TOKENS,
+  CACHE_TTL_MS,
+  MAX_CACHE_SIZE,
+  LATENCY_TARGET_MS,
+  type PreModelHookResult,
+  type RetrievalMetrics,
+} from './retrieval'
+
+// Tool isolation (E11.1)
+export {
+  createToolResultCache,
+  isolateToolResult,
+  getToolResult,
+  cacheToolResult,
+  clearExpiredEntries,
+  getCacheStats,
+  createIsolatedTool,
+  isolateAllTools,
+  summarizeForLLM,
+  createMetricsTracker,
+  IsolationMetricsTracker,
+  DEFAULT_ISOLATION_CONFIG,
+  type ToolResultCache,
+  type ToolResultCacheEntry,
+  type IsolationConfig,
+  type IsolationMetrics,
+  type TurnMetrics,
+} from './tool-isolation'
 
 // System prompts
 export {

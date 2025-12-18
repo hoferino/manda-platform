@@ -55,8 +55,8 @@ logger = structlog.get_logger(__name__)
 # Cost Estimation Helper
 # ============================================================
 
-# Voyage voyage-finance-2 pricing: $0.12 per 1M tokens
-_VOYAGE_COST_PER_TOKEN = 0.00000012
+# Voyage voyage-3.5 pricing: $0.06 per 1M tokens
+_VOYAGE_COST_PER_TOKEN = 0.00000006
 _CHARS_PER_TOKEN_ESTIMATE = 4
 
 
@@ -64,7 +64,7 @@ def _estimate_embedding_cost(content: str) -> float:
     """
     Estimate embedding cost based on content length.
 
-    Uses Voyage voyage-finance-2 pricing ($0.12/1M tokens).
+    Uses Voyage voyage-3.5 pricing ($0.06/1M tokens).
     Assumes ~4 characters per token.
 
     Args:

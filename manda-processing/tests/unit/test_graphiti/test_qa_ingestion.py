@@ -201,7 +201,7 @@ class TestIngestQAResponse:
         answer = "A" * 300  # 300 chars
         # Total content = "Q: " + question + "\n\nA: " + answer = 3 + 100 + 4 + 300 = 407 chars
         # With actual format = ~407 chars / 4 = ~101 tokens
-        # Cost = 101 * 0.00000012 ≈ 0.000012
+        # Cost = 101 * 0.00000006 ≈ 0.000006 (voyage-3.5 pricing)
 
         with patch(
             "src.graphiti.ingestion.GraphitiClient.add_episode",

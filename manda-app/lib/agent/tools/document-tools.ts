@@ -198,10 +198,10 @@ export const triggerAnalysisTool = tool(
       // Note: Actual pg-boss integration would go here
       // For now, the document status change will be picked up by the processing pipeline
 
+      // E10.8: 'embedding' type removed - Graphiti handles embeddings during ingestion
       const analysisTypeText = {
-        full: 'Full analysis (text extraction, embeddings, finding generation)',
+        full: 'Full analysis (text extraction, finding generation via Graphiti)',
         financial: 'Financial analysis (focused on financial metrics)',
-        embedding: 'Embedding regeneration only',
       }
 
       return formatToolResponse(true, {
@@ -220,9 +220,9 @@ export const triggerAnalysisTool = tool(
   },
   {
     name: 'trigger_analysis',
-    description: `Trigger document analysis to extract findings and generate embeddings.
+    description: `Trigger document analysis to extract findings via Graphiti ingestion.
 Use this when the user wants to re-analyze a document or start analysis on a pending document.
-Analysis types: 'full' (complete), 'financial' (financial focus), 'embedding' (vectors only).`,
+Analysis types: 'full' (complete analysis with Graphiti ingestion), 'financial' (financial focus).`,
     schema: TriggerAnalysisInputSchema,
   }
 )

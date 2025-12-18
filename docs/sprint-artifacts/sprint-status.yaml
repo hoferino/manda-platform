@@ -1,6 +1,6 @@
 # Sprint Status - Manda Platform Implementation
 # Generated: 2025-11-28
-# Last Updated: 2025-12-11
+# Last Updated: 2025-12-17
 # Project: Manda
 # Tracking System: file-system
 # Story Location: docs/sprint-artifacts
@@ -1768,7 +1768,9 @@ development_status:
   # REWRITTEN 2025-12-15: Major architecture evolution per sprint-change-proposal-2025-12-15.md
   # Consolidates to Graphiti + Neo4j as single knowledge store (removes pgvector)
   # Priority: P0 | Points: 42 | Stories: 8
-  epic-10: in-progress
+  epic-10: done
+  epic-10-completed: 2025-12-17
+  epic-10-retrospective: docs/sprint-artifacts/retrospectives/epic-E10-retrospective.md
   epic-10-jira-id: SCRUM-10
   epic-10-name: "Knowledge Graph Foundation (Graphiti + Neo4j)"
   epic-10-priority: P0
@@ -1780,11 +1782,15 @@ development_status:
   e10-2-voyage-embedding-integration: done
   e10-2-points: 3
   e10-2-completion-notes: |
-    - Integrated VoyageAI voyage-finance-2 embeddings (1024d) via graphiti-core[voyageai] extra
+    - Integrated VoyageAI embeddings (1024d) via graphiti-core[voyageai] extra
     - Implemented init-time fallback to Gemini text-embedding-004 (768d) when VOYAGE_API_KEY missing
     - Added cost tracking logging with provider, model, texts_count, dimensions, estimated_cost_usd
     - Created 13 unit tests (1 integration test skipped - requires API key)
     - Code review fixes: Added texts_count to logs, removed dead code, fixed placeholder test, added cost logging test
+    - UPDATED (E10 retrospective 2025-12-17): Upgraded voyage-finance-2 → voyage-3.5
+      * voyage-3.5 outperforms domain-specific models on ALL domains including finance
+      * 50% cheaper: $0.06/1M tokens (vs $0.12 for voyage-finance-2)
+      * 200M free tokens (vs 50M for voyage-finance-2)
   e10-3-sell-side-spine-schema: done
   e10-3-points: 5
   e10-3-completion-notes: |
@@ -1797,8 +1803,16 @@ development_status:
     - Created 7 integration tests for Graphiti schema integration
     - Added comprehensive schema extension documentation to graphiti-local-setup.md
     - Code review fixes: Added MentionsEdge, SuppliesEdge, bounds validation, exported EntityType/EdgeType
-  e10-4-document-ingestion-pipeline: ready-for-dev
+  e10-4-document-ingestion-pipeline: done
   e10-4-points: 8
+  e10-4-completion-notes: |
+    - Created GraphitiIngestionService with ingest_document_chunks() method
+    - Implemented ingest-graphiti job handler following E3.8 retry patterns
+    - Modified generate_embeddings.py to enqueue ingest-graphiti as next job
+    - Created 33 unit tests (17 ingestion + 16 handler tests) - all passing
+    - Integration tests for multi-format validation (PDF, Excel, Word)
+    - EXTRACTED_FROM relationships created automatically via Graphiti schema
+    - WebSocket notification via existing Supabase Realtime infrastructure
   e10-5-qa-and-chat-ingestion: complete
   e10-5-points: 5
   e10-5-completion-notes: |
@@ -1818,37 +1832,75 @@ development_status:
     - Implemented manual merge/split API endpoints with audit trail
     - Created 69 unit tests for resolution module (all passing)
     - Added E10.6 integration tests for entity resolution scenarios
-  e10-7-hybrid-retrieval-with-reranking: backlog
+  e10-7-hybrid-retrieval-with-reranking: done
   e10-7-points: 8
-  e10-8-postgresql-cleanup: backlog
+  e10-7-notes: |
+    - Implemented VoyageReranker with async wrapper for sync SDK
+    - Created HybridRetrievalService (Graphiti search + Voyage reranking)
+    - Added POST /api/search/hybrid endpoint with API key auth
+    - Code review completed: Fixed 6 issues (unused import, empty entities, type annotations, test determinism)
+    - 35 unit tests passing, 15 integration tests created
+    - All 8 acceptance criteria satisfied
+  e10-8-postgresql-cleanup: done
   e10-8-points: 3
-  epic-10-retrospective: optional
+  e10-8-notes: |
+    - Created migration 00041_remove_pgvector.sql (drops embedding columns, match_findings RPC)
+    - Updated database.types.ts (removed embedding fields from chunks/findings)
+    - Deprecated lib/services/embeddings.ts (Graphiti + Voyage handles embeddings)
+    - Updated knowledge-tools.ts to use POST /api/search/hybrid
+    - Updated content-retrieval.ts with searchGraphiti() unified function
+    - Changed pipeline: parse_document → ingest_graphiti (skipping generate_embeddings)
+    - Deprecated /api/search/similar endpoint, findings/search uses Graphiti
+    - All TypeScript compilation errors fixed (no embedding references)
+    - Test files marked deprecated with E10.8 migration notes
+  epic-10-retrospective: done
+  epic-10-retrospective-file: docs/sprint-artifacts/retrospectives/epic-E10-retrospective.md
+  epic-10-retrospective-summary: |
+    Retrospective completed 2025-12-17. Key outcomes:
+    - All 8/8 stories completed successfully
+    - Architecture clarification: explained Graphiti + Neo4j flows
+    - Quick win: Upgraded voyage-finance-2 → voyage-3.5 (50% cheaper, better performance)
+    - Updated all documentation (architecture, PRD, epic, tech-spec, stories)
+    - Identified improvement: Need "how it works" architecture diagrams
+    - E11 dependencies satisfied and ready to begin
 
   # Epic 11: Agent Context Engineering
-  # UPDATED 2025-12-15: Aligned with Graphiti architecture
+  # UPDATED 2025-12-17: Major reprioritization based on research
+  # - E11.4 (retrieval) and E11.3 (autonomous write-back) now P0
+  # - E11.1/E11.2 (token optimization) moved to backlog — not the bottleneck
   # Depends on E10 for Graphiti infrastructure
   # Priority: P1 | Points: 39 | Stories: 7
-  epic-11: backlog
+  epic-11: in-progress
   epic-11-jira-id: SCRUM-11
   epic-11-name: "Agent Context Engineering"
   epic-11-priority: P1
   epic-11-epic-file: docs/sprint-artifacts/epics/epic-E11.md
   epic-11-stories: 7
   epic-11-points: 39
-  e11-1-tool-call-context-compression: backlog
-  e11-1-points: 5
-  e11-2-conversation-summarization: backlog
-  e11-2-points: 5
-  e11-3-knowledge-base-write-back-from-chat: backlog
-  e11-3-points: 8
-  e11-4-intent-aware-knowledge-retrieval: backlog
+  # P0 - Critical (Start here)
+  e11-4-intent-aware-knowledge-retrieval: done
   e11-4-points: 5
+  e11-4-priority: P0
+  e11-3-agent-autonomous-write-back: done
+  e11-3-points: 8
+  e11-3-priority: P0
+  # P1 - Important
   e11-5-type-safe-tool-definitions-with-pydantic-ai: backlog
   e11-5-points: 8
+  e11-5-priority: P1
   e11-6-model-configuration-and-switching: backlog
   e11-6-points: 3
+  e11-6-priority: P1
+  # P2/P3 - Backlog (Token optimization - not the bottleneck)
+  e11-2-conversation-summarization: backlog
+  e11-2-points: 5
+  e11-2-priority: P2
+  e11-1-tool-result-isolation: done
+  e11-1-points: 5
+  e11-1-priority: P3
   e11-7-context-knowledge-integration-tests: backlog
   e11-7-points: 5
+  e11-7-priority: P3
   epic-11-retrospective: optional
 
   # Tech Debt items discovered during Phase 1 testing

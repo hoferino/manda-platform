@@ -1,14 +1,20 @@
 /**
  * Findings Search API Route
- * Performs semantic search on findings using pgvector similarity
  * Story: E4.2 - Implement Semantic Search for Findings (AC: #2, #3, #7, #8)
+ * Updated: E10.8 - PostgreSQL Cleanup (switched to Graphiti hybrid search)
+ *
+ * Uses Graphiti hybrid search (vector + BM25 + graph) with Voyage reranking
+ * instead of pgvector match_findings RPC.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
-import { generateEmbedding } from '@/lib/services/embeddings'
 import type { Finding, FindingDomain, FindingStatus, ValidationEvent } from '@/lib/types/findings'
+
+// E10.8: Graphiti hybrid search endpoint configuration
+const PROCESSING_API_URL = process.env.PROCESSING_API_URL || 'http://localhost:8000'
+const PROCESSING_API_KEY = process.env.PROCESSING_API_KEY || ''
 
 // Request body validation schema
 const SearchRequestSchema = z.object({
@@ -47,12 +53,51 @@ export interface SearchResponse {
   total: number
   searchTime: number
   query: string
-  cached?: boolean
+  latencyMs?: number  // E10.8: Graphiti latency
+  entities?: string[] // E10.8: Extracted entities
+}
+
+/**
+ * Graphiti hybrid search response (E10.7)
+ */
+interface GraphitiSearchResult {
+  id: string
+  content: string
+  score: number
+  source_type: 'episode' | 'entity' | 'fact'
+  source_channel: string
+  confidence: number
+  citation: {
+    type: 'document' | 'qa' | 'chat'
+    id: string
+    title: string
+    excerpt?: string
+    page?: number
+    chunk_index?: number
+    confidence: number
+  } | null
+}
+
+interface GraphitiSearchResponse {
+  query: string
+  results: GraphitiSearchResult[]
+  sources: Array<{
+    type: 'document' | 'qa' | 'chat'
+    id: string
+    title: string
+    excerpt?: string
+    page?: number
+    chunk_index?: number
+    confidence: number
+  }>
+  entities: string[]
+  latency_ms: number
+  result_count: number
 }
 
 /**
  * POST /api/projects/[id]/findings/search
- * Perform semantic search on findings
+ * Perform semantic search on findings using Graphiti hybrid search
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   const startTime = Date.now()
@@ -71,7 +116,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       )
     }
 
-    const { query, limit, filters } = parseResult.data
+    const { query, limit } = parseResult.data
 
     const supabase = await createClient()
 
@@ -95,74 +140,69 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    // Generate embedding for the search query
-    let queryEmbedding: number[]
+    // E10.8: Call Graphiti hybrid search endpoint
+    let graphitiResponse: GraphitiSearchResponse
     try {
-      queryEmbedding = await generateEmbedding(query)
-    } catch (embeddingError) {
-      console.error('[api/findings/search] Embedding generation error:', embeddingError)
-      return NextResponse.json(
-        { error: 'Failed to process search query. Please try again.' },
-        { status: 503 }
-      )
-    }
+      const response = await fetch(`${PROCESSING_API_URL}/api/search/hybrid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': PROCESSING_API_KEY,
+        },
+        body: JSON.stringify({
+          query,
+          deal_id: projectId,
+          num_results: limit,
+        }),
+        signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
+      })
 
-    // Check if we're approaching timeout
-    const elapsedMs = Date.now() - startTime
-    if (elapsedMs > SEARCH_TIMEOUT_MS - 500) {
-      return NextResponse.json(
-        { error: 'Search timeout. Please try a shorter query.' },
-        { status: 504 }
-      )
-    }
-
-    // Call the similarity search RPC function
-    const { data: searchResults, error: searchError } = await supabase.rpc('match_findings', {
-      query_embedding: JSON.stringify(queryEmbedding),
-      match_threshold: 0.0, // Return all results, let similarity ordering handle relevance
-      match_count: limit,
-      p_deal_id: projectId,
-      p_document_id: filters?.documentId,
-      p_domains: filters?.domain,
-      p_statuses: filters?.status,
-      p_confidence_min: filters?.confidenceMin,
-      p_confidence_max: filters?.confidenceMax,
-    })
-
-    if (searchError) {
-      console.error('[api/findings/search] Search error:', searchError)
-
-      // If the RPC doesn't exist, return a helpful error
-      if (searchError.message.includes('function') && searchError.message.includes('does not exist')) {
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[api/findings/search] Graphiti search error:', response.status, errorText)
         return NextResponse.json(
-          { error: 'Semantic search is not yet configured. Database function pending migration.' },
+          { error: 'Search service unavailable' },
           { status: 503 }
         )
       }
 
-      return NextResponse.json({ error: 'Search failed' }, { status: 500 })
+      graphitiResponse = await response.json()
+    } catch (fetchError) {
+      if (fetchError instanceof Error && fetchError.name === 'TimeoutError') {
+        return NextResponse.json(
+          { error: 'Search timeout. Please try a shorter query.' },
+          { status: 504 }
+        )
+      }
+      console.error('[api/findings/search] Fetch error:', fetchError)
+      return NextResponse.json(
+        { error: 'Failed to connect to search service' },
+        { status: 503 }
+      )
     }
 
-    // Transform results to API response format
-    // Using inferred types from Supabase generated types
-    const findings: FindingWithSimilarity[] = (searchResults || []).map((row) => ({
-      id: row.id,
-      dealId: row.deal_id,
-      documentId: row.document_id || null,
-      chunkId: row.chunk_id || null,
-      userId: row.user_id,
-      text: row.text,
-      sourceDocument: row.source_document || null,
-      pageNumber: row.page_number || null,
-      confidence: row.confidence || null,
-      findingType: row.finding_type as Finding['findingType'],
-      domain: row.domain as FindingDomain | null,
-      status: (row.status as FindingStatus) || 'pending',
-      validationHistory: (row.validation_history as unknown as ValidationEvent[]) || [],
-      metadata: row.metadata as Record<string, unknown> | null,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at || null,
-      similarity: row.similarity,
+    // E10.8: Transform Graphiti results to FindingWithSimilarity format
+    const findings: FindingWithSimilarity[] = graphitiResponse.results.map((result) => ({
+      id: result.id,
+      dealId: projectId,
+      documentId: result.citation?.id || null,
+      chunkId: null,
+      userId: user.id,
+      text: result.content,
+      sourceDocument: result.citation?.title || null,
+      pageNumber: result.citation?.page || null,
+      confidence: result.confidence,
+      findingType: null,
+      domain: null as FindingDomain | null,
+      status: 'validated' as FindingStatus, // Graphiti facts are validated
+      validationHistory: [] as ValidationEvent[],
+      metadata: {
+        source_type: result.source_type,
+        source_channel: result.source_channel,
+      },
+      createdAt: new Date().toISOString(), // Graphiti doesn't return created_at
+      updatedAt: null,
+      similarity: result.score,
     }))
 
     const searchTime = Date.now() - startTime
@@ -172,6 +212,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       total: findings.length,
       searchTime,
       query,
+      latencyMs: graphitiResponse.latency_ms,
+      entities: graphitiResponse.entities,
     } satisfies SearchResponse)
   } catch (err) {
     console.error('[api/findings/search] Error:', err)

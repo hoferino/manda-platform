@@ -1,6 +1,11 @@
 """
 Tests for the similarity search API endpoint.
 Story: E3.4 - Generate Embeddings for Semantic Search (AC: #6)
+
+DEPRECATED: E10.8 - PostgreSQL Cleanup
+The GET /api/search/similar endpoint is deprecated.
+Use POST /api/search/hybrid (Graphiti + Voyage reranking) instead.
+These tests are kept for backwards compatibility during transition.
 """
 
 import os

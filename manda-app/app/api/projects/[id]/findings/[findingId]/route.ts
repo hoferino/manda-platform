@@ -90,80 +90,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
       chunkData = chunk
     }
 
-    // Fetch related findings using semantic similarity
-    // Use the finding's embedding to find similar findings
-    let relatedFindings: Finding[] = []
-
-    try {
-      // Check if the finding has an embedding
-      const { data: findingWithEmbedding } = await supabase
-        .from('findings')
-        .select('embedding')
-        .eq('id', findingId)
-        .single()
-
-      if (findingWithEmbedding?.embedding) {
-        // Call the match_findings RPC for semantic similarity
-        const { data: similarFindings } = await supabase.rpc('match_findings', {
-          query_embedding: JSON.stringify(findingWithEmbedding.embedding),
-          match_threshold: 0.5, // Only return reasonably similar findings
-          match_count: 6, // Get 6 to exclude the current finding and still have 5
-          p_deal_id: projectId,
-          p_document_id: undefined,
-          p_domains: undefined,
-          p_statuses: undefined,
-          p_confidence_min: undefined,
-          p_confidence_max: undefined,
-        })
-
-        if (similarFindings) {
-          // Filter out the current finding and limit to 5
-          relatedFindings = similarFindings
-            .filter((f: { id: string }) => f.id !== findingId)
-            .slice(0, 5)
-            .map((row: {
-              id: string
-              deal_id: string
-              document_id: string | null
-              chunk_id: string | null
-              user_id: string
-              text: string
-              source_document: string | null
-              page_number: number | null
-              confidence: number | null
-              finding_type: string | null
-              domain: string | null
-              status: string | null
-              validation_history: unknown
-              metadata: unknown
-              created_at: string
-              updated_at: string | null
-              similarity: number
-            }) => ({
-              id: row.id,
-              dealId: row.deal_id,
-              documentId: row.document_id || null,
-              chunkId: row.chunk_id || null,
-              userId: row.user_id,
-              text: row.text,
-              sourceDocument: row.source_document || null,
-              pageNumber: row.page_number || null,
-              confidence: row.confidence || null,
-              findingType: row.finding_type as Finding['findingType'],
-              domain: row.domain as FindingDomain | null,
-              status: (row.status as FindingStatus) || 'pending',
-              validationHistory: (row.validation_history as unknown as ValidationEvent[]) || [],
-              metadata: row.metadata as Record<string, unknown> | null,
-              createdAt: row.created_at,
-              updatedAt: row.updated_at || null,
-              similarity: row.similarity,
-            }))
-        }
-      }
-    } catch (err) {
-      // If semantic search fails, continue without related findings
-      console.warn('[api/findings/[findingId]] Related findings search error:', err)
-    }
+    // E10.8: Related findings via semantic similarity
+    // Previously used pgvector match_findings - now uses Graphiti hybrid search
+    // TODO: Re-enable with Graphiti hybrid search endpoint
+    const relatedFindings: Finding[] = []
+    // E10.8 NOTE: Related findings feature temporarily disabled during migration
+    // The pgvector embedding column has been removed. To re-enable:
+    // 1. Use POST /api/search/hybrid with the finding text as query
+    // 2. Filter out the current finding from results
+    // 3. Map Graphiti results to Finding[] format
 
     // Transform to API response format
     const extendedRow = findingData as typeof findingData & {

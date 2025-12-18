@@ -103,7 +103,8 @@ class GraphitiClient:
                 llm_client = GeminiClient(config=llm_config)
 
                 # Configure embedder for semantic search (REQUIRED)
-                # E10.2: Use VoyageAI voyage-finance-2 (1024d) for domain-optimized M&A embeddings
+                # E10.2: Use VoyageAI embeddings (1024d) for semantic search
+                # voyage-3.5: Best general-purpose model, outperforms domain-specific models
                 # Falls back to Gemini text-embedding-004 (768d) if Voyage unavailable
                 try:
                     if not settings.voyage_api_key:
@@ -111,7 +112,7 @@ class GraphitiClient:
 
                     embedder_config = VoyageAIEmbedderConfig(
                         api_key=settings.voyage_api_key,
-                        embedding_model=settings.voyage_embedding_model,  # "voyage-finance-2"
+                        embedding_model=settings.voyage_embedding_model,
                     )
                     embedder = VoyageAIEmbedder(config=embedder_config)
                     cls._embedding_provider = "voyage"
@@ -283,8 +284,8 @@ class GraphitiClient:
             settings = get_settings()
             estimated_tokens = len(content) // 4  # ~4 chars per token (rough estimate)
             if cls._embedding_provider == "voyage":
-                # voyage-finance-2 pricing: $0.12 per 1M tokens
-                estimated_cost_usd = estimated_tokens * 0.00000012
+                # voyage-3.5 pricing: $0.06 per 1M tokens
+                estimated_cost_usd = estimated_tokens * 0.00000006
                 dimensions = settings.voyage_embedding_dimensions
                 model = settings.voyage_embedding_model
             else:
@@ -365,7 +366,8 @@ class GraphitiClient:
             settings = get_settings()
             estimated_tokens = len(query) // 4
             if cls._embedding_provider == "voyage":
-                estimated_cost_usd = estimated_tokens * 0.00000012
+                # voyage-3.5 pricing: $0.06 per 1M tokens
+                estimated_cost_usd = estimated_tokens * 0.00000006
                 model = settings.voyage_embedding_model
             else:
                 estimated_cost_usd = 0.0

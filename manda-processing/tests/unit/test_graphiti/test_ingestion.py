@@ -281,8 +281,8 @@ class TestGraphitiIngestionServiceIngest:
             )
 
             # 4000 chars / 4 = 1000 tokens
-            # 1000 tokens * $0.00000012 = $0.00012
-            assert result.estimated_cost_usd == pytest.approx(0.00012, rel=0.01)
+            # 1000 tokens * $0.00000006 = $0.00006 (voyage-3.5 pricing)
+            assert result.estimated_cost_usd == pytest.approx(0.00006, rel=0.01)
 
     @pytest.mark.asyncio
     async def test_schema_types_passed(self, service):
