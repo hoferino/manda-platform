@@ -10,7 +10,7 @@
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -103,6 +103,9 @@ export function DataRoomClient({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null)
 
+  // Track recently deleted document IDs to prevent polling from restoring them
+  const deletedDocIdsRef = useRef<Set<string>>(new Set())
+
   // E3.6: Handle realtime document updates
   const handleRealtimeUpdate = useCallback(
     (update: DocumentUpdate) => {
@@ -177,6 +180,71 @@ export function DataRoomClient({
       },
     }
   )
+
+  // Polling fallback - always poll every 3 seconds to ensure UI stays up to date
+  // This is simpler and more reliable than trying to detect when to poll
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    // Start polling immediately
+    const poll = async () => {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('deal_id', projectId)
+          .order('created_at', { ascending: false })
+
+        if (error || !data) return
+
+        // Transform to Document type
+        const docs: Document[] = data.map((doc) => ({
+          id: doc.id,
+          projectId: doc.deal_id,
+          name: doc.name,
+          size: doc.file_size,
+          mimeType: doc.mime_type,
+          category: (doc.category as DocumentCategory) || null,
+          folderPath: doc.folder_path || null,
+          uploadStatus: doc.upload_status as Document['uploadStatus'],
+          processingStatus: doc.processing_status as Document['processingStatus'],
+          processingError: (doc as Record<string, unknown>).processing_error as string | null || null,
+          findingsCount: (doc as Record<string, unknown>).findings_count as number | null || null,
+          createdAt: doc.created_at,
+          updatedAt: doc.updated_at,
+        }))
+
+        // Filter out recently deleted documents
+        const filteredDocs = docs.filter((d) => !deletedDocIdsRef.current.has(d.id))
+
+        // Only update if there are actual changes
+        setAllDocuments((prev) => {
+          const hasChanges =
+            filteredDocs.length !== prev.length ||
+            filteredDocs.some((newDoc) => {
+              const oldDoc = prev.find((d) => d.id === newDoc.id)
+              return !oldDoc ||
+                oldDoc.processingStatus !== newDoc.processingStatus ||
+                oldDoc.uploadStatus !== newDoc.uploadStatus
+            })
+          return hasChanges ? filteredDocs : prev
+        })
+      } catch {
+        // Silent fail - don't disrupt the user
+      }
+    }
+
+    // Poll every 3 seconds
+    pollingIntervalRef.current = setInterval(poll, 3000)
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+    }
+  }, [projectId])
 
   // Load documents and folders from Supabase
   const loadDocuments = useCallback(async () => {
@@ -268,6 +336,26 @@ export function DataRoomClient({
       )
     }
   }, [selectedPath, allDocuments])
+
+  // E3.6: Rebuild folder tree when documents change (for realtime updates)
+  useEffect(() => {
+    // Skip if no documents yet (initial load handles this)
+    if (allDocuments.length === 0 && dbFolders.length === 0) return
+
+    // Merge folder paths from documents AND from database
+    const docFolderPaths = allDocuments
+      .map((d) => d.folderPath)
+      .filter((p): p is string => p !== null)
+    const dbFolderPaths = dbFolders.map((f) => f.path)
+
+    // Combine unique paths
+    const allFolderPaths = [...new Set([...docFolderPaths, ...dbFolderPaths])]
+    const tree = buildFolderTree(allFolderPaths)
+
+    // Add document counts to folders
+    addDocumentCounts(tree, allDocuments)
+    setFolders(tree)
+  }, [allDocuments, dbFolders])
 
   // Handle folder selection
   const handleSelectFolder = useCallback((path: string | null) => {
@@ -612,6 +700,9 @@ export function DataRoomClient({
       // Store current state for potential rollback
       const previousDocuments = allDocuments
 
+      // Track this document as deleted to prevent polling from restoring it
+      deletedDocIdsRef.current.add(doc.id)
+
       // Optimistic update - remove immediately from UI
       setAllDocuments((prev) => prev.filter((d) => d.id !== doc.id))
 
@@ -625,7 +716,8 @@ export function DataRoomClient({
         const result = await deleteDocument(doc.id)
 
         if (!result.success) {
-          // Rollback on error
+          // Rollback on error - remove from deleted set
+          deletedDocIdsRef.current.delete(doc.id)
           setAllDocuments(previousDocuments)
           toast.error(result.error || 'Failed to delete document', {
             action: {
@@ -636,10 +728,17 @@ export function DataRoomClient({
           return { success: false, error: result.error }
         }
 
+        // Keep in deleted set for a while to ensure polling doesn't restore it
+        // Remove after 30 seconds (database should be consistent by then)
+        setTimeout(() => {
+          deletedDocIdsRef.current.delete(doc.id)
+        }, 30000)
+
         toast.success(`Deleted "${doc.name}"`)
         return { success: true }
       } catch (error) {
-        // Rollback on error
+        // Rollback on error - remove from deleted set
+        deletedDocIdsRef.current.delete(doc.id)
         setAllDocuments(previousDocuments)
         const errorMessage = error instanceof Error ? error.message : 'Failed to delete document'
         toast.error(errorMessage, {

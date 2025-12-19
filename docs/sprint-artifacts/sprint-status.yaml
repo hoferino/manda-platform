@@ -2021,24 +2021,33 @@ development_status:
   e12-2-story-file: docs/sprint-artifacts/stories/e12-2-usage-logging-integration.md
   e12-2-drafted: 2025-12-19
   e12-2-completed: 2025-12-19
-  e12-3-developer-dashboard-usage: not-started
+  e12-3-developer-dashboard-usage: review
   e12-3-points: 8
   e12-3-priority: P0
-  e12-4-manual-test-happy-paths: not-started
+  e12-3-story-file: docs/sprint-artifacts/stories/e12-3-developer-dashboard-usage.md
+  e12-3-drafted: 2025-12-19
+  e12-4-manual-test-happy-paths: ready-for-review
   e12-4-points: 5
   e12-4-priority: P0
+  e12-4-story-file: docs/sprint-artifacts/stories/e12-4-manual-test-happy-paths.md
+  e12-4-drafted: 2025-12-19
   # P1 - High (Robustness)
-  e12-5-manual-test-edge-cases: not-started
+  e12-5-manual-test-edge-cases: in-progress
   e12-5-points: 8
   e12-5-priority: P1
-  e12-6-error-handling-graceful-degradation: not-started
+  e12-5-story-file: docs/sprint-artifacts/stories/e12-5-manual-test-edge-cases.md
+  e12-5-drafted: 2025-12-19
+  e12-6-error-handling-graceful-degradation: done
   e12-6-points: 5
   e12-6-priority: P1
+  e12-6-story-file: docs/sprint-artifacts/stories/e12-6-error-handling-graceful-degradation.md
+  e12-6-drafted: 2025-12-19
+  e12-6-completed: 2025-12-19
   # P2 - Medium (Monitoring)
-  e12-7-alerting-monitoring: not-started
+  e12-7-alerting-monitoring: backlog
   e12-7-points: 5
   e12-7-priority: P2
-  e12-8-performance-profiling: not-started
+  e12-8-performance-profiling: backlog
   e12-8-points: 5
   e12-8-priority: P2
 

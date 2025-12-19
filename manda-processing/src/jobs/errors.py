@@ -210,6 +210,8 @@ class ErrorClassifier:
 
     # Permanent error patterns - these should NOT trigger retry
     PERMANENT_PATTERNS: list[tuple[str, str]] = [
+        # Docling-specific: "Input document X is not valid" - typically means encrypted/corrupted PDF
+        (r"input document.*is not valid", "invalid_file"),
         (r"invalid.?file|file.?corrupt", "invalid_file"),
         (r"unsupported.?(format|type)", "unsupported_format"),
         (r"permission.?denied|403|unauthorized|401", "auth_error"),

@@ -227,11 +227,33 @@ class HybridRetrievalService:
         graphiti_start = time.perf_counter()
 
         # GraphitiClient.search() returns list[EntityEdge]
-        candidates: list[EntityEdge] = await GraphitiClient.search(
-            deal_id=deal_id,
-            query=query,
-            num_results=num_candidates,
-        )
+        # E12.6: Graceful degradation when Neo4j/Graphiti unavailable
+        try:
+            # TODO (E12.9): Pass organization_id from request for proper multi-tenant isolation
+            # For now, using deal_id as both org and deal to maintain backwards compatibility
+            candidates: list[EntityEdge] = await GraphitiClient.search(
+                deal_id=deal_id,
+                organization_id=deal_id,  # Temporary: use deal_id until API schema updated
+                query=query,
+                num_results=num_candidates,
+            )
+        except Exception as graphiti_error:
+            # Graceful degradation: return empty results if Graphiti unavailable
+            logger.warning(
+                "Graphiti search unavailable, returning empty results",
+                error=str(graphiti_error),
+                deal_id=deal_id,
+            )
+            elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+            return RetrievalResult(
+                results=[],
+                sources=[],
+                entities=[],
+                latency_ms=elapsed_ms,
+                graphiti_latency_ms=0,
+                rerank_latency_ms=0,
+                candidate_count=0,
+            )
 
         graphiti_latency_ms = int((time.perf_counter() - graphiti_start) * 1000)
 

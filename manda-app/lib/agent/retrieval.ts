@@ -253,6 +253,54 @@ function formatRetrievedContext(
 // Graphiti Search
 // =============================================================================
 
+import { logFeatureUsage } from '@/lib/observability/usage'
+
+/**
+ * Entity from Graphiti search (simplified for this module)
+ */
+interface GraphitiEntity {
+  name: string
+  type: string
+  properties?: Record<string, unknown>
+}
+
+/**
+ * Safely fetch Graphiti entities with graceful degradation.
+ * Story: E12.6 - Error Handling & Graceful Degradation (AC: #1)
+ * If Graphiti is unavailable, returns empty results instead of failing.
+ * Chat continues with basic vector search only.
+ */
+export async function safeGraphitiSearch(
+  query: string,
+  dealId: string,
+  options?: { organizationId?: string }
+): Promise<GraphitiEntity[]> {
+  try {
+    const result = await callGraphitiSearch(query, dealId)
+    if (!result) return []
+    // Map results to entity format
+    return result.entities?.map((name) => ({ name, type: 'entity' })) ?? []
+  } catch (error) {
+    const msg = error instanceof Error ? error.message.toLowerCase() : ''
+    const isGraphitiError = msg.includes('neo4j') || msg.includes('graphiti') ||
+                            msg.includes('econnrefused') || msg.includes('connection')
+
+    if (isGraphitiError) {
+      console.warn('[safeGraphitiSearch] Graphiti unavailable, degrading gracefully:', error)
+      logFeatureUsage({
+        organizationId: options?.organizationId,
+        dealId,
+        featureName: 'graphiti_search',
+        status: 'error',
+        errorMessage: 'Graphiti unavailable - graceful degradation',
+        metadata: { degraded: true },
+      }).catch(() => {})
+      return [] // Chat will use vector search only
+    }
+    throw error
+  }
+}
+
 /**
  * Call Graphiti hybrid search API
  *

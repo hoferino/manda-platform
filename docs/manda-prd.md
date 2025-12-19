@@ -48,8 +48,8 @@
 3. **Error Handling:** Hierarchical error boundaries at global, app, and route levels
 4. **Database & Auth:** Supabase for PostgreSQL and Auth
 5. **Document Processing:** Docling for parsing (Excel formulas, tables, OCR)
-6. **Embeddings (MVP):** pgvector + OpenAI text-embedding-3-large (3072d) — *to be replaced by E10*
-7. **Knowledge Graph (MVP):** Neo4j for relationship mapping — *to be enhanced by E10*
+6. **Embeddings (MVP):** ~~pgvector + OpenAI text-embedding-3-large (3072d)~~ — *replaced by E10 (see #9)*
+7. **Knowledge Graph (MVP):** ~~Neo4j (basic)~~ — *enhanced by E10 (see #9)*
 8. **Deployment Target:** Google Cloud Run - scale-to-zero, cost-effective for variable traffic
 
 **Phase 2 (E10 Knowledge Graph Foundation) — ✅ IMPLEMENTED:**

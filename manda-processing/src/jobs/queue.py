@@ -270,13 +270,14 @@ class JobQueue:
 
         logger.info("Job completed", job_id=job_id)
 
-    async def fail(self, job_id: str, error: str) -> None:
+    async def fail(self, job_id: str, error: str, permanent: bool = False) -> None:
         """
         Mark a job as failed, potentially triggering retry.
 
         Args:
             job_id: ID of the job that failed
             error: Error message describing the failure
+            permanent: If True, skip retry and immediately mark as failed
         """
         async with self._pool.acquire() as conn:
             # Check if we should retry
@@ -289,7 +290,7 @@ class JobQueue:
                 job_id,
             )
 
-            if row and row["retry_count"] < row["retry_limit"]:
+            if not permanent and row and row["retry_count"] < row["retry_limit"]:
                 # Calculate retry delay with optional backoff
                 delay = row["retry_delay"]
                 if row["retry_backoff"]:

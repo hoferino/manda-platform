@@ -12,16 +12,16 @@
 
 ## Implementation Status
 
-> **IMPORTANT FOR DEVELOPERS:** This document describes the **target architecture** after E10/E11 completion. See below for current vs planned state.
+> **Architecture Evolution (E10 Pivot):** As of E10 completion (2025-12-17), the knowledge architecture was consolidated from pgvector + Neo4j dual-database to unified Graphiti + Neo4j. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md) and [E10 Retrospective](sprint-artifacts/retrospectives/epic-E10-retrospective.md) for full context.
 
-| Component | Current (MVP) | Target (E10/E11) | Status |
-|-----------|---------------|------------------|--------|
-| **Embeddings** | pgvector + OpenAI 3072d | Neo4j + Voyage 1024d | 📋 E10.2 |
-| **Knowledge Graph** | Neo4j (basic) | Graphiti + Neo4j (temporal) | 📋 E10.1 |
-| **Retrieval** | pgvector semantic | Hybrid + Voyage reranking | 📋 E10.7 |
-| **Entity Resolution** | None | Graphiti built-in | 📋 E10.6 |
-| **Schema** | Hardcoded nodes | Dynamic spine + discovery | 📋 E10.3 |
-| **Document Ingestion** | Docling → pgvector | Docling → Graphiti | 📋 E10.4 |
+| Component | Pre-E10 (Historical) | Post-E10 (Current) | Status |
+|-----------|----------------------|-------------------|--------|
+| **Embeddings** | pgvector + OpenAI 3072d | Neo4j + Voyage 3.5 (1024d) | ✅ E10.2 |
+| **Knowledge Graph** | Neo4j (basic) | Graphiti + Neo4j (temporal) | ✅ E10.1 |
+| **Retrieval** | pgvector semantic | Hybrid + Voyage reranking | ✅ E10.7 |
+| **Entity Resolution** | None | Graphiti built-in | ✅ E10.6 |
+| **Schema** | Hardcoded nodes | Dynamic spine + discovery | ✅ E10.3 |
+| **Document Ingestion** | Docling → pgvector | Docling → Graphiti | ✅ E10.4 |
 | **Tool Result Isolation** | None | Summaries in context, full data cached | 📋 E11.1 |
 | **Knowledge Write-Back** | None | Chat → Graphiti | 📋 E11.3 |
 
@@ -51,10 +51,10 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 |--------------|--------|--------|-----------|
 | **Backend Framework** | FastAPI 0.121+ (Python 3.11+) | ✅ | Native integration with Docling, LangGraph, LLM libraries |
 | **Primary Database** | PostgreSQL 18 (Supabase) | ✅ | Transactional data, auth, RLS for multi-tenant security |
-| **Knowledge Graph** | Graphiti + Neo4j 5.26+ | 📋 E10 | Temporal knowledge graph, entity resolution, dynamic ontology |
-| **Vector Search** | Neo4j native vector indexes | 📋 E10 | HNSW (1024d), hybrid queries. *Currently: pgvector* |
+| **Knowledge Graph** | Graphiti + Neo4j 5.26+ | ✅ E10 | Temporal knowledge graph, entity resolution, dynamic ontology |
+| **Vector Search** | Neo4j native vector indexes | ✅ E10 | HNSW (1024d), hybrid queries |
 | **Embeddings** | Voyage voyage-3.5 (1024d) | ✅ E10 | General-purpose, outperforms domain-specific models |
-| **Reranking** | Voyage rerank-2.5 | 📋 E10 | 20-35% accuracy improvement. *Currently: none* |
+| **Reranking** | Voyage rerank-2.5 | ✅ E10 | 20-35% accuracy improvement |
 | **Document Parser** | Docling | ✅ | RAG-optimized, preserves Excel formulas, table extraction, OCR |
 | **Job Queue** | pg-boss | ✅ | Postgres-based for MVP simplicity |
 | **AI Agent Framework** | LangChain 1.0 + LangGraph 1.0 | ✅ | Workflow orchestration with human-in-the-loop |
@@ -268,19 +268,19 @@ Development & Deployment:
             │         │  - Poll pg-boss queue           │
             │         │  - Execute job handlers         │
             │         │  - Document parsing (Docling)   │
-            │         │  - Embedding generation (OpenAI)│
+            │         │  - Graphiti ingestion (Voyage)  │
             │         │  - LLM analysis (Gemini)        │
             │         │  - Pattern detection            │
-            │         │  - Graph updates (Neo4j)        │
+            │         │  - Entity resolution (Graphiti) │
             │         └──────────┬──────────────────────┘
             │                    │
 ┌───────────▼────────────────────▼───────────────────────────────┐
 │                       DATA LAYER                                │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   Supabase   │  │    Neo4j     │  │   Google     │         │
-│  │   Postgres   │  │  (Graph DB)  │  │   Cloud      │         │
-│  │  + pgvector  │  │              │  │   Storage    │         │
-│  │  + pg-boss   │  │              │  │              │         │
+│  │   Supabase   │  │  Graphiti +  │  │   Google     │         │
+│  │   Postgres   │  │    Neo4j     │  │   Cloud      │         │
+│  │  + pg-boss   │  │  (Knowledge) │  │   Storage    │         │
+│  │  (transact.) │  │              │  │              │         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -315,11 +315,13 @@ Docling parses document
   - Extracts text, tables, formulas
   - Generates semantic chunks
   ↓
-pg-boss enqueues job: generate_embeddings
+pg-boss enqueues job: ingest_graphiti
   ↓
-Worker generates embeddings (OpenAI)
-  ↓
-Store chunks in Postgres with embeddings (pgvector)
+Worker ingests to Graphiti + Neo4j
+  - Generates Voyage embeddings (1024d)
+  - Extracts entities (Companies, People, Metrics)
+  - Resolves duplicates via entity resolution
+  - Creates temporal facts with valid_at/invalid_at
   ↓
 pg-boss enqueues job: analyze_document
   ↓
@@ -328,14 +330,12 @@ Worker analyzes with Gemini 3.0 Pro (thinking: high)
   - Identifies insights
   - Detects potential contradictions
   ↓
-Store findings and insights in Postgres
-  ↓
-pg-boss enqueues job: update_graph
+Store findings metadata in Postgres (knowledge in Neo4j)
   ↓
 Worker updates Neo4j relationships
-  - Finding → Document links
-  - Cross-domain pattern edges
-  - Contradiction relationships
+  - EXTRACTED_FROM (Finding → Document)
+  - MENTIONS (Finding → Entity)
+  - SUPERSEDES/CONTRADICTS (temporal facts)
   ↓
 Emit event: document_processed
   ↓
@@ -465,7 +465,7 @@ Complete schema with all tables, indexes, and RLS policies documented in full ar
 - `deals` - Deal metadata
 - `documents` - Document tracking with folder_id reference
 - `folders` - Hierarchical folder structure for Data Room (see below)
-- `findings` - Extracted facts with embeddings (pgvector)
+- `findings` - Finding metadata (embeddings now in Neo4j via Graphiti)
 - `insights` - Analyzed patterns
 - `conversations` - Chat history with LangGraph state
 - `messages` - Chat messages
@@ -473,6 +473,8 @@ Complete schema with all tables, indexes, and RLS policies documented in full ar
 - `irl_items` - IRL line items with manual status tracking
 - `qa_lists` - Q&A lists
 - `cims` - CIM versions
+
+> **E10 Migration Note:** As of E10.8, the `embedding` column on findings/document_chunks tables is deprecated. All embeddings are now stored in Neo4j via Graphiti with Voyage voyage-3.5 (1024d).
 
 ### Data Room Folder Architecture
 
@@ -927,37 +929,32 @@ async def query_knowledge_base(
     input: KnowledgeQueryInput
 ) -> KnowledgeQueryOutput:
     """
-    Semantic search across findings using pgvector.
+    Hybrid search across knowledge using Graphiti + Neo4j.
     Input/output validated by Pydantic models.
+
+    E10 Update: Uses Graphiti hybrid search (vector + BM25 + graph)
+    instead of pgvector. Embeddings generated via Voyage voyage-3.5.
     """
     # Pydantic validates input automatically
-    # Generate embedding
-    from openai import OpenAI
-    client = OpenAI()
+    from src.graphiti.retrieval import GraphitiRetrievalService
 
-    embedding = client.embeddings.create(
-        model="text-embedding-3-large",
-        input=input.query
-    ).data[0].embedding
+    service = GraphitiRetrievalService()
 
-    # Vector search in PostgreSQL
-    from db import get_db
-    async with get_db() as db:
-        results = await db.execute(
-            """
-            SELECT text, source_document, page_number, confidence,
-                   1 - (embedding <=> $1::vector) AS similarity
-            FROM findings
-            WHERE deal_id = $2
-              AND ($3::jsonb IS NULL OR metadata @> $3)
-            ORDER BY embedding <=> $1::vector
-            LIMIT $4
-            """,
-            embedding,
-            input.filters.get('deal_id'),
-            input.filters,
-            input.limit
-        )
+    # Hybrid search: vector + BM25 + graph traversal
+    results = await service.hybrid_search(
+        query=input.query,
+        group_id=input.filters.get('deal_id'),  # Multi-tenant isolation
+        limit=50,  # Retrieve candidates for reranking
+        include_edges=True,  # Include relationship context
+    )
+
+    # Voyage reranking for accuracy improvement (20-35%)
+    from src.graphiti.retrieval import rerank_results
+    reranked = await rerank_results(
+        query=input.query,
+        results=results,
+        top_k=input.limit
+    )
 
     findings = [
         Finding(
@@ -1323,7 +1320,7 @@ class KnowledgeQueryInput(BaseModel):
 @tool("query_knowledge_base", args_schema=KnowledgeQueryInput)
 async def query_knowledge_base_tool(query: str, filters: dict, limit: int) -> str:
     """
-    Semantic search across findings using pgvector.
+    Hybrid search across knowledge using Graphiti + Neo4j.
     Returns findings with source attribution.
     """
     # Call the actual Pydantic-validated function
@@ -1498,7 +1495,7 @@ User: "What were the Q3 revenues?"
 1. Agent receives query
 2. LLM (Claude) decides to call query_knowledge_base tool
    - Function calling: {"name": "query_knowledge_base", "arguments": {"query": "Q3 revenues", "limit": 5}}
-3. Tool executes: Searches pgvector for relevant findings
+3. Tool executes: Graphiti hybrid search (vector + BM25 + graph) + Voyage reranking
 4. Tool returns: "Found 3 findings: - Q3 revenues were $5.2M (source: financials.xlsx, confidence: 0.92)..."
 5. LLM receives tool output and generates response
 6. Agent streams response: "According to the financials (financials.xlsx), Q3 revenues were $5.2M."
@@ -1639,7 +1636,7 @@ llm = FallbackLLM(llms=[llm_primary, llm_fallback])
 
 | Strategy | Description | Implementation |
 |----------|-------------|----------------|
-| **Write** | Persist information outside context window | Write findings/entities to Neo4j + pgvector |
+| **Write** | Persist information outside context window | Write findings/entities to Graphiti + Neo4j |
 | **Select** | Pull relevant information in | RAG from knowledge base before responding |
 | **Compress** | Token-efficient management | Summarize tool results, prune old messages |
 | **Isolate** | Strategic context splitting | Keep tool results outside context until needed |
@@ -1668,14 +1665,14 @@ llm = FallbackLLM(llms=[llm_primary, llm_fallback])
 
 3. **Knowledge Base Write-Back (E11.3):**
    - Agent detects user-provided facts in conversation
-   - Facts indexed to PostgreSQL (pgvector) + Neo4j (Information nodes)
+   - Facts indexed to Graphiti + Neo4j (temporal episodes)
    - Integration with E10 ontology for semantic classification
    - Frees context for new work, facts retrievable later
 
 4. **Intent-Aware Knowledge Retrieval (E11.4):**
    - Classify intent before retrieval (greeting, meta, factual, task)
    - Skip retrieval for non-knowledge intents (greetings, "summarize our chat")
-   - For factual/task queries, retrieve relevant findings from pgvector
+   - For factual/task queries, retrieve via Graphiti hybrid search
    - Token budget: max 2000 tokens for retrieval context
    - Tool-based retrieval remains primary; this provides proactive retrieval
 
@@ -1795,8 +1792,8 @@ class CIMBuilderWorkflow:
   - dependency_refs[]
 - **Tools Used:**
   - `searchQAItems()` - Text search on answered Q&A (HIGHEST PRIORITY - most recent data)
-  - `searchFindings()` - pgvector semantic search on findings (confidence > 0.3)
-  - `searchDocumentChunks()` - pgvector semantic search on raw document content
+  - `searchFindings()` - Graphiti hybrid search on findings (confidence > 0.3)
+  - `searchDocumentChunks()` - Graphiti hybrid search on raw document content
   - `enrichWithRelationships()` - Neo4j queries for SUPPORTS/CONTRADICTS/SUPERSEDES
   - `mergeAndRankResults()` - Priority merge: Q&A > Findings > Chunks
   - `validate_idea_coherence()` - Check content fits narrative
@@ -1916,10 +1913,11 @@ for element in slide.content_elements:
     # Returns: "company-background.pdf, page 2" (from PostgreSQL findings table)
 ```
 
-**pgvector Semantic Search:**
-- Embeddings generated during document processing (OpenAI text-embedding-3-large)
-- Stored in findings table (pgvector column)
-- Semantic search finds relevant findings even without exact keyword match
+**Graphiti Hybrid Search:**
+- Embeddings generated during document processing (Voyage voyage-3.5, 1024d)
+- Stored in Neo4j via Graphiti (episodic nodes)
+- Hybrid search combines vector + BM25 + graph traversal
+- Voyage rerank-2.5 provides 20-35% accuracy improvement
 
 **Neo4j Source Attribution:**
 - `EXTRACTED_FROM` relationships track Finding → Document
@@ -2348,8 +2346,8 @@ services:
 ### Development Environment (Docker Compose)
 
 **Stack:**
-- Supabase local (PostgreSQL 15 + pgvector + Auth + Storage)
-- Neo4j 5 Community Edition
+- Supabase local (PostgreSQL 15 + Auth + Storage)
+- Graphiti + Neo4j 5 Community Edition (knowledge graph + embeddings)
 - FastAPI (hot reload)
 - Next.js 16 dev server (Turbopack enabled)
 - Background workers (Python)
@@ -2464,7 +2462,7 @@ npm install
 **Native Python Stack:** Docling, LangGraph, Pydantic AI Gateway all Python. No bridge complexity. Type safety with Pydantic v2.
 
 ### Why Supabase?
-**Auth + Database + Storage:** Integrated platform, RLS for security, managed service. pgvector for semantic search. OAuth providers out of the box.
+**Auth + Database + Storage:** Integrated platform, RLS for security, managed service. Transactional data store. OAuth providers out of the box.
 
 ### Why Pydantic v2 with LangChain?
 **Type Safety + Flexibility:** Pydantic v2 provides strict validation for structured outputs and tool definitions, while LangChain offers mature ecosystem with multiple LLM providers, retry logic, and fallback mechanisms. This combination is production-tested and widely adopted.
@@ -2472,29 +2470,31 @@ npm install
 ### Why LangGraph over Genkit?
 **Human-in-the-Loop:** LangGraph's interrupt pattern is perfect for Q&A/CIM workflows. Genkit too new for production.
 
-### Why Postgres + Neo4j Hybrid?
-**Complementary:** Postgres for structured data + vector search (pgvector), Neo4j for cross-domain relationships and contradiction tracking (your competitive moat).
+### Why Postgres + Graphiti/Neo4j Split?
+**Separation of Concerns:** PostgreSQL handles transactional data (deals, users, Q&A items) with RLS for security. Graphiti + Neo4j handles all knowledge (embeddings, entities, relationships, temporal facts). This split was solidified in E10 (2025-12-17). Previously used pgvector for embeddings in PostgreSQL, but consolidated to Neo4j for hybrid queries (vector + BM25 + graph).
 
 ### Why pg-boss over Redis+Bull?
 **MVP Simplicity:** One less infrastructure component. Postgres-based queue. Can upgrade to Redis+Bull later if needed.
 
 ### Why Multi-Model Strategy?
-**Cost + Quality:** Gemini 3.0 Pro for volume (2M context, thinking mode, cost-effective), Claude Sonnet 4.5 for conversation (quality, M&A domain), OpenAI for embeddings (best quality).
+**Cost + Quality:** Gemini 3.0 Pro for volume (2M context, thinking mode, cost-effective), Claude Sonnet 4.5 for conversation (quality, M&A domain), Voyage voyage-3.5 for embeddings (best general-purpose, $0.06/1M tokens).
 
 ### Why 12 Agent Tools (expanded from 8)?
 **Collaborative Workflow Support:** New PRD requirements (v1.1) added collaborative analysis, finding capture/validation, learning loop. Tools enable: `update_knowledge_base`, `update_knowledge_graph`, `validate_finding`, `add_to_qa`.
 
 ---
 
-## Open Questions
+## Open Questions (Resolved)
 
-1. **Job Queue Migration Trigger:** At what point migrate from pg-boss to Redis+Bull? (Monitor queue performance in MVP)
-2. **Neo4j vs Graphiti:** Add Graphiti for temporal facts in Phase 3? (Evaluate after MVP launch)
-3. **Gemini Quality:** Test Gemini 3.0 Pro against Claude on M&A documents (Week 8 of implementation)
-4. **Phase 1 Patterns:** Include basic contradictions in MVP? (Yes - PRD v1.1 includes contradiction detection in MVP)
-5. **CIM Export:** Word only or add Google Docs support? (Start with Word, add Google Docs in Phase 2)
-6. **Docker in Production:** Managed services (Vercel, Railway) or fully containerized (Kubernetes)? (Start with managed, migrate if needed)
-7. **Supabase Local vs Cloud:** Use local Supabase in development, when to switch to cloud for staging? (Switch at end of Phase 1)
+| Question | Resolution | Date |
+|----------|------------|------|
+| Job Queue Migration Trigger | Keep pg-boss for now — performance is adequate | 2025-12 |
+| Neo4j vs Graphiti | ✅ Graphiti adopted in E10 | 2025-12-17 |
+| Gemini Quality | Gemini 2.5 Flash selected for extraction | 2025-11 |
+| Phase 1 Patterns | Contradiction detection included via Graphiti temporal model | 2025-12-17 |
+| CIM Export | Markdown blueprints with Word export planned | 2025-12 |
+| Docker in Production | TBD - targeting Cloud Run | - |
+| Supabase Local vs Cloud | Cloud Supabase in use | 2025-12 |
 
 ---
 
@@ -2512,6 +2512,8 @@ npm install
 ## References
 
 - [Manda PRD](./manda-prd.md)
+- [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md) (E10 Architecture Pivot)
+- [E10 Retrospective](sprint-artifacts/retrospectives/epic-E10-retrospective.md)
 - [Brainstorming Session](./brainstorming-session-results-2025-11-19.md)
 - [Docling](https://docling-project.github.io/docling/)
 - [LangChain](https://python.langchain.com/docs/)
@@ -2519,8 +2521,9 @@ npm install
 - [Pydantic v2](https://docs.pydantic.dev/latest/)
 - [LangChain LLM Adapters](https://python.langchain.com/docs/integrations/chat/)
 - [Supabase](https://supabase.com/docs)
-- [pgvector](https://github.com/pgvector/pgvector)
+- [Graphiti](https://github.com/getzep/graphiti) (Temporal Knowledge Graph Framework)
 - [Neo4j](https://neo4j.com/docs/)
+- [Voyage AI](https://docs.voyageai.com/docs/embeddings) (Embeddings & Reranking)
 
 ---
 

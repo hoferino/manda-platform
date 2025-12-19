@@ -1696,8 +1696,100 @@ export type Database = {
       }
     }
     Functions: {
+      get_costs_by_feature: {
+        Args: {
+          p_end_date?: string
+          p_organization_id?: string
+          p_start_date?: string
+        }
+        Returns: {
+          avg_latency_ms: number
+          call_count: number
+          cost_usd: number
+          feature: string
+        }[]
+      }
+      get_costs_by_model: {
+        Args: {
+          p_end_date?: string
+          p_organization_id?: string
+          p_start_date?: string
+        }
+        Returns: {
+          call_count: number
+          cost_usd: number
+          model: string
+          provider: string
+          total_tokens: number
+        }[]
+      }
+      get_daily_costs: {
+        Args: {
+          p_end_date: string
+          p_organization_id?: string
+          p_start_date: string
+        }
+        Returns: {
+          call_count: number
+          cost_usd: number
+          date: string
+          input_tokens: number
+          output_tokens: number
+        }[]
+      }
+      get_deal_cost_summary: {
+        Args: {
+          p_end_date?: string
+          p_limit?: number
+          p_organization_id?: string
+          p_start_date?: string
+        }
+        Returns: {
+          conversation_count: number
+          deal_id: string
+          deal_name: string
+          document_count: number
+          last_activity: string
+          organization_name: string
+          total_cost_usd: number
+        }[]
+      }
+      get_recent_errors: {
+        Args: {
+          p_end_date?: string
+          p_limit?: number
+          p_organization_id?: string
+          p_start_date?: string
+        }
+        Returns: {
+          created_at: string
+          deal_id: string
+          deal_name: string
+          duration_ms: number
+          error_message: string
+          feature_name: string
+          id: string
+          metadata: Json
+        }[]
+      }
+      get_usage_summary: {
+        Args: {
+          p_end_date?: string
+          p_organization_id?: string
+          p_start_date?: string
+        }
+        Returns: {
+          avg_latency_ms: number
+          error_count: number
+          error_rate: number
+          total_calls: number
+          total_cost_usd: number
+          total_tokens: number
+        }[]
+      }
       is_superadmin: { Args: never; Returns: boolean }
       user_organization_ids: { Args: never; Returns: string[] }
+      verify_superadmin_access: { Args: never; Returns: undefined }
     }
     Enums: {
       finding_domain_enum:

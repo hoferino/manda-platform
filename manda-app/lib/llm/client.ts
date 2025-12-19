@@ -142,6 +142,38 @@ export function createLLMClientForProvider(
 export type LLMClient = BaseChatModel
 
 /**
+ * Create LLM client with automatic fallback.
+ * Story: E12.6 - Uses LangChain's built-in FallbackLLM for model switching.
+ * Primary: Claude Sonnet -> Fallback: Gemini Pro on 429/503 errors.
+ *
+ * Note: Returns a Runnable that can be used like BaseChatModel.
+ * The withFallbacks wrapper handles 429/503 errors automatically.
+ */
+export function createLLMClientWithFallback(config?: Partial<LLMConfig>) {
+  const llmConfig = { ...getLLMConfig(), ...config }
+
+  const primaryLLM = createLLMClient(llmConfig)
+
+  // Only configure fallback if we have a fallback key
+  if (!process.env.GOOGLE_AI_API_KEY) {
+    return primaryLLM
+  }
+
+  const fallbackLLM = new ChatGoogleGenerativeAI({
+    apiKey: process.env.GOOGLE_AI_API_KEY,
+    model: 'gemini-2.5-pro',
+    temperature: llmConfig.temperature,
+    maxOutputTokens: llmConfig.maxTokens,
+    maxRetries: llmConfig.retryAttempts,
+  })
+
+  // LangChain's withFallbacks handles 429, 503, and connection errors automatically
+  return primaryLLM.withFallbacks({
+    fallbacks: [fallbackLLM],
+  })
+}
+
+/**
  * Re-export types for convenience
  */
 export type { LLMConfig, LLMProvider }

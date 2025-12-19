@@ -4,6 +4,7 @@
  * Functions for interacting with the chat API endpoints.
  * Story: E5.3 - Build Chat Interface with Conversation History
  * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
+ * Story: E12.9 - Multi-Tenant Data Isolation (AC: #9 - API client includes org header)
  */
 
 import type {
@@ -14,6 +15,7 @@ import type {
   SSEEvent,
   parseSSEEvent,
 } from '@/lib/types/chat'
+import { apiFetch } from '@/lib/api/client'
 
 /**
  * Base API path for chat
@@ -33,11 +35,8 @@ function getConversationsApiPath(projectId: string): string {
  * Fetch conversations for a project
  */
 export async function getConversations(projectId: string): Promise<Conversation[]> {
-  const response = await fetch(getConversationsApiPath(projectId), {
+  const response = await apiFetch(getConversationsApiPath(projectId), {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
   })
 
   if (!response.ok) {
@@ -55,13 +54,10 @@ export async function getConversation(
   projectId: string,
   conversationId: string
 ): Promise<ConversationWithMessages> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${getConversationsApiPath(projectId)}/${conversationId}`,
     {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
     }
   )
 
@@ -80,11 +76,8 @@ export async function createConversation(
   projectId: string,
   title?: string
 ): Promise<Conversation> {
-  const response = await fetch(getConversationsApiPath(projectId), {
+  const response = await apiFetch(getConversationsApiPath(projectId), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({ title }),
   })
 
@@ -103,13 +96,10 @@ export async function deleteConversation(
   projectId: string,
   conversationId: string
 ): Promise<void> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${getConversationsApiPath(projectId)}/${conversationId}`,
     {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
     }
   )
 
@@ -127,13 +117,10 @@ export async function updateConversation(
   conversationId: string,
   title: string
 ): Promise<Conversation> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${getConversationsApiPath(projectId)}/${conversationId}`,
     {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ title }),
     }
   )
@@ -162,11 +149,8 @@ export async function getMessages(
     params.toString() ? `?${params.toString()}` : ''
   }`
 
-  const response = await fetch(url, {
+  const response = await apiFetch(url, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
   })
 
   if (!response.ok) {
@@ -210,10 +194,9 @@ export function sendMessageStream(
   // Execute async without blocking
   ;(async () => {
     try {
-      const response = await fetch(getChatApiPath(projectId), {
+      const response = await apiFetch(getChatApiPath(projectId), {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Accept: 'text/event-stream',
         },
         body: JSON.stringify({
@@ -335,12 +318,8 @@ export async function sendMessage(
   message: string,
   conversationId?: string
 ): Promise<{ message: Message; conversationId: string; suggestedFollowups?: string[] }> {
-  const response = await fetch(getChatApiPath(projectId), {
+  const response = await apiFetch(getChatApiPath(projectId), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      // Don't request SSE
-    },
     body: JSON.stringify({
       message,
       conversationId,

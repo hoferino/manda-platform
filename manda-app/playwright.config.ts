@@ -1,6 +1,6 @@
 /**
  * Playwright E2E Test Configuration
- * TD-001: Add E2E tests for Data Room
+ * E12.4: Happy Path Smoke Tests
  */
 
 import { defineConfig, devices } from '@playwright/test'
@@ -23,8 +23,23 @@ export default defineConfig({
 
   projects: [
     {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+    {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'smoke',
+      testMatch: '**/smoke/*.spec.ts',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/user.json',
+        actionTimeout: 30000,
+        navigationTimeout: 30000,
+      },
     },
   ],
 

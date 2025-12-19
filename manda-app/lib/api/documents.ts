@@ -3,9 +3,11 @@
  *
  * Client-side functions for interacting with the documents API.
  * Handles file uploads, downloads, and document management.
+ * Story: E12.9 - Multi-Tenant Data Isolation (AC: #9 - API client includes org header)
  */
 
 import type { DocumentCategory } from '@/lib/gcs/client'
+import { apiFetch, getOrganizationId } from '@/lib/api/client'
 
 /**
  * Processing status values that match the backend pipeline
@@ -95,6 +97,7 @@ export interface UploadResult {
 
 /**
  * Upload a file to the document storage
+ * Note: Uses raw fetch with manual org header for FormData (apiFetch sets Content-Type)
  */
 export async function uploadDocument(
   file: File,
@@ -113,8 +116,17 @@ export async function uploadDocument(
   }
 
   try {
+    // Must use raw fetch for FormData (apiFetch sets Content-Type which breaks multipart)
+    // But we still need the organization header for multi-tenant isolation
+    const orgId = getOrganizationId()
+    const headers: HeadersInit = {}
+    if (orgId) {
+      headers['x-organization-id'] = orgId
+    }
+
     const response = await fetch('/api/documents/upload', {
       method: 'POST',
+      headers,
       body: formData,
     })
 
@@ -178,7 +190,7 @@ export async function getDocument(id: string): Promise<{
   error?: string
 }> {
   try {
-    const response = await fetch(`/api/documents/${id}`)
+    const response = await apiFetch(`/api/documents/${id}`)
     const data = await response.json()
 
     if (!response.ok) {
@@ -200,7 +212,7 @@ export async function deleteDocument(id: string): Promise<{
   error?: string
 }> {
   try {
-    const response = await fetch(`/api/documents/${id}`, {
+    const response = await apiFetch(`/api/documents/${id}`, {
       method: 'DELETE',
     })
     const data = await response.json()
@@ -232,11 +244,8 @@ export async function updateDocument(
   error?: string
 }> {
   try {
-    const response = await fetch(`/api/documents/${id}`, {
+    const response = await apiFetch(`/api/documents/${id}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(updates),
     })
     const data = await response.json()
@@ -308,7 +317,7 @@ export async function getSignedUploadUrl(
       params.set('folderPath', folderPath)
     }
 
-    const response = await fetch(`/api/documents/upload?${params}`)
+    const response = await apiFetch(`/api/documents/upload?${params}`)
     const data = await response.json()
 
     if (!response.ok) {
@@ -401,7 +410,7 @@ export async function findDocumentByName(
   }
 
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `/api/projects/${projectId}/documents/lookup?name=${encodeURIComponent(documentName)}`
     )
 
@@ -460,11 +469,10 @@ export async function findDocumentsByNames(
 
   // Fetch uncached names
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `/api/projects/${projectId}/documents/lookup`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ names: uncachedNames }),
       }
     )

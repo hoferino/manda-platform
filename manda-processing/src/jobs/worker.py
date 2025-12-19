@@ -1,6 +1,7 @@
 """
 Job worker process for background job execution.
 Story: E3.1 - Set up FastAPI Backend with pg-boss Job Queue (AC: #2)
+Story: E12.6 - Error Handling & Graceful Degradation (permanent failure handling)
 """
 
 import asyncio
@@ -14,6 +15,21 @@ import structlog
 from src.jobs.queue import Job, JobQueue, get_job_queue
 
 logger = structlog.get_logger(__name__)
+
+
+class PermanentJobError(Exception):
+    """
+    Raised when a job fails permanently and should NOT be retried.
+
+    Use this to wrap errors that are classified as permanent failures
+    (e.g., invalid file format, corrupt file, password-protected PDF).
+
+    Example:
+        if classified.category == ErrorCategory.PERMANENT:
+            raise PermanentJobError(str(e)) from e
+    """
+
+    pass
 
 
 @dataclass
@@ -190,7 +206,18 @@ class Worker:
                 job_id=job.id,
                 job_name=job.name,
             )
+        except PermanentJobError as e:
+            # Permanent failures should not be retried
+            error_msg = str(e)
+            logger.error(
+                "Job failed permanently (no retry)",
+                job_id=job.id,
+                job_name=job.name,
+                error=error_msg,
+            )
+            await queue.fail(job.id, error_msg, permanent=True)
         except Exception as e:
+            # Other failures may be retried
             error_msg = str(e)
             logger.error(
                 "Job processing failed",

@@ -2,12 +2,14 @@
  * Chat Section Page
  * Conversational AI assistant with conversation history
  * Story: E5.3 - Build Chat Interface with Conversation History
+ * Story: E12.6 - Error Handling & Graceful Degradation
  * AC: #1 (Chat Page UI)
  */
 
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { ChatInterface } from '@/components/chat'
+import { ChatErrorBoundary } from '@/components/chat/error-boundary'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const metadata: Metadata = {
@@ -55,7 +57,9 @@ export default async function ChatPage({ params }: ChatPageProps) {
 
   return (
     <Suspense fallback={<ChatSkeleton />}>
-      <ChatInterface projectId={projectId} />
+      <ChatErrorBoundary>
+        <ChatInterface projectId={projectId} />
+      </ChatErrorBoundary>
     </Suspense>
   )
 }

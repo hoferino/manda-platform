@@ -8,15 +8,18 @@
  * Story: E5.6 - Add Conversation Context and Multi-turn Support
  * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
  * Story: E11.4 - Intent-Aware Knowledge Retrieval
+ * Story: E12.6 - Error Handling & Graceful Degradation
  * AC: #2 (Message Submission), #3 (Streaming Responses), #8 (API Routes)
  * AC: E5.6 #1 (Last N Messages), #3 (Context Persists), #4 (Long Conversations), #5 (Token Management)
  * AC: E5.7 #1 (Confidence Score Extraction), #6 (Multiple Finding Aggregation)
  * AC: E11.4 #3 (Graphiti hybrid retrieval), #4 (Context injection), #7 (Latency tracking)
+ * AC: E12.6 #4 (Error logging), #5 (User-friendly messages)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ChatRequestSchema } from '@/lib/types/chat'
+import { toUserFacingError } from '@/lib/errors/types'
 import {
   createChatAgent,
   streamChat,
@@ -229,15 +232,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
         // Generate message ID for the response
         const messageId = crypto.randomUUID()
 
-        // Save assistant message to database (E5.7: store confidence)
-        await supabase.from('messages').insert({
+        // Save assistant message to database
+        // Note: confidence column removed - doesn't exist in schema yet
+        const { error: assistantMsgError } = await supabase.from('messages').insert({
           id: messageId,
           conversation_id: activeConversationId,
           role: 'assistant',
           content,
           sources: handler.getSources().length > 0 ? JSON.stringify(handler.getSources()) : null,
-          confidence: confidence ? JSON.stringify(confidence) : null,
         })
+
+        if (assistantMsgError) {
+          console.error('[api/chat] Error saving assistant message:', assistantMsgError)
+        } else {
+          console.log('[api/chat] Assistant message saved:', messageId, 'to conversation:', activeConversationId)
+        }
 
         // Update conversation updated_at
         await supabase
@@ -281,7 +290,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
       },
     })
   } catch (err) {
-    console.error('[api/chat] Error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    // E12.6: Standardized error response
+    const userError = toUserFacingError(err)
+    console.error('[api/chat] Error:', userError.cause ?? err)
+
+    return NextResponse.json(
+      {
+        error: userError.message,
+        isRetryable: userError.isRetryable,
+        errorType: userError.constructor.name,
+      },
+      { status: userError.statusCode }
+    )
   }
 }

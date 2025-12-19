@@ -25,15 +25,20 @@ interface UseChatReturn {
   messages: Message[]
   isLoading: boolean
   isStreaming: boolean
+  /** Conversation ID that has a stream running in the background (user switched away) */
+  backgroundStreamConversationId: string | null
   error: Error | null
   currentTool: string | null
   contextMessageCount: number
   suggestedFollowups: string[]
-  sendMessage: (content: string) => Promise<void>
+  /** Send a message. Optional conversationIdOverride bypasses React state delay for newly created conversations. */
+  sendMessage: (content: string, conversationIdOverride?: string) => Promise<void>
   retryLastMessage: () => Promise<void>
   clearError: () => void
   clearSuggestions: () => void
   loadConversation: (conversationId: string) => Promise<void>
+  /** Call before creating a new conversation to prevent reload from wiping optimistic state */
+  prepareForNewConversation: () => void
 }
 
 const CONTEXT_WINDOW_SIZE = 10
@@ -46,6 +51,7 @@ export function useChat({
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isStreaming, setIsStreaming] = useState(false)
+  const [backgroundStreamConversationId, setBackgroundStreamConversationId] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [currentTool, setCurrentTool] = useState<string | null>(null)
   const [suggestedFollowups, setSuggestedFollowups] = useState<string[]>([])
@@ -63,15 +69,30 @@ export function useChat({
   // Track confidence data (E5.7)
   const confidenceRef = useRef<MessageConfidence | undefined>(undefined)
 
+  // Track the conversation ID that's currently being created/streamed to
+  // This prevents reload for THIS conversation but allows switching to others
+  const pendingConversationIdRef = useRef<string | null>(null)
+  // Track the conversation ID we're actively streaming to (for callback guards)
+  const streamingConversationIdRef = useRef<string | null>(null)
+
   // Update internal ref when prop changes
   useEffect(() => {
     currentConversationRef.current = conversationId
   }, [conversationId])
 
   // Load conversation messages when conversationId changes
+  // Skip reload only if we're streaming to THIS specific conversation
   useEffect(() => {
+    console.log('[useChat] conversationId effect:', conversationId, 'pending:', pendingConversationIdRef.current)
     if (conversationId) {
-      loadConversationMessages(conversationId)
+      // Only skip reload if this is the conversation we're actively streaming to
+      // This allows switching to OTHER conversations while streaming
+      if (pendingConversationIdRef.current === conversationId) {
+        console.log('[useChat] Skipped reload - this is the pending conversation')
+      } else {
+        console.log('[useChat] Loading conversation messages for:', conversationId)
+        loadConversationMessages(conversationId)
+      }
     } else {
       setMessages([])
     }
@@ -94,8 +115,27 @@ export function useChat({
   }
 
   // Load a specific conversation
+  // Only skip if trying to load the conversation we're actively streaming to
   const loadConversation = useCallback(
     async (convId: string) => {
+      // Allow switching to OTHER conversations, only block reload of pending one
+      if (pendingConversationIdRef.current === convId) {
+        console.log('[useChat] loadConversation skipped - this is the pending conversation')
+        return
+      }
+
+      // If switching away from a streaming conversation, DON'T abort -
+      // let it continue in background. Track it so UI can show indicator.
+      if (streamingConversationIdRef.current && streamingConversationIdRef.current !== convId) {
+        console.log('[useChat] Switching away from streaming conversation, stream continues in background')
+        // Don't abort - let stream continue so response is saved
+        // Track as background stream so UI can show indicator
+        setBackgroundStreamConversationId(streamingConversationIdRef.current)
+        // Clear active streaming state for this view
+        setIsStreaming(false)
+        setCurrentTool(null)
+      }
+
       currentConversationRef.current = convId
       await loadConversationMessages(convId)
     },
@@ -103,9 +143,25 @@ export function useChat({
   )
 
   // Send a message
+  // Optional conversationIdOverride allows passing a newly created conversation ID
+  // before React state has propagated through the effect chain
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, conversationIdOverride?: string) => {
       if (!content.trim() || isStreaming) return
+
+      // Use override if provided (for newly created conversations)
+      const effectiveConversationId = conversationIdOverride ?? currentConversationRef.current
+
+      // Update the ref immediately if override provided
+      if (conversationIdOverride) {
+        currentConversationRef.current = conversationIdOverride
+      }
+
+      // Mark this conversation as pending (prevents reload from wiping optimistic messages)
+      // Only blocks reload for THIS conversation, not switching to others
+      pendingConversationIdRef.current = effectiveConversationId
+      // Track which conversation we're streaming to (for switch-away detection)
+      streamingConversationIdRef.current = effectiveConversationId
 
       // Store for retry
       lastUserMessageRef.current = content
@@ -114,7 +170,7 @@ export function useChat({
       const userMessageId = crypto.randomUUID()
       const userMessage: Message = {
         id: userMessageId,
-        conversationId: currentConversationRef.current || '',
+        conversationId: effectiveConversationId || '',
         role: 'user',
         content,
         createdAt: new Date().toISOString(),
@@ -133,7 +189,7 @@ export function useChat({
       const assistantMessageId = crypto.randomUUID()
       const assistantMessage: Message = {
         id: assistantMessageId,
-        conversationId: currentConversationRef.current || '',
+        conversationId: effectiveConversationId || '',
         role: 'assistant',
         content: '',
         createdAt: new Date().toISOString(),
@@ -141,8 +197,11 @@ export function useChat({
       setMessages((prev) => [...prev, assistantMessage])
 
       // Set up streaming callbacks
+      // Guard callbacks to only update if we're still viewing this conversation
       const callbacks: ChatStreamCallbacks = {
         onToken: (token) => {
+          // Guard: only update if we're still on this conversation
+          if (streamingConversationIdRef.current !== effectiveConversationId) return
           streamingContentRef.current += token
           setMessages((prev) =>
             prev.map((msg) =>
@@ -153,15 +212,32 @@ export function useChat({
           )
         },
         onToolStart: (tool) => {
+          if (streamingConversationIdRef.current !== effectiveConversationId) return
           setCurrentTool(tool)
         },
         onToolEnd: () => {
+          if (streamingConversationIdRef.current !== effectiveConversationId) return
           setCurrentTool(null)
         },
         onSources: (citations) => {
           sourcesRef.current = citations
         },
         onDone: (message, followups, confidence) => {
+          // Only update UI if we're still on this conversation
+          const isStillOnConversation = streamingConversationIdRef.current === effectiveConversationId
+
+          // Always clear streaming refs and background state
+          streamingConversationIdRef.current = null
+          pendingConversationIdRef.current = null
+          setBackgroundStreamConversationId(null) // Clear background indicator
+
+          if (!isStillOnConversation) {
+            // User switched away, just clean up state
+            setIsStreaming(false)
+            setCurrentTool(null)
+            return
+          }
+
           // Store confidence for final update (E5.7)
           if (confidence) {
             confidenceRef.current = confidence
@@ -188,10 +264,19 @@ export function useChat({
           setCurrentTool(null)
         },
         onError: (err, code) => {
-          setError(err)
+          // Only show error if we're still on this conversation
+          const isStillOnConversation = streamingConversationIdRef.current === effectiveConversationId
+
+          // Always clear streaming refs and background state
+          streamingConversationIdRef.current = null
+          pendingConversationIdRef.current = null
+          setBackgroundStreamConversationId(null) // Clear background indicator
           setIsStreaming(false)
           setCurrentTool(null)
 
+          if (!isStillOnConversation) return
+
+          setError(err)
           // Remove the empty assistant message on error
           setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId))
         },
@@ -201,7 +286,7 @@ export function useChat({
       const controller = sendMessageStream(
         projectId,
         content,
-        currentConversationRef.current || undefined,
+        effectiveConversationId || undefined,
         {
           ...callbacks,
           onDone: (message, suggestedFollowups) => {
@@ -245,6 +330,14 @@ export function useChat({
     setSuggestedFollowups([])
   }, [])
 
+  // Prepare for new conversation - sets a temporary pending ID to prevent
+  // the conversationId change effect from reloading messages
+  // The actual ID will be set in sendMessage when we know the real conversation ID
+  const prepareForNewConversation = useCallback(() => {
+    // Use a temporary marker - will be replaced with actual ID in sendMessage
+    pendingConversationIdRef.current = 'pending-new'
+  }, [])
+
   // Calculate context message count
   const contextMessageCount = Math.min(messages.length, CONTEXT_WINDOW_SIZE * 2)
 
@@ -252,6 +345,7 @@ export function useChat({
     messages,
     isLoading,
     isStreaming,
+    backgroundStreamConversationId,
     error,
     currentTool,
     contextMessageCount,
@@ -261,5 +355,6 @@ export function useChat({
     clearError,
     clearSuggestions,
     loadConversation,
+    prepareForNewConversation,
   }
 }

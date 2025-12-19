@@ -54,10 +54,13 @@ manda-platform/
 ## 🚀 Key Features
 
 ### 1. Conversational Knowledge Base
-- Semantic search (RAG via pgvector) across all deal documents
+- Hybrid search (vector + BM25 + graph) via Graphiti + Neo4j
+- Voyage voyage-3.5 embeddings with rerank-2.5 for accuracy
+- Temporal knowledge graph with entity resolution
 - Multi-source synthesis with confidence indicators
-- Neo4j knowledge graph for relationship mapping
 - Source attribution chains for transparency
+
+> **Architecture Note (E10 - 2025-12-17):** Knowledge architecture consolidated from pgvector + Neo4j dual-database to unified Graphiti + Neo4j. See [Sprint Change Proposal 2025-12-15](docs/sprint-change-proposal-2025-12-15.md).
 
 ### 2. CIM Company Overview Creation (CIM v3 Workflow)
 - **14-phase interactive workflow** for creating Company Overview chapters
@@ -136,8 +139,9 @@ This project is built using the **BMAD Framework** (Build Mad Agentic Delivery) 
 
 ### Backend
 - **Framework:** FastAPI 0.121+ (Python 3.11+)
-- **Database:** PostgreSQL 18 (Supabase) with pgvector 0.8+
-- **Graph DB:** Neo4j 2025.01 (knowledge graph, source attribution)
+- **Transactional DB:** PostgreSQL 18 (Supabase) for deals, users, Q&A, conversations
+- **Knowledge Graph:** Graphiti + Neo4j 5.26+ (embeddings, entity resolution, hybrid search)
+- **Embeddings:** Voyage voyage-3.5 (1024d) with rerank-2.5
 - **AI Framework:** LangChain 1.0 + LangGraph 1.0 (workflow orchestration, human-in-the-loop)
 - **Type Safety:** Pydantic v2.12+ (structured outputs, validation)
 - **LLM Integration:** LangChain adapters (model-agnostic, multi-provider support)
@@ -152,8 +156,9 @@ This project is built using the **BMAD Framework** (Build Mad Agentic Delivery) 
 - **Conversation:** Configurable (default: Claude Sonnet 4.5 or Gemini 2.0 Pro)
 - **Document Extraction:** Configurable (default: Gemini 2.0 Pro 2M context or Claude Opus 3)
 - **Speed Tasks:** Configurable (default: Claude Haiku 4 or Gemini 2.0 Flash)
-- **Embeddings:** Configurable (default: OpenAI text-embedding-3-large)
-- **Provider Support:** Anthropic Claude, Google Gemini, OpenAI GPT, and more via LangChain
+- **Embeddings:** Voyage voyage-3.5 (1024d, 32K context) — general-purpose, $0.06/1M tokens
+- **Reranking:** Voyage rerank-2.5 (20-35% accuracy improvement)
+- **Provider Support:** Anthropic Claude, Google Gemini, OpenAI GPT, Voyage AI, and more via LangChain
 
 ### Infrastructure
 - **Deployment:** Docker Compose (development), Kubernetes (production)
@@ -170,11 +175,14 @@ This project is built using the **BMAD Framework** (Build Mad Agentic Delivery) 
 | E4 | Collaborative Knowledge Workflow | ✅ Complete | 13/13 |
 | E5 | Conversational Assistant | ✅ Complete | 8/9 |
 | E6 | IRL Management & Auto-Generation | ✅ Complete | 7/7 |
-| E7 | Learning Loop | Backlog | 0/6 |
-| E8 | Q&A Co-Creation Workflow | Backlog | 0/8 |
-| E9 | CIM Builder | Backlog | 0/15 |
+| E7 | Learning Loop | ✅ Complete | 6/6 |
+| E8 | Q&A Co-Creation Workflow | ✅ Complete | 7/7 |
+| E9 | CIM Builder | ✅ Complete | 15/15 |
+| E10 | Knowledge Graph Foundation | ✅ Complete | 8/8 |
+| E11 | Agent Context Engineering | In Progress | 0/7 |
+| E12 | Testing & Stabilization | In Progress | 0/9 |
 
-**Current Phase:** Testing & Stabilization (validating Phase 1 MVP before Phase 2 enhancements)
+**Current Phase:** Phase 2 - Refinement Sprint (E11 Agent Context Engineering, E12 Testing & Stabilization)
 
 ## 🤝 Contributing
 
@@ -193,4 +201,4 @@ Proprietary - All Rights Reserved
 
 *Built with the BMAD Framework - Agentic delivery for modern software development*
 
-*Last Updated: 2025-12-13*
+*Last Updated: 2025-12-19*

@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Menu, AlertCircle, RefreshCw } from 'lucide-react'
+import { Menu, AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useConversations } from '@/lib/hooks/useConversations'
@@ -62,6 +62,7 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
     messages,
     isLoading: messagesLoading,
     isStreaming,
+    backgroundStreamConversationId,
     error: chatError,
     currentTool,
     contextMessageCount,
@@ -71,14 +72,17 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
     clearError,
     clearSuggestions,
     loadConversation,
+    prepareForNewConversation,
   } = useChat({
     projectId,
     conversationId: currentConversationId,
-    onConversationCreated: (id) => {
-      // Refresh conversations list when a new one is created
-      refreshConversations()
-    },
+    // Note: onConversationCreated is not used - conversation is created by ChatInterface directly
   })
+
+  // Get the title of the conversation with a background stream
+  const backgroundStreamConversationTitle = backgroundStreamConversationId
+    ? conversations.find((c) => c.id === backgroundStreamConversationId)?.title || 'a conversation'
+    : null
 
   // Quick action availability
   const quickActionAvailability = useQuickActionAvailability({ projectId })
@@ -103,6 +107,8 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
   }, [])
 
   // Sync URL with current conversation
+  // Use window.history.replaceState instead of router.replace to avoid
+  // triggering a soft navigation that could interrupt streaming state
   useEffect(() => {
     const currentParam = searchParams.get('conversation')
     if (currentConversationId !== currentParam) {
@@ -112,9 +118,10 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
       } else {
         url.searchParams.delete('conversation')
       }
-      router.replace(url.pathname + url.search, { scroll: false })
+      // Use native history API to update URL without navigation
+      window.history.replaceState(null, '', url.pathname + url.search)
     }
-  }, [currentConversationId, searchParams, router])
+  }, [currentConversationId, searchParams])
 
   // Handle new conversation
   const handleNewConversation = useCallback(async () => {
@@ -138,16 +145,23 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
     async (content: string) => {
       // Clear input value after sending
       setInputValue('')
-      // If no conversation selected, create one first
+      // If no conversation selected, create one first and pass ID directly
+      // to avoid race condition with React state propagation
       if (!currentConversationId) {
+        // Prevent the conversationId change from triggering a message reload
+        console.log('[ChatInterface] Preparing for new conversation')
+        prepareForNewConversation()
         const conversation = await createNewConversation(
           content.length > 50 ? content.substring(0, 47) + '...' : content
         )
-        // The useChat hook will pick up the new conversation ID
+        console.log('[ChatInterface] Created conversation:', conversation.id)
+        // Pass the new conversation ID directly to bypass state propagation delay
+        await sendMessage(content, conversation.id)
+      } else {
+        await sendMessage(content)
       }
-      await sendMessage(content)
     },
-    [currentConversationId, createNewConversation, sendMessage]
+    [currentConversationId, createNewConversation, sendMessage, prepareForNewConversation]
   )
 
   // Handle quick action
@@ -237,6 +251,24 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
               </div>
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Background stream indicator */}
+        {backgroundStreamConversationId && (
+          <div className="px-4 py-2 text-xs bg-primary/10 border-b flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+            <span className="text-primary">
+              Processing response in "{backgroundStreamConversationTitle}"...
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-6 text-xs"
+              onClick={() => handleSelectConversation(backgroundStreamConversationId)}
+            >
+              Go to conversation
+            </Button>
+          </div>
         )}
 
         {/* Context indicator */}

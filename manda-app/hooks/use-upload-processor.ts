@@ -1,6 +1,7 @@
 /**
  * Upload Processor Hook
  * Story: E2.7 - Build Upload Progress Indicators and WebSocket Updates
+ * Story: E12.9 - Multi-Tenant Data Isolation (AC: #9 - API client includes org header)
  * Acceptance Criteria: AC3 (Progress), AC5 (Retry), AC6 (Bulk/Parallel), AC7 (Notifications)
  *
  * Features:
@@ -21,6 +22,7 @@ import {
   type UploadItem,
 } from '@/stores/upload-store'
 import type { Document } from '@/lib/api/documents'
+import { getOrganizationId } from '@/lib/api/client'
 
 interface UploadResponse {
   success: boolean
@@ -110,6 +112,13 @@ function uploadWithProgress(
     // Configure and send
     xhr.open('POST', '/api/documents/upload')
     xhr.timeout = 600000 // 10 minutes timeout for large files
+
+    // E12.9: Add organization header for multi-tenant isolation
+    const orgId = getOrganizationId()
+    if (orgId) {
+      xhr.setRequestHeader('x-organization-id', orgId)
+    }
+
     xhr.send(formData)
   })
 }

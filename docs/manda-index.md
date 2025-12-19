@@ -1,8 +1,11 @@
 # Manda Platform - Comprehensive Project Index
 
 **Generated:** 2025-12-13
+**Last Updated:** 2025-12-19
 **Scan Level:** Exhaustive
 **Project Type:** Multi-part Monorepo (Web + Backend)
+
+> **Architecture Note (E10 Pivot - 2025-12-17):** Knowledge architecture consolidated from pgvector + Neo4j dual-database to unified Graphiti + Neo4j. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md).
 
 ---
 
@@ -42,9 +45,12 @@
 | E4: Knowledge Explorer | ✅ Complete | Findings browser, contradictions, gaps |
 | E5: Conversational Assistant | ✅ Complete | LangChain agent with 11 tools |
 | E6: IRL Management | ✅ Complete | Templates, auto-generation, export |
-| E7: Learning Loop | Contexted | Corrections, feedback, audit trail |
-| E8: Q&A Co-Creation | Backlog | Question/answer management |
-| E9: CIM Builder | Backlog | AI-powered document generation |
+| E7: Learning Loop | ✅ Complete | Corrections, feedback, audit trail |
+| E8: Q&A Co-Creation | ✅ Complete | Question/answer management |
+| E9: CIM Builder | ✅ Complete | AI-powered document generation |
+| E10: Knowledge Graph Foundation | ✅ Complete | Graphiti + Neo4j, Voyage embeddings, hybrid retrieval |
+| E11: Agent Context Engineering | In Progress | Context engineering, Pydantic AI |
+| E12: Testing & Stabilization | In Progress | E2E testing, error handling |
 
 ---
 

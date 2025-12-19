@@ -384,6 +384,28 @@ async def hybrid_search(
     except HTTPException:
         raise  # Re-raise HTTP errors
     except Exception as e:
+        # E12.6: Check for Graphiti connection errors (graceful degradation)
+        error_str = str(e).lower()
+        is_connection_error = any(term in error_str for term in [
+            'neo4j', 'graphiti', 'connection', 'unavailable', 'timeout'
+        ])
+
+        if is_connection_error:
+            logger.warning(
+                "Graphiti/Neo4j unavailable, returning empty results",
+                error=str(e),
+                deal_id=request.deal_id,
+            )
+            # Return empty results for graceful degradation
+            return HybridSearchResponse(
+                query=request.query,
+                results=[],
+                sources=[],
+                entities=[],
+                latency_ms=0,
+                result_count=0,
+            )
+
         logger.error(
             "Hybrid search failed",
             error=str(e),

@@ -3,6 +3,7 @@ Document parsing job handler.
 Story: E3.3 - Implement Document Parsing Job Handler (AC: #1-6)
 Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
 Story: E10.8 - PostgreSQL Cleanup (pipeline update)
+Story: E12.6 - Error Handling & Graceful Degradation (AC: #3, #4)
 
 This handler processes parse_document jobs from the pg-boss queue:
 1. Downloads document from GCS
@@ -20,6 +21,10 @@ Enhanced with E3.8:
 - Stage tracking via last_completed_stage
 - Error classification and retry decisions
 - Structured error reporting
+
+Enhanced with E12.6:
+- User-facing error messages via classify_error
+- Error logging with full context to feature_usage table
 """
 
 import time
@@ -51,6 +56,9 @@ from src.storage.supabase_client import (
     DatabaseError,
     get_supabase_client,
 )
+from src.errors.types import classify_error
+from src.observability.usage import log_feature_usage_to_db
+from src.jobs.worker import PermanentJobError
 
 
 def _create_docling_parser():
@@ -227,8 +235,8 @@ class ParseDocumentHandler:
                 retry_count=job.retry_count,
             )
 
-            # Re-raise to let worker mark job as failed
-            raise
+            # E12.6: Raise PermanentJobError to prevent retry
+            raise PermanentJobError(str(e)) from e
 
         except (GCSDownloadError, DatabaseError) as e:
             # Potentially retryable errors - classify and decide
@@ -253,12 +261,16 @@ class ParseDocumentHandler:
 
         except Exception as e:
             # Unexpected errors - classify and re-raise
+            elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+            user_error = classify_error(e)
+
             logger.error(
                 "parse_document job failed unexpectedly",
                 job_id=job.id,
                 document_id=str(document_id),
                 error=str(e),
                 error_type=type(e).__name__,
+                user_message=user_error.user_message,
                 exc_info=True,
             )
 
@@ -269,6 +281,29 @@ class ParseDocumentHandler:
                 current_stage="parsing",
                 retry_count=job.retry_count,
             )
+
+            # E12.6: Log error with full context to feature_usage table
+            try:
+                import traceback
+                await log_feature_usage_to_db(
+                    supabase=self.db.client,
+                    organization_id=None,  # Could be extracted from deal if available
+                    deal_id=deal_id,
+                    user_id=user_id,
+                    feature_name="document_parse",
+                    status="error",
+                    duration_ms=elapsed_ms,
+                    error_message=user_error.user_message,
+                    metadata={
+                        "error_type": user_error.__class__.__name__,
+                        "is_retryable": user_error.is_retryable,
+                        "stack": traceback.format_exc(),
+                        "original_error": str(e),
+                        "document_id": str(document_id),
+                    },
+                )
+            except Exception as log_error:
+                logger.warning("Failed to log error to feature_usage", error=str(log_error))
 
             raise
 

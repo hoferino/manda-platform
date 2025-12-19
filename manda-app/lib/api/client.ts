@@ -51,8 +51,9 @@ export function configureApiClient(config: Partial<ApiClientConfig>): void {
 /**
  * Get the current organization ID from localStorage.
  * This is a fallback when the React context is not available.
+ * Exported for use by FormData uploads that can't use apiFetch.
  */
-function getCurrentOrgId(): string | null {
+export function getOrganizationId(): string | null {
   if (typeof window === 'undefined') {
     return null
   }
@@ -145,7 +146,7 @@ export async function apiFetch(
 
   // Add organization header unless skipped
   if (!skipOrgHeader) {
-    const orgId = organizationId || getCurrentOrgId()
+    const orgId = organizationId || getOrganizationId()
     if (orgId) {
       headers['x-organization-id'] = orgId
     }

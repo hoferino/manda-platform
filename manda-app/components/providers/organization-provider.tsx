@@ -112,8 +112,10 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
           if (savedOrgId && savedOrgExists) {
             setCurrentOrgId(savedOrgId)
           } else if (orgs[0]) {
-            // Default to first organization
-            setCurrentOrgId(orgs[0].organization_id)
+            // Default to first organization and persist to localStorage
+            const firstOrgId = orgs[0].organization_id
+            setCurrentOrgId(firstOrgId)
+            localStorage.setItem(ORG_STORAGE_KEY, firstOrgId)
           }
         }
       } catch (err) {
