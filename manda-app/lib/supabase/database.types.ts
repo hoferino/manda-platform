@@ -340,6 +340,7 @@ export type Database = {
           irl_template: string | null
           metadata: Json | null
           name: string
+          organization_id: string
           status: string | null
           updated_at: string
           user_id: string
@@ -352,6 +353,7 @@ export type Database = {
           irl_template?: string | null
           metadata?: Json | null
           name: string
+          organization_id: string
           status?: string | null
           updated_at?: string
           user_id: string
@@ -364,11 +366,20 @@ export type Database = {
           irl_template?: string | null
           metadata?: Json | null
           name?: string
+          organization_id?: string
           status?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "deals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_chunks: {
         Row: {
@@ -585,6 +596,60 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      feature_usage: {
+        Row: {
+          created_at: string
+          deal_id: string | null
+          duration_ms: number | null
+          error_message: string | null
+          feature_name: string
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          deal_id?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          feature_name: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          feature_name?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_usage_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_usage_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feedback_analytics: {
         Row: {
@@ -910,6 +975,7 @@ export type Database = {
           name: string
           parent_path: string | null
           path: string
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
@@ -919,6 +985,7 @@ export type Database = {
           name: string
           parent_path?: string | null
           path: string
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
@@ -928,6 +995,7 @@ export type Database = {
           name?: string
           parent_path?: string | null
           path?: string
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1090,6 +1158,66 @@ export type Database = {
           },
         ]
       }
+      llm_usage: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          deal_id: string | null
+          feature: string
+          id: string
+          input_tokens: number
+          latency_ms: number | null
+          model: string
+          organization_id: string | null
+          output_tokens: number
+          provider: string
+          user_id: string | null
+        }
+        Insert: {
+          cost_usd?: number
+          created_at?: string
+          deal_id?: string | null
+          feature: string
+          id?: string
+          input_tokens?: number
+          latency_ms?: number | null
+          model: string
+          organization_id?: string | null
+          output_tokens?: number
+          provider: string
+          user_id?: string | null
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          deal_id?: string | null
+          feature?: string
+          id?: string
+          input_tokens?: number
+          latency_ms?: number | null
+          model?: string
+          organization_id?: string | null
+          output_tokens?: number
+          provider?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "llm_usage_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "llm_usage_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -1133,6 +1261,103 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      organization_member_audit: {
+        Row: {
+          action: string | null
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          new_role: string | null
+          old_role: string | null
+          organization_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_role?: string | null
+          old_role?: string | null
+          organization_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_role?: string | null
+          old_role?: string | null
+          organization_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_member_audit_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          organization_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
       }
       prompt_improvements: {
         Row: {
@@ -1471,8 +1696,8 @@ export type Database = {
       }
     }
     Functions: {
-      // match_findings removed in E10.8 - replaced by Graphiti hybrid search
-      // See: POST /api/search/hybrid in manda-processing
+      is_superadmin: { Args: never; Returns: boolean }
+      user_organization_ids: { Args: never; Returns: string[] }
     }
     Enums: {
       finding_domain_enum:

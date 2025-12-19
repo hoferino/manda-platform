@@ -1,9 +1,17 @@
 """
-Integration tests for the Graphiti knowledge ingest API endpoint.
+API endpoint tests for the Graphiti knowledge ingest endpoint.
 Story: E11.3 - Agent-Autonomous Knowledge Write-Back (AC: #4, #6)
 
-These tests verify the POST /api/graphiti/ingest endpoint
-integrates correctly with the Graphiti ingestion service.
+These tests verify the POST /api/graphiti/ingest endpoint handles
+requests correctly with mocked dependencies. They test:
+- Request/response handling
+- Input validation
+- Error handling
+- Authentication flow
+
+NOTE: These tests mock GraphitiIngestionService and Supabase client.
+For true integration tests with actual Neo4j/Graphiti, see the
+manual E2E verification in the story's Task 7.
 """
 
 import os
@@ -99,7 +107,7 @@ class TestGraphitiIngestEndpoint:
         """Test that ingest returns success for valid input (AC: #4)."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
         from src.storage.supabase_client import get_supabase_client
 
         app = FastAPI()
@@ -107,11 +115,11 @@ class TestGraphitiIngestEndpoint:
         # Override dependencies
         app.dependency_overrides[get_supabase_client] = lambda: mock_db_client
         # Skip API key validation for tests
-        app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
 
-        with patch.object(
-            graphiti.GraphitiIngestionService,
-            "__new__",
+        # Patch where GraphitiIngestionService is imported (lazy import inside function)
+        with patch(
+            "src.graphiti.ingestion.GraphitiIngestionService",
             return_value=mock_graphiti_service,
         ):
             app.include_router(graphiti.router)
@@ -142,7 +150,7 @@ class TestGraphitiIngestEndpoint:
         """Test that ingest accepts correction, confirmation, new_info (AC: #7)."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
         from src.storage.supabase_client import get_supabase_client
 
         source_types = ["correction", "confirmation", "new_info"]
@@ -150,11 +158,11 @@ class TestGraphitiIngestEndpoint:
         for source_type in source_types:
             app = FastAPI()
             app.dependency_overrides[get_supabase_client] = lambda: mock_db_client
-            app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+            app.dependency_overrides[verify_api_key] = lambda: "test-key"
 
-            with patch.object(
-                graphiti.GraphitiIngestionService,
-                "__new__",
+            # Patch where GraphitiIngestionService is imported (lazy import inside function)
+            with patch(
+                "src.graphiti.ingestion.GraphitiIngestionService",
                 return_value=mock_graphiti_service,
             ):
                 app.include_router(graphiti.router)
@@ -178,12 +186,12 @@ class TestGraphitiIngestEndpoint:
         """Test that ingest returns 404 for non-existent deal."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
         from src.storage.supabase_client import get_supabase_client
 
         app = FastAPI()
         app.dependency_overrides[get_supabase_client] = lambda: mock_db_client_no_deal
-        app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
 
         app.include_router(graphiti.router)
         with TestClient(app) as client:
@@ -211,10 +219,11 @@ class TestGraphitiIngestValidation:
         """Test that content shorter than 10 chars is rejected."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
 
         app = FastAPI()
-        app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+        # Override the actual dependency function, not the type alias
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
         app.include_router(graphiti.router)
 
         with TestClient(app) as client:
@@ -237,10 +246,10 @@ class TestGraphitiIngestValidation:
         """Test that invalid source_type is rejected."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
 
         app = FastAPI()
-        app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
         app.include_router(graphiti.router)
 
         with TestClient(app) as client:
@@ -262,10 +271,10 @@ class TestGraphitiIngestValidation:
         """Test that invalid deal_id UUID is rejected."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
 
         app = FastAPI()
-        app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
         app.include_router(graphiti.router)
 
         with TestClient(app) as client:
@@ -288,10 +297,10 @@ class TestGraphitiIngestValidation:
         """Test that all required fields must be present."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
 
         app = FastAPI()
-        app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
         app.include_router(graphiti.router)
 
         # Missing content
@@ -340,7 +349,7 @@ class TestGraphitiIngestErrorHandling:
         """Test that service errors return 500."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
         from src.storage.supabase_client import get_supabase_client
 
         mock_graphiti = MagicMock()
@@ -350,11 +359,11 @@ class TestGraphitiIngestErrorHandling:
 
         app = FastAPI()
         app.dependency_overrides[get_supabase_client] = lambda: mock_db_client
-        app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
 
-        with patch.object(
-            graphiti.GraphitiIngestionService,
-            "__new__",
+        # Patch where GraphitiIngestionService is imported (lazy import inside function)
+        with patch(
+            "src.graphiti.ingestion.GraphitiIngestionService",
             return_value=mock_graphiti,
         ):
             app.include_router(graphiti.router)
@@ -385,16 +394,16 @@ class TestGraphitiIngestOptionalFields:
         """Test that message_context is passed to service."""
         from fastapi import FastAPI
         from src.api.routes import graphiti
-        from src.api.dependencies import ApiKeyDep
+        from src.api.dependencies import verify_api_key
         from src.storage.supabase_client import get_supabase_client
 
         app = FastAPI()
         app.dependency_overrides[get_supabase_client] = lambda: mock_db_client
-        app.dependency_overrides[ApiKeyDep] = lambda: "test-key"
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
 
-        with patch.object(
-            graphiti.GraphitiIngestionService,
-            "__new__",
+        # Patch where GraphitiIngestionService is imported (lazy import inside function)
+        with patch(
+            "src.graphiti.ingestion.GraphitiIngestionService",
             return_value=mock_graphiti_service,
         ):
             app.include_router(graphiti.router)

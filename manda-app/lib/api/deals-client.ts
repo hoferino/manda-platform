@@ -2,8 +2,10 @@
  * Deals API Client Functions
  * Client-side functions for creating and managing deals
  * Story: E1.5 - Implement Project Creation Wizard (AC: #7, #8)
+ * Story: E12.9 - Multi-Tenant Data Isolation (AC: #4)
  *
  * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
+ * Note (E12.9): Deals now require organization_id for multi-tenant isolation
  */
 
 'use client'
@@ -13,6 +15,7 @@ import type { Deal, DealInsert } from '@/lib/supabase/types'
 
 export interface CreateDealInput {
   name: string
+  organization_id: string // E12.9: Required for multi-tenant
   company_name?: string | null
   industry?: string | null
   irl_template?: string | null
@@ -38,9 +41,10 @@ export async function createDeal(input: CreateDealInput): Promise<CreateDealResp
     return { data: null, error: 'Authentication required. Please sign in.' }
   }
 
-  // Prepare the insert data with user_id
+  // E12.9: Prepare the insert data with user_id and organization_id
   const insertData: DealInsert = {
     user_id: user.id,
+    organization_id: input.organization_id, // E12.9: Required for multi-tenant
     name: input.name,
     company_name: input.company_name || null,
     industry: input.industry || null,

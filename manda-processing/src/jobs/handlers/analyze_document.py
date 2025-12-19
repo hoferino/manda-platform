@@ -3,12 +3,13 @@ Analyze document job handler for LLM-based finding extraction.
 Story: E3.5 - Implement LLM Analysis with Gemini 2.5 (Tiered Approach) (AC: #1, #4, #5)
 Story: E3.8 - Implement Retry Logic for Failed Processing (AC: #2, #3, #4)
 Story: E4.15 - Sync Findings to Neo4j Knowledge Graph (AC: #3)
+Story: E11.5 - Type-Safe Tool Definitions with Pydantic AI (AC: #2, #3)
 
 This handler processes analyze-document jobs from the pg-boss queue:
 1. Updates document status to 'analyzing'
 2. Loads chunks from database
 3. Selects appropriate model tier based on document type
-4. Extracts findings using Gemini LLM
+4. Extracts findings using Pydantic AI agent (E11.5) or fallback GeminiClient
 5. Stores findings in database
 6. Syncs findings to Neo4j (E4.15)
 7. Updates document status to 'analyzed'
@@ -21,9 +22,15 @@ Enhanced with E3.8:
 
 Enhanced with E4.15:
 - Neo4j knowledge graph sync (best-effort, doesn't fail job)
+
+Enhanced with E11.5:
+- Type-safe Pydantic AI agent with structured output
+- Dependency injection via RunContext[AnalysisDependencies]
+- Model switching via config: PYDANTIC_AI_EXTRACTION_MODEL
 """
 
 import time
+import traceback
 from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID
@@ -46,6 +53,7 @@ from src.storage.neo4j_client import (
     create_extracted_from_relationship,
     Neo4jConnectionError,
 )
+from src.observability.usage import log_feature_usage_to_db
 
 logger = structlog.get_logger(__name__)
 
@@ -75,6 +83,13 @@ def _create_gemini_client():
     return GeminiClient()
 
 
+def _create_pydantic_agent():
+    """Create a Pydantic AI agent (lazy import to avoid import errors in tests)."""
+    from src.llm.pydantic_agent import create_analysis_agent
+
+    return create_analysis_agent()
+
+
 class AnalyzeDocumentHandler:
     """
     Handler for analyze-document jobs.
@@ -83,30 +98,63 @@ class AnalyzeDocumentHandler:
     Load Chunks -> Select Model -> Extract Findings -> Store -> Update Status -> Enqueue Next
 
     E3.8: Includes stage tracking and retry management.
+    E11.5: Uses Pydantic AI agent for type-safe extraction with fallback to GeminiClient.
     """
 
     def __init__(
         self,
         db_client: Optional[SupabaseClient] = None,
         llm_client: Optional[Any] = None,
+        pydantic_agent: Optional[Any] = None,
         retry_manager: Optional[RetryManager] = None,
         config: Optional[Settings] = None,
+        use_pydantic_ai: bool = True,
     ):
         """
         Initialize the handler with its dependencies.
 
         Args:
             db_client: Database client for storage
-            llm_client: Gemini LLM client
+            llm_client: Gemini LLM client (fallback when Pydantic AI unavailable)
+            pydantic_agent: Pydantic AI agent for type-safe extraction (E11.5)
             retry_manager: Retry manager for stage tracking and error handling
             config: Application settings
+            use_pydantic_ai: Whether to use Pydantic AI (default True, falls back if unavailable)
         """
         self.db = db_client or get_supabase_client()
         self.llm_client = llm_client or _create_gemini_client()
         self.retry_mgr = retry_manager or get_retry_manager()
         self.config = config or get_settings()
+        self.use_pydantic_ai = use_pydantic_ai
 
-        logger.info("AnalyzeDocumentHandler initialized")
+        # E11.5: Initialize Pydantic AI agent (lazy, may fail if not configured)
+        self._pydantic_agent = pydantic_agent
+        self._pydantic_agent_initialized = pydantic_agent is not None
+
+        logger.info(
+            "AnalyzeDocumentHandler initialized",
+            use_pydantic_ai=use_pydantic_ai,
+        )
+
+    def _get_pydantic_agent(self) -> Optional[Any]:
+        """Get or create the Pydantic AI agent (lazy initialization)."""
+        if not self.use_pydantic_ai:
+            return None
+
+        if not self._pydantic_agent_initialized:
+            try:
+                self._pydantic_agent = _create_pydantic_agent()
+                self._pydantic_agent_initialized = True
+                logger.debug("Pydantic AI agent initialized")
+            except Exception as e:
+                logger.warning(
+                    "Failed to initialize Pydantic AI agent, will use fallback",
+                    error=str(e),
+                )
+                self._pydantic_agent = None
+                self._pydantic_agent_initialized = True
+
+        return self._pydantic_agent
 
     async def handle(self, job: Job) -> dict[str, Any]:
         """
@@ -130,10 +178,14 @@ class AnalyzeDocumentHandler:
         user_id = job_data.get("user_id")
         is_retry = job_data.get("is_retry", False)
 
+        # E12.9: Get organization_id from job payload (will fetch from deal if not present)
+        organization_id = job_data.get("organization_id")
+
         logger.info(
             "Processing analyze-document job",
             job_id=job.id,
             document_id=str(document_id),
+            organization_id=organization_id,
             retry_count=job.retry_count,
             is_retry=is_retry,
         )
@@ -160,6 +212,17 @@ class AnalyzeDocumentHandler:
 
             if not project_id:
                 raise ValueError(f"Document has no project_id: {document_id}")
+
+            # E12.9: Fetch organization_id from deal if not in job payload
+            if not organization_id and deal_id:
+                deal = await self.db.get_deal(deal_id)
+                if deal:
+                    organization_id = deal.get("organization_id")
+                    logger.debug(
+                        "Fetched organization_id from deal",
+                        deal_id=deal_id,
+                        organization_id=organization_id,
+                    )
 
             # Select model tier based on document type
             model_tier = select_model_tier(file_type)
@@ -225,48 +288,77 @@ class AnalyzeDocumentHandler:
                 for chunk in chunks
             ]
 
-            # Analyze chunks with LLM
-            batch_size = self.config.llm_analysis_batch_size
-            analysis_result = await self.llm_client.analyze_batch(
-                chunks=chunk_data,
-                context=context,
-                model_tier=model_tier,
-                batch_size=batch_size,
-            )
-
-            logger.info(
-                "LLM analysis complete",
-                document_id=str(document_id),
-                findings_count=analysis_result.finding_count,
-                input_tokens=analysis_result.total_input_tokens,
-                output_tokens=analysis_result.total_output_tokens,
-            )
-
-            # Convert raw findings to FindingCreate models
+            # E11.5: Try Pydantic AI agent first, fallback to GeminiClient
+            pydantic_agent = self._get_pydantic_agent()
             findings_to_store: list[FindingCreate] = []
-            for finding_data in analysis_result.findings:
-                try:
-                    # Get chunk_id from finding data
-                    chunk_id = None
-                    if finding_data.get("chunk_id"):
-                        try:
-                            chunk_id = UUID(finding_data["chunk_id"])
-                        except (ValueError, TypeError):
-                            pass
+            total_input_tokens = 0
+            total_output_tokens = 0
 
-                    finding = finding_from_dict(
-                        data=finding_data,
-                        project_id=UUID(str(project_id)),
-                        document_id=document_id,
-                        chunk_id=chunk_id,
-                    )
-                    findings_to_store.append(finding)
-                except Exception as e:
-                    logger.warning(
-                        "Failed to convert finding",
-                        error=str(e),
-                        finding_preview=str(finding_data)[:100],
-                    )
+            if pydantic_agent is not None:
+                # Use Pydantic AI agent for type-safe extraction
+                analysis_result = await self._analyze_with_pydantic_ai(
+                    pydantic_agent=pydantic_agent,
+                    chunks=chunk_data,
+                    document_id=document_id,
+                    deal_id=str(project_id),
+                    document_name=document_name,
+                )
+                findings_to_store = analysis_result["findings"]
+                total_input_tokens = analysis_result["input_tokens"]
+                total_output_tokens = analysis_result["output_tokens"]
+
+                logger.info(
+                    "Pydantic AI analysis complete",
+                    document_id=str(document_id),
+                    findings_count=len(findings_to_store),
+                    input_tokens=total_input_tokens,
+                    output_tokens=total_output_tokens,
+                )
+            else:
+                # Fallback to GeminiClient batch analysis
+                batch_size = self.config.llm_analysis_batch_size
+                analysis_result = await self.llm_client.analyze_batch(
+                    chunks=chunk_data,
+                    context=context,
+                    model_tier=model_tier,
+                    batch_size=batch_size,
+                )
+
+                logger.info(
+                    "LLM analysis complete (fallback)",
+                    document_id=str(document_id),
+                    findings_count=analysis_result.finding_count,
+                    input_tokens=analysis_result.total_input_tokens,
+                    output_tokens=analysis_result.total_output_tokens,
+                )
+
+                total_input_tokens = analysis_result.total_input_tokens
+                total_output_tokens = analysis_result.total_output_tokens
+
+                # Convert raw findings to FindingCreate models
+                for finding_data in analysis_result.findings:
+                    try:
+                        # Get chunk_id from finding data
+                        chunk_id = None
+                        if finding_data.get("chunk_id"):
+                            try:
+                                chunk_id = UUID(finding_data["chunk_id"])
+                            except (ValueError, TypeError):
+                                pass
+
+                        finding = finding_from_dict(
+                            data=finding_data,
+                            project_id=UUID(str(project_id)),
+                            document_id=document_id,
+                            chunk_id=chunk_id,
+                        )
+                        findings_to_store.append(finding)
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to convert finding",
+                            error=str(e),
+                            finding_preview=str(finding_data)[:100],
+                        )
 
             # Store findings and update status atomically
             if findings_to_store:
@@ -342,18 +434,39 @@ class AnalyzeDocumentHandler:
             # Calculate metrics
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
+            # E11.5: Calculate estimated cost (simplified - actual cost varies by provider)
+            # Using Gemini Flash pricing as baseline: $0.30/1M input, $1.20/1M output
+            estimated_cost_usd = (total_input_tokens * 0.0000003) + (total_output_tokens * 0.0000012)
+
             result = {
                 "success": True,
                 "document_id": str(document_id),
                 "findings_count": stored_count,
                 "chunks_analyzed": len(chunks),
                 "model_tier": model_tier.value,
-                "input_tokens": analysis_result.total_input_tokens,
-                "output_tokens": analysis_result.total_output_tokens,
-                "estimated_cost_usd": analysis_result.estimated_cost_usd,
+                "input_tokens": total_input_tokens,
+                "output_tokens": total_output_tokens,
+                "estimated_cost_usd": estimated_cost_usd,
                 "total_time_ms": elapsed_ms,
                 "next_job_id": next_job_id,
             }
+
+            # E12.2: Log feature usage to database
+            await log_feature_usage_to_db(
+                self.db,
+                organization_id=UUID(organization_id) if organization_id else None,  # E12.9
+                deal_id=UUID(str(project_id)) if project_id else None,
+                user_id=UUID(user_id) if user_id else None,
+                feature_name="document_analysis",
+                status="success",
+                duration_ms=elapsed_ms,
+                metadata={
+                    "document_id": str(document_id),
+                    "findings_count": stored_count,
+                    "chunks_analyzed": len(chunks),
+                    "model_tier": model_tier.value,
+                },
+            )
 
             logger.info(
                 "analyze-document job completed",
@@ -365,12 +478,26 @@ class AnalyzeDocumentHandler:
 
         except NON_RETRYABLE_ERRORS as e:
             # Permanent failures - use retry manager
+            elapsed_ms = int((time.perf_counter() - start_time) * 1000)
             logger.error(
                 "analyze-document job failed permanently",
                 job_id=job.id,
                 document_id=str(document_id),
                 error=str(e),
                 error_type=type(e).__name__,
+            )
+
+            # E12.2: Log failed feature usage
+            await log_feature_usage_to_db(
+                self.db,
+                organization_id=UUID(organization_id) if organization_id else None,  # E12.9
+                deal_id=UUID(deal_id) if deal_id else None,
+                user_id=UUID(user_id) if user_id else None,
+                feature_name="document_analysis",
+                status="error",
+                duration_ms=elapsed_ms,
+                error_message=str(e),
+                metadata={"stack": traceback.format_exc(), "document_id": str(document_id)},
             )
 
             # E3.8: Classify error and store structured error info
@@ -443,6 +570,108 @@ class AnalyzeDocumentHandler:
                 retry_count=job.retry_count,
             )
             raise
+
+    async def _analyze_with_pydantic_ai(
+        self,
+        pydantic_agent: Any,
+        chunks: list[dict[str, Any]],
+        document_id: UUID,
+        deal_id: str,
+        document_name: str,
+    ) -> dict[str, Any]:
+        """
+        Analyze document chunks using Pydantic AI agent.
+
+        Story: E11.5 - Type-Safe Tool Definitions with Pydantic AI (AC: #2, #3)
+
+        Args:
+            pydantic_agent: The Pydantic AI agent instance
+            chunks: List of chunk dicts with id, content, page_number, etc.
+            document_id: UUID of the document being analyzed
+            deal_id: Deal/project ID for dependency injection
+            document_name: Document name for context
+
+        Returns:
+            Dict with findings (list[FindingCreate]), input_tokens, output_tokens
+        """
+        from src.llm.pydantic_agent import AnalysisDependencies
+        from src.graphiti.client import GraphitiClient
+
+        # Get Graphiti client if Neo4j is configured
+        graphiti = None
+        if self.config.neo4j_password:
+            try:
+                graphiti = await GraphitiClient.get_instance()
+            except Exception as e:
+                logger.warning(
+                    "Graphiti unavailable for Pydantic AI dependencies",
+                    error=str(e),
+                )
+
+        # Create type-safe dependencies
+        deps = AnalysisDependencies(
+            db=self.db,
+            graphiti=graphiti,
+            deal_id=deal_id,
+            document_id=str(document_id),
+            document_name=document_name,
+        )
+
+        # Combine all chunk content for batch analysis
+        combined_content = "\n\n---\n\n".join(
+            f"[Chunk {i+1}] (Page {chunk.get('page_number', 'N/A')}, Type: {chunk.get('chunk_type', 'text')})\n{chunk['content']}"
+            for i, chunk in enumerate(chunks)
+        )
+
+        # Run agent with structured output
+        prompt = f"""Analyze the following document content and extract all relevant findings.
+
+Document: {document_name}
+Total Chunks: {len(chunks)}
+
+Content:
+{combined_content}
+
+Extract structured findings with:
+- content: the actual finding text
+- finding_type: one of [fact, metric, risk, opportunity, assumption]
+- confidence: 0.0-1.0 based on source clarity
+- source_reference: include page_number if available"""
+
+        result = await pydantic_agent.run(prompt, deps=deps)
+
+        # Extract token usage (Pydantic AI 1.x uses result.usage() method)
+        usage = result.usage()
+        input_tokens = usage.request_tokens if usage else 0
+        output_tokens = usage.response_tokens if usage else 0
+
+        # Convert FindingResult models to FindingCreate models
+        findings_to_store: list[FindingCreate] = []
+        for finding in result.data:
+            try:
+                finding_create = FindingCreate(
+                    project_id=UUID(deal_id),
+                    document_id=document_id,
+                    chunk_id=None,  # Pydantic AI doesn't track individual chunk IDs
+                    text=finding.content,
+                    finding_type=finding.finding_type,
+                    confidence=finding.confidence,
+                    domain="operational",  # Default domain
+                    metadata=finding.source_reference,
+                )
+                findings_to_store.append(finding_create)
+            except Exception as e:
+                logger.warning(
+                    "Failed to convert Pydantic AI finding",
+                    error=str(e),
+                    finding_content=finding.content[:100] if finding.content else "",
+                )
+
+        return {
+            "findings": findings_to_store,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+        }
 
     async def _sync_findings_to_neo4j(
         self,

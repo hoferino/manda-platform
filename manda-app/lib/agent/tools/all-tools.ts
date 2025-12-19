@@ -130,7 +130,7 @@ export const TOOL_NAMES = allChatTools.map((tool) => tool.name)
 /**
  * Tool count for validation
  */
-export const TOOL_COUNT = allChatTools.length // Should be 17
+export const TOOL_COUNT = allChatTools.length // Should be 18
 
 /**
  * Get tool by name

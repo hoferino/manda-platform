@@ -2,6 +2,7 @@
  * Project Creation Wizard Page
  * 2-step wizard for creating new M&A projects
  * Story: E1.5 - Implement Project Creation Wizard (AC: #1-#10)
+ * Story: E12.9 - Multi-Tenant Data Isolation (AC: #4)
  *
  * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
  */
@@ -15,6 +16,7 @@ import { WizardLayout } from '@/components/wizard/WizardLayout'
 import { Step1BasicInfo } from '@/components/wizard/Step1BasicInfo'
 import { Step3IRLTemplate as Step2IRLTemplate, NO_IRL_TEMPLATE, UPLOAD_IRL_TEMPLATE } from '@/components/wizard/Step3IRLTemplate'
 import { createDealWithIRL } from '@/app/actions/create-deal-with-irl'
+import { useOrganization } from '@/components/providers/organization-provider'
 
 interface WizardFormData {
   projectName: string
@@ -33,6 +35,7 @@ const TOTAL_STEPS = 2
 
 export default function NewProjectPage() {
   const router = useRouter()
+  const { currentOrganization } = useOrganization() // E12.9: Get current org
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
@@ -109,6 +112,12 @@ export default function NewProjectPage() {
       return
     }
 
+    // E12.9: Require organization context
+    if (!currentOrganization?.id) {
+      toast.error('No organization selected. Please select an organization first.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -124,6 +133,7 @@ export default function NewProjectPage() {
         // First create the deal
         const dealResult = await createDealWithIRL({
           name: formData.projectName.trim(),
+          organization_id: currentOrganization.id, // E12.9: Required for multi-tenant
           company_name: formData.companyName.trim() || null,
           industry: formData.industry || null,
           irl_template: 'none', // Create empty deal first
@@ -167,6 +177,7 @@ export default function NewProjectPage() {
       // Standard template or empty project creation
       const result = await createDealWithIRL({
         name: formData.projectName.trim(),
+        organization_id: currentOrganization.id, // E12.9: Required for multi-tenant
         company_name: formData.companyName.trim() || null,
         industry: formData.industry || null,
         irl_template: irlTemplate,
@@ -197,7 +208,7 @@ export default function NewProjectPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, router, validateStep1])
+  }, [formData, router, validateStep1, currentOrganization])
 
   // Update form data handlers
   const updateFormData = useCallback(

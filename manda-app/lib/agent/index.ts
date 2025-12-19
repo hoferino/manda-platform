@@ -3,6 +3,7 @@
  *
  * Exports all agent-related functionality for the M&A Due Diligence Assistant.
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E11.2 - Conversation Summarization
  * Story: E11.4 - Intent-Aware Knowledge Retrieval
  */
 
@@ -43,6 +44,35 @@ export {
   type PreModelHookResult,
   type RetrievalMetrics,
 } from './retrieval'
+
+// Conversation summarization (E11.2)
+export {
+  summarizeConversationHistory,
+  summarizeWithTimeout,
+  SummarizationCache,
+  summarizationCache,
+  shouldSummarize,
+  hashMessage,
+  getCacheKey,
+  extractTopicsFromMessages,
+  estimateTokens,
+  estimateMessageTokens,
+  estimateMessagesTokens,
+  createTokenCounter,
+  trimMessagesWithLLM,
+  SUMMARIZATION_TIMEOUT_MS,
+  SUMMARIZATION_THRESHOLD_MESSAGES,
+  SUMMARIZATION_THRESHOLD_TOKENS,
+  MESSAGES_TO_KEEP,
+  CACHE_TTL_MS as SUMMARIZATION_CACHE_TTL_MS,
+  MAX_CACHE_SIZE as SUMMARIZATION_MAX_CACHE_SIZE,
+  SUMMARY_TARGET_TOKENS,
+  SUMMARIZATION_PROMPT,
+  type SummarizationMetrics,
+  type SummarizationConfig,
+  type SummarizationResult,
+  type CachedSummary,
+} from './summarization'
 
 // Tool isolation (E11.1)
 export {

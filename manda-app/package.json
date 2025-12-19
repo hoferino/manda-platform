@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:integration": "RUN_INTEGRATION_TESTS=true vitest run --config vitest.integration.config.ts",
     "test:affected": "vitest run --changed",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",

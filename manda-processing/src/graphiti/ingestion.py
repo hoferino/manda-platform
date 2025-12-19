@@ -2,6 +2,7 @@
 Graphiti ingestion service for document processing.
 Story: E10.4 - Document Ingestion Pipeline (AC: #1, #2, #3)
 Story: E10.5 - Q&A and Chat Ingestion (AC: #1, #2, #4, #5)
+Story: E12.9 - Multi-Tenant Data Isolation (AC: #5)
 
 This module provides:
 - GraphitiIngestionService: Orchestrates document chunk ingestion into Graphiti
@@ -13,27 +14,30 @@ Usage:
 
     service = GraphitiIngestionService()
 
-    # Document ingestion (E10.4)
+    # Document ingestion (E10.4 + E12.9)
     result = await service.ingest_document_chunks(
         document_id="doc-123",
         deal_id="deal-456",
+        organization_id="org-789",  # E12.9: Required for multi-tenant isolation
         document_name="financial-report.pdf",
         chunks=chunks,
     )
     print(f"Ingested {result.episode_count} episodes")
 
-    # Q&A response ingestion (E10.5)
+    # Q&A response ingestion (E10.5 + E12.9)
     result = await service.ingest_qa_response(
         qa_item_id="qa-123",
         deal_id="deal-456",
+        organization_id="org-789",  # E12.9: Required for multi-tenant isolation
         question="What is the revenue?",
         answer="Revenue was $5.2M",
     )
 
-    # Chat fact ingestion (E10.5)
+    # Chat fact ingestion (E10.5 + E12.9)
     result = await service.ingest_chat_fact(
         message_id="msg-123",
         deal_id="deal-456",
+        organization_id="org-789",  # E12.9: Required for multi-tenant isolation
         fact_content="The CEO confirmed expansion plans",
         message_context="Full chat message...",
     )
@@ -173,6 +177,7 @@ class GraphitiIngestionService:
         self,
         document_id: str,
         deal_id: str,
+        organization_id: str,  # E12.9: Required for multi-tenant isolation
         document_name: str,
         chunks: list[dict[str, Any]],
     ) -> IngestionResult:
@@ -180,6 +185,7 @@ class GraphitiIngestionService:
         Ingest document chunks as Graphiti episodes.
 
         Story: E10.4 - Document Ingestion Pipeline (AC: #2, #3, #5)
+        Story: E12.9 - Multi-Tenant Data Isolation (AC: #5)
 
         Each chunk becomes an episode in Graphiti. Entity extraction
         happens automatically via Graphiti's LLM pipeline using Gemini Flash.
@@ -190,9 +196,13 @@ class GraphitiIngestionService:
         are stored in Neo4j as part of the add_episode() call. If Voyage is
         unavailable, Graphiti falls back to GeminiEmbedder per E10.2 design.
 
+        E12.9: group_id = "{organization_id}:{deal_id}" ensures complete
+        namespace isolation between organizations.
+
         Args:
             document_id: Source document UUID (for logging/tracking)
-            deal_id: Deal UUID (group_id for namespace isolation)
+            deal_id: Deal UUID for scoping within organization
+            organization_id: Organization UUID for namespace isolation (E12.9)
             document_name: Document filename for episode naming
             chunks: Parsed document chunks from db.get_chunks_by_document()
                    Each chunk has: id, content, chunk_index, page_number,
@@ -218,6 +228,7 @@ class GraphitiIngestionService:
             "Starting document ingestion to Graphiti",
             document_id=document_id,
             deal_id=deal_id,
+            organization_id=organization_id,
             document_name=document_name,
             chunk_count=len(chunks),
         )
@@ -235,8 +246,10 @@ class GraphitiIngestionService:
             content = chunk["content"]
 
             # Add episode to Graphiti - entity extraction happens automatically
+            # E12.9: organization_id is passed for composite group_id
             await GraphitiClient.add_episode(
                 deal_id=deal_id,
+                organization_id=organization_id,  # E12.9: Multi-tenant isolation
                 content=content,
                 name=episode_name,
                 source_description=source_desc,
@@ -266,6 +279,7 @@ class GraphitiIngestionService:
             "Document ingestion completed",
             document_id=document_id,
             deal_id=deal_id,
+            organization_id=organization_id,
             episode_count=episode_count,
             elapsed_ms=elapsed_ms,
             estimated_cost_usd=f"${estimated_cost_usd:.6f}",
@@ -314,6 +328,7 @@ class GraphitiIngestionService:
         self,
         qa_item_id: str,
         deal_id: str,
+        organization_id: str,  # E12.9: Required for multi-tenant isolation
         question: str,
         answer: str,
     ) -> IngestionResult:
@@ -321,15 +336,20 @@ class GraphitiIngestionService:
         Ingest Q&A response as authoritative knowledge.
 
         Story: E10.5 - Q&A and Chat Ingestion (AC: #1, #4, #5)
+        Story: E12.9 - Multi-Tenant Data Isolation (AC: #5)
 
         Q&A answers have highest confidence (0.95) because they're
         client-provided authoritative answers. If the answer contradicts
         an existing fact, Graphiti's temporal model creates a SUPERSEDES
         relationship and marks the old fact's invalid_at = now().
 
+        E12.9: group_id = "{organization_id}:{deal_id}" ensures complete
+        namespace isolation between organizations.
+
         Args:
             qa_item_id: Q&A item UUID (for provenance)
-            deal_id: Deal UUID (group_id for namespace isolation)
+            deal_id: Deal UUID for scoping within organization
+            organization_id: Organization UUID for namespace isolation (E12.9)
             question: The question that was asked
             answer: Client/user provided answer
 
@@ -357,11 +377,13 @@ class GraphitiIngestionService:
             "Ingesting Q&A response to Graphiti",
             qa_item_id=qa_item_id,
             deal_id=deal_id,
+            organization_id=organization_id,
             confidence=QA_CONFIDENCE,
         )
 
         await GraphitiClient.add_episode(
             deal_id=deal_id,
+            organization_id=organization_id,  # E12.9: Multi-tenant isolation
             content=content,
             name=episode_name,
             source_description=source_desc,
@@ -379,6 +401,7 @@ class GraphitiIngestionService:
             "Q&A response ingested to Graphiti",
             qa_item_id=qa_item_id,
             deal_id=deal_id,
+            organization_id=organization_id,
             confidence=QA_CONFIDENCE,
             elapsed_ms=elapsed_ms,
         )
@@ -393,6 +416,7 @@ class GraphitiIngestionService:
         self,
         message_id: str,
         deal_id: str,
+        organization_id: str,  # E12.9: Required for multi-tenant isolation
         fact_content: str,
         message_context: str,
     ) -> IngestionResult:
@@ -400,13 +424,18 @@ class GraphitiIngestionService:
         Ingest fact extracted from analyst chat.
 
         Story: E10.5 - Q&A and Chat Ingestion (AC: #2, #4, #5)
+        Story: E12.9 - Multi-Tenant Data Isolation (AC: #5)
 
         Chat facts have high confidence (0.90) and create episodes
         with source_channel="analyst_chat".
 
+        E12.9: group_id = "{organization_id}:{deal_id}" ensures complete
+        namespace isolation between organizations.
+
         Args:
             message_id: Chat message UUID (for provenance)
-            deal_id: Deal UUID (group_id for namespace isolation)
+            deal_id: Deal UUID for scoping within organization
+            organization_id: Organization UUID for namespace isolation (E12.9)
             fact_content: The extracted fact
             message_context: Full message for context
 
@@ -431,11 +460,13 @@ class GraphitiIngestionService:
             "Ingesting chat fact to Graphiti",
             message_id=message_id,
             deal_id=deal_id,
+            organization_id=organization_id,
             confidence=CHAT_CONFIDENCE,
         )
 
         await GraphitiClient.add_episode(
             deal_id=deal_id,
+            organization_id=organization_id,  # E12.9: Multi-tenant isolation
             content=fact_content,
             name=episode_name,
             source_description=source_desc,
@@ -453,6 +484,7 @@ class GraphitiIngestionService:
             "Chat fact ingested to Graphiti",
             message_id=message_id,
             deal_id=deal_id,
+            organization_id=organization_id,
             confidence=CHAT_CONFIDENCE,
             elapsed_ms=elapsed_ms,
         )

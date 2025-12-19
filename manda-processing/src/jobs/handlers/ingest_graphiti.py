@@ -1,6 +1,7 @@
 """
 Graphiti ingestion job handler.
 Story: E10.4 - Document Ingestion Pipeline (AC: #1, #6, #7)
+Story: E12.9 - Multi-Tenant Data Isolation (AC: #5)
 
 This handler processes ingest-graphiti jobs from the pg-boss queue:
 1. Loads document chunks from database
@@ -12,6 +13,9 @@ Enhanced with E3.8:
 - Stage tracking via last_completed_stage
 - Error classification and retry decisions
 - Structured error reporting
+
+E12.9: organization_id is extracted from the deal and passed to Graphiti
+for namespace isolation via composite group_id format.
 """
 
 import time
@@ -25,6 +29,7 @@ from src.graphiti.ingestion import GraphitiIngestionService, IngestionResult
 from src.jobs.queue import Job, get_job_queue
 from src.jobs.retry_manager import RetryManager, get_retry_manager
 from src.storage.supabase_client import DatabaseError, SupabaseClient, get_supabase_client
+from src.observability.usage import log_feature_usage_to_db
 
 logger = structlog.get_logger(__name__)
 
@@ -92,6 +97,10 @@ class IngestGraphitiHandler:
                 "Ensure the upstream job includes deal_id in the payload."
             )
 
+        # E12.9: organization_id is REQUIRED for multi-tenant isolation
+        # If not in job payload, we fetch it from the deal
+        organization_id = job_data.get("organization_id")
+
         user_id = job_data.get("user_id")
         is_retry = job_data.get("is_retry", False)
 
@@ -100,6 +109,7 @@ class IngestGraphitiHandler:
             job_id=job.id,
             document_id=str(document_id),
             deal_id=deal_id,
+            organization_id=organization_id,
             retry_count=job.retry_count,
             is_retry=is_retry,
         )
@@ -121,6 +131,23 @@ class IngestGraphitiHandler:
 
             if not doc:
                 raise ValueError(f"Document not found: {document_id}")
+
+            # E12.9: Fetch organization_id from deal if not in job payload
+            if not organization_id:
+                deal = await self.db.get_deal(deal_id)
+                if not deal:
+                    raise ValueError(f"Deal not found: {deal_id}")
+                organization_id = deal.get("organization_id")
+                if not organization_id:
+                    raise ValueError(
+                        f"organization_id is required for Graphiti ingestion (deal_id={deal_id}). "
+                        "The deal must have an organization_id set."
+                    )
+                logger.debug(
+                    "Fetched organization_id from deal",
+                    deal_id=deal_id,
+                    organization_id=organization_id,
+                )
 
             # Idempotency check: skip if already ingested (Task 4.4)
             # This prevents duplicate episodes if job is reprocessed
@@ -163,9 +190,11 @@ class IngestGraphitiHandler:
                 }
 
             # Ingest chunks to Graphiti
+            # E12.9: organization_id is passed for composite group_id
             result: IngestionResult = await self.ingestion.ingest_document_chunks(
                 document_id=str(document_id),
                 deal_id=deal_id,
+                organization_id=organization_id,  # E12.9: Multi-tenant isolation
                 document_name=doc["name"],
                 chunks=chunks,
             )
@@ -191,6 +220,22 @@ class IngestGraphitiHandler:
                 "total_time_ms": elapsed_ms,
                 "next_job_id": next_job_id,
             }
+
+            # E12.2: Log feature usage to database
+            await log_feature_usage_to_db(
+                self.db,
+                organization_id=UUID(organization_id) if organization_id else None,
+                deal_id=UUID(deal_id) if deal_id else None,
+                user_id=UUID(user_id) if user_id else None,
+                feature_name="document_processing",
+                status="success",
+                duration_ms=elapsed_ms,
+                metadata={
+                    "document_id": str(document_id),
+                    "episodes_created": result.episode_count,
+                    "stage": "graphiti_ingestion",
+                },
+            )
 
             logger.info(
                 "ingest-graphiti job completed",

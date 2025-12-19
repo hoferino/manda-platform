@@ -1,9 +1,10 @@
 /**
  * Server Action: Create Deal with IRL
  * Handles complete project creation workflow with IRL template integration
+ * Story: E12.9 - Multi-Tenant Data Isolation (AC: #4)
  *
  * Workflow:
- * 1. Create deal record
+ * 1. Create deal record with organization_id
  * 2. If template selected, create IRL from template
  * 3. Auto-generate folders from IRL categories
  * 4. Return complete deal data
@@ -28,6 +29,7 @@ const TEMPLATE_NAME_TO_ID: Record<string, string> = {
 
 export interface CreateDealWithIRLInput {
   name: string
+  organization_id: string // E12.9: Required for multi-tenant isolation
   company_name?: string | null
   industry?: string | null
   irl_template?: string | null
@@ -59,11 +61,12 @@ export async function createDealWithIRL(
     return { data: null, error: 'Authentication required. Please sign in.' }
   }
 
-  // 2. Create deal record
+  // 2. Create deal record with organization_id (E12.9)
   const { data: deal, error: dealError } = await supabase
     .from('deals')
     .insert({
       user_id: user.id,
+      organization_id: input.organization_id, // E12.9: Required for multi-tenant
       name: input.name,
       company_name: input.company_name || null,
       industry: input.industry || null,

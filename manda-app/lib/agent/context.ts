@@ -3,12 +3,13 @@
  *
  * Manages conversation context for multi-turn conversations with token-aware truncation.
  * Story: E5.6 - Add Conversation Context and Multi-turn Support
+ * Story: E11.2 - Conversation Summarization (LLM-based)
  *
  * Features:
  * - Load conversation history from database
  * - Token counting using tiktoken
  * - Automatic truncation when exceeding token limit
- * - Optional summarization of older messages
+ * - Optional LLM-based summarization of older messages (E11.2)
  *
  * P4 Compliance (from agent-behavior-spec.md):
  * - Clear follow-ups: assume same context, state assumption briefly
@@ -18,6 +19,7 @@
 
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages'
 import type { BaseMessage } from '@langchain/core/messages'
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 
 /**
  * Configuration options for context management
@@ -209,14 +211,24 @@ export function estimateTokens(text: string): number {
  * Conversation Context Manager
  *
  * Handles loading, formatting, and token-aware truncation of conversation history.
+ * Story: E11.2 - Now supports optional LLM for summarization
  */
 export class ConversationContextManager {
   private options: ConversationContextOptions
   private tokenCounter: TokenCounter
+  /** Optional LLM for E11.2 summarization */
+  private llm?: BaseChatModel
 
-  constructor(options: Partial<ConversationContextOptions> = {}) {
+  /**
+   * Create a new ConversationContextManager
+   *
+   * @param options - Context management options
+   * @param llm - Optional LLM for LLM-based summarization (E11.2)
+   */
+  constructor(options: Partial<ConversationContextOptions> = {}, llm?: BaseChatModel) {
     this.options = { ...DEFAULT_CONTEXT_OPTIONS, ...options }
     this.tokenCounter = getTokenCounter()
+    this.llm = llm
   }
 
   /**
@@ -303,21 +315,46 @@ export class ConversationContextManager {
   }
 
   /**
-   * Optional: Summarize older messages (future enhancement)
+   * Summarize older messages using LLM or fallback to topic extraction
    *
-   * This is a placeholder for future LLM-based summarization.
-   * Currently returns a simple truncation message.
+   * Story: E11.2 - Conversation Summarization
+   *
+   * If LLM is available, delegates to the new LLM-based summarization.
+   * Otherwise, falls back to simple topic extraction.
    *
    * @param messages - Messages to summarize
    * @returns Summary string
    */
   async summarizeOlderMessages(messages: ConversationMessage[]): Promise<string> {
-    // For now, return a simple summary
-    // Future: Use LLM to generate a proper summary
     if (messages.length === 0) {
       return ''
     }
 
+    // E11.2: If LLM is available, use the new summarization module
+    if (this.llm) {
+      try {
+        // Import dynamically to avoid circular dependencies
+        const { summarizeConversationHistory } = await import('./summarization')
+        const langChainMessages = convertToLangChainMessages(messages)
+        const result = await summarizeConversationHistory(langChainMessages, this.llm)
+        return result.summaryText || this.extractTopics(messages)
+      } catch (error) {
+        console.warn('[ConversationContextManager] LLM summarization failed, using fallback:', error)
+        return this.extractTopics(messages)
+      }
+    }
+
+    // Fallback to simple topic extraction
+    return this.extractTopics(messages)
+  }
+
+  /**
+   * Extract topics from messages (simple fallback for summarization)
+   *
+   * @param messages - Messages to extract topics from
+   * @returns Topic summary string
+   */
+  private extractTopics(messages: ConversationMessage[]): string {
     const topics = new Set<string>()
     messages.forEach((msg) => {
       // Extract potential topics from user messages
@@ -346,13 +383,78 @@ export class ConversationContextManager {
   getOptions(): ConversationContextOptions {
     return { ...this.options }
   }
+
+  /**
+   * Format context with LLM-based summarization
+   *
+   * Story: E11.2 - Conversation Summarization
+   *
+   * Enhanced version of formatContext that uses LLM summarization
+   * when available and context exceeds threshold.
+   *
+   * @param messages - Conversation messages to format
+   * @returns FormattedContext with optional summary
+   */
+  async formatContextWithSummarization(messages: ConversationMessage[]): Promise<FormattedContext> {
+    const originalCount = messages.length
+
+    // If under threshold or no LLM, use standard formatting
+    if (messages.length <= this.options.maxMessages * 2 || !this.llm) {
+      return this.formatContext(messages)
+    }
+
+    // Split messages: older ones for summarization, recent ones to keep
+    const messagesToSummarize = messages.slice(0, -this.options.maxMessages)
+    const recentMessages = messages.slice(-this.options.maxMessages)
+
+    // Generate summary of older messages
+    const summary = await this.summarizeOlderMessages(messagesToSummarize)
+
+    // Convert recent messages to LangChain format
+    const langChainMessages = convertToLangChainMessages(recentMessages)
+
+    // Add summary as a system message at the start
+    if (summary) {
+      langChainMessages.unshift(new SystemMessage(`Previous context: ${summary}`))
+    }
+
+    const tokenCount = this.tokenCounter.countMessagesTokens(recentMessages)
+
+    return {
+      messages: langChainMessages,
+      tokenCount,
+      wasTruncated: true,
+      summary,
+      originalMessageCount: originalCount,
+    }
+  }
+
+  /**
+   * Check if LLM is available for summarization
+   */
+  hasLLM(): boolean {
+    return !!this.llm
+  }
+
+  /**
+   * Set LLM for summarization (allows updating after construction)
+   *
+   * @param llm - LangChain chat model
+   */
+  setLLM(llm: BaseChatModel): void {
+    this.llm = llm
+  }
 }
 
 /**
  * Create a context manager with custom options
+ *
+ * @param options - Context management options
+ * @param llm - Optional LLM for summarization (E11.2)
  */
 export function createContextManager(
-  options?: Partial<ConversationContextOptions>
+  options?: Partial<ConversationContextOptions>,
+  llm?: BaseChatModel
 ): ConversationContextManager {
-  return new ConversationContextManager(options)
+  return new ConversationContextManager(options, llm)
 }

@@ -14,6 +14,7 @@ const mockDeal: Deal = {
   id: '123e4567-e89b-12d3-a456-426614174000',
   name: 'Test Acquisition',
   user_id: 'user-123',
+  organization_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', // E12.9
   status: 'active',
   company_name: 'Test Company Inc',
   industry: 'Technology',
@@ -60,6 +61,7 @@ describe('ProjectCard', () => {
       id: 'minimal-id',
       name: 'Minimal Deal',
       user_id: 'user-123',
+      organization_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', // E12.9
       status: 'active',
       company_name: null,
       industry: null,

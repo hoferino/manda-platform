@@ -32,6 +32,7 @@ import {
   type DatabaseMessage,
   DEFAULT_CONTEXT_OPTIONS,
 } from '@/lib/agent/context'
+import { logFeatureUsage } from '@/lib/observability/usage'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -48,6 +49,8 @@ const CONTEXT_WINDOW_SIZE = DEFAULT_CONTEXT_OPTIONS.maxMessages
  * Send a message and receive streaming SSE response
  */
 export async function POST(request: NextRequest, context: RouteContext) {
+  const chatStartTime = Date.now() // E12.2: Track timing for usage logging
+
   try {
     const { id: projectId } = await context.params
 
@@ -75,10 +78,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    // Verify user has access to this project
+    // Verify user has access to this project and get organization_id for usage tracking
     const { data: project, error: projectError } = await supabase
       .from('deals')
-      .select('id, name')
+      .select('id, name, organization_id')
       .eq('id', projectId)
       .single()
 
@@ -209,7 +212,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
               )
             },
           },
-          { dealId: projectId } // E11.4: Enable pre-model retrieval
+          {
+            dealId: projectId,
+            userId: user.id,
+            organizationId: project.organization_id ?? undefined, // E12.9: Multi-tenant isolation
+          } // E11.4: Enable pre-model retrieval, E12.2: Usage logging
         )
 
         // Generate follow-up suggestions
@@ -237,6 +244,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
           .from('conversations')
           .update({ updated_at: new Date().toISOString() })
           .eq('id', activeConversationId)
+
+        // E12.2: Log feature usage for chat
+        try {
+          await logFeatureUsage({
+            dealId: projectId,
+            userId: user.id,
+            organizationId: project.organization_id ?? undefined, // E12.9: Multi-tenant isolation
+            featureName: 'chat',
+            status: 'success',
+            durationMs: Date.now() - chatStartTime,
+            metadata: {
+              conversationId: activeConversationId,
+              messageLength: message.length,
+              responseLength: content.length,
+            },
+          })
+        } catch (loggingError) {
+          console.error('[api/chat] Usage logging failed:', loggingError)
+          // Non-blocking - don't fail the chat for logging errors
+        }
 
         // Complete the stream
         handler.onComplete(messageId, followups)

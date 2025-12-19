@@ -1870,7 +1870,7 @@ development_status:
   # - E11.1/E11.2 (token optimization) moved to backlog — not the bottleneck
   # Depends on E10 for Graphiti infrastructure
   # Priority: P1 | Points: 39 | Stories: 7
-  epic-11: in-progress
+  epic-11: done
   epic-11-jira-id: SCRUM-11
   epic-11-name: "Agent Context Engineering"
   epic-11-priority: P1
@@ -1881,27 +1881,166 @@ development_status:
   e11-4-intent-aware-knowledge-retrieval: done
   e11-4-points: 5
   e11-4-priority: P0
+  e11-4-completed: 2025-12-17
+  e11-4-notes: |
+    Intent-aware knowledge retrieval completed. Key deliverables:
+    - IntentClassifier with 5 intent types (factual, analytical, procedural, conversational, correction)
+    - Pre-model retrieval hook for proactive knowledge loading
+    - LRU cache for intent classification results
+    - 92 tests passing with full intent coverage
   e11-3-agent-autonomous-write-back: done
   e11-3-points: 8
   e11-3-priority: P0
+  e11-3-completed: 2025-12-17
+  e11-3-notes: |
+    Agent autonomous write-back completed. Key deliverables:
+    - index_to_knowledge_base tool for Graphiti integration
+    - Autonomous write-back without user confirmation prompts
+    - Chat facts and corrections persisted to knowledge graph
+    - Integration with ingest_chat_fact job handler
   # P1 - Important
-  e11-5-type-safe-tool-definitions-with-pydantic-ai: backlog
+  e11-5-type-safe-tool-definitions-with-pydantic-ai: done
   e11-5-points: 8
   e11-5-priority: P1
-  e11-6-model-configuration-and-switching: backlog
+  e11-5-completed: 2025-12-17
+  e11-5-notes: |
+    Type-safe Pydantic AI agent completed. Key deliverables:
+    - AnalysisDependencies dataclass for type-safe dependency injection
+    - Tools using RunContext[AnalysisDependencies] for IDE autocomplete
+    - create_analysis_agent factory with FallbackModel support
+    - Structured output via Pydantic models (FindingResult)
+    - Model switching via string syntax: 'google-gla:gemini-2.5-flash'
+  e11-6-model-configuration-and-switching: done
   e11-6-points: 3
   e11-6-priority: P1
+  e11-6-completed: 2025-12-17
+  e11-6-notes: |
+    Model configuration and switching completed. Key deliverables:
+    - config/models.yaml with agent-specific model configurations
+    - Environment variable override support (EXTRACTION_MODEL, etc.)
+    - FallbackModel with automatic retry on HTTP errors and rate limits
+    - log_usage() function for per-provider cost tracking to structlog
+    - Cost calculation using model pricing from config
   # P2/P3 - Backlog (Token optimization - not the bottleneck)
-  e11-2-conversation-summarization: backlog
+  e11-2-conversation-summarization: done
   e11-2-points: 5
   e11-2-priority: P2
+  e11-2-completed: 2025-12-18
+  e11-2-notes: |
+    Conversation summarization completed. Key deliverables:
+    - trimMessages utility for token-aware message truncation
+    - LLM-based summarization for conversations >20 messages
+    - Summarization triggers at configurable token threshold
+    - Summary stored in conversation metadata
+    - 78 tests passing
   e11-1-tool-result-isolation: done
   e11-1-points: 5
   e11-1-priority: P3
-  e11-7-context-knowledge-integration-tests: backlog
+  e11-1-completed: 2025-12-18
+  e11-1-notes: |
+    Tool result isolation completed. Key deliverables:
+    - Tool isolation wrapper for context management
+    - ToolResultCache with LRU eviction
+    - Summaries compressed to ~50-100 tokens
+    - Full results cached for on-demand retrieval
+    - 44 tests passing
+  e11-7-context-knowledge-integration-tests: done
   e11-7-points: 5
   e11-7-priority: P3
-  epic-11-retrospective: optional
+  e11-7-completed: 2025-12-18
+  e11-7-notes: |
+    Context-knowledge integration tests completed. Key deliverables:
+    - 48 integration tests (28 TypeScript + 20 Python)
+    - E2E context-knowledge flow validation
+    - Graphiti search and ingestion test coverage
+    - Model fallback behavior verification
+    - Validation report generated
+  epic-11-retrospective: done
+  epic-11-retrospective-date: 2025-12-18
+  epic-11-retrospective-file: docs/sprint-artifacts/retrospectives/epic-E11-retrospective.md
+  epic-11-notes: |
+    All 7 stories completed. Duration: 2 days (Dec 17-18).
+    Key deliverables:
+    - Pydantic AI agent with type-safe tools and FallbackModel
+    - Intent-aware knowledge retrieval with pre-model hook
+    - Autonomous knowledge write-back to Graphiti
+    - Model configuration via YAML with cost tracking
+    - Conversation summarization for long chats
+    - Tool result isolation with caching
+    - 48 integration tests validating full context-knowledge flow
+    Key patterns established:
+    - RunContext[Dependencies] for typed tool dependencies
+    - FallbackModel for automatic retry and model switching
+    - log_usage() for per-call cost tracking
+
+  # ===================
+  # EPIC 12: Production Readiness & Observability
+  # ===================
+  # Focus: Multi-tenant isolation, cost visibility, manual testing, error handling
+  # Before going to real users - need security and observability
+  # Priority: P0 | Points: 57 | Stories: 9
+  epic-12: in-progress
+  epic-12-jira-id: SCRUM-12
+  epic-12-name: "Production Readiness & Observability"
+  epic-12-priority: P0
+  epic-12-epic-file: docs/sprint-artifacts/epics/epic-E12.md
+  epic-12-stories: 9
+  epic-12-points: 57
+  # P0 - Critical (Security - DO FIRST)
+  e12-9-multi-tenant-isolation: done
+  e12-9-points: 13
+  e12-9-priority: P0
+  e12-9-story-file: docs/sprint-artifacts/stories/e12-9-multi-tenant-isolation.md
+  e12-9-drafted: 2025-12-18
+  e12-9-completed: 2025-12-18
+  e12-9-notes: |
+    Multi-tenant data isolation completed. Key deliverables:
+    - organizations and organization_members tables with RLS policies
+    - deals.organization_id foreign key with NOT NULL constraint
+    - 16 RLS policies using is_superadmin() and user_organization_ids() helpers
+    - Graphiti namespace isolation with composite group_id: {org_id}:{deal_id}
+    - Next.js middleware for x-organization-id header validation
+    - FastAPI OrgAuth dependency for Python API routes
+    - OrganizationProvider React context and OrgSwitcher component
+    - apiFetch wrapper with automatic org header injection
+    - Migration script for existing Neo4j data
+    - Integration tests for cross-org access prevention
+    Code review fixes applied:
+    - Composite group_id format for Graphiti namespace isolation
+    - All ingestion functions updated with organization_id parameter
+  # P0 - Critical (Observability)
+  e12-1-usage-tracking-schema: done
+  e12-1-points: 3
+  e12-1-priority: P0
+  e12-1-story-file: docs/sprint-artifacts/stories/e12-1-usage-tracking-schema.md
+  e12-1-drafted: 2025-12-19
+  e12-1-completed: 2025-12-19
+  e12-2-usage-logging-integration: done
+  e12-2-points: 5
+  e12-2-priority: P0
+  e12-2-story-file: docs/sprint-artifacts/stories/e12-2-usage-logging-integration.md
+  e12-2-drafted: 2025-12-19
+  e12-2-completed: 2025-12-19
+  e12-3-developer-dashboard-usage: not-started
+  e12-3-points: 8
+  e12-3-priority: P0
+  e12-4-manual-test-happy-paths: not-started
+  e12-4-points: 5
+  e12-4-priority: P0
+  # P1 - High (Robustness)
+  e12-5-manual-test-edge-cases: not-started
+  e12-5-points: 8
+  e12-5-priority: P1
+  e12-6-error-handling-graceful-degradation: not-started
+  e12-6-points: 5
+  e12-6-priority: P1
+  # P2 - Medium (Monitoring)
+  e12-7-alerting-monitoring: not-started
+  e12-7-points: 5
+  e12-7-priority: P2
+  e12-8-performance-profiling: not-started
+  e12-8-points: 5
+  e12-8-priority: P2
 
   # Tech Debt items discovered during Phase 1 testing
   phase-2-tech-debt:

@@ -4,6 +4,7 @@
  * LangChain tool-calling agent with streaming support.
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
  * Story: E11.1 - Tool Result Isolation
+ * Story: E11.2 - Conversation Summarization
  * Story: E11.4 - Intent-Aware Knowledge Retrieval
  *
  * Features:
@@ -12,6 +13,7 @@
  * - Context management for multi-turn conversations
  * - Error handling with graceful degradation
  * - Tool result isolation (E11.1) - summaries in context, full results in cache
+ * - Conversation summarization (E11.2) - compress long conversations
  * - Pre-model retrieval hook (E11.4) - proactive knowledge injection
  */
 
@@ -33,6 +35,14 @@ import {
   type PreModelHookResult,
   type RetrievalMetrics,
 } from './retrieval'
+import {
+  summarizeConversationHistory,
+  shouldSummarize,
+  type SummarizationMetrics,
+  type SummarizationConfig,
+} from './summarization'
+import { logLLMUsage, calculateLLMCost } from '@/lib/observability/usage'
+import { getLLMConfig } from '@/lib/llm/config'
 
 /**
  * Agent type returned by createReactAgent
@@ -211,20 +221,39 @@ export async function executeChat(
 
 /**
  * Options for streamChat and executeChat
+ * Story: E11.2 - Conversation Summarization
  * Story: E11.4 - Intent-Aware Knowledge Retrieval
+ * Story: E12.2 - Usage Logging Integration
  */
 export interface ChatExecutionOptions {
   /** Deal ID for pre-model retrieval namespace isolation */
   dealId?: string
+  /** User ID for usage attribution */
+  userId?: string
+  /** Organization ID for multi-tenant isolation (E12.9) */
+  organizationId?: string
   /** Disable pre-model retrieval (for debugging) */
   disableRetrieval?: boolean
+  /** Disable conversation summarization (for debugging) - E11.2 */
+  disableSummarization?: boolean
 }
 
 /**
  * Stream chat execution with token-by-token output
  *
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * Story: E11.2 - Conversation Summarization (AC: #4, #5)
  * Story: E11.4 - Intent-Aware Knowledge Retrieval (AC: #3, #4)
+ *
+ * Hook Order (CRITICAL - per E11.2 spec):
+ * 1. Summarization FIRST - reduces message count
+ * 2. Retrieval SECOND - adds context to reduced messages
+ *
+ * Final message order:
+ * 1. Retrieval context (SystemMessage) - from E11.4
+ * 2. Conversation summary (SystemMessage) - from E11.2
+ * 3. Recent messages (last 10 verbatim)
+ * 4. New user message
  *
  * @param agentOrWithCache - ReactAgent instance or ChatAgentWithCache
  * @param input - User input message
@@ -243,18 +272,44 @@ export async function streamChat(
     onError?: (error: Error) => void
     /** Callback when pre-model retrieval completes (E11.4) */
     onRetrievalComplete?: (metrics: RetrievalMetrics) => void
+    /** Callback when conversation summarization completes (E11.2) */
+    onSummarizationComplete?: (metrics: SummarizationMetrics) => void
   } = {},
   options?: ChatExecutionOptions
 ): Promise<string> {
+  // E12.2: Track timing for usage logging
+  const chatStartTime = Date.now()
+
   // Support both raw agent and ChatAgentWithCache (E11.1)
   const agent = 'agent' in agentOrWithCache ? agentOrWithCache.agent : agentOrWithCache
+
+  // Get LLM from agent for summarization (needed for E11.2)
+  // Note: We access the LLM client directly for summarization hook
+  const llm = createLLMClient()
 
   const langChainHistory = convertToLangChainMessages(chatHistory)
 
   try {
     let messages: BaseMessage[] = [...langChainHistory, new HumanMessage(input)]
 
-    // E11.4: Pre-model retrieval hook
+    // E11.2: Summarization hook FIRST (reduce message count)
+    // This must run BEFORE retrieval to compress context
+    if (!options?.disableSummarization && shouldSummarize(messages)) {
+      const summarizationConfig: SummarizationConfig = {
+        dealId: options?.dealId ?? 'default',
+      }
+      const summarizationResult = await summarizeConversationHistory(
+        messages,
+        llm,
+        summarizationConfig
+      )
+      messages = summarizationResult.messages
+
+      // Notify callback of summarization metrics
+      callbacks.onSummarizationComplete?.(summarizationResult.metrics)
+    }
+
+    // E11.4: Pre-model retrieval hook SECOND
     // Proactively retrieve relevant knowledge before LLM generation
     if (options?.dealId && !options?.disableRetrieval) {
       const hookResult = await preModelRetrievalHook(messages, options.dealId)
@@ -295,6 +350,42 @@ export async function streamChat(
         // Tool invocation ended
         callbacks.onToolEnd?.(event.name, event.data?.output as string)
       }
+    }
+
+    // E12.2: Log LLM usage to database
+    // NOTE: Token counts are ESTIMATED - LangChain doesn't expose actual usage
+    // chars/4 ≈ tokens is a reasonable approximation for cost tracking
+    try {
+      const estimatedInputTokens = Math.ceil(input.length / 4)
+      const estimatedOutputTokens = Math.ceil(fullOutput.length / 4)
+
+      // Get provider/model from config dynamically (fixes hardcoded values)
+      const llmConfig = getLLMConfig()
+      const provider = llmConfig.provider
+      // Normalize model name to match cost lookup format (e.g., 'claude-sonnet-4-0')
+      const model = llmConfig.model.includes('claude-sonnet-4')
+        ? 'claude-sonnet-4-0'
+        : llmConfig.model.includes('gemini-2.5-flash')
+          ? 'gemini-2.5-flash'
+          : llmConfig.model.includes('gemini-2.5-pro')
+            ? 'gemini-2.5-pro'
+            : llmConfig.model
+
+      await logLLMUsage({
+        organizationId: options?.organizationId,
+        dealId: options?.dealId,
+        userId: options?.userId,
+        provider,
+        model,
+        feature: 'chat',
+        inputTokens: estimatedInputTokens,
+        outputTokens: estimatedOutputTokens,
+        costUsd: calculateLLMCost(provider, model, estimatedInputTokens, estimatedOutputTokens),
+        latencyMs: Date.now() - chatStartTime,
+      })
+    } catch (loggingError) {
+      console.error('[streamChat] Usage logging failed:', loggingError)
+      // Don't fail the chat for logging errors - observability is non-blocking
     }
 
     return fullOutput

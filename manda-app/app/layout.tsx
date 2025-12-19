@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Source_Sans_3 } from "next/font/google";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { OrganizationProvider } from "@/components/providers/organization-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -34,8 +35,10 @@ export default function RootLayout({
         className={`${montserrat.variable} ${sourceSans.variable} antialiased`}
       >
         <AuthProvider>
-          {children}
-          <Toaster />
+          <OrganizationProvider>
+            {children}
+            <Toaster />
+          </OrganizationProvider>
         </AuthProvider>
       </body>
     </html>

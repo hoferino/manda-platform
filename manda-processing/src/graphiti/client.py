@@ -3,12 +3,17 @@ Graphiti client for temporal knowledge graph operations.
 Story: E10.1 - Graphiti Infrastructure Setup (AC: #1, #2, #3, #7, #8)
 Story: E10.2 - Voyage Embedding Integration (AC: #1, #2, #3, #4, #5)
 Story: E10.3 - Sell-Side Spine Schema (AC: #4, #5)
+Story: E12.9 - Multi-Tenant Data Isolation (AC: #5)
 
 This module provides:
-- GraphitiClient: Singleton client with deal isolation via group_id
+- GraphitiClient: Singleton client with organization+deal isolation via group_id
 - GraphitiConnectionError: Exception for connection failures
 
 Follows the singleton pattern from storage/neo4j_client.py for consistency.
+
+Note (E12.9): group_id uses composite format "{organization_id}:{deal_id}" to ensure
+complete namespace isolation between organizations. This prevents cross-org access
+even if an attacker knows a deal_id from another organization.
 """
 
 from datetime import datetime, timezone
@@ -38,7 +43,7 @@ class GraphitiConnectionError(Exception):
 
 class GraphitiClient:
     """
-    Singleton Graphiti client with deal isolation via group_id.
+    Singleton Graphiti client with organization+deal isolation via group_id.
 
     Follows existing pattern from storage/neo4j_client.py for consistency.
 
@@ -46,9 +51,10 @@ class GraphitiClient:
         # Get instance (creates connection on first call)
         client = await GraphitiClient.get_instance()
 
-        # Add episode with deal isolation
+        # Add episode with organization+deal isolation (E12.9)
         await GraphitiClient.add_episode(
             deal_id="deal-123",
+            organization_id="org-456",  # Required for multi-tenant isolation
             content="Revenue increased 15%...",
             source="financial-report.pdf",
             source_description="Annual financial report"
@@ -61,6 +67,7 @@ class GraphitiClient:
         - Graphiti is fully async - all methods must be awaited
         - Episodes within a group_id must be processed sequentially
         - build_indices_and_constraints() is called only on first init
+        - group_id = "{organization_id}:{deal_id}" for multi-tenant isolation (E12.9)
     """
 
     _instance: Optional[Graphiti] = None
@@ -217,6 +224,7 @@ class GraphitiClient:
     async def add_episode(
         cls,
         deal_id: str,
+        organization_id: str,  # E12.9: Required for multi-tenant isolation
         content: str,
         name: str,
         source_description: str,
@@ -227,10 +235,11 @@ class GraphitiClient:
         edge_type_map: Optional[dict[tuple[str, str], list[str]]] = None,
     ) -> None:
         """
-        Add an episode with deal isolation and custom entity/edge extraction.
+        Add an episode with organization+deal isolation and custom entity/edge extraction.
 
         Args:
-            deal_id: Used as group_id for namespace isolation
+            deal_id: Deal UUID for scoping within organization
+            organization_id: Organization UUID for namespace isolation (E12.9)
             content: Episode text content (document chunk, Q&A, etc.)
             name: Episode name/identifier (e.g., "financial-report.pdf")
             source_description: Human-readable description of the source
@@ -247,7 +256,9 @@ class GraphitiClient:
             GraphitiConnectionError: If write fails
 
         Note:
-            group_id ensures deal A's data is isolated from deal B.
+            group_id = "{organization_id}:{deal_id}" ensures:
+            - Organization A's data is isolated from Organization B
+            - Even if attacker knows deal_id, wrong org_id = no results
             Episodes within a group_id are processed sequentially.
             Entity/edge types enable guided extraction while still allowing
             dynamic discovery of novel entities (AC: #5).
@@ -266,6 +277,9 @@ class GraphitiClient:
         edge_types = edge_types or get_edge_types()
         edge_type_map = edge_type_map or get_edge_type_map()
 
+        # E12.9: Composite group_id for organization + deal isolation
+        composite_group_id = f"{organization_id}:{deal_id}"
+
         try:
             await client.add_episode(
                 name=name,
@@ -273,7 +287,7 @@ class GraphitiClient:
                 source_description=source_description,
                 reference_time=reference_time,
                 source=episode_type,  # EpisodeType enum
-                group_id=deal_id,  # Deal isolation via group_id
+                group_id=composite_group_id,  # E12.9: Org+deal isolation
                 entity_types=entity_types,  # E10.3: Guided extraction
                 edge_types=edge_types,  # E10.3: Typed relationships
                 edge_type_map=edge_type_map,  # E10.3: Entity pair mappings
@@ -307,7 +321,9 @@ class GraphitiClient:
 
             logger.debug(
                 "Episode added to Graphiti",
+                organization_id=organization_id,
                 deal_id=deal_id,
+                group_id=composite_group_id,
                 name=name,
                 content_length=len(content),
             )
@@ -333,14 +349,16 @@ class GraphitiClient:
     async def search(
         cls,
         deal_id: str,
+        organization_id: str,  # E12.9: Required for multi-tenant isolation
         query: str,
         num_results: int = 10,
     ) -> list:
         """
-        Search the knowledge graph for a deal.
+        Search the knowledge graph for a deal with organization scoping.
 
         Args:
-            deal_id: The deal's group_id for namespace isolation
+            deal_id: Deal UUID for scoping within organization
+            organization_id: Organization UUID for namespace isolation (E12.9)
             query: Natural language search query
             num_results: Maximum number of results to return
 
@@ -351,14 +369,19 @@ class GraphitiClient:
             GraphitiConnectionError: If search fails
 
         Note:
-            Search is scoped to the deal's group_id.
+            Search is scoped to "{organization_id}:{deal_id}" group_id.
+            This ensures cross-organization access is blocked even if
+            an attacker knows a deal_id from another organization.
         """
         client = await cls.get_instance()
+
+        # E12.9: Composite group_id for organization + deal isolation
+        composite_group_id = f"{organization_id}:{deal_id}"
 
         try:
             results = await client.search(
                 query=query,
-                group_ids=[deal_id],  # Scope search to specific deal
+                group_ids=[composite_group_id],  # E12.9: Org+deal scoped search
                 num_results=num_results,
             )
 
@@ -385,7 +408,9 @@ class GraphitiClient:
 
             logger.debug(
                 "Graphiti search completed",
+                organization_id=organization_id,
                 deal_id=deal_id,
+                group_id=composite_group_id,
                 query=query[:50],
                 num_results=len(results) if results else 0,
             )

@@ -1,0 +1,48 @@
+# LLM Model Configuration with Fallback Chains
+# Story: E11.6 - Model Configuration and Switching
+#
+# Override with env vars: PYDANTIC_AI_EXTRACTION_MODEL=anthropic:claude-sonnet-4-0
+# Provider string format: <provider>:<model>
+#   - google-gla: Gemini via AI Studio (API key auth)
+#   - google-vertex: Gemini via Vertex AI (service account)
+#   - anthropic: Claude models
+#   - openai: GPT models
+
+agents:
+  extraction:
+    primary: 'google-gla:gemini-2.5-flash'
+    fallback: 'anthropic:claude-sonnet-4-0'
+    settings:
+      temperature: 0.3
+      max_tokens: 4096
+
+  analysis:
+    primary: 'google-gla:gemini-2.5-pro'
+    fallback: 'anthropic:claude-sonnet-4-0'
+    settings:
+      temperature: 0.5
+      max_tokens: 8192
+
+  # For documentation - TypeScript (manda-app) uses env vars directly
+  conversational:
+    primary: 'anthropic:claude-sonnet-4-5-20250929'
+    fallback: 'google-gla:gemini-1.5-pro'
+
+# Cost per 1M tokens (USD) - Dec 2025 pricing
+# Used for cost tracking per provider/model
+costs:
+  google-gla:gemini-2.5-flash:
+    input: 0.30
+    output: 1.20
+  google-gla:gemini-2.5-pro:
+    input: 1.25
+    output: 5.00
+  anthropic:claude-sonnet-4-0:
+    input: 3.00
+    output: 15.00
+  anthropic:claude-sonnet-4-5-20250929:
+    input: 3.00
+    output: 15.00
+  openai:gpt-4-turbo:
+    input: 10.00
+    output: 30.00

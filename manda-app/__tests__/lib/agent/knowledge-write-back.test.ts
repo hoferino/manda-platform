@@ -164,24 +164,13 @@ describe('indexToKnowledgeBaseTool', () => {
     vi.restoreAllMocks()
   })
 
-  describe('successful ingestion', () => {
-    it('should call manda-processing endpoint with correct payload', async () => {
-      ;(mockFetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            success: true,
-            episode_count: 1,
-            elapsed_ms: 150,
-            estimated_cost_usd: 0.00001,
-          }),
-      })
-
-      // Import and call the tool
+  describe('tool export and configuration', () => {
+    it('should export tool with correct name and description', async () => {
+      // Note: Full integration testing of the fetch call requires mocking
+      // Supabase auth, which is tested in integration tests.
+      // This test verifies the tool is correctly exported and configured.
       const { indexToKnowledgeBaseTool } = await import('@/lib/agent/tools/knowledge-tools')
 
-      // We can't easily test the tool directly since it requires auth
-      // Just verify the schema is exported correctly
       expect(indexToKnowledgeBaseTool.name).toBe('index_to_knowledge_base')
       expect(indexToKnowledgeBaseTool.description).toContain('Persist user-provided facts')
       expect(indexToKnowledgeBaseTool.description).toContain('AUTONOMOUSLY')

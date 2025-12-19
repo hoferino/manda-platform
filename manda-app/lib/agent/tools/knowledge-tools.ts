@@ -623,6 +623,28 @@ export const indexToKnowledgeBaseTool = tool(
     try {
       const { content, source_type, deal_id } = input
 
+      // Authenticate user and verify deal access
+      const supabase = await createClient()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return formatToolResponse(false, 'Authentication required')
+      }
+
+      // Verify user has access to the deal (RLS will enforce this)
+      const { data: deal, error: dealError } = await supabase
+        .from('deals')
+        .select('id')
+        .eq('id', deal_id)
+        .single()
+
+      if (dealError || !deal) {
+        console.warn('[index_to_knowledge_base] User does not have access to deal', { deal_id, userId: user.id })
+        return formatToolResponse(false, 'Deal not found or access denied')
+      }
+
       // Call Graphiti ingest endpoint (E11.3)
       let ingestResponse: IngestResponse
       try {

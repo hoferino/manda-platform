@@ -1,6 +1,7 @@
 """
 FastAPI application entry point.
 Story: E3.1 - Set up FastAPI Backend with pg-boss Job Queue (AC: #1)
+Story: E11.5 - Type-Safe Tool Definitions with Pydantic AI (AC: #6)
 """
 
 from contextlib import asynccontextmanager
@@ -12,6 +13,39 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import health, webhooks, search, processing, financial_metrics, entities, graphiti
 from src.config import get_settings
+
+
+def _init_logfire() -> None:
+    """
+    Initialize Logfire observability for Pydantic AI (E11.5).
+
+    Only initializes if LOGFIRE_TOKEN is set in environment.
+    Provides tracing for all Pydantic AI agent operations.
+    """
+    settings = get_settings()
+    if settings.logfire_token:
+        try:
+            import logfire
+
+            logfire.configure()
+            logfire.instrument_pydantic_ai()
+            structlog.get_logger(__name__).info(
+                "Logfire observability initialized for Pydantic AI"
+            )
+        except ImportError:
+            structlog.get_logger(__name__).warning(
+                "Logfire token set but logfire package not installed. "
+                "Install with: pip install logfire"
+            )
+        except Exception as e:
+            structlog.get_logger(__name__).warning(
+                "Failed to initialize Logfire",
+                error=str(e),
+            )
+
+
+# Initialize Logfire if configured (E11.5)
+_init_logfire()
 
 # Configure structured logging
 structlog.configure(

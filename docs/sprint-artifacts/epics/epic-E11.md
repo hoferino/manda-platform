@@ -708,8 +708,83 @@ describe('Context-Knowledge Integration', () => {
 
 ---
 
+## Completion Notes
+
+**Status: ✅ COMPLETED**
+**Completion Date:** 2025-12-18
+**Retrospective:** [epic-E11-retrospective.md](../retrospectives/epic-E11-retrospective.md)
+
+### Stories Delivered
+
+| Story | Status | Key Deliverables |
+|-------|--------|------------------|
+| E11.1 | ✅ Done | Tool isolation wrapper, ToolResultCache, 44 tests |
+| E11.2 | ✅ Done | Conversation summarization with trimMessages, 78 tests |
+| E11.3 | ✅ Done | `index_to_knowledge_base` tool, autonomous write-back |
+| E11.4 | ✅ Done | Intent classification (92 tests), pre-model retrieval hook, LRU cache |
+| E11.5 | ✅ Done | Pydantic AI agent, type-safe tools, FallbackModel |
+| E11.6 | ✅ Done | models.yaml config, model switching, cost tracking |
+| E11.7 | ✅ Done | 48 integration tests (28 TypeScript + 20 Python) |
+
+### Architecture Files Created
+
+```
+manda-app/lib/agent/
+├── intent.ts          ← Intent classification
+├── retrieval.ts       ← Pre-model retrieval hook + LRU cache
+├── summarization.ts   ← Conversation summarization
+├── tool-isolation.ts  ← Tool result isolation + cache
+└── tools/
+    └── knowledge-tools.ts  ← index_to_knowledge_base tool
+
+manda-processing/src/llm/
+├── pydantic_agent.py  ← Pydantic AI agent with FallbackModel
+├── schemas.py         ← Pydantic output models
+└── tools/             ← Type-safe extraction tools
+
+manda-processing/config/
+└── models.yaml        ← LLM model configuration
+```
+
+### LangChain Context Engineering Framework
+
+All four strategies implemented:
+
+| Strategy | Story | Implementation |
+|----------|-------|----------------|
+| **Isolate** | E11.1 | Tool wrapper returns summaries (~50-100 tokens), caches full results |
+| **Select** | E11.4 | Pre-model retrieval hook + intent classification |
+| **Compress** | E11.2 | `trimMessages` + LLM summarization for conversations > 20 messages |
+| **Write** | E11.3 | Agent autonomously persists facts to Graphiti |
+
+### Test Coverage
+
+- **E11.1:** 44 tests (tool isolation)
+- **E11.2:** 78 tests (summarization)
+- **E11.4:** 119 tests (92 intent + 27 retrieval)
+- **E11.7:** 48 integration tests
+- **Total:** ~289 new tests
+
+### Architecture Diagrams
+
+Created during retrospective:
+- [manda-context-diagram.excalidraw](../../diagrams/manda-context-diagram.excalidraw) — Level 0 Context Diagram
+- [document-ingestion-flow.excalidraw](../../diagrams/document-ingestion-flow.excalidraw) — Level 1 DFD (E10)
+- [chat-knowledge-flow.excalidraw](../../diagrams/chat-knowledge-flow.excalidraw) — Level 1 DFD (E11)
+- [knowledge-retrieval-flow.excalidraw](../../diagrams/knowledge-retrieval-flow.excalidraw) — Level 1 DFD (E10.7)
+
+### Key Decisions
+
+1. **Agent-autonomous write-back** — No user confirmation needed; agent says "Got it, I've noted..." naturally
+2. **Hot path persistence** — Facts persisted immediately (not background) for same-session retrieval
+3. **Pydantic AI for Python only** — TypeScript continues using Zod schemas
+4. **FallbackModel** — Automatic provider switching (Gemini → Claude) on HTTP errors
+
+---
+
 *Epic created: 2025-12-14*
 *Updated: 2025-12-15 (Graphiti integration)*
 *Updated: 2025-12-17 (E11.1 Tool Result Isolation pattern, LangChain context engineering research)*
 *Updated: 2025-12-17 (v5.0) **Major reprioritization:** E11.4 (retrieval) and E11.3 (autonomous write-back) now P0. E11.1/E11.2 moved to backlog. Research added: Graphiti episode architecture, LangGraph long-term memory, agent-autonomous persistence patterns.*
-*Status: Backlog*
+*Completed: 2025-12-18*
+*Status: Done*

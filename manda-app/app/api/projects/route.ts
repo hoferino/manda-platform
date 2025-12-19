@@ -2,8 +2,10 @@
  * Projects API Route
  * Handles project creation with audit logging
  * Story: E1.9 - Implement Audit Logging for Security Events (AC: #4)
+ * Story: E12.9 - Multi-Tenant Data Isolation (AC: #4)
  *
  * Note (v2.6): deal_type removed - it didn't drive any downstream behavior
+ * Note (E12.9): Projects now require organization_id for multi-tenant isolation
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -13,6 +15,10 @@ import {
   AUDIT_EVENT_TYPES,
   getRequestContextFromRequest,
 } from '@/lib/audit'
+import {
+  getOrgContextFromRequest,
+  ForbiddenError,
+} from '@/lib/auth/org-context'
 
 interface CreateProjectRequest {
   name: string
@@ -51,11 +57,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the project
+    // E12.9: Get organization context from request headers
+    let orgContext
+    try {
+      orgContext = await getOrgContextFromRequest(request, user.id)
+    } catch (err) {
+      if (err instanceof ForbiddenError) {
+        return NextResponse.json({ error: err.message }, { status: 403 })
+      }
+      throw err
+    }
+
+    // Create the project with organization_id
     const { data, error } = await supabase
       .from('deals')
       .insert({
         user_id: user.id,
+        organization_id: orgContext.organizationId, // E12.9: Required for multi-tenant
         name: name.trim(),
         company_name: company_name?.trim() || null,
         industry: industry || null,
@@ -102,6 +120,7 @@ export async function POST(request: NextRequest) {
         project_id: data.id,
         project_name: data.name,
         industry: data.industry,
+        organization_id: orgContext.organizationId, // E12.9: Track org in audit
       },
       success: true,
     })
@@ -117,7 +136,8 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/projects - List projects for authenticated user
+ * GET /api/projects - List projects for authenticated user in current organization
+ * E12.9: RLS policies filter to user's organization; org context validates membership
  */
 export async function GET(request: NextRequest) {
   try {
@@ -135,9 +155,22 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // E12.9: Get organization context from request headers
+    let orgContext
+    try {
+      orgContext = await getOrgContextFromRequest(request, user.id)
+    } catch (err) {
+      if (err instanceof ForbiddenError) {
+        return NextResponse.json({ error: err.message }, { status: 403 })
+      }
+      throw err
+    }
+
+    // E12.9: RLS policies filter to organization; explicit filter ensures correct behavior
     const { data, error } = await supabase
       .from('deals')
       .select('*')
+      .eq('organization_id', orgContext.organizationId)
       .order('updated_at', { ascending: false })
 
     if (error) {
