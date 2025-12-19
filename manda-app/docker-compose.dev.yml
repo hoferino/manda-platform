@@ -11,8 +11,10 @@ version: '3.8'
 
 services:
   # Neo4j Graph Database for Knowledge Graph
+  # NOTE: Graphiti requires Neo4j 5.26+ for vector similarity functions
+  # See: https://github.com/getzep/graphiti/issues/325
   neo4j:
-    image: neo4j:5.15-community
+    image: neo4j:5.26-community
     container_name: manda-neo4j
     environment:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-mandadev123}

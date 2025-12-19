@@ -25,10 +25,15 @@ export {
 // Intent classification (E11.4)
 export {
   classifyIntent,
+  classifyIntentAsync,
   shouldRetrieve,
   getIntentDescription,
-  SKIP_RETRIEVAL_PATTERNS,
+  isSemanticRouterAvailable,
+  getSemanticRouterStatus,
+  INTENT_EXAMPLES,
+  FALLBACK_PATTERNS,
   type IntentType,
+  type IntentClassificationResult,
 } from './intent'
 
 // Pre-model retrieval (E11.4)

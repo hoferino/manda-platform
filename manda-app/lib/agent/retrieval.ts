@@ -21,7 +21,13 @@
 import { SystemMessage } from '@langchain/core/messages'
 import type { BaseMessage } from '@langchain/core/messages'
 
-import { classifyIntent, shouldRetrieve, type IntentType } from './intent'
+import {
+  classifyIntent,
+  classifyIntentAsync,
+  shouldRetrieve,
+  type IntentType,
+  type IntentClassificationResult,
+} from './intent'
 
 // =============================================================================
 // Configuration
@@ -229,18 +235,45 @@ function formatRetrievedContext(
     // Format source citation
     const source = result.citation?.title || 'Unknown'
     const page = result.citation?.page ? ` (p${result.citation.page})` : ''
-    const line = `- ${result.content} [Source: ${source}${page}]\n`
+    let line = `- ${result.content} [Source: ${source}${page}]\n`
 
     // Estimate tokens (~4 chars per token)
-    const lineTokens = Math.ceil(line.length / 4)
+    let lineTokens = Math.ceil(line.length / 4)
 
-    // Check budget before adding
-    if (estimatedTokens + lineTokens > maxTokens) {
-      break
+    // If this single result exceeds budget, truncate it to fit
+    // This ensures we always return at least partial context from the first result
+    if (lineTokens > maxTokens - estimatedTokens) {
+      const remainingTokens = maxTokens - estimatedTokens
+      if (remainingTokens > 50) {
+        // Only truncate if we have meaningful space left (50+ tokens)
+        // Calculate max chars we can use (~4 chars per token, minus citation overhead)
+        const citationSuffix = `... [Source: ${source}${page}]\n`
+        const citationTokens = Math.ceil(citationSuffix.length / 4)
+        const contentTokens = remainingTokens - citationTokens
+        const maxContentChars = contentTokens * 4
+
+        if (maxContentChars > 100) {
+          // Only truncate if we can show meaningful content
+          const truncatedContent = result.content.slice(0, maxContentChars)
+          line = `- ${truncatedContent}${citationSuffix}`
+          lineTokens = Math.ceil(line.length / 4)
+        } else {
+          // Not enough space for meaningful content, skip this result
+          break
+        }
+      } else {
+        // Not enough space left, stop adding results
+        break
+      }
     }
 
     context += line
     estimatedTokens += lineTokens
+
+    // Check if we've reached the budget
+    if (estimatedTokens >= maxTokens) {
+      break
+    }
   }
 
   return {
@@ -389,8 +422,14 @@ export async function preModelRetrievalHook(
     }
   }
 
-  // Classify intent (AC: #1, #2)
-  const intent = classifyIntent(userQuery)
+  // Classify intent using semantic router (AC: #1, #2)
+  // Uses Voyage embeddings for accurate classification, falls back to regex
+  const classificationResult = await classifyIntentAsync(userQuery)
+  const intent = classificationResult.intent
+
+  console.log(
+    `[preModelRetrievalHook] Intent: ${intent} (confidence: ${classificationResult.confidence.toFixed(2)}, method: ${classificationResult.method})`
+  )
 
   // Skip retrieval for non-knowledge intents
   if (!shouldRetrieve(intent)) {

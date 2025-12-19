@@ -14,6 +14,7 @@ from threading import Lock
 from typing import Annotated, Literal
 from uuid import UUID
 
+import asyncpg
 import structlog
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field, field_validator
@@ -130,15 +131,20 @@ async def verify_deal_exists(deal_id: str, db: SupabaseClient) -> DealVerificati
 
     Args:
         deal_id: The deal UUID to verify
-        db: Supabase client
+        db: Supabase client (provides asyncpg pool)
 
     Returns:
         DealVerificationResult with exists flag and db_error flag
     """
     try:
-        result = await db.client.table("deals").select("id").eq("id", deal_id).execute()
-        return DealVerificationResult(exists=len(result.data) > 0)
-    except Exception as e:
+        pool = await db._get_pool()
+        async with pool.acquire() as conn:
+            result = await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM deals WHERE id = $1)",
+                UUID(deal_id),
+            )
+            return DealVerificationResult(exists=bool(result))
+    except (asyncpg.PostgresError, ValueError) as e:
         logger.error(
             "Database error verifying deal",
             deal_id=deal_id,
