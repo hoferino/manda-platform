@@ -99,13 +99,20 @@ class Settings(BaseSettings):
     # Retrieval Configuration (E10.7)
     retrieval_num_candidates: int = 50
 
+    # RAG Mode Feature Flag
+    # Modes:
+    #   - "graphiti": Full Graphiti RAG (graph + vector + BM25 + reranking) - default
+    #   - "semantic": Semantic-only vector search (simpler, no graph traversal)
+    #   - "google_file_search": Google File Search API (fully managed RAG) - future
+    rag_mode: Literal["graphiti", "semantic", "google_file_search"] = "graphiti"
+
     # Pydantic AI Model Configuration (E11.5)
     # Model strings follow format: provider:model-name
     # Providers: google-gla (Gemini via AI Studio), google-vertex, anthropic, openai
     # Examples: 'google-gla:gemini-2.5-flash', 'anthropic:claude-sonnet-4-0'
     pydantic_ai_extraction_model: str = "google-gla:gemini-2.5-flash"
     pydantic_ai_analysis_model: str = "google-gla:gemini-2.5-pro"
-    pydantic_ai_fallback_model: str = "anthropic:claude-sonnet-4-0"
+    pydantic_ai_fallback_model: str = "anthropic:claude-sonnet-4-5"
 
     # Logfire Observability (E11.5 - Optional)
     # Set to enable Pydantic AI tracing via Logfire

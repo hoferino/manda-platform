@@ -25,8 +25,8 @@ setup('authenticate', async ({ page }) => {
   await page.getByLabel(/email/i).fill(process.env.E2E_TEST_EMAIL)
   await page.getByLabel(/password/i).fill(process.env.E2E_TEST_PASSWORD)
 
-  // Submit login form
-  await page.getByRole('button', { name: /sign in|log in/i }).click()
+  // Submit login form (use exact match to avoid matching Google sign-in button)
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click()
 
   // Wait for redirect to projects page (authenticated)
   await expect(page).toHaveURL('/projects', { timeout: 10000 })

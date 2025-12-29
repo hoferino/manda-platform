@@ -241,6 +241,7 @@ class HybridSearchResponse(BaseModel):
     entities: list[str]
     latency_ms: int
     result_count: int
+    rag_mode: str = Field(default="graphiti", description="RAG mode used: graphiti, semantic, or google_file_search")
 
 
 async def verify_deal_exists(deal_id: str, db: SupabaseClient) -> bool:
@@ -317,9 +318,10 @@ async def hybrid_search(
 
     try:
         # Import here to avoid circular imports and lazy load
-        from src.graphiti.retrieval import HybridRetrievalService
+        # Uses factory function that respects RAG_MODE feature flag
+        from src.graphiti import get_retrieval_service
 
-        service = HybridRetrievalService()
+        service = get_retrieval_service()
         result = await service.retrieve(
             query=request.query,
             deal_id=request.deal_id,
@@ -369,6 +371,10 @@ async def hybrid_search(
                 )
             )
 
+        # Get current RAG mode for response
+        from src.config import get_settings
+        current_rag_mode = get_settings().rag_mode
+
         response = HybridSearchResponse(
             query=request.query,
             results=response_results,
@@ -376,6 +382,7 @@ async def hybrid_search(
             entities=result.entities,
             latency_ms=result.latency_ms,
             result_count=len(response_results),
+            rag_mode=current_rag_mode,
         )
 
         logger.info(
@@ -383,6 +390,7 @@ async def hybrid_search(
             result_count=len(response_results),
             latency_ms=result.latency_ms,
             top_score=response_results[0].score if response_results else None,
+            rag_mode=current_rag_mode,
         )
 
         return response
@@ -403,6 +411,7 @@ async def hybrid_search(
                 deal_id=request.deal_id,
             )
             # Return empty results for graceful degradation
+            from src.config import get_settings
             return HybridSearchResponse(
                 query=request.query,
                 results=[],
@@ -410,6 +419,7 @@ async def hybrid_search(
                 entities=[],
                 latency_ms=0,
                 result_count=0,
+                rag_mode=get_settings().rag_mode,
             )
 
         logger.error(

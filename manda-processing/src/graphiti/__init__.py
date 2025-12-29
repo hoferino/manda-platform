@@ -72,6 +72,9 @@ from src.graphiti.retrieval import (
     SourceCitation,
 )
 
+# Semantic-only retrieval (feature flag: RAG_MODE=semantic)
+from src.graphiti.semantic_retrieval import SemanticRetrievalService
+
 # E10.6: Entity resolution module
 from src.graphiti.resolution import (
     COMPANY_SUFFIX_VARIATIONS,
@@ -113,6 +116,41 @@ from src.graphiti.schema import (
     get_entity_types,
 )
 
+def get_retrieval_service() -> HybridRetrievalService | SemanticRetrievalService:
+    """
+    Factory function to get the appropriate retrieval service based on RAG_MODE.
+
+    Feature flag controlled via environment variable or settings:
+    - RAG_MODE=graphiti (default): Full Graphiti RAG with graph traversal
+    - RAG_MODE=semantic: Semantic-only vector search (simpler, for testing)
+    - RAG_MODE=google_file_search: Google File Search API (future)
+
+    Returns:
+        HybridRetrievalService or SemanticRetrievalService based on config
+
+    Usage:
+        from src.graphiti import get_retrieval_service
+
+        service = get_retrieval_service()
+        result = await service.retrieve(query="...", deal_id="...")
+    """
+    from src.config import get_settings
+
+    settings = get_settings()
+    mode = settings.rag_mode
+
+    if mode == "semantic":
+        return SemanticRetrievalService()
+    elif mode == "google_file_search":
+        # Future: Return GoogleFileSearchService
+        raise NotImplementedError(
+            "Google File Search mode not yet implemented. Use 'graphiti' or 'semantic'."
+        )
+    else:
+        # Default to graphiti (full RAG)
+        return HybridRetrievalService()
+
+
 __all__ = [
     # Client
     "GraphitiClient",
@@ -123,6 +161,8 @@ __all__ = [
     "IngestionResult",
     # Retrieval (E10.7)
     "HybridRetrievalService",
+    "SemanticRetrievalService",
+    "get_retrieval_service",
     "RetrievalResult",
     "KnowledgeItem",
     "SourceCitation",
