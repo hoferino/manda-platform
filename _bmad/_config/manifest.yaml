@@ -1,0 +1,16 @@
+installation:
+  version: 6.0.0-alpha.21
+  installDate: 2025-12-29T20:34:30.638Z
+  lastUpdated: 2025-12-29T20:34:30.638Z
+modules:
+  - core
+  - bmb
+  - bmm
+  - cis
+ides:
+  - claude-code
+  - codex
+  - cursor
+  - antigravity
+  - windsurf
+  - gemini
