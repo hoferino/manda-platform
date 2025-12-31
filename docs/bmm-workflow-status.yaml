@@ -18,12 +18,14 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-11-18"
-last_updated: "2025-12-13"
+last_updated: "2025-12-29"
 project: "Manda"
 project_type: "enhancement"
 selected_track: "method"
 field_type: "brownfield"
 workflow_path: "bmad/bmm/workflows/workflow-status/paths/method-brownfield.yaml"
+bmad_version: "6.0.0-alpha.21"
+planning_artifacts_path: "planning_artifacts/"
 
 workflow_status:
   # PREREQUISITE: Documentation (brownfield projects)
