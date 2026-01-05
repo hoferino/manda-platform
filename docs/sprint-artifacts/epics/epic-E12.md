@@ -799,10 +799,12 @@ export async function withOrgAuth(req: Request, handler: Handler) {
 | **P0** | E12.4 Happy Path Tests | 5 | Must work before users |
 | **P1** | E12.5 Edge Case Tests | 8 | Real-world robustness |
 | **P1** | E12.6 Error Handling | 5 | User experience |
+| **P1** | E12.10 Fast Path Retrieval | 8 | Immediate document querying (added 2026-01-05) |
 | **P2** | E12.7 Alerting | 5 | Proactive monitoring |
 | **P2** | E12.8 Performance | 5 | Optimization |
+| **P2** | E12.11 LangSmith Observability | 5 | Real token counts, latency breakdown, quality metrics |
 
-**Total: 57 points**
+**Total: 70 points** (was 65, +5 for E12.11)
 
 ### Recommended Execution Order
 
@@ -811,6 +813,7 @@ export async function withOrgAuth(req: Request, handler: Handler) {
 3. **E12.4 → E12.5** (Manual testing, may surface issues)
 4. **E12.6** (Error handling improvements from testing)
 5. **E12.7 → E12.8** (Polish)
+6. **E12.11** (LangSmith — can be done anytime after E12.2 for comparison)
 
 ---
 
@@ -831,6 +834,180 @@ export async function withOrgAuth(req: Request, handler: Handler) {
 5. **Error tracking** — All errors logged with context, viewable in dashboard
 6. **Performance acceptable** — Chat <5s, search <2s, upload <30s
 7. **Ready for users** — Confidence to onboard first real users with their confidential data
+
+---
+
+### E12.10: Fast Path Document Retrieval
+
+**Story ID:** E12.10
+**Points:** 8
+**Priority:** P1
+**Added:** 2026-01-05 (Sprint Change Proposal)
+
+**Description:**
+Enable immediate document querying after upload by creating a parallel "fast path" that embeds chunks directly into Neo4j without waiting for LLM-based entity extraction. Currently, Graphiti ingestion takes 2-3 minutes per chunk due to LLM entity extraction, blocking users from querying documents immediately after upload.
+
+**User Value:**
+Analysts can start asking questions about uploaded documents immediately (within seconds), rather than waiting for full knowledge graph extraction. This matches user expectations set by tools like Claude and addresses critical workflow pain points for:
+- Single-document use cases (upload Excel → query immediately)
+- Bulk uploads (50-1000 documents)
+- Analysts who read documents immediately and want to ask questions
+
+**Acceptance Criteria:**
+- [ ] ChunkNode type created in Neo4j with content, embedding (1024d), and metadata
+- [ ] Vector index created: `CREATE VECTOR INDEX chunk_embeddings FOR (c:Chunk) ON (c.embedding)`
+- [ ] Document upload triggers immediate chunk embedding (parallel to `ingest-graphiti` job)
+- [ ] Retrieval pipeline queries ChunkNodes when knowledge graph has no results (two-tier fallback)
+- [ ] Latency < 500ms for chunk-based retrieval
+- [ ] Graceful degradation: if fast path fails, wait for knowledge graph
+- [ ] Multi-tenant isolation via `group_id` on ChunkNodes (format: `{org_id}_{deal_id}`)
+- [ ] Test with 100-document bulk upload completing fast path in < 1 minute
+
+**Technical Notes:**
+
+**Neo4j Schema:**
+```cypher
+-- ChunkNode for fast path retrieval
+(:Chunk {
+    id: UUID,
+    content: String,           // Raw text from document chunk
+    embedding: [Float],        // 1024d Voyage voyage-3.5
+    document_id: UUID,         // Reference to PostgreSQL document
+    deal_id: UUID,
+    group_id: String,          // {org_id}_{deal_id} for isolation
+    chunk_index: Integer,
+    created_at: DateTime
+})
+
+-- Vector index for fast similarity search
+CREATE VECTOR INDEX chunk_embeddings FOR (c:Chunk) ON (c.embedding)
+OPTIONS {indexConfig: {`vector.dimensions`: 1024, `vector.similarity_function`: 'cosine'}}
+```
+
+**Two-Tier Retrieval Strategy:**
+```
+User Query
+    ↓
+1. Try Tier 2 (Knowledge Graph) first
+   - Graphiti hybrid search (vector + BM25 + graph)
+   - If results found → return with entity context
+    ↓
+2. Fallback to Tier 1 (ChunkNodes) if no results
+   - Direct Neo4j vector search on Chunk embeddings
+   - Faster but less semantic richness
+    ↓
+3. User can force "raw search" for Tier 1 only
+```
+
+**Job Handler:**
+```python
+# New job: embed_chunks (runs in PARALLEL with ingest_graphiti)
+# Triggered after document-parse completes
+# Uses existing Voyage voyage-3.5 client
+# Writes ChunkNodes to Neo4j with group_id isolation
+```
+
+**Files to create/modify:**
+- `manda-processing/src/jobs/handlers/embed_chunks.py` (new)
+- `manda-processing/src/graphiti/retrieval.py` (add chunk search fallback)
+- `manda-processing/src/neo4j/schema.py` (add Chunk node type)
+- `manda-processing/src/graphiti/client.py` (trigger parallel job)
+- `docs/manda-architecture.md` (document two-tier retrieval)
+
+**Reference:**
+- [Sprint Change Proposal 2026-01-05](../sprint-change-proposal-2026-01-05.md)
+
+---
+
+### E12.11: LangSmith Observability
+
+**Story ID:** E12.11
+**Points:** 5
+**Priority:** P2
+**Added:** 2026-01-05
+
+**Description:**
+Enable LangSmith tracing for comprehensive observability into LLM operations. Currently, token counts are estimated (chars/4) and latency breakdown is unavailable. LangSmith provides exact token usage, per-step latency, full trace visualization, and evaluation capabilities.
+
+**User Value:**
+Developers get accurate cost tracking, debugging capabilities, and performance insights. Enables data-driven optimization of prompts, retrieval, and tool usage. Critical for moving from "it works" to "it works efficiently."
+
+**Current State:**
+- Token usage: **Estimated** via `Math.ceil(string.length / 4)`
+- Latency: **Total only** (no per-step breakdown)
+- Traces: **Console logs** only
+- Cost: **Calculated** from estimates, not actual
+- Quality metrics: **None**
+
+**With LangSmith:**
+- Token usage: **Exact** from LLM provider
+- Latency: **Per-step** (retrieval, LLM, tools)
+- Traces: **Full visualization** with input/output
+- Cost: **Actual** based on real token counts
+- Quality metrics: **Evaluation datasets + feedback**
+
+**Acceptance Criteria:**
+- [ ] `langsmith` package added to manda-app (already uses `@langchain/langgraph`)
+- [ ] Environment variables configured: `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT`
+- [ ] Chat agent traces appear in LangSmith dashboard
+- [ ] CIM agent traces appear in LangSmith dashboard
+- [ ] Token counts in LangSmith match expected ranges (compare to E12.2 estimates)
+- [ ] Per-step latency visible: intent classification, retrieval, LLM generation, tools
+- [ ] Custom metadata attached: `deal_id`, `user_id`, `organization_id`
+- [ ] Documentation: How to view traces, interpret metrics
+
+**Technical Notes:**
+
+**Environment Setup:**
+```bash
+# .env.local (manda-app)
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_pt_xxx
+LANGSMITH_PROJECT=manda-platform
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+
+# For serverless (Vercel): ensure traces complete before function ends
+LANGCHAIN_CALLBACKS_BACKGROUND=false
+
+# For local dev: background processing for lower latency
+LANGCHAIN_CALLBACKS_BACKGROUND=true
+```
+
+**Auto-Tracing (Zero Code Change):**
+LangChain.js auto-traces when `LANGSMITH_TRACING=true`. The existing `createReactAgent` and `streamEvents` calls will automatically send traces.
+
+**Custom Metadata (Optional Enhancement):**
+```typescript
+// In executor.ts streamChat()
+const eventStream = agent.streamEvents(
+  { messages },
+  {
+    version: 'v2',
+    metadata: {
+      deal_id: options?.dealId,
+      user_id: options?.userId,
+      organization_id: options?.organizationId,
+    }
+  }
+)
+```
+
+**Comparison with E12.2:**
+After enabling LangSmith, compare:
+1. LangSmith actual tokens vs E12.2 estimated tokens
+2. Validate cost calculations are accurate
+3. Adjust cost formulas if needed
+
+**Files to modify:**
+- `manda-app/package.json` (add `langsmith`)
+- `manda-app/.env.local.example` (document env vars)
+- `manda-app/lib/agent/executor.ts` (optional: add metadata)
+- `docs/manda-architecture.md` (document observability stack)
+
+**Reference:**
+- [LangSmith Docs](https://docs.smith.langchain.com/)
+- [LangSmith JS SDK](https://github.com/langchain-ai/langsmith-sdk/blob/main/js/README.md)
+- [Agent Framework Strategy - Section 7](../../agent-framework-strategy.md#7-langsmith-observability)
 
 ---
 

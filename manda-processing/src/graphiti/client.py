@@ -278,7 +278,8 @@ class GraphitiClient:
         edge_type_map = edge_type_map or get_edge_type_map()
 
         # E12.9: Composite group_id for organization + deal isolation
-        composite_group_id = f"{organization_id}:{deal_id}"
+        # Note: Graphiti requires alphanumeric, dashes, or underscores only - no colons
+        composite_group_id = f"{organization_id}_{deal_id}"
 
         try:
             await client.add_episode(
@@ -376,7 +377,8 @@ class GraphitiClient:
         client = await cls.get_instance()
 
         # E12.9: Composite group_id for organization + deal isolation
-        composite_group_id = f"{organization_id}:{deal_id}"
+        # Note: Graphiti requires alphanumeric, dashes, or underscores only - no colons
+        composite_group_id = f"{organization_id}_{deal_id}"
 
         try:
             results = await client.search(

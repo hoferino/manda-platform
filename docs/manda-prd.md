@@ -311,6 +311,7 @@ Unlike generic AI assistants that start fresh each conversation, or traditional 
 - **Tool-Based Integration**: Agent accesses platform through well-defined tools (not complex inter-agent communication)
 - **Background Processing**: Heavy work happens asynchronously in platform layer
 - **Lightweight Conversation**: Agent queries pre-computed knowledge base, doesn't reprocess documents in real-time
+- **Immediate Availability**: Documents become queryable within seconds of upload via fast vector search, while deeper knowledge graph extraction continues in background (see [Sprint Change Proposal 2026-01-05](sprint-artifacts/sprint-change-proposal-2026-01-05.md))
 - **Stateless Agent**: Conversation state stored in platform, agent itself is stateless between invocations
 - **Extensibility**: New analysis types added as new tools, new document types as new parsers
 

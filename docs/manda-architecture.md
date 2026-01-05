@@ -722,15 +722,38 @@ Query:  "What is the revenue?"
 - "How has the revenue story evolved across presentations?"
 - "Show all facts that were superseded — potential red flags"
 
-#### Retrieval Pipeline
+#### Retrieval Pipeline (Two-Tier)
+
+> **Architecture Update (2026-01-05):** Added two-tier retrieval to enable immediate document querying. See [Sprint Change Proposal 2026-01-05](sprint-artifacts/sprint-change-proposal-2026-01-05.md).
+
+The retrieval system uses a two-tier approach to balance immediacy with analytical depth:
+
+**Tier 1: Fast Path (ChunkNodes) - Available immediately after upload**
+
+```
+User Query
+    ↓
+1. Neo4j Vector Search on ChunkNodes
+   - Voyage-3.5 embeddings (1024d)
+   - Direct chunk content retrieval
+   → 20 candidates (~100ms)
+    ↓
+2. Voyage Reranker (rerank-2.5)
+   - Score and reorder by relevance
+   → Top 5 results (~200ms)
+    ↓
+Total latency: ~300ms
+```
+
+**Tier 2: Deep Path (Knowledge Graph) - Available after entity extraction**
 
 ```
 User Query
     ↓
 1. Graphiti Hybrid Search
-   - Vector similarity (Voyage finance-2, 1024d)
+   - Vector similarity on Entities (Voyage-3.5, 1024d)
    - BM25 full-text
-   - Graph traversal
+   - Graph traversal (relationships)
    → 50 candidates (~300ms)
     ↓
 2. Voyage Reranker (rerank-2.5)
@@ -745,26 +768,62 @@ User Query
 Total latency: ~2-3 seconds
 ```
 
+**Retrieval Strategy:**
+
+| Scenario | Behavior |
+|----------|----------|
+| Default query | Try Tier 2 first; fall back to Tier 1 if no results |
+| Document just uploaded | Use Tier 1 (knowledge graph not yet available) |
+| User requests "raw search" | Force Tier 1 only |
+| Comprehensive analysis | Combine both tiers for maximum coverage |
+
+**Why Two Tiers?**
+- **Tier 1** provides immediate access (~seconds after upload) but lacks entity resolution and relationship context
+- **Tier 2** provides semantic richness (entities, relationships, temporal facts) but requires LLM extraction (~2-3 min/chunk)
+- Users expect immediate querying (like Claude) while also benefiting from deep knowledge graph analysis for CIM generation
+
 #### Vector Indexes
 
 ```cypher
--- Entity embeddings for semantic search
+-- ChunkNode embeddings for fast path (Tier 1)
+CREATE VECTOR INDEX chunk_embeddings FOR (c:Chunk) ON (c.embedding)
+OPTIONS {indexConfig: {`vector.dimensions`: 1024, `vector.similarity_function`: 'cosine'}}
+
+-- Entity embeddings for semantic search (Tier 2)
 CREATE VECTOR INDEX entity_embeddings FOR (e:Entity) ON (e.embedding)
 OPTIONS {indexConfig: {`vector.dimensions`: 1024, `vector.similarity_function`: 'cosine'}}
 
--- Episode embeddings for content search
+-- Episode embeddings for content search (Tier 2)
 CREATE VECTOR INDEX episode_embeddings FOR (ep:Episode) ON (ep.embedding)
 OPTIONS {indexConfig: {`vector.dimensions`: 1024, `vector.similarity_function`: 'cosine'}}
 
 -- BM25 full-text indexes
 CREATE FULLTEXT INDEX entity_names FOR (e:Entity) ON EACH [e.name, e.summary]
 CREATE FULLTEXT INDEX episode_content FOR (ep:Episode) ON EACH [ep.content]
+CREATE FULLTEXT INDEX chunk_content FOR (c:Chunk) ON EACH [c.content]
+```
+
+#### ChunkNode Schema
+
+```cypher
+-- ChunkNode for fast path retrieval (added 2026-01-05)
+(:Chunk {
+    id: UUID,
+    content: String,           -- Raw text from document chunk
+    embedding: [Float],        -- 1024d Voyage voyage-3.5
+    document_id: UUID,         -- Reference to PostgreSQL document
+    deal_id: UUID,
+    group_id: String,          -- {org_id}_{deal_id} for multi-tenant isolation
+    chunk_index: Integer,
+    created_at: DateTime
+})
 ```
 
 #### References
 
 - [Graphiti GitHub](https://github.com/getzep/graphiti)
-- [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
+- [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md) - Knowledge graph consolidation
+- [Sprint Change Proposal 2026-01-05](sprint-artifacts/sprint-change-proposal-2026-01-05.md) - Two-tier retrieval
 - [Voyage AI Documentation](https://docs.voyageai.com/docs/embeddings)
 
 ---

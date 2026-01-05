@@ -254,6 +254,48 @@ class SupabaseClient:
                 retryable=self._is_retryable_error(e),
             )
 
+    async def get_deal(self, deal_id: str) -> Optional[dict[str, Any]]:
+        """
+        Get deal details by ID.
+
+        Story: E12.9 - Multi-Tenant Data Isolation
+
+        Args:
+            deal_id: UUID string of the deal
+
+        Returns:
+            Deal record as dict, or None if not found
+        """
+        pool = await self._get_pool()
+
+        try:
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """
+                    SELECT id, user_id, organization_id, name, company_name,
+                           industry, status, irl_template, metadata,
+                           created_at, updated_at
+                    FROM deals
+                    WHERE id = $1
+                    """,
+                    UUID(deal_id),
+                )
+
+                if row:
+                    return dict(row)
+                return None
+
+        except asyncpg.PostgresError as e:
+            logger.error(
+                "Database error fetching deal",
+                deal_id=deal_id,
+                error=str(e),
+            )
+            raise DatabaseError(
+                f"Failed to fetch deal: {str(e)}",
+                retryable=self._is_retryable_error(e),
+            )
+
     async def store_chunks_and_update_status(
         self,
         document_id: UUID,
@@ -389,7 +431,7 @@ class SupabaseClient:
                     """
                     SELECT id, document_id, chunk_index, content, chunk_type,
                            page_number, sheet_name, cell_reference, token_count,
-                           metadata, embedding IS NOT NULL as has_embedding
+                           metadata
                     FROM document_chunks
                     WHERE document_id = $1
                     ORDER BY chunk_index ASC

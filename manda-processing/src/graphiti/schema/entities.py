@@ -26,13 +26,13 @@ class Company(BaseModel):
     acquirer, competitor, or other role.
 
     Attributes:
-        name: Official company name
+        company_name: Official company name (renamed from 'name' - reserved by Graphiti)
         role: Company's role in the M&A context
         industry: Industry sector (optional)
         aliases: Alternative names for entity resolution
     """
 
-    name: str
+    company_name: str = Field(description="Official company name")
     role: Literal["target", "acquirer", "competitor", "customer", "supplier", "investor"]
     industry: str | None = None
     aliases: list[str] = Field(default_factory=list)
@@ -46,14 +46,14 @@ class Person(BaseModel):
     executives, advisors, board members, and other stakeholders.
 
     Attributes:
-        name: Full name of the person
+        full_name: Full name of the person (renamed from 'name' - reserved by Graphiti)
         title: Job title (optional)
         role: Person's role in M&A context
         company_id: Reference to associated Company entity (optional)
         aliases: Alternative names for entity resolution (e.g., "J. Smith" for "John Smith")
     """
 
-    name: str
+    full_name: str = Field(description="Full name of the person")
     title: str | None = None
     role: Literal["executive", "advisor", "board", "investor", "employee"]
     company_id: str | None = None
