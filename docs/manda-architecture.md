@@ -3,10 +3,10 @@
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-17
+**Last Updated:** 2026-01-06
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 4.1 (E11 Context Engineering - Tool Result Isolation Pattern)
+**Version:** 4.2 (E12.11 LangSmith Observability - Token tracking, cost, visual debugging)
 
 ---
 
@@ -66,6 +66,7 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 | **Authentication** | Supabase Auth | ✅ | OAuth, magic links, MFA, RLS |
 | **File Storage** | Google Cloud Storage | ✅ | Signed URLs, lifecycle policies |
 | **Frontend** | Next.js 15 (React 19.2) | ✅ | shadcn/ui, Turbopack |
+| **Observability** | LangSmith + LangGraph Studio | ✅ E12.11 | Token tracking, cost, visual debugging |
 | **Development Environment** | Docker Compose | ✅ | Local Supabase + Neo4j orchestration |
 
 ---
@@ -181,6 +182,29 @@ Authentication & Authorization:
     - OAuth (Google, Microsoft)
     - MFA (optional)
   security: Row-Level Security (RLS)
+
+Observability:
+  tracing: LangSmith (LangChain)
+  # - Automatic tracing of all LangChain/LangGraph operations
+  # - Exact token counts from LLM providers (vs estimated)
+  # - Per-step latency breakdown (retrieval, LLM, tools)
+  # - Cost tracking with model-specific pricing
+  # - EU endpoint: eu.api.smith.langchain.com
+
+  visual_debugging: LangGraph Studio
+  # - Graph visualization of agent workflows
+  # - Execution tracking (which nodes run, in what order)
+  # - State inspection at each step
+  # - Time-travel debugging (replay from checkpoints)
+  # - CLI: npx @langchain/langgraph-cli@latest dev
+  # - Desktop: brew install --cask langgraph-studio
+
+  environment_variables:
+    - LANGSMITH_TRACING=true
+    - LANGSMITH_API_KEY=lsv2_pt_xxx
+    - LANGSMITH_PROJECT=manda-platform
+    - LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com
+    - LANGCHAIN_CALLBACKS_BACKGROUND=true  # false for Vercel/serverless
 
 Development & Deployment:
   container_orchestration: Docker Compose

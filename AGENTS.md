@@ -17,6 +17,14 @@ Refer to `~/.factory/memories.md` for my coding preferences and past decisions.
 
 Refer to `.factory/memories.md` for project-specific architecture decisions and known issues.
 
+## Project Skills
+
+- `.factory/skills/create-story/` — create next story with BMAD checklist and template
+- `.factory/skills/dev-story/` — implement story using Definition of Done
+- `.factory/skills/code-review/` — adversarial review and sprint sync
+- `.factory/skills/sprint-status/` — inspect/update sprint-status.yaml
+- `.factory/skills/retrospective/` — capture sprint/epic retros
+
 ## Coding Standards
 
 Follow the conventions documented in:

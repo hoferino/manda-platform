@@ -2062,15 +2062,23 @@ development_status:
   e12-8-performance-profiling: backlog
   e12-8-points: 5
   e12-8-priority: P2
-  # E12.11 - LangSmith Observability (added 2026-01-05)
-  e12-11-langsmith-observability: backlog
+  # E12.11 - LangSmith Observability (added 2026-01-05, completed 2026-01-06)
+  e12-11-langsmith-observability: done
   e12-11-points: 5
   e12-11-priority: P2
   e12-11-added: 2026-01-05
+  e12-11-completed: 2026-01-06
   e12-11-description: |
     Enable LangSmith tracing for comprehensive LLM observability. Auto-traces
     with LangChain.js when LANGSMITH_TRACING=true. Provides exact token counts,
     per-step latency, trace visualization, and evaluation capabilities.
+  e12-11-deliverables: |
+    - manda-app/.env.local: Added LANGSMITH_TRACING, LANGSMITH_API_KEY,
+      LANGSMITH_PROJECT, LANGSMITH_ENDPOINT (EU), LANGCHAIN_CALLBACKS_BACKGROUND
+    - manda-app/langgraph.json: Created for LangGraph Studio integration
+    - manda-app/lib/agent/graph.ts: Exported chatGraph for Studio visualization
+    - docs/manda-architecture.md: Added Observability section (v4.2)
+    - manda-app/.env.example: Updated LangSmith variable documentation
 
   # Tech Debt items discovered during Phase 1 testing
   phase-2-tech-debt:
