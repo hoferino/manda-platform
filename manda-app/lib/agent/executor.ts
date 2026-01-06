@@ -20,7 +20,13 @@
 import { createReactAgent } from '@langchain/langgraph/prebuilt'
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages'
 import type { BaseMessage } from '@langchain/core/messages'
-import { createLLMClient, createLLMClientWithFallback, type LLMConfig } from '@/lib/llm/client'
+import {
+  createLLMClient,
+  createLLMClientWithFallback,
+  type LLMConfig,
+  type CreateLLMClientOptions,
+} from '@/lib/llm/client'
+import { formatModelSelection, getEffectiveModelConfig } from '@/lib/llm/routing'
 import { allChatTools, TOOL_COUNT } from './tools/all-tools'
 import { getToolsForComplexity, logToolTierSelection } from './tools/tool-loader'
 import type { ComplexityLevel } from './intent'
@@ -44,7 +50,7 @@ import {
 } from './summarization'
 import { logLLMUsage, logFeatureUsage, calculateLLMCost } from '@/lib/observability/usage'
 import { toUserFacingError } from '@/lib/errors/types'
-import { getLLMConfig } from '@/lib/llm/config'
+import { getLLMConfig, calculateModelCost } from '@/lib/llm/config'
 
 /**
  * Agent type returned by createReactAgent
@@ -79,6 +85,7 @@ export interface ChatAgentConfig {
  * Extended agent type with tool result cache access
  * Story: E11.1 - Tool Result Isolation
  * Story: E13.2 - Tier-Based Tool Loading (adds toolCount for tracing)
+ * Story: E13.3 - Model Selection Matrix (adds selectedModel for tracing)
  */
 export interface ChatAgentWithCache {
   agent: ReactAgentType
@@ -87,6 +94,10 @@ export interface ChatAgentWithCache {
   toolCount: number
   /** Complexity tier used (for tracing) - E13.2 */
   complexity?: ComplexityLevel
+  /** Selected model identifier (for tracing) - E13.3 */
+  selectedModel?: string
+  /** Selected provider (for tracing) - E13.3 */
+  selectedProvider?: string
 }
 
 /**
@@ -138,8 +149,24 @@ export function convertToLangChainMessages(messages: ConversationMessage[]): Bas
  * ```
  */
 export function createChatAgent(config: ChatAgentConfig): ChatAgentWithCache {
-  // Create LLM client with fallback (E12.6: Claude → Gemini on 429/503)
-  const llm = createLLMClientWithFallback(config.llmConfig)
+  // E13.3: Build LLM client options with complexity-based model selection
+  const llmOptions: CreateLLMClientOptions = {
+    ...config.llmConfig,
+    complexity: config.complexity, // E13.3: Route to tier-appropriate model
+  }
+
+  // E13.3: Get the effective model config for logging/tracing
+  const effectiveConfig = getEffectiveModelConfig(config.complexity)
+
+  // Create LLM client with fallback (E12.6 + E13.3)
+  // - E12.6: Primary → Fallback on 429/503 errors
+  // - E13.3: Complexity-based primary model selection
+  const llm = createLLMClientWithFallback(llmOptions)
+
+  // E13.3: Log model selection alongside tool tier selection
+  console.log(
+    `[Agent] Model routing: ${formatModelSelection(effectiveConfig, config.complexity)}`
+  )
 
   // Get system prompt
   const systemPrompt = config.dealName
@@ -186,6 +213,9 @@ export function createChatAgent(config: ChatAgentConfig): ChatAgentWithCache {
     toolResultCache,
     toolCount: baseTools.length,
     complexity: config.complexity,
+    // E13.3: Include selected model info for tracing
+    selectedModel: effectiveConfig.model,
+    selectedProvider: effectiveConfig.provider,
   }
 }
 
@@ -311,11 +341,12 @@ export async function streamChat(
 
   // Support both raw agent and ChatAgentWithCache (E11.1)
   const agent = 'agent' in agentOrWithCache ? agentOrWithCache.agent : agentOrWithCache
+  const agentCache = 'agent' in agentOrWithCache ? agentOrWithCache : null
 
   // Get LLM from agent for summarization (needed for E11.2)
+  // E13.3: Pass complexity to use tier-appropriate model for summarization
   // Note: Use standard client for summarization (no fallback needed - low-stakes operation)
-  // The main agent chat uses fallback via createChatAgent which calls createLLMClientWithFallback
-  const llm = createLLMClient()
+  const llm = createLLMClient({ complexity: agentCache?.complexity })
 
   const langChainHistory = convertToLangChainMessages(chatHistory)
 
@@ -382,24 +413,16 @@ export async function streamChat(
       }
     }
 
-    // E12.2: Log LLM usage to database
+    // E12.2 + E13.3: Log LLM usage to database with complexity-aware model info
     // NOTE: Token counts are ESTIMATED - LangChain doesn't expose actual usage
     // chars/4 ≈ tokens is a reasonable approximation for cost tracking
     try {
       const estimatedInputTokens = Math.ceil(input.length / 4)
       const estimatedOutputTokens = Math.ceil(fullOutput.length / 4)
 
-      // Get provider/model from config dynamically (fixes hardcoded values)
-      const llmConfig = getLLMConfig()
-      const provider = llmConfig.provider
-      // Normalize model name to match cost lookup format (e.g., 'claude-sonnet-4-0')
-      const model = llmConfig.model.includes('claude-sonnet-4')
-        ? 'claude-sonnet-4-0'
-        : llmConfig.model.includes('gemini-2.5-flash')
-          ? 'gemini-2.5-flash'
-          : llmConfig.model.includes('gemini-2.5-pro')
-            ? 'gemini-2.5-pro'
-            : llmConfig.model
+      // E13.3: Use agent's selected model/provider if available, otherwise fall back to env config
+      const provider = agentCache?.selectedProvider ?? getLLMConfig().provider
+      const model = agentCache?.selectedModel ?? getLLMConfig().model
 
       await logLLMUsage({
         organizationId: options?.organizationId,
@@ -410,7 +433,8 @@ export async function streamChat(
         feature: 'chat',
         inputTokens: estimatedInputTokens,
         outputTokens: estimatedOutputTokens,
-        costUsd: calculateLLMCost(provider, model, estimatedInputTokens, estimatedOutputTokens),
+        // E13.3: Use calculateModelCost which properly looks up per-model pricing
+        costUsd: calculateModelCost(model, estimatedInputTokens, estimatedOutputTokens),
         latencyMs: Date.now() - chatStartTime,
       })
     } catch (loggingError) {

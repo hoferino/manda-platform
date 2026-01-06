@@ -31,11 +31,12 @@ export type LLMConfig = z.infer<typeof LLMConfigSchema>
 
 /**
  * Default model configurations per provider
+ * Updated to align with MODEL_BY_COMPLEXITY in intent.ts (E13.3)
  */
 export const DEFAULT_MODELS: Record<LLMProvider, string> = {
-  anthropic: 'claude-sonnet-4-5-20250929',
-  openai: 'gpt-4-turbo-preview',
-  google: 'gemini-1.5-pro',
+  anthropic: 'claude-sonnet-4-20250514',
+  openai: 'gpt-4o',
+  google: 'gemini-2.5-pro',
 }
 
 /**
@@ -46,6 +47,76 @@ export const TOKEN_COSTS: Record<LLMProvider, { input: number; output: number }>
   anthropic: { input: 3.00, output: 15.00 },   // Claude Sonnet
   openai: { input: 10.00, output: 30.00 },     // GPT-4 Turbo
   google: { input: 1.25, output: 5.00 },       // Gemini 1.5 Pro
+}
+
+/**
+ * Cost per 1M tokens (input/output) by specific model
+ * Story: E13.3 - Model Selection Matrix (AC: #5)
+ * Prices verified Jan 2026
+ */
+export const TOKEN_COSTS_BY_MODEL: Record<string, { input: number; output: number }> = {
+  // Anthropic - Claude 4 family
+  'claude-sonnet-4-20250514': { input: 3.00, output: 15.00 },
+  'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 },
+
+  // Google - Gemini family
+  'gemini-2.0-flash-lite': { input: 0.075, output: 0.30 },  // ~40x cheaper than Pro
+  'gemini-2.5-flash-lite': { input: 0.10, output: 0.40 },
+  'gemini-2.5-pro': { input: 1.25, output: 10.00 },  // Note: output is $10, not $5
+  'gemini-2.5-flash': { input: 0.30, output: 1.20 },
+  'gemini-1.5-pro': { input: 1.25, output: 5.00 },
+
+  // OpenAI (for reference)
+  'gpt-4-turbo-preview': { input: 10.00, output: 30.00 },
+  'gpt-4o': { input: 2.50, output: 10.00 },
+}
+
+/**
+ * Get token costs for a specific model
+ * Story: E13.3 - Model Selection Matrix (AC: #5)
+ *
+ * Falls back to gemini-2.5-pro pricing if model not found
+ *
+ * @param model - Model identifier string
+ * @returns Token cost rates per 1M tokens
+ *
+ * @example
+ * ```typescript
+ * const costs = getTokenCosts('gemini-2.0-flash-lite')
+ * // { input: 0.075, output: 0.30 }
+ *
+ * const inputCost = (tokens / 1_000_000) * costs.input
+ * ```
+ */
+export function getTokenCosts(model: string): { input: number; output: number } {
+  const costs = TOKEN_COSTS_BY_MODEL[model]
+  if (costs) return costs
+  // Fallback to gemini-2.5-pro pricing
+  return { input: 1.25, output: 10.00 }
+}
+
+/**
+ * Calculate estimated cost for a given model and token usage
+ * Story: E13.3 - Model Selection Matrix (AC: #5)
+ *
+ * @param model - Model identifier string
+ * @param inputTokens - Number of input tokens
+ * @param outputTokens - Number of output tokens
+ * @returns Total estimated cost in USD
+ *
+ * @example
+ * ```typescript
+ * const cost = calculateModelCost('gemini-2.0-flash-lite', 1000, 100)
+ * // ~$0.000105
+ * ```
+ */
+export function calculateModelCost(
+  model: string,
+  inputTokens: number,
+  outputTokens: number
+): number {
+  const costs = getTokenCosts(model)
+  return (inputTokens / 1_000_000) * costs.input + (outputTokens / 1_000_000) * costs.output
 }
 
 /**

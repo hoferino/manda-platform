@@ -2130,15 +2130,17 @@ development_status:
   e13-2-points: 5
   e13-2-priority: P0
   e13-2-description: "Dynamic tool loading: 0 tools (simple) → 3-5 tools (medium) → all (complex)"
-  e13-3-model-selection-matrix: backlog
+  e13-3-model-selection-matrix: done
   e13-3-points: 3
   e13-3-priority: P0
   e13-3-description: "Route queries to Gemini Flash (simple) → Gemini Pro (medium) → Claude Sonnet (complex)"
   # P1 - Important (Multi-Agent)
-  e13-4-supervisor-agent-pattern: backlog
+  e13-4-supervisor-agent-pattern: done
   e13-4-points: 8
   e13-4-priority: P1
   e13-4-description: "LangGraph StateGraph supervisor for complex query routing to specialists"
+  e13-4-story-file: docs/sprint-artifacts/stories/e13-4-supervisor-agent-pattern.md
+  e13-4-drafted: 2026-01-06
   e13-5-financial-analyst-specialist: backlog
   e13-5-points: 5
   e13-5-priority: P1

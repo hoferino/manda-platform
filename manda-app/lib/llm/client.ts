@@ -3,12 +3,14 @@
  *
  * Model-agnostic LLM client wrapper supporting Anthropic, OpenAI, and Google providers.
  * Story: E5.1 - Integrate LLM via LangChain (Model-Agnostic)
+ * Story: E13.3 - Model Selection Matrix (AC: #3)
  *
  * Features:
  * - Provider switching via environment or explicit config
  * - Unified BaseChatModel interface
  * - Built-in retry logic via LangChain
  * - Type-safe configuration validation
+ * - Complexity-based model selection (E13.3)
  */
 
 import { ChatAnthropic } from '@langchain/anthropic'
@@ -22,6 +24,12 @@ import {
   getLLMConfig,
   getAPIKey,
 } from './config'
+import { type ComplexityLevel } from '../agent/intent'
+import {
+  getEffectiveModelConfig,
+  getFallbackConfig,
+  formatModelSelection,
+} from './routing'
 
 /**
  * Creates an Anthropic (Claude) chat model
@@ -70,9 +78,24 @@ function createGoogleClient(config: LLMConfig): BaseChatModel {
 }
 
 /**
+ * Extended config options for createLLMClient
+ * Story: E13.3 - Model Selection Matrix (AC: #3)
+ */
+export interface CreateLLMClientOptions extends Partial<LLMConfig> {
+  /**
+   * Query complexity for automatic model selection
+   * When provided, model/provider/settings are selected from MODEL_ROUTING_CONFIG
+   * Explicit config values override complexity-derived values
+   */
+  complexity?: ComplexityLevel
+}
+
+/**
  * Factory function to create an LLM client based on configuration
+ * Story: E5.1 - Integrate LLM via LangChain (Model-Agnostic)
+ * Story: E13.3 - Model Selection Matrix (AC: #3)
  *
- * @param config - Optional explicit configuration. If not provided, reads from environment.
+ * @param options - Optional configuration or complexity-based selection
  * @returns A LangChain BaseChatModel instance
  * @throws Error if provider is invalid or API key is missing
  *
@@ -91,18 +114,33 @@ function createGoogleClient(config: LLMConfig): BaseChatModel {
  *   timeout: 30000,
  * })
  *
+ * // E13.3: Complexity-based model selection
+ * const llm = createLLMClient({ complexity: 'simple' })
+ * // Creates gemini-2.0-flash-lite client
+ *
  * // Basic usage
  * const response = await llm.invoke('Hello!')
  * ```
  */
-export function createLLMClient(config?: Partial<LLMConfig>): BaseChatModel {
-  // Get base config from environment
-  const envConfig = getLLMConfig()
+export function createLLMClient(options?: CreateLLMClientOptions): BaseChatModel {
+  let finalConfig: LLMConfig
 
-  // Merge with explicit config if provided
-  const finalConfig: LLMConfig = config
-    ? { ...envConfig, ...config }
-    : envConfig
+  if (options?.complexity) {
+    // E13.3: Use complexity-based model selection
+    // getEffectiveModelConfig handles API key availability checks
+    const routingConfig = getEffectiveModelConfig(options.complexity)
+
+    // Allow explicit overrides on top of routing config
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { complexity, ...explicitConfig } = options
+    finalConfig = { ...routingConfig, ...explicitConfig }
+
+    console.log(`[LLM Client] ${formatModelSelection(finalConfig, options.complexity)}`)
+  } else {
+    // Original behavior: environment-based config with optional overrides
+    const envConfig = getLLMConfig()
+    finalConfig = options ? { ...envConfig, ...options } : envConfig
+  }
 
   // Create provider-specific client
   switch (finalConfig.provider) {
@@ -144,28 +182,83 @@ export type LLMClient = BaseChatModel
 /**
  * Create LLM client with automatic fallback.
  * Story: E12.6 - Uses LangChain's built-in FallbackLLM for model switching.
- * Primary: Claude Sonnet -> Fallback: Gemini Pro on 429/503 errors.
+ * Story: E13.3 - Model Selection Matrix (AC: #3) - Complexity-aware fallback chain.
+ *
+ * Fallback behavior:
+ * - Without complexity: Claude → Gemini Pro (original E12.6 behavior)
+ * - With complexity: Tier model → getFallbackConfig(tier) model
+ *   - Simple (Flash Lite) → Medium (Gemini Pro)
+ *   - Medium (Gemini Pro) → Complex (Claude Sonnet)
+ *   - Complex (Claude Sonnet) → Medium (Gemini Pro)
  *
  * Note: Returns a Runnable that can be used like BaseChatModel.
  * The withFallbacks wrapper handles 429/503 errors automatically.
  */
-export function createLLMClientWithFallback(config?: Partial<LLMConfig>) {
-  const llmConfig = { ...getLLMConfig(), ...config }
+export function createLLMClientWithFallback(options?: CreateLLMClientOptions) {
+  // Create primary LLM using complexity-aware routing
+  const primaryLLM = createLLMClient(options)
 
-  const primaryLLM = createLLMClient(llmConfig)
+  // Determine fallback config based on complexity
+  let fallbackConfig: LLMConfig
 
-  // Only configure fallback if we have a fallback key
-  if (!process.env.GOOGLE_AI_API_KEY) {
+  if (options?.complexity) {
+    // E13.3: Use tier-aware fallback chain
+    const primaryConfig = getEffectiveModelConfig(options.complexity)
+    fallbackConfig = getFallbackConfig(options.complexity)
+    console.log(`[LLM Client] Fallback chain: ${primaryConfig.model} → ${fallbackConfig.model}`)
+  } else {
+    // Original E12.6 behavior: fallback to Gemini Pro
+    const envConfig = getLLMConfig()
+    fallbackConfig = {
+      ...envConfig,
+      provider: 'google',
+      model: 'gemini-2.5-pro',
+    }
+  }
+
+  // Check if fallback provider API key is available
+  const fallbackKeyAvailable =
+    (fallbackConfig.provider === 'google' && process.env.GOOGLE_AI_API_KEY) ||
+    (fallbackConfig.provider === 'anthropic' && process.env.ANTHROPIC_API_KEY) ||
+    (fallbackConfig.provider === 'openai' && process.env.OPENAI_API_KEY)
+
+  if (!fallbackKeyAvailable) {
+    console.warn(`[LLM Client] Fallback provider ${fallbackConfig.provider} API key not available`)
     return primaryLLM
   }
 
-  const fallbackLLM = new ChatGoogleGenerativeAI({
-    apiKey: process.env.GOOGLE_AI_API_KEY,
-    model: 'gemini-2.5-pro',
-    temperature: llmConfig.temperature,
-    maxOutputTokens: llmConfig.maxTokens,
-    maxRetries: llmConfig.retryAttempts,
-  })
+  // Create fallback LLM
+  let fallbackLLM: BaseChatModel
+
+  switch (fallbackConfig.provider) {
+    case 'google':
+      fallbackLLM = new ChatGoogleGenerativeAI({
+        apiKey: process.env.GOOGLE_AI_API_KEY!,
+        model: fallbackConfig.model,
+        temperature: fallbackConfig.temperature,
+        maxOutputTokens: fallbackConfig.maxTokens,
+        maxRetries: fallbackConfig.retryAttempts,
+      })
+      break
+    case 'anthropic':
+      fallbackLLM = new ChatAnthropic({
+        anthropicApiKey: process.env.ANTHROPIC_API_KEY!,
+        modelName: fallbackConfig.model,
+        temperature: fallbackConfig.temperature,
+        maxTokens: fallbackConfig.maxTokens,
+        maxRetries: fallbackConfig.retryAttempts,
+      })
+      break
+    case 'openai':
+      fallbackLLM = new ChatOpenAI({
+        openAIApiKey: process.env.OPENAI_API_KEY!,
+        modelName: fallbackConfig.model,
+        temperature: fallbackConfig.temperature,
+        maxTokens: fallbackConfig.maxTokens,
+        maxRetries: fallbackConfig.retryAttempts,
+      })
+      break
+  }
 
   // LangChain's withFallbacks handles 429, 503, and connection errors automatically
   return primaryLLM.withFallbacks({

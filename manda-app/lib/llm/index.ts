@@ -14,11 +14,14 @@ export {
   LLMConfigSchema,
   DEFAULT_MODELS,
   TOKEN_COSTS,
+  TOKEN_COSTS_BY_MODEL,
   DEFAULT_CONFIG,
   getLLMConfig,
   getLLMProvider,
   getLLMModel,
   getAPIKey,
+  getTokenCosts,
+  calculateModelCost,
   isLangSmithEnabled,
   getLangSmithConfig,
   CONSTANTS,
@@ -28,8 +31,22 @@ export {
 export {
   createLLMClient,
   createLLMClientForProvider,
+  createLLMClientWithFallback,
   type LLMClient,
+  type CreateLLMClientOptions,
 } from './client'
+
+// Model Routing (E13.3)
+export {
+  MODEL_ROUTING_CONFIG,
+  selectModelForComplexity,
+  getFallbackConfig,
+  getEffectiveModelConfig,
+  isGoogleAvailable,
+  isAnthropicAvailable,
+  getTierFromModel,
+  formatModelSelection,
+} from './routing'
 
 // Callbacks and Observability
 export {

@@ -10,12 +10,16 @@
  * Story: E11.4 - Intent-Aware Knowledge Retrieval
  * Story: E12.6 - Error Handling & Graceful Degradation
  * Story: E13.2 - Tier-Based Tool Loading (dynamic tool loading based on complexity)
+ * Story: E13.3 - Model Selection Matrix (model routing based on complexity)
+ * Story: E13.4 - Supervisor Agent Pattern (multi-agent routing for complex queries)
  * AC: #2 (Message Submission), #3 (Streaming Responses), #8 (API Routes)
  * AC: E5.6 #1 (Last N Messages), #3 (Context Persists), #4 (Long Conversations), #5 (Token Management)
  * AC: E5.7 #1 (Confidence Score Extraction), #6 (Multiple Finding Aggregation)
  * AC: E11.4 #3 (Graphiti hybrid retrieval), #4 (Context injection), #7 (Latency tracking)
  * AC: E12.6 #4 (Error logging), #5 (User-friendly messages)
  * AC: E13.2 #3 (Dynamic tool loading), #4 (Tool count in metadata)
+ * AC: E13.3 #4 (Model in traces), #5 (Cost tracking per tier)
+ * AC: E13.4 #7 (Conditional routing based on complexity)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -40,6 +44,9 @@ import {
 import { classifyIntentAsync, type ComplexityLevel } from '@/lib/agent/intent'
 import { handleToolEscalation, getNextTier, canEscalate } from '@/lib/agent/tools/tool-loader'
 import { logFeatureUsage } from '@/lib/observability/usage'
+import { getTokenCosts, calculateModelCost } from '@/lib/llm/config'
+// E13.4: Supervisor for complex query multi-agent routing
+import { invokeSupervisor, type SupervisorInvokeResult } from '@/lib/agent/supervisor'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -201,6 +208,117 @@ export async function POST(request: NextRequest, context: RouteContext) {
       `confidence: ${intentResult.complexityConfidence ?? 'N/A'}`
     )
 
+    // E13.4: Feature flag for supervisor routing
+    // Set to true to enable multi-agent supervisor for complex queries
+    const ENABLE_SUPERVISOR = process.env.ENABLE_SUPERVISOR_AGENT === 'true'
+
+    // E13.4: Route complex queries to supervisor for multi-agent processing (AC: #7)
+    if (ENABLE_SUPERVISOR && complexity === 'complex') {
+      console.log('[api/chat] Routing to supervisor agent for complex query')
+
+      try {
+        const supervisorResult = await invokeSupervisor({
+          query: message,
+          dealId: projectId,
+          userId: user.id,
+          organizationId: project.organization_id ?? undefined,
+          intent: intentResult,
+        })
+
+        // Generate message ID for the response
+        const messageId = crypto.randomUUID()
+
+        // Save assistant message from supervisor
+        const { error: assistantMsgError } = await supabase.from('messages').insert({
+          id: messageId,
+          conversation_id: activeConversationId,
+          role: 'assistant',
+          content: supervisorResult.content,
+          sources: supervisorResult.sources.length > 0 ? JSON.stringify(supervisorResult.sources) : null,
+        })
+
+        if (assistantMsgError) {
+          console.error('[api/chat] Error saving supervisor message:', assistantMsgError)
+        }
+
+        // Update conversation updated_at
+        await supabase
+          .from('conversations')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', activeConversationId)
+
+        // E13.4: Log supervisor usage (AC: #5)
+        try {
+          await logFeatureUsage({
+            dealId: projectId,
+            userId: user.id,
+            organizationId: project.organization_id ?? undefined,
+            featureName: 'chat_supervisor',
+            status: 'success',
+            durationMs: supervisorResult.metrics.totalLatencyMs,
+            metadata: {
+              conversationId: activeConversationId,
+              messageLength: message.length,
+              responseLength: supervisorResult.content.length,
+              // E13.4: Supervisor-specific metadata
+              specialists: supervisorResult.specialists,
+              wasSynthesized: supervisorResult.wasSynthesized,
+              confidence: supervisorResult.confidence,
+              sourceCount: supervisorResult.sources.length,
+              // Routing details
+              routingSpecialists: supervisorResult.routing.selectedSpecialists,
+              routingRationale: supervisorResult.routing.rationale,
+              routingParallel: supervisorResult.routing.isParallel,
+              // Timing breakdown
+              classifyLatencyMs: supervisorResult.metrics.classifyLatencyMs,
+              routeLatencyMs: supervisorResult.metrics.routeLatencyMs,
+              synthesizeLatencyMs: supervisorResult.metrics.synthesizeLatencyMs,
+            },
+          })
+        } catch (loggingError) {
+          console.error('[api/chat] Supervisor usage logging failed:', loggingError)
+        }
+
+        // Return non-streaming JSON response for supervisor path
+        // TODO: E13.8 - Add streaming support to supervisor
+        return NextResponse.json({
+          content: supervisorResult.content,
+          messageId,
+          conversationId: activeConversationId,
+          confidence: supervisorResult.confidence,
+          sources: supervisorResult.sources,
+          specialists: supervisorResult.specialists,
+          wasSynthesized: supervisorResult.wasSynthesized,
+          routing: supervisorResult.routing,
+          metrics: supervisorResult.metrics,
+        }, {
+          headers: {
+            'X-Conversation-Id': activeConversationId,
+            'X-Complexity-Tier': 'complex',
+            'X-Agent-Mode': 'supervisor',
+            'X-Specialists': supervisorResult.specialists.join(','),
+          },
+        })
+      } catch (supervisorError) {
+        // Log error and fall back to regular agent
+        console.error('[api/chat] Supervisor error, falling back to regular agent:', supervisorError)
+        try {
+          await logFeatureUsage({
+            dealId: projectId,
+            userId: user.id,
+            organizationId: project.organization_id ?? undefined,
+            featureName: 'chat_supervisor',
+            status: 'error',
+            durationMs: Date.now() - chatStartTime,
+            errorMessage: supervisorError instanceof Error ? supervisorError.message : String(supervisorError),
+          })
+        } catch (logErr) {
+          console.error('[api/chat] Supervisor error logging failed:', logErr)
+        }
+        // Continue to regular agent path below
+      }
+    }
+
     // Create the agent with complexity-based tool loading (E13.2)
     const agent = createChatAgent({
       dealId: projectId,
@@ -269,8 +387,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
           .update({ updated_at: new Date().toISOString() })
           .eq('id', activeConversationId)
 
-        // E12.2: Log feature usage for chat
+        // E12.2 + E13.3: Log feature usage for chat with model information
         try {
+          // E13.3: Calculate estimated cost using model-specific pricing
+          const estimatedInputTokens = Math.ceil(message.length / 4)
+          const estimatedOutputTokens = Math.ceil(content.length / 4)
+          const modelUsed = agent.selectedModel ?? 'claude-sonnet-4-20250514'
+          const estimatedCost = calculateModelCost(modelUsed, estimatedInputTokens, estimatedOutputTokens)
+
           await logFeatureUsage({
             dealId: projectId,
             userId: user.id,
@@ -287,6 +411,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
               toolCount: agent.toolCount,
               intent: intentResult.intent,
               complexityConfidence: intentResult.complexityConfidence,
+              // E13.3: Model selection metadata
+              modelUsed: `${agent.selectedProvider}:${agent.selectedModel}`,
+              modelTier: agent.complexity ?? 'complex',
+              estimatedInputTokens,
+              estimatedOutputTokens,
+              estimatedCostUsd: estimatedCost,
             },
           })
         } catch (loggingError) {
@@ -336,15 +466,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // Return the streaming response
     // E13.2: Include tool tier metadata in headers for debugging/tracing
+    // E13.3: Include model selection metadata in headers
     // Note: wasEscalated would be set if we implemented full retry logic
     // Currently we log escalation events for classification improvement
     return new NextResponse(stream, {
       headers: {
         ...getSSEHeaders(),
         'X-Conversation-Id': activeConversationId,
+        // E13.2: Tool tier metadata
         'X-Tool-Tier': agent.complexity ?? 'complex',
         'X-Tool-Count': String(agent.toolCount),
         'X-Was-Escalated': 'false', // E13.2: Would be true if escalation retry occurred
+        // E13.3: Model selection metadata for LangSmith tracing (AC: #4)
+        'X-Model-Used': `${agent.selectedProvider}:${agent.selectedModel}`,
+        'X-Complexity-Tier': agent.complexity ?? 'complex',
       },
     })
   } catch (err) {
