@@ -1,10 +1,10 @@
 # Manda - Epic and Story Breakdown
 
-**Document Status:** Complete (MVP Epics E1-E9, Refinement E10-E11)
+**Document Status:** Complete (MVP E1-E9, Refinement E10-E11, Production E12-E13)
 **Created:** 2025-11-19
-**Last Updated:** 2025-12-15
+**Last Updated:** 2026-01-06
 **Owner:** Max
-**Version:** 2.4 (Added E10 Knowledge Graph Foundation, E11 Agent Context Engineering as Phase 1.5 Refinement; renumbered Phase 2/3 epics)
+**Version:** 2.5 (E10/E11 Complete, E12 In Progress, Added E13 Agent Orchestration Optimization)
 
 ---
 
@@ -43,36 +43,45 @@ This document breaks down the Manda M&A Intelligence Platform into epics and sto
 
 **Total Stories (Phase 1 MVP):** 86
 
-### Phase 1.5: Refinement Sprint (Architecture Evolution)
+### Phase 1.5: Refinement Sprint (Complete)
 
-> Course correction epics from [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md). These epics upgrade the MVP knowledge architecture before Phase 2 enhancements.
+> Course correction epics from [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md). These epics upgraded the MVP knowledge architecture.
 
-| Epic # | Epic Name | User Value | Stories | Priority |
-|--------|-----------|------------|---------|----------|
-| E10 | Knowledge Graph Foundation | System builds temporal knowledge graph with Graphiti + Neo4j for hybrid retrieval | 8 | P0 |
-| E11 | Agent Context Engineering | Agent maintains coherent context, writes back to knowledge base, enables chat-from-anywhere | 7 | P1 |
+| Epic # | Epic Name | User Value | Stories | Status |
+|--------|-----------|------------|---------|--------|
+| E10 | Knowledge Graph Foundation | System builds temporal knowledge graph with Graphiti + Neo4j for hybrid retrieval | 8/8 | ✅ Complete (2025-12-17) |
+| E11 | Agent Context Engineering | Agent maintains coherent context, writes back to knowledge base, enables chat-from-anywhere | 7/7 | ✅ Complete (2025-12-18) |
 
-**Total Stories (Phase 1.5 Refinement):** 15
+**Total Stories (Phase 1.5 Refinement):** 15 ✅
 
-### Phase 2: Enhancement Epics (Platform Enhancement)
-
-| Epic # | Epic Name | User Value | Stories | Priority |
-|--------|-----------|------------|---------|----------|
-| E12 | Smart Document Classification | Users get AI-assisted document classification with approval workflow | 8 | P2 |
-| E13 | Advanced Data Room Features | Users get enhanced organization and collaboration | 6 | P2 |
-| E14 | External Data Integration | Users can connect external data sources | 5 | P2 |
-| E15 | Advanced CIM Features | Users get richer CIM capabilities | 6 | P2 |
-
-**Total Stories (Phase 2):** 25
-
-### Phase 3: Intelligence Epics (Competitive Moat)
+### Phase 2: Production Readiness (In Progress)
 
 | Epic # | Epic Name | User Value | Stories | Priority |
 |--------|-----------|------------|---------|----------|
-| E16 | Cross-Domain Intelligence Engine | Users get proactive pattern detection across domains (11+ patterns) | 12 | P3 |
-| E17 | Proactive Insight Surfacing | System proactively alerts users to critical patterns | 5 | P3 |
+| E12 | Production Readiness & Observability | Multi-tenant isolation, usage tracking, manual testing, error handling | 8 (3 deferred) | P0 |
+| E13 | Agent Orchestration Optimization | Redis caching, PostgreSQL checkpointing, supervisor pattern, model selection, specialist agents | 9 | P1 |
 
-**Total Stories (Phase 3):** 17
+**Total Stories (Phase 2):** 17 (+ 3 deferred)
+
+### Phase 3: Enhancement Epics (Platform Enhancement)
+
+| Epic # | Epic Name | User Value | Stories | Priority |
+|--------|-----------|------------|---------|----------|
+| E14 | Smart Document Classification | Users get AI-assisted document classification with approval workflow | 8 | P2 |
+| E15 | Advanced Data Room Features | Users get enhanced organization and collaboration | 6 | P2 |
+| E16 | External Data Integration | Users can connect external data sources | 5 | P2 |
+| E17 | Advanced CIM Features | Users get richer CIM capabilities | 6 | P2 |
+
+**Total Stories (Phase 3):** 25
+
+### Phase 4: Intelligence Epics (Competitive Moat)
+
+| Epic # | Epic Name | User Value | Stories | Priority |
+|--------|-----------|------------|---------|----------|
+| E18 | Cross-Domain Intelligence Engine | Users get proactive pattern detection across domains (11+ patterns) | 12 | P3 |
+| E19 | Proactive Insight Surfacing | System proactively alerts users to critical patterns | 5 | P3 |
+
+**Total Stories (Phase 4):** 17
 
 ---
 

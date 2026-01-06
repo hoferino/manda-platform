@@ -187,8 +187,8 @@ class ParseDocumentHandler:
             # E3.8: Mark parsing stage as complete
             await self.retry_mgr.mark_stage_complete(document_id, "parsed")
 
-            # Enqueue the next job
-            next_job_id = await self._enqueue_next_job(
+            # E12.10: Enqueue parallel jobs (fast path + deep path)
+            next_jobs = await self._enqueue_next_jobs(
                 document_id=document_id,
                 chunks_count=chunks_stored,
                 deal_id=deal_id,
@@ -206,7 +206,8 @@ class ParseDocumentHandler:
                 "formulas_extracted": len(parse_result.formulas),
                 "parse_time_ms": parse_result.parse_time_ms or 0,
                 "total_time_ms": elapsed_ms,
-                "next_job_id": next_job_id,
+                "embed_job_id": next_jobs.get("embed_job_id"),  # E12.10: Fast path
+                "graphiti_job_id": next_jobs.get("graphiti_job_id"),  # Deep path
             }
 
             logger.info(
@@ -307,32 +308,35 @@ class ParseDocumentHandler:
 
             raise
 
-    async def _enqueue_next_job(
+    async def _enqueue_next_jobs(
         self,
         document_id: UUID,
         chunks_count: int,
         deal_id: Optional[str] = None,
         user_id: Optional[str] = None,
-    ) -> str:
+        organization_id: Optional[str] = None,
+    ) -> dict[str, str]:
         """
-        Enqueue the ingest-graphiti job.
+        Enqueue parallel jobs after document parsing.
 
-        E10.8: Updated to skip generate-embeddings and go directly to ingest-graphiti.
-        Graphiti now handles all embeddings internally via Voyage AI (1024d).
-        The old OpenAI pgvector embeddings (3072d) are deprecated.
+        E12.10: Triggers BOTH embed-chunks (fast path) and ingest-graphiti (deep path)
+        in parallel. Fast path enables immediate querying within seconds.
 
         Pipeline change:
-        - Old: parse_document -> generate_embeddings -> ingest_graphiti -> analyze_document
-        - New: parse_document -> ingest_graphiti -> analyze_document
+        - Old (E10.8): parse_document -> ingest_graphiti -> analyze_document
+        - New (E12.10): parse_document -> [embed-chunks | ingest-graphiti] -> analyze_document
+                                              ↓                    ↓
+                                         Fast path (~5s)    Deep path (~2-3min/chunk)
 
         Args:
             document_id: UUID of the processed document
             chunks_count: Number of chunks (passed for logging/metrics)
-            deal_id: Parent deal ID (REQUIRED for Graphiti namespace isolation)
+            deal_id: Parent deal ID (REQUIRED for namespace isolation)
             user_id: User who uploaded
+            organization_id: Organization ID for multi-tenant isolation
 
         Returns:
-            The enqueued job ID
+            Dict with embed_job_id and graphiti_job_id
         """
         queue = await get_job_queue()
 
@@ -340,23 +344,30 @@ class ParseDocumentHandler:
             "document_id": str(document_id),
         }
 
-        # deal_id is REQUIRED for Graphiti namespace isolation
+        # deal_id is REQUIRED for namespace isolation
         if deal_id:
             job_data["deal_id"] = deal_id
         if user_id:
             job_data["user_id"] = user_id
+        if organization_id:
+            job_data["organization_id"] = organization_id
 
-        # E10.8: Skip generate-embeddings, go directly to ingest-graphiti
-        job_id = await queue.enqueue("ingest-graphiti", job_data)
+        # E12.10: Enqueue both jobs in parallel
+        embed_job_id = await queue.enqueue("embed-chunks", job_data)  # Fast path
+        graphiti_job_id = await queue.enqueue("ingest-graphiti", job_data)  # Deep path
 
         logger.info(
-            "Enqueued ingest-graphiti job (E10.8: skipping generate-embeddings)",
+            "Enqueued parallel ingestion jobs (E12.10: fast path + deep path)",
             document_id=str(document_id),
-            next_job_id=job_id,
+            embed_job_id=embed_job_id,
+            graphiti_job_id=graphiti_job_id,
             chunks_count=chunks_count,
         )
 
-        return job_id
+        return {
+            "embed_job_id": embed_job_id,
+            "graphiti_job_id": graphiti_job_id,
+        }
 
 
 # Handler instance factory

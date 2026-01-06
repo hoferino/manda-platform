@@ -1,6 +1,6 @@
 # Sprint Status - Manda Platform Implementation
 # Generated: 2025-11-28
-# Last Updated: 2025-12-17
+# Last Updated: 2026-01-06
 # Project: Manda
 # Tracking System: file-system
 # Story Location: docs/sprint-artifacts
@@ -1985,8 +1985,10 @@ development_status:
   epic-12-name: "Production Readiness & Observability"
   epic-12-priority: P0
   epic-12-epic-file: docs/sprint-artifacts/epics/epic-E12.md
-  epic-12-stories: 10
-  epic-12-points: 65
+  epic-12-stories: 8
+  epic-12-points: 47
+  epic-12-deferred-stories: 3
+  epic-12-deferred-points: 18
   # P0 - Critical (Security - DO FIRST)
   e12-9-multi-tenant-isolation: done
   e12-9-points: 13
@@ -2022,22 +2024,26 @@ development_status:
   e12-2-story-file: docs/sprint-artifacts/stories/e12-2-usage-logging-integration.md
   e12-2-drafted: 2025-12-19
   e12-2-completed: 2025-12-19
-  e12-3-developer-dashboard-usage: review
+  e12-3-developer-dashboard-usage: done
   e12-3-points: 8
   e12-3-priority: P0
   e12-3-story-file: docs/sprint-artifacts/stories/e12-3-developer-dashboard-usage.md
   e12-3-drafted: 2025-12-19
-  e12-4-manual-test-happy-paths: ready-for-review
+  e12-3-completed: 2026-01-06
+  e12-4-manual-test-happy-paths: done
   e12-4-points: 5
   e12-4-priority: P0
   e12-4-story-file: docs/sprint-artifacts/stories/e12-4-manual-test-happy-paths.md
   e12-4-drafted: 2025-12-19
-  # P1 - High (Robustness)
-  e12-5-manual-test-edge-cases: in-progress
+  e12-4-completed: 2026-01-06
+  # P1 - High (Robustness) - DEFERRED: Will test with LangSmith observability
+  e12-5-manual-test-edge-cases: deferred
   e12-5-points: 8
   e12-5-priority: P1
   e12-5-story-file: docs/sprint-artifacts/stories/e12-5-manual-test-edge-cases.md
   e12-5-drafted: 2025-12-19
+  e12-5-defer-reason: "Will test edge cases with LangSmith observability for better debugging"
+  e12-5-defer-date: 2026-01-06
   e12-6-error-handling-graceful-degradation: done
   e12-6-points: 5
   e12-6-priority: P1
@@ -2045,7 +2051,9 @@ development_status:
   e12-6-drafted: 2025-12-19
   e12-6-completed: 2025-12-19
   # P1 - High (User Experience) - Added 2026-01-05
-  e12-10-fast-path-document-retrieval: backlog
+  e12-10-fast-path-document-retrieval: done
+  e12-10-drafted: 2026-01-06
+  e12-10-completed: 2026-01-06
   e12-10-points: 8
   e12-10-priority: P1
   e12-10-story-file: docs/sprint-artifacts/stories/e12-10-fast-path-document-retrieval.md
@@ -2055,13 +2063,17 @@ development_status:
     Enable immediate document querying after upload by creating parallel "fast path"
     that embeds chunks directly into Neo4j without waiting for LLM entity extraction.
     Two-tier retrieval: fast ChunkNode search + deep knowledge graph search.
-  # P2 - Medium (Monitoring)
-  e12-7-alerting-monitoring: backlog
+  # P2 - Medium (Monitoring) - DEFERRED: LangSmith (E12.11) covers observability needs
+  e12-7-alerting-monitoring: deferred
   e12-7-points: 5
   e12-7-priority: P2
-  e12-8-performance-profiling: backlog
+  e12-7-defer-reason: "LangSmith provides alerting/monitoring via trace analysis and dashboards"
+  e12-7-defer-date: 2026-01-06
+  e12-8-performance-profiling: deferred
   e12-8-points: 5
   e12-8-priority: P2
+  e12-8-defer-reason: "LangSmith provides latency tracking, token counts, and cost analysis per trace"
+  e12-8-defer-date: 2026-01-06
   # E12.11 - LangSmith Observability (added 2026-01-05, completed 2026-01-06)
   e12-11-langsmith-observability: done
   e12-11-points: 5
@@ -2079,6 +2091,76 @@ development_status:
     - manda-app/lib/agent/graph.ts: Exported chatGraph for Studio visualization
     - docs/manda-architecture.md: Added Observability section (v4.2)
     - manda-app/.env.example: Updated LangSmith variable documentation
+
+  # ===================
+  # EPIC 13: Agent Orchestration Optimization
+  # ===================
+  # Focus: Redis caching, PostgreSQL checkpointing, supervisor pattern, model selection, specialists
+  # Based on LangSmith trace analysis (2026-01-06) showing 19.4s TTFT
+  # Priority: P1 | Points: 46 | Stories: 9
+  # Added: 2026-01-06
+  # Updated: 2026-01-06 - Added E13.8 (Redis Caching) and E13.9 (PostgreSQL Checkpointer)
+  epic-13: in-progress
+  epic-13-jira-id: SCRUM-13
+  epic-13-name: "Agent Orchestration Optimization"
+  epic-13-priority: P1
+  epic-13-epic-file: docs/sprint-artifacts/epics/epic-E13.md
+  epic-13-stories: 9
+  epic-13-points: 46
+  epic-13-added: 2026-01-06
+  epic-13-rationale: |
+    LangSmith trace analysis revealed performance issues:
+    - 19.4s TTFT even for simple queries
+    - 8,577 input tokens per request (all 18 tools loaded)
+    - No model selection based on query complexity
+    - In-memory caches lost on cold starts, no cross-instance sharing
+    - CIM workflow state lost on server restart (MemorySaver)
+    Target improvements:
+    - Simple query TTFT: 19.4s → <500ms
+    - Token usage (simple): 8,577 → <2,000
+    - Cost per simple query: $0.001 → $0.0001
+    - Cache hit rate: 0% → >40% (cross-instance Redis)
+    - CIM state durability: Lost → Survives 30 days
+  # P0 - Critical (Foundation)
+  e13-1-enhanced-intent-classification: done
+  e13-1-points: 5
+  e13-1-priority: P0
+  e13-1-description: "Add complexity scoring (simple/medium/complex) to IntentClassifier"
+  e13-2-tier-based-tool-loading: backlog
+  e13-2-points: 5
+  e13-2-priority: P0
+  e13-2-description: "Dynamic tool loading: 0 tools (simple) → 3-5 tools (medium) → all (complex)"
+  e13-3-model-selection-matrix: backlog
+  e13-3-points: 3
+  e13-3-priority: P0
+  e13-3-description: "Route queries to Gemini Flash (simple) → Gemini Pro (medium) → Claude Sonnet (complex)"
+  # P1 - Important (Multi-Agent)
+  e13-4-supervisor-agent-pattern: backlog
+  e13-4-points: 8
+  e13-4-priority: P1
+  e13-4-description: "LangGraph StateGraph supervisor for complex query routing to specialists"
+  e13-5-financial-analyst-specialist: backlog
+  e13-5-points: 5
+  e13-5-priority: P1
+  e13-5-description: "Pydantic AI specialist agent for financial analysis queries"
+  e13-6-knowledge-graph-specialist: backlog
+  e13-6-points: 5
+  e13-6-priority: P1
+  e13-6-description: "Pydantic AI specialist agent for entity resolution and KG traversal"
+  # P2 - Medium (Validation)
+  e13-7-performance-benchmarking-suite: backlog
+  e13-7-points: 5
+  e13-7-priority: P2
+  e13-7-description: "Automated benchmark runner with 100+ queries, LangSmith integration"
+  # P1 - Infrastructure (Added 2026-01-06)
+  e13-8-redis-caching-layer: backlog
+  e13-8-points: 5
+  e13-8-priority: P1
+  e13-8-description: "Migrate in-memory caches to Upstash Redis for cross-instance sharing and cold start resilience"
+  e13-9-postgresql-checkpointer: backlog
+  e13-9-points: 5
+  e13-9-priority: P1
+  e13-9-description: "Replace MemorySaver with PostgresSaver for durable CIM workflow state"
 
   # Tech Debt items discovered during Phase 1 testing
   phase-2-tech-debt:

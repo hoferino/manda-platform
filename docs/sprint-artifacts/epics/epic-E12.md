@@ -3,8 +3,16 @@
 **Epic ID:** E12
 **Jira Issue:** SCRUM-12
 **Priority:** P0
+**Stories:** 8 active (3 deferred)
+**Points:** 47 active (18 deferred)
+**Last Updated:** 2026-01-06
 
 **User Value:** The platform provides full visibility into costs and performance, enabling confident deployment to real users. Issues are caught early through comprehensive testing, costs are tracked per feature, and the system gracefully handles real-world edge cases.
+
+**Deferred Stories:**
+- E12.5 (Edge Case Testing) - Will test with LangSmith observability for better debugging
+- E12.7 (Alerting) - LangSmith provides this via trace analysis
+- E12.8 (Performance Profiling) - LangSmith + E13 Agent Orchestration covers this
 
 ---
 
@@ -496,6 +504,8 @@ try {
 **Story ID:** E12.7
 **Points:** 5
 **Priority:** P2
+**Status:** ⏸️ DEFERRED (2026-01-06)
+**Defer Reason:** LangSmith (E12.11) provides alerting/monitoring via trace analysis, dashboards, and anomaly detection.
 
 **Description:**
 Set up basic alerting for critical failures and cost anomalies.
@@ -561,6 +571,8 @@ export async function checkAlerts() {
 **Story ID:** E12.8
 **Points:** 5
 **Priority:** P2
+**Status:** ⏸️ DEFERRED (2026-01-06)
+**Defer Reason:** LangSmith (E12.11) provides latency tracking, token counts, and cost analysis per trace. E13 Agent Orchestration will address TTFT optimization.
 
 **Description:**
 Profile critical paths and optimize bottlenecks identified during manual testing.
@@ -790,30 +802,32 @@ export async function withOrgAuth(req: Request, handler: Handler) {
 
 ## Story Priority Matrix
 
-| Priority | Story | Points | Rationale |
-|----------|-------|--------|-----------|
-| **P0** | E12.9 Multi-Tenant Isolation | 13 | **Security-critical** — must have before any external users |
-| **P0** | E12.1 Usage Schema | 3 | Foundation for all tracking |
-| **P0** | E12.2 Usage Integration | 5 | Enables cost visibility |
-| **P0** | E12.3 Developer Dashboard | 8 | Developer's primary request |
-| **P0** | E12.4 Happy Path Tests | 5 | Must work before users |
-| **P1** | E12.5 Edge Case Tests | 8 | Real-world robustness |
-| **P1** | E12.6 Error Handling | 5 | User experience |
-| **P1** | E12.10 Fast Path Retrieval | 8 | Immediate document querying (added 2026-01-05) |
-| **P2** | E12.7 Alerting | 5 | Proactive monitoring |
-| **P2** | E12.8 Performance | 5 | Optimization |
-| **P2** | E12.11 LangSmith Observability | 5 | Real token counts, latency breakdown, quality metrics |
+| Priority | Story | Points | Status | Rationale |
+|----------|-------|--------|--------|-----------|
+| **P0** | E12.9 Multi-Tenant Isolation | 13 | ✅ Done | **Security-critical** — must have before any external users |
+| **P0** | E12.1 Usage Schema | 3 | ✅ Done | Foundation for all tracking |
+| **P0** | E12.2 Usage Integration | 5 | ✅ Done | Enables cost visibility |
+| **P0** | E12.3 Developer Dashboard | 8 | ✅ Done | Developer's primary request |
+| **P0** | E12.4 Happy Path Tests | 5 | ✅ Done | Must work before users |
+| ~~P1~~ | ~~E12.5 Edge Case Tests~~ | ~~8~~ | ⏸️ Deferred | Will test with LangSmith |
+| **P1** | E12.6 Error Handling | 5 | ✅ Done | User experience |
+| **P1** | E12.10 Fast Path Retrieval | 8 | 📋 Backlog | Immediate document querying (added 2026-01-05) |
+| **P2** | E12.11 LangSmith Observability | 5 | ✅ Done | Real token counts, latency breakdown, quality metrics |
+| ~~P2~~ | ~~E12.7 Alerting~~ | ~~5~~ | ⏸️ Deferred | LangSmith covers this |
+| ~~P2~~ | ~~E12.8 Performance~~ | ~~5~~ | ⏸️ Deferred | LangSmith + E13 covers this |
 
-**Total: 70 points** (was 65, +5 for E12.11)
+**Active: 47 points | Deferred: 18 points | Done: 39 points**
 
 ### Recommended Execution Order
 
-1. **E12.9** (Multi-Tenant) — Do this first, it touches many files
-2. **E12.1 → E12.2 → E12.3** (Usage tracking pipeline)
-3. **E12.4 → E12.5** (Manual testing, may surface issues)
-4. **E12.6** (Error handling improvements from testing)
-5. **E12.7 → E12.8** (Polish)
-6. **E12.11** (LangSmith — can be done anytime after E12.2 for comparison)
+1. ✅ **E12.9** (Multi-Tenant) — Done
+2. ✅ **E12.1 → E12.2 → E12.3** (Usage tracking pipeline) — Done
+3. ✅ **E12.4** (Happy path testing) — Done
+4. ✅ **E12.6** (Error handling) — Done
+5. ✅ **E12.11** (LangSmith) — Done
+6. 📋 **E12.10** (Fast Path) — Next up
+7. ⏸️ ~~E12.5~~ — Deferred (will test with LangSmith)
+8. ⏸️ ~~E12.7 → E12.8~~ — Deferred (LangSmith covers observability)
 
 ---
 
@@ -1014,12 +1028,13 @@ After enabling LangSmith, compare:
 ## Testing Strategy
 
 ### Pre-Deployment Checklist
-- [ ] All happy path tests pass (E12.4)
-- [ ] Critical edge cases handled (E12.5)
-- [ ] Error handling verified (E12.6)
-- [ ] Dashboard shows accurate data (E12.3)
-- [ ] Performance targets met (E12.8)
-- [ ] Alerts configured and tested (E12.7)
+- [x] All happy path tests pass (E12.4) ✅
+- [x] Error handling verified (E12.6) ✅
+- [x] Dashboard shows accurate data (E12.3) ✅
+- [x] LangSmith observability enabled (E12.11) ✅
+- ~~[ ] Critical edge cases handled (E12.5)~~ — Deferred (will test with LangSmith)
+- ~~[ ] Performance targets met (E12.8)~~ — Deferred (LangSmith)
+- ~~[ ] Alerts configured and tested (E12.7)~~ — Deferred (LangSmith)
 
 ---
 
@@ -1033,4 +1048,5 @@ After enabling LangSmith, compare:
 ---
 
 *Epic created: 2025-12-18*
-*Status: Ready for Development*
+*Last updated: 2026-01-06*
+*Status: In Progress (7/8 active done, 3 deferred)*

@@ -429,6 +429,47 @@ class GraphitiClient:
             raise GraphitiConnectionError(f"Search failed: {e}") from e
 
     @classmethod
+    async def initialize_chunk_index(cls) -> None:
+        """
+        Initialize Neo4j vector index for ChunkNodes.
+
+        Story: E12.10 - Fast Path Document Retrieval (AC: #2)
+
+        Should be called once during application startup.
+        Idempotent - safe to call multiple times.
+        """
+        from src.neo4j.chunk_schema import (
+            CHUNK_INDEX_CYPHER,
+            CHUNK_CONSTRAINTS_CYPHER,
+            CHUNK_FULLTEXT_INDEX_CYPHER,
+        )
+
+        client = await cls.get_instance()
+        driver = client.driver  # Access underlying Neo4j driver
+
+        async with driver.session() as session:
+            try:
+                # Create unique constraint
+                await session.run(CHUNK_CONSTRAINTS_CYPHER)
+                logger.debug("Chunk constraint created or already exists")
+
+                # Create vector index
+                await session.run(CHUNK_INDEX_CYPHER)
+                logger.debug("Chunk vector index created or already exists")
+
+                # Create fulltext index for hybrid search
+                await session.run(CHUNK_FULLTEXT_INDEX_CYPHER)
+                logger.debug("Chunk fulltext index created or already exists")
+
+                logger.info("Chunk vector index initialized successfully")
+            except Exception as e:
+                if "EquivalentSchemaRuleAlreadyExists" in str(e):
+                    logger.debug("Chunk index already exists, skipping")
+                else:
+                    logger.error("Failed to initialize chunk index", error=str(e))
+                    raise
+
+    @classmethod
     def reset_for_testing(cls) -> None:
         """
         Reset singleton state for testing.

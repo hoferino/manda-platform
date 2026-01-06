@@ -141,6 +141,18 @@ Background Processing:
   job_queue: pg-boss (Postgres-based)
   task_runner: Python worker processes
 
+Caching Layer:
+  provider: Upstash Redis (serverless)
+  # - REST API (works in Edge Runtime)
+  # - ~1ms latency from Vercel
+  # - Cross-instance cache sharing for serverless
+  # - Cold start resilience (caches survive restarts)
+  caches:
+    - tool_result: 30min TTL, stores full tool outputs (summaries sent to LLM)
+    - retrieval: 5min TTL, stores Graphiti search results by topic
+    - summarization: 30min TTL, stores conversation summaries
+  fallback: In-memory Map if Redis unavailable (graceful degradation)
+
 Intelligence Layer:
   ai_framework: LangChain 1.0 + LangGraph 1.0
   type_safety: Pydantic v2.12+
@@ -1802,6 +1814,12 @@ agents:
 
 **Reference:** See Epic 11 definition: [epic-E11.md](sprint-artifacts/epics/epic-E11.md)
 
+**E13 Agent Infrastructure Enhancements:**
+- **E13.8 (Redis Caching):** Migrate in-memory caches to Upstash Redis for cross-instance sharing and cold start resilience
+- **E13.9 (PostgreSQL Checkpointer):** Replace MemorySaver with PostgresSaver for durable CIM workflow state
+
+**Reference:** See Epic 13 definition: [epic-E13.md](sprint-artifacts/epics/epic-E13.md)
+
 ---
 
 ## CIM v3 Workflow Implementation
@@ -2578,6 +2596,8 @@ npm install
 | CIM Export | Markdown blueprints with Word export planned | 2025-12 |
 | Docker in Production | TBD - targeting Cloud Run | - |
 | Supabase Local vs Cloud | Cloud Supabase in use | 2025-12 |
+| Memory Files vs Redis | ✅ Redis caching adopted over memory files (E13.8). Memory files rejected due to information loss, staleness, and coverage check overhead | 2026-01-06 |
+| CIM State Persistence | ✅ PostgreSQL checkpointer planned (E13.9). Replaces MemorySaver for durable workflow state | 2026-01-06 |
 
 ---
 

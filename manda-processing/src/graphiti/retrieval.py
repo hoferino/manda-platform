@@ -400,6 +400,127 @@ class HybridRetrievalService:
             candidate_count=len(candidates),
         )
 
+    async def retrieve_with_fallback(
+        self,
+        query: str,
+        deal_id: str,
+        organization_id: str,
+        num_candidates: Optional[int] = None,
+        num_results: Optional[int] = None,
+        force_chunk_search: bool = False,
+    ) -> RetrievalResult:
+        """
+        Two-tier retrieval with fast path fallback.
+
+        Story: E12.10 - Fast Path Document Retrieval (AC: #4, #6)
+
+        Strategy:
+        1. Try knowledge graph (Graphiti) first for semantic richness
+        2. Fall back to chunk search if no results
+        3. User can force chunk search only with force_chunk_search=True
+
+        Args:
+            query: Natural language search query
+            deal_id: Deal UUID
+            organization_id: Organization UUID for namespace isolation
+            num_candidates: Graphiti candidates (default 50)
+            num_results: Final results (default 10)
+            force_chunk_search: Skip knowledge graph, use chunks only
+
+        Returns:
+            RetrievalResult from either tier
+        """
+        from src.graphiti.chunk_retrieval import search_chunks
+
+        num_results = num_results or self.settings.voyage_rerank_top_k
+
+        # Option to force fast path only (for immediate queries)
+        if force_chunk_search:
+            logger.info(
+                "Force chunk search enabled, skipping knowledge graph",
+                query=query[:50],
+                deal_id=deal_id,
+            )
+            chunk_result = await search_chunks(
+                query=query,
+                deal_id=deal_id,
+                organization_id=organization_id,
+                num_results=num_results,
+            )
+            return self._convert_chunk_result(chunk_result)
+
+        # Try knowledge graph first
+        graphiti_result = await self.retrieve(
+            query=query,
+            deal_id=deal_id,
+            num_candidates=num_candidates,
+            num_results=num_results,
+        )
+
+        # If results found, return them
+        if graphiti_result.results:
+            return graphiti_result
+
+        # Fallback to chunk search (fast path)
+        logger.info(
+            "No knowledge graph results, falling back to chunk search",
+            query=query[:50],
+            deal_id=deal_id,
+        )
+
+        chunk_result = await search_chunks(
+            query=query,
+            deal_id=deal_id,
+            organization_id=organization_id,
+            num_results=num_results,
+        )
+
+        return self._convert_chunk_result(chunk_result)
+
+    def _convert_chunk_result(self, chunk_result) -> RetrievalResult:
+        """
+        Convert ChunkRetrievalResult to RetrievalResult format.
+
+        Story: E12.10 - Fast Path Document Retrieval (AC: #4)
+        """
+        from src.graphiti.chunk_retrieval import ChunkRetrievalResult
+
+        knowledge_items: list[KnowledgeItem] = []
+        sources: list[SourceCitation] = []
+
+        for chunk in chunk_result.results:
+            citation = SourceCitation(
+                type="document",
+                id=chunk.chunk_id,
+                title="Document chunk",
+                excerpt=chunk.content[:200],
+                page=chunk.page_number,
+                confidence=chunk.score,
+            )
+            sources.append(citation)
+
+            knowledge_items.append(
+                KnowledgeItem(
+                    id=chunk.chunk_id,
+                    content=chunk.content,
+                    score=chunk.score,
+                    source_type="fact",
+                    source_channel="document",
+                    confidence=chunk.score,
+                    citation=citation,
+                )
+            )
+
+        return RetrievalResult(
+            results=knowledge_items,
+            sources=sources,
+            entities=[],  # Chunks don't have entity extraction
+            latency_ms=chunk_result.latency_ms,
+            graphiti_latency_ms=0,
+            rerank_latency_ms=0,
+            candidate_count=len(chunk_result.results),
+        )
+
 
 __all__ = [
     "HybridRetrievalService",

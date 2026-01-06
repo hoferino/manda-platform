@@ -2,26 +2,39 @@
 
 **Document Status:** Strategic Planning
 **Created:** 2026-01-05
-**Last Updated:** 2026-01-05
+**Last Updated:** 2026-01-06
 **Owner:** Max
 **Contributors:** PM John, Architect Winston, Analyst Mary, Dev Amelia, TEA Murat
-**Version:** 1.1
+**Version:** 1.2
+
+---
+
+> ⚠️ **Architectural Decision (2026-01-06):** Memory Files have been **deprecated** in favor of **Redis Caching Layer (E13.8)**. Pre-computed LLM summaries were rejected due to information loss, staleness race conditions, and coverage check overhead. The simpler approach is caching actual retrieval results in Redis with TTL-based expiry. See [Solution 1: Redis Caching Layer](#solution-1-redis-caching-layer-e138) for details.
+>
+> Workflow simulations below still reference memory files for historical context. The actual implementation will use Redis caching instead.
 
 ---
 
 ## Executive Summary
 
-This document outlines the strategic vision for Manda's agent framework using LangGraph and LangSmith. It identifies core problems in the current implementation, proposes solutions with memory files and autonomous write-back, and simulates detailed user workflows showing what happens in the UI and background.
+This document outlines the strategic vision for Manda's agent framework using LangGraph and LangSmith. It identifies core problems in the current implementation, proposes solutions with Redis caching, PostgreSQL checkpointing, and autonomous write-back, and simulates detailed user workflows showing what happens in the UI and background.
 
 **Key Findings:**
 1. **[NEW - E12.10]** Documents must be queryable immediately after upload (solved by two-tier retrieval)
 2. Current architecture is reactive-only; knowledge doesn't accumulate from conversations
-3. Querying the full graph for every question is inefficient
-4. Memory files + selective retrieval can reduce tokens by 60-80%
-5. Autonomous write-back is critical for persistent intelligence
-6. LangSmith observability is essential for optimization
+3. In-memory caches don't survive cold starts or share across serverless instances
+4. **Redis caching layer (E13.8)** provides cross-instance cache sharing and cold start resilience
+5. **PostgreSQL checkpointer (E13.9)** ensures CIM workflow state survives restarts
+6. Autonomous write-back is critical for persistent intelligence
+7. LangSmith observability is essential for optimization
 
-**Recent Updates (2026-01-05):**
+**Recent Updates (2026-01-06):**
+- **Deprecated Memory Files** in favor of Redis Caching Layer (E13.8)
+- Added E13.8 (Redis Caching) and E13.9 (PostgreSQL Checkpointer) to Epic 13
+- Updated Problem Matrix P2/P4 to reflect new solutions
+- Updated Solution 1 deep dive with Redis architecture
+
+**Previous Updates (2026-01-05):**
 - Added E12.10 Fast Path Retrieval to solve immediate document querying
 - Updated Problem Matrix with P0 (immediate querying)
 - Added Solution 0 deep dive for two-tier retrieval architecture
@@ -113,10 +126,10 @@ Analysts DON'T want AI to replace their judgment. They want AI to:
 |-----|--------|--------|
 | **Immediate Document Querying** | Users wait 2-3 min/chunk before querying | **E12.10 planned** - Two-tier retrieval |
 | **Write-Back Integration** | Knowledge doesn't accumulate from chat | E11.3 not implemented |
-| **Memory Files** | Full graph query for every question (slow, expensive) | Not designed |
+| **Redis Caching** | In-memory caches lost on cold start, no cross-instance sharing | **E13.8 planned** |
 | **Proactive Insights** | System is reactive-only | Phase 3 not started |
 | **Token Optimization** | Unknown efficiency, no measurement | LangSmith not enabled |
-| **Persistent Checkpoints** | CIM state lost on restart (MemorySaver) | Needs PostgreSQL checkpointer |
+| **Persistent Checkpoints** | CIM state lost on restart (MemorySaver) | **E13.9 planned** - PostgreSQL checkpointer |
 
 ### Architecture Gap Visualization
 
@@ -163,16 +176,16 @@ WITH E12.10 (Two-Tier Retrieval):
         [Tier 2 First] [Fallback T1] [Force T1]
         (Rich context) (Immediate)  (Raw search)
 
-TARGET STATE (with Memory Files):
+TARGET STATE (with Redis Caching):
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   User       │────▶│  Chat Agent  │────▶│ Memory Files │
-│   Query      │     │  (Proactive) │     │ (Pre-computed)│
+│   User       │────▶│  Chat Agent  │────▶│ Redis Cache  │
+│   Query      │     │  (Proactive) │     │ (Shared)     │
 └──────────────┘     └──────────────┘     └──────────────┘
                             │                    │
                             ▼                    ▼
                      ┌──────────────┐     ┌──────────────┐
-                     │  Write-Back  │     │ Neo4j (Gap   │
-                     │  to Graph    │     │ Queries Only)│
+                     │  Write-Back  │     │ Neo4j (on    │
+                     │  to Graph    │     │ cache miss)  │
                      └──────────────┘     └──────────────┘
 ```
 
@@ -188,9 +201,9 @@ TARGET STATE (with Memory Files):
 |---|---------|--------------|----------|-----------|--------|
 | **P0** | Documents not queryable immediately | Users wait 2-3 min/chunk for entity extraction before asking questions | **E12.10 Fast Path**: Parallel embed-chunks job creates ChunkNodes for immediate search | Query documents within ~5 seconds of upload; entity extraction continues in background | 📋 **Planned** |
 | **P1** | Knowledge doesn't persist from chat | Analyst tells system facts, forgets them next session | **Autonomous Write-Back**: Index facts to Neo4j automatically | Never lose context; "Where did I see that?" → instant answer | ⬚ Not started |
-| **P2** | Full graph query for every question | 3-5s latency, high token cost, irrelevant results | **Memory Files**: Pre-computed summaries loaded by intent | 10x faster, 60-80% token reduction | ⬚ Not started |
+| **P2** | Cache lost on cold start/cross-instance | Each serverless instance has separate cache, cold starts reset all caches | **Redis Caching Layer**: Shared retrieval, tool result, and summarization caches across instances | Cross-instance cache sharing, instant cold start recovery | 📋 **E13.8** |
 | **P3** | No proactive intelligence | System only responds to questions | **Background Analysis Agent**: Pattern detection + notifications | "Margin compression detected" without asking | ⬚ Phase 3 |
-| **P4** | Context lost between sessions | Start fresh every conversation | **Persistent State**: PostgreSQL checkpointer + memory files | Resume after 2 weeks with full context | ⬚ Not started |
+| **P4** | Context lost between sessions | CIM state lost on restart (MemorySaver) | **PostgreSQL Checkpointer**: LangGraph state persisted to Supabase | Resume CIM after weeks with full context | 📋 **E13.9** |
 | **P5** | Contradictions slip through | Manual review of all findings | **Contradiction Workflow**: Confidence-aware detection | Flag real issues, reduce false positives | ⬚ Phase 2 |
 | **P6** | CIM disconnected from knowledge | Agent may hallucinate content | **Memory-Aware CIM**: Load deal thesis + key findings | CIM grounded in verified facts | ⬚ Phase 2 |
 | **P7** | Token usage unknown | No visibility into costs | **LangSmith Tracing**: Full observability | Optimize costs, measure quality | ⬚ Phase 1 |
@@ -240,45 +253,69 @@ Document Upload
 
 ---
 
-#### Solution 1: Memory Files
+#### Solution 1: Redis Caching Layer (E13.8)
 
-**Concept:** Pre-computed, structured summaries that capture "what we know" about specific topics.
+**Concept:** Migrate in-memory caches to Redis for cross-instance sharing and cold start resilience.
 
-**Storage:** PostgreSQL `deal_memory_files` table with JSONB content column. Cached in Redis for fast retrieval (5-min TTL).
+**Why Redis over Memory Files:**
+Memory files (pre-computed LLM summaries) were considered but rejected due to:
+1. **Information loss**: LLM summarization is lossy; the summarizer doesn't know what the analyst will ask next
+2. **Staleness race condition**: During active due diligence, every query triggers regeneration
+3. **Coverage check overhead**: Extra LLM call to determine if summary answers query
+4. **Schema rigidity**: Pre-defined buckets don't match M&A query patterns
 
+Redis caching is simpler and preserves full fidelity:
+- Cache actual retrieval results, not lossy summaries
+- TTL-based expiry handles staleness automatically
+- No extra LLM calls for coverage checks
+- Same data available for UI citation display
+
+**Architecture:**
 ```
-deal_memory_files table:
-├── deal_id: uuid
-├── file_type: enum (company_profile, financial_summary, customer_analysis, etc.)
-├── content: jsonb  # Structured data, not markdown
-├── token_count: int  # Pre-computed for budget planning
-├── version: int  # Incremented on regeneration
-├── stale: boolean  # True when Neo4j has newer data
-├── last_regenerated_at: timestamp
-└── created_at, updated_at: timestamps
-
-File types:
-├── company_profile      # Basics, history, structure, key people
-├── financial_summary    # Revenue, EBITDA, margins, trends, projections
-├── customer_analysis    # Concentration, contracts, churn, top customers
-├── operational_overview # Team, processes, capacity, technology
-├── risk_register        # Identified risks, contradictions, open items
-├── deal_thesis          # Investment highlights, buyer fit, valuation
-└── open_questions       # Unresolved items, Q&A pending, follow-ups
+┌──────────────────────────────────────────────────────────────────┐
+│                     Redis Caching Layer                         │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Query: "Q3 revenue trend"                                       │
+│                           │                                      │
+│                           ▼                                      │
+│              ┌────────────────────────┐                         │
+│              │ Semantic Key Generator │                         │
+│              │ (topic + entities)     │                         │
+│              └────────────────────────┘                         │
+│                           │                                      │
+│                           ▼                                      │
+│         ┌────────────────────────────────┐                      │
+│         │         Upstash Redis          │                      │
+│         │  Key: cache:retrieval:deal:123:│                      │
+│         │       revenue_q3_trend         │                      │
+│         │  TTL: 5 minutes                │                      │
+│         └────────────────────────────────┘                      │
+│                     │                                           │
+│         ┌───────────┴───────────┐                               │
+│         ▼                       ▼                               │
+│    [Cache Hit]             [Cache Miss]                         │
+│    Return raw facts        Query Graphiti                       │
+│    (~5ms)                  Cache result                         │
+│                           (~500ms)                              │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**How it works:**
-1. **Event-driven regeneration**: Memory file marked stale when Neo4j ingests related entities
-2. **Lazy regeneration**: Stale files regenerated on next access (not immediately)
-3. **Intent classifier** selects 1-3 files to load based on query
-4. **Coverage check**: LLM determines if memory files answer query (>80% confidence = skip retrieval)
-5. **Targeted retrieval**: Only query Neo4j for specific gaps not in memory files
-6. **Write-back**: Updates Neo4j → marks affected memory files stale
+**Caches to migrate:**
+| Cache | Current | Redis Key Pattern | TTL |
+|-------|---------|-------------------|-----|
+| Tool Result | 50-entry Map | `cache:tool:{toolCallId}` | 30min |
+| Retrieval | 20-entry Map | `cache:retrieval:{dealId}:{topicHash}` | 5min |
+| Summarization | 50-entry Map | `cache:summary:{dealId}:{messageHash}` | 30min |
 
-**Token Impact:**
-- Current: ~6-8K tokens per query (full retrieval + history)
-- Target: ~2-4K tokens per query (memory file + targeted retrieval)
-- Savings: 50-70%
+**Benefits:**
+- **Cold start recovery**: Caches survive process restarts
+- **Cross-instance sharing**: All serverless instances share cache
+- **Memory reduction**: ~96% less memory per instance
+- **No information loss**: Raw facts cached, not lossy summaries
+
+**Provider:** Upstash Redis (serverless-native, REST API, ~1ms latency)
 
 #### Solution 2: Autonomous Write-Back
 
@@ -295,7 +332,7 @@ File types:
 2. Extract entities (company, metric, date, value)
 3. Call Graphiti ingest with source attribution
 4. Graphiti handles entity resolution + deduplication
-5. Mark memory files as stale for regeneration
+5. Invalidate relevant Redis cache entries (retrieval cache for affected deal)
 
 ---
 

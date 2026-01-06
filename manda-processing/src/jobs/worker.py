@@ -52,6 +52,8 @@ DEFAULT_WORKER_CONFIG: dict[str, WorkerConfig] = {
     # E10.5: Q&A and Chat ingestion
     "ingest-qa-response": WorkerConfig(batch_size=5, polling_interval_seconds=3),
     "ingest-chat-fact": WorkerConfig(batch_size=10, polling_interval_seconds=2),
+    # E12.10: Fast path chunk embedding
+    "embed-chunks": WorkerConfig(batch_size=5, polling_interval_seconds=2),
 }
 
 
@@ -328,3 +330,8 @@ def setup_default_handlers(worker: Worker) -> None:
     from src.jobs.handlers import handle_ingest_chat_fact
 
     worker.register("ingest-chat-fact", handle_ingest_chat_fact)
+
+    # Fast path chunk embedding handler (E12.10)
+    from src.jobs.handlers import handle_embed_chunks
+
+    worker.register("embed-chunks", handle_embed_chunks)

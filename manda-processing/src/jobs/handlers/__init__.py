@@ -137,6 +137,19 @@ def handle_ingest_chat_fact(job):
     return _handler(job)
 
 
+# E12.10: Fast path chunk embedding handler
+def get_handle_embed_chunks():
+    """Get the embed_chunks handler (lazy import)."""
+    from src.jobs.handlers.embed_chunks import handle_embed_chunks
+    return handle_embed_chunks
+
+
+def handle_embed_chunks(job):
+    """Handle an embed-chunks job (lazy wrapper)."""
+    from src.jobs.handlers.embed_chunks import handle_embed_chunks as _handler
+    return _handler(job)
+
+
 __all__ = [
     "handle_parse_document",
     "get_handle_parse_document",
@@ -159,4 +172,7 @@ __all__ = [
     "get_handle_ingest_qa_response",
     "handle_ingest_chat_fact",
     "get_handle_ingest_chat_fact",
+    # E12.10: Fast path chunk embedding
+    "handle_embed_chunks",
+    "get_handle_embed_chunks",
 ]
