@@ -9,7 +9,6 @@ import { JOB_TYPES, DEFAULT_WORKER_CONFIG } from './jobs'
 import {
   testJobHandler,
   documentParseHandler,
-  generateEmbeddingsHandler,
   analyzeDocumentHandler,
   updateGraphHandler,
 } from './handlers'
@@ -52,21 +51,6 @@ export async function registerJobHandlers(): Promise<void> {
     )
     registeredHandlers.add(JOB_TYPES.DOCUMENT_PARSE)
     console.log(`[pg-boss] Registered handler: ${JOB_TYPES.DOCUMENT_PARSE}`)
-  }
-
-  // Register generate embeddings handler (placeholder)
-  if (!registeredHandlers.has(JOB_TYPES.GENERATE_EMBEDDINGS)) {
-    const config = DEFAULT_WORKER_CONFIG[JOB_TYPES.GENERATE_EMBEDDINGS]
-    await boss.work(
-      JOB_TYPES.GENERATE_EMBEDDINGS,
-      {
-        batchSize: config.batchSize,
-        pollingIntervalSeconds: config.pollingIntervalSeconds,
-      },
-      generateEmbeddingsHandler
-    )
-    registeredHandlers.add(JOB_TYPES.GENERATE_EMBEDDINGS)
-    console.log(`[pg-boss] Registered handler: ${JOB_TYPES.GENERATE_EMBEDDINGS}`)
   }
 
   // Register analyze document handler (placeholder)

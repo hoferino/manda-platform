@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { listTemplates } from '@/lib/services/irl-templates'
+import { getAllTemplates } from '@/lib/services/irl-templates'
 import { countTemplateItems } from '@/lib/types/irl'
 
 interface RouteContext {
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // Load all templates dynamically from the templates directory
-    const templates = await listTemplates()
+    const templates = getAllTemplates()
 
     // Add item counts to each template for display
     const templatesWithCounts = templates.map(template => ({

@@ -352,17 +352,18 @@ async def retry_embedding(
             "is_retry": True,
         }
 
-        job_id = await queue.enqueue("generate-embeddings", job_data)
+        # E10.8: Changed from generate-embeddings to ingest-graphiti
+        job_id = await queue.enqueue("ingest-graphiti", job_data)
 
         logger.info(
-            "Embedding retry job enqueued",
+            "Ingest retry job enqueued",
             document_id=str(payload.document_id),
             job_id=job_id,
         )
 
         return WebhookResponse(
             success=True,
-            message="Embedding retry job enqueued",
+            message="Ingest retry job enqueued",
             job_id=job_id,
         )
 

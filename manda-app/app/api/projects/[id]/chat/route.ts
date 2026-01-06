@@ -9,11 +9,13 @@
  * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
  * Story: E11.4 - Intent-Aware Knowledge Retrieval
  * Story: E12.6 - Error Handling & Graceful Degradation
+ * Story: E13.2 - Tier-Based Tool Loading (dynamic tool loading based on complexity)
  * AC: #2 (Message Submission), #3 (Streaming Responses), #8 (API Routes)
  * AC: E5.6 #1 (Last N Messages), #3 (Context Persists), #4 (Long Conversations), #5 (Token Management)
  * AC: E5.7 #1 (Confidence Score Extraction), #6 (Multiple Finding Aggregation)
  * AC: E11.4 #3 (Graphiti hybrid retrieval), #4 (Context injection), #7 (Latency tracking)
  * AC: E12.6 #4 (Error logging), #5 (User-friendly messages)
+ * AC: E13.2 #3 (Dynamic tool loading), #4 (Tool count in metadata)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -35,6 +37,8 @@ import {
   type DatabaseMessage,
   DEFAULT_CONTEXT_OPTIONS,
 } from '@/lib/agent/context'
+import { classifyIntentAsync, type ComplexityLevel } from '@/lib/agent/intent'
+import { handleToolEscalation, getNextTier, canEscalate } from '@/lib/agent/tools/tool-loader'
 import { logFeatureUsage } from '@/lib/observability/usage'
 
 interface RouteContext {
@@ -187,11 +191,22 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { stream, writer } = createSSEStream()
     const handler = new AgentStreamHandler(writer)
 
-    // Create the agent
+    // E13.2: Classify intent to determine complexity for tier-based tool loading
+    // This runs before agent creation to optimize tool set selection
+    const intentResult = await classifyIntentAsync(message)
+    const { complexity } = intentResult
+
+    console.log(
+      `[api/chat] Intent classified: ${intentResult.intent}, complexity: ${complexity ?? 'default'}, ` +
+      `confidence: ${intentResult.complexityConfidence ?? 'N/A'}`
+    )
+
+    // Create the agent with complexity-based tool loading (E13.2)
     const agent = createChatAgent({
       dealId: projectId,
       userId: user.id,
       dealName: project.name,
+      complexity, // E13.2: Pass complexity for tier-based tool loading
     })
 
     // Start streaming in the background
@@ -267,6 +282,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
               conversationId: activeConversationId,
               messageLength: message.length,
               responseLength: content.length,
+              // E13.2: Tool tier metadata for LangSmith tracing
+              toolTier: agent.complexity ?? 'complex',
+              toolCount: agent.toolCount,
+              intent: intentResult.intent,
+              complexityConfidence: intentResult.complexityConfidence,
             },
           })
         } catch (loggingError) {
@@ -278,15 +298,53 @@ export async function POST(request: NextRequest, context: RouteContext) {
         handler.onComplete(messageId, followups)
       } catch (error) {
         console.error('[api/chat] Stream error:', error)
+
+        // E13.2: Check if this error indicates a need for escalation
+        // Log escalation events for classification improvement
+        const escalationResult = handleToolEscalation(error, agent.complexity ?? 'complex')
+        if (escalationResult.shouldEscalate) {
+          console.warn(
+            `[api/chat] Escalation needed: ${agent.complexity} → ${escalationResult.nextTier}. ` +
+            `Query: "${message.substring(0, 100)}..." Reason: ${escalationResult.reason}`
+          )
+          // Log escalation event for future classification improvement
+          try {
+            await logFeatureUsage({
+              dealId: projectId,
+              userId: user.id,
+              organizationId: project.organization_id ?? undefined,
+              featureName: 'chat_escalation',
+              status: 'error', // Escalation is triggered by an error
+              durationMs: Date.now() - chatStartTime,
+              metadata: {
+                escalationType: 'tier_upgrade_needed',
+                originalTier: agent.complexity ?? 'complex',
+                suggestedTier: escalationResult.nextTier,
+                intent: intentResult.intent,
+                messagePreview: message.substring(0, 200),
+                errorMessage: error instanceof Error ? error.message : String(error),
+              },
+            })
+          } catch (logErr) {
+            console.error('[api/chat] Escalation logging failed:', logErr)
+          }
+        }
+
         handler.onError(error instanceof Error ? error : new Error(String(error)), 'STREAM_ERROR')
       }
     })()
 
     // Return the streaming response
+    // E13.2: Include tool tier metadata in headers for debugging/tracing
+    // Note: wasEscalated would be set if we implemented full retry logic
+    // Currently we log escalation events for classification improvement
     return new NextResponse(stream, {
       headers: {
         ...getSSEHeaders(),
         'X-Conversation-Id': activeConversationId,
+        'X-Tool-Tier': agent.complexity ?? 'complex',
+        'X-Tool-Count': String(agent.toolCount),
+        'X-Was-Escalated': 'false', // E13.2: Would be true if escalation retry occurred
       },
     })
   } catch (err) {

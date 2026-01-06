@@ -44,7 +44,6 @@ class WorkerConfig:
 DEFAULT_WORKER_CONFIG: dict[str, WorkerConfig] = {
     "test-job": WorkerConfig(batch_size=5, polling_interval_seconds=2),
     "document-parse": WorkerConfig(batch_size=3, polling_interval_seconds=5),
-    "generate-embeddings": WorkerConfig(batch_size=5, polling_interval_seconds=2),
     "analyze-document": WorkerConfig(batch_size=3, polling_interval_seconds=5),
     "extract-financials": WorkerConfig(batch_size=3, polling_interval_seconds=5),
     "update-graph": WorkerConfig(batch_size=10, polling_interval_seconds=1),
@@ -300,11 +299,6 @@ def setup_default_handlers(worker: Worker) -> None:
     from src.jobs.handlers import handle_parse_document
 
     worker.register("document-parse", handle_parse_document)
-
-    # Embedding generation handler (E3.4)
-    from src.jobs.handlers import handle_generate_embeddings
-
-    worker.register("generate-embeddings", handle_generate_embeddings)
 
     # LLM analysis handler (E3.5)
     from src.jobs.handlers import handle_analyze_document

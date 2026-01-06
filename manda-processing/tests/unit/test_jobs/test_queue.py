@@ -431,12 +431,6 @@ class TestDefaultJobOptions:
         options = DEFAULT_JOB_OPTIONS["test-job"]
         assert options.retry_limit == 3
 
-    def test_generate_embeddings_options(self) -> None:
-        """Test that generate-embeddings has options configured."""
-        assert "generate-embeddings" in DEFAULT_JOB_OPTIONS
-        options = DEFAULT_JOB_OPTIONS["generate-embeddings"]
-        assert options.priority == 4
-
     def test_analyze_document_options(self) -> None:
         """Test that analyze-document has options configured."""
         assert "analyze-document" in DEFAULT_JOB_OPTIONS

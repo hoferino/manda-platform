@@ -867,11 +867,11 @@ async function generateIRLExcel(
   rows.push(['Category', 'Item', 'Status', 'Description'])
 
   // Data rows
-  Object.entries(itemsByCategory).forEach(([category, items]) => {
+  Array.from(itemsByCategory.entries()).forEach(([category, items]) => {
     items.forEach((item, index) => {
       rows.push([
         index === 0 ? category : '', // Category name only on first item
-        item.name,
+        item.itemName,
         item.fulfilled ? 'Done' : 'Not Done',
         item.description || '',
       ])
@@ -911,11 +911,11 @@ async function generateIRLCsv(
   rows.push(['Category', 'Item', 'Status', 'Description'])
 
   // Data rows
-  Object.entries(itemsByCategory).forEach(([category, items]) => {
+  Array.from(itemsByCategory.entries()).forEach(([category, items]) => {
     items.forEach((item, index) => {
       rows.push([
         index === 0 ? category : '', // Category name only on first item
-        item.name,
+        item.itemName,
         item.fulfilled ? 'Done' : 'Not Done',
         item.description || '',
       ])

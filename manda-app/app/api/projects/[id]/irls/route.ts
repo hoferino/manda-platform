@@ -138,7 +138,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           subcategory: undefined,
           itemName: item.name,
           description: item.description,
-          priority: item.priority,
+          priority: item.priority ?? 'medium',
           status: 'not_started' as const,
           fulfilled: false,
           notes: undefined,
@@ -180,7 +180,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const response: CreateIRLResponse = {
       irl,
       items: items.length > 0 ? items : undefined,
-      folders: folderGenerationResult || undefined,
+      folders: folderGenerationResult
+        ? {
+            created: folderGenerationResult.created,
+            skipped: folderGenerationResult.skipped,
+            errors: folderGenerationResult.errors,
+            folders: folderGenerationResult.folders.map((f) => ({
+              id: f.id,
+              name: f.name,
+              path: f.path,
+              gcsPath: `deals/${projectId}/data-room${f.path}`,
+            })),
+          }
+        : undefined,
     }
 
     return NextResponse.json(response, { status: 201 })

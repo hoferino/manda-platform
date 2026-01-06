@@ -10,7 +10,6 @@ import {
   DEFAULT_JOB_OPTIONS,
   type TestJobPayload,
   type DocumentParseJobPayload,
-  type GenerateEmbeddingsJobPayload,
   type AnalyzeDocumentJobPayload,
   type UpdateGraphJobPayload,
   type DetectContradictionsJobPayload,
@@ -112,31 +111,6 @@ export async function enqueueDocumentParse(
 
   console.log(
     `[enqueue] Document parse job enqueued: ${jobId} (doc: ${data.document_id})`
-  )
-  return jobId
-}
-
-/**
- * Enqueue a generate embeddings job
- * @param data - Embeddings payload
- * @param options - Optional job options
- * @returns Job ID
- */
-export async function enqueueGenerateEmbeddings(
-  data: GenerateEmbeddingsJobPayload,
-  options?: EnqueueOptions
-): Promise<string | null> {
-  const boss = await getPgBoss()
-  const mergedOptions = mergeOptions('GENERATE_EMBEDDINGS', options)
-
-  const jobId = await boss.send(
-    JOB_TYPES.GENERATE_EMBEDDINGS,
-    data,
-    toSendOptions(mergedOptions)
-  )
-
-  console.log(
-    `[enqueue] Generate embeddings job enqueued: ${jobId} (doc: ${data.document_id})`
   )
   return jobId
 }

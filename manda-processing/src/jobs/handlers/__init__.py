@@ -19,12 +19,6 @@ def get_handle_parse_document():
     return handle_parse_document
 
 
-def get_handle_generate_embeddings():
-    """Get the generate_embeddings handler (lazy import)."""
-    from src.jobs.handlers.generate_embeddings import handle_generate_embeddings
-    return handle_generate_embeddings
-
-
 def get_handle_analyze_document():
     """Get the analyze_document handler (lazy import)."""
     from src.jobs.handlers.analyze_document import handle_analyze_document
@@ -48,12 +42,6 @@ def get_handle_detect_contradictions():
 def handle_parse_document(job):
     """Handle a parse_document job (lazy wrapper)."""
     from src.jobs.handlers.parse_document import handle_parse_document as _handler
-    return _handler(job)
-
-
-def handle_generate_embeddings(job):
-    """Handle a generate_embeddings job (lazy wrapper)."""
-    from src.jobs.handlers.generate_embeddings import handle_generate_embeddings as _handler
     return _handler(job)
 
 
@@ -153,8 +141,6 @@ def handle_embed_chunks(job):
 __all__ = [
     "handle_parse_document",
     "get_handle_parse_document",
-    "handle_generate_embeddings",
-    "get_handle_generate_embeddings",
     "handle_analyze_document",
     "get_handle_analyze_document",
     "handle_extract_financials",

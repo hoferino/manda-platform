@@ -187,13 +187,13 @@ export const WORD_COUNT_FALLBACK = {
 export const TOOLS_BY_COMPLEXITY: Record<ComplexityLevel, string[] | 'all'> = {
   simple: [], // No tools - direct LLM response
   medium: [
-    'query_knowledge_base',
-    'get_document_info',
-    'search_knowledge_graph',
-    'get_finding',
-    'get_qa_item',
+    'query_knowledge_base',    // Primary knowledge retrieval
+    'get_document_info',       // Document metadata lookup
+    'get_finding_source',      // Source attribution for findings
+    'validate_finding',        // Verify finding accuracy
+    'add_qa_item',             // Add Q&A items during conversation
   ],
-  complex: 'all', // Full tool access or route to specialist
+  complex: 'all', // Full 18 tools or route to specialist (E13.4+)
 }
 
 /**
@@ -306,7 +306,7 @@ export function classifyComplexity(message: string): ComplexityResult {
  * @example
  * ```typescript
  * if (hasAllToolsAccess('complex')) {
- *   // Load all 17 tools
+ *   // Load all 18 tools
  * } else {
  *   // Load only suggested tools
  * }

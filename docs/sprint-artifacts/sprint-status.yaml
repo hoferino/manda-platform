@@ -2126,7 +2126,7 @@ development_status:
   e13-1-points: 5
   e13-1-priority: P0
   e13-1-description: "Add complexity scoring (simple/medium/complex) to IntentClassifier"
-  e13-2-tier-based-tool-loading: backlog
+  e13-2-tier-based-tool-loading: done
   e13-2-points: 5
   e13-2-priority: P0
   e13-2-description: "Dynamic tool loading: 0 tools (simple) → 3-5 tools (medium) → all (complex)"

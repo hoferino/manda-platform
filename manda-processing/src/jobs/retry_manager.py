@@ -303,9 +303,11 @@ class RetryManager:
             The enqueued job ID, or None if enqueueing failed
         """
         # Map stage to job name
+        # E10.8: Updated pipeline - embedding stage now uses ingest-graphiti
         stage_to_job = {
             "parsing": "parse-document",
-            "embedding": "generate-embeddings",
+            "embedding": "ingest-graphiti",  # E10.8: Changed from generate-embeddings
+            "ingesting": "ingest-graphiti",
             "analyzing": "analyze-document",
         }
 

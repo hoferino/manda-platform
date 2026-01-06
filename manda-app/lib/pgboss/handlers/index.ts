@@ -6,6 +6,5 @@
 
 export { testJobHandler } from './test-job'
 export { documentParseHandler } from './document-parse'
-export { generateEmbeddingsHandler } from './generate-embeddings'
 export { analyzeDocumentHandler } from './analyze-document'
 export { updateGraphHandler } from './update-graph'

@@ -73,11 +73,11 @@ class TestDefaultWorkerConfig:
         assert config.batch_size == 3
         assert config.polling_interval_seconds == 5
 
-    def test_generate_embeddings_config(self) -> None:
-        """Test generate-embeddings configuration."""
-        config = DEFAULT_WORKER_CONFIG["generate-embeddings"]
-        assert config.batch_size == 5
-        assert config.polling_interval_seconds == 2
+    def test_ingest_graphiti_config(self) -> None:
+        """Test ingest-graphiti configuration (E10.8: replaced generate-embeddings)."""
+        config = DEFAULT_WORKER_CONFIG["ingest-graphiti"]
+        assert config.batch_size == 3
+        assert config.polling_interval_seconds == 5
 
 
 class TestWorkerRegistration:

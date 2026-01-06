@@ -291,6 +291,11 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
    - M2: Added `getIntentTraceMetadata()` function for structured LangSmith trace metadata
    - M3: Documented 5 pre-existing regex failures as `it.skip` tests in Known Issues section
 
+7. **Post-Implementation Fix (E13.2 Story Creation):**
+   - Fixed TOOLS_BY_COMPLEXITY.medium to use actual tool names from codebase
+   - Changed: `search_knowledge_graph` → `get_finding_source`, `get_finding` → `validate_finding`, `get_qa_item` → `add_qa_item`
+   - All 5 medium-tier tools now match actual tool registry in all-tools.ts
+
 ### File List
 
 - `manda-app/lib/agent/intent.ts` (modified - added ~150 lines including review fixes)

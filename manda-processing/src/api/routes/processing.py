@@ -79,9 +79,10 @@ def _map_job_name_to_stage(job_name: str, state: str) -> Optional[str]:
     if state != "active":
         return None
 
+    # E10.8: Updated pipeline - removed generate-embeddings, added ingest-graphiti
     stage_mapping = {
         "document-parse": "parsing",
-        "generate-embeddings": "embedding",
+        "ingest-graphiti": "ingesting",
         "analyze-document": "analyzing",
     }
     return stage_mapping.get(job_name)
@@ -105,9 +106,10 @@ def _estimate_completion(file_type: str, job_name: str, started_at: Optional[dat
         return None
 
     # Rough estimates in seconds based on job type
+    # E10.8: Updated for new pipeline
     estimates = {
         "document-parse": 30,  # 30 seconds for parsing
-        "generate-embeddings": 20,  # 20 seconds for embeddings
+        "ingest-graphiti": 45,  # 45 seconds for Graphiti ingestion
         "analyze-document": 60,  # 60 seconds for analysis
     }
 

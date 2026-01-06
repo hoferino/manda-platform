@@ -3,29 +3,22 @@
  * Provides predefined IRL templates for different deal types
  */
 
-export interface IRLTemplateItem {
-  name: string
-  description?: string
-  priority?: 'high' | 'medium' | 'low'
-  subcategory?: string | null
-}
+// Re-export canonical types from lib/types/irl
+export type {
+  IRLTemplate,
+  IRLTemplateCategory,
+  IRLTemplateItem,
+  IRLDealType,
+  IRLPriority,
+} from '@/lib/types/irl'
 
-export interface IRLTemplateCategory {
-  name: string
-  items: IRLTemplateItem[]
-}
-
-export interface IRLTemplate {
-  id: string
-  name: string
-  description: string
-  categories: IRLTemplateCategory[]
-}
+import type { IRLTemplate } from '@/lib/types/irl'
 
 const TECH_MA_TEMPLATE: IRLTemplate = {
   id: 'tech-ma',
   name: 'Tech M&A',
   description: 'Information request list for technology company acquisitions',
+  dealType: 'tech_ma',
   categories: [
     {
       name: 'Financial',
@@ -72,6 +65,7 @@ const INDUSTRIAL_TEMPLATE: IRLTemplate = {
   id: 'industrial',
   name: 'Industrial',
   description: 'Information request list for industrial deals',
+  dealType: 'industrial',
   categories: [
     {
       name: 'Financial',
@@ -95,6 +89,7 @@ const PHARMA_TEMPLATE: IRLTemplate = {
   id: 'pharma',
   name: 'Pharma',
   description: 'Information request list for pharma deals',
+  dealType: 'pharma',
   categories: [
     {
       name: 'Financial',
@@ -118,6 +113,7 @@ const FINANCIAL_TEMPLATE: IRLTemplate = {
   id: 'financial',
   name: 'Financial Services',
   description: 'Information request list for financial services deals',
+  dealType: 'financial',
   categories: [
     {
       name: 'Financial',
@@ -140,6 +136,7 @@ const CUSTOM_TEMPLATE: IRLTemplate = {
   id: 'custom',
   name: 'General M&A',
   description: 'Basic information request list for general deals',
+  dealType: 'custom',
   categories: [
     {
       name: 'Financial',
@@ -176,4 +173,12 @@ export function getAllTemplates(): IRLTemplate[] {
 
 export function getTemplateIds(): string[] {
   return Object.keys(TEMPLATES)
+}
+
+/**
+ * Alias for getAllTemplates for backward compatibility
+ * Returns a Promise for async compatibility with callers expecting async
+ */
+export async function listTemplates(): Promise<IRLTemplate[]> {
+  return getAllTemplates()
 }

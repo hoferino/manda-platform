@@ -1,6 +1,6 @@
 # Manda Platform Documentation
 
-**Last Updated:** 2025-12-13
+**Last Updated:** 2026-01-06
 
 This directory contains all documentation for the Manda M&A Intelligence Platform.
 
@@ -10,9 +10,9 @@ This directory contains all documentation for the Manda M&A Intelligence Platfor
 
 | Document | Description | Version |
 |----------|-------------|---------|
-| [manda-prd.md](manda-prd.md) | Product Requirements Document | v1.9 |
-| [manda-architecture.md](manda-architecture.md) | Technical Architecture | v3.3 |
-| [epics.md](epics.md) | Epic and Story Breakdown | v2.3 |
+| [manda-prd.md](manda-prd.md) | Product Requirements Document | v2.4 |
+| [manda-architecture.md](manda-architecture.md) | Technical Architecture | v4.2 |
+| [epics.md](epics.md) | Epic and Story Breakdown | v2.5 |
 | [ux-design-specification.md](ux-design-specification.md) | UX Design Specification | - |
 | [testing/testing-guide.md](testing/testing-guide.md) | Testing & Operations Guide | - |
 
@@ -30,8 +30,7 @@ docs/
 ├── ux-design-specification.md    # UX Design Specification
 │
 ├── testing/                      # Testing & Operations
-│   ├── testing-guide.md          # Consolidated testing guide
-│   └── archive/                  # Historical test reports
+│   └── testing-guide.md          # Consolidated testing guide
 │
 ├── sprint-artifacts/             # Sprint Development Artifacts
 │   ├── sprint-status.yaml        # Current sprint tracking
@@ -41,9 +40,7 @@ docs/
 │   ├── retrospectives/           # Epic retrospectives
 │   └── features/                 # Feature documentation
 │
-├── archive/                      # Historical Documents
-│   ├── planning/                 # Old planning docs
-│   └── sessions/                 # Session handoffs
+├── architecture-decisions/       # Architecture Decision Records (ADRs)
 │
 ├── diagrams/                     # Architecture diagrams
 └── deployment/                   # Deployment configuration
@@ -81,8 +78,8 @@ The architecture document defines how we're building it:
 **File:** [epics.md](epics.md)
 
 Complete breakdown of all epics and stories:
-- 9 MVP epics (E1-E9)
-- 86 total stories
+- 13 epics total (E1-E13)
+- E1-E11 complete, E12-E13 in progress
 - Acceptance criteria in BDD format
 - FR traceability mapping
 
@@ -126,61 +123,43 @@ Active development artifacts:
 
 ## Implementation Status
 
-| Epic | Name | Status | Stories |
-|------|------|--------|---------|
-| E1 | Project Foundation | Complete | 9/9 |
-| E2 | Document Ingestion & Storage | Complete | 8/8 |
-| E3 | Intelligent Document Processing | Complete | 9/9 |
-| E4 | Collaborative Knowledge Workflow | Complete | 13/13 |
-| E5 | Conversational Assistant | Complete | 8/9 |
-| E6 | IRL Management & Auto-Generation | Complete | 7/7 |
-| E7 | Learning Loop | Backlog | 0/6 |
-| E8 | Q&A Co-Creation Workflow | Backlog | 0/8 |
-| E9 | CIM Builder | Backlog | 0/15 |
+| Epic | Name | Status | Stories | Completed |
+|------|------|--------|---------|-----------|
+| E1 | Project Foundation | Complete | 9/9 | 2025-11-25 |
+| E2 | Document Ingestion & Storage | Complete | 8/8 | 2025-11-26 |
+| E3 | Intelligent Document Processing | Complete | 9/9 | 2025-11-28 |
+| E4 | Collaborative Knowledge Workflow | Complete | 13/13 | 2025-11-30 |
+| E5 | Conversational Assistant | Complete | 9/9 | 2025-12-02 |
+| E6 | IRL Management & Auto-Generation | Complete | 7/7 | 2025-12-04 |
+| E7 | Learning Loop | Complete | 6/6 | 2025-12-08 |
+| E8 | Q&A Co-Creation Workflow | Complete | 7/7 | 2025-12-09 |
+| E9 | CIM Builder | Complete | 15/15 | 2025-12-11 |
+| E10 | Knowledge Graph Foundation | Complete | 8/8 | 2025-12-17 |
+| E11 | Agent Context Engineering | Complete | 7/7 | 2025-12-18 |
+| E12 | Production Readiness | In Progress | 7/11 | - |
+| E13 | Agent Orchestration Optimization | Planned | 0/7 | - |
 
-**Current Phase:** Testing & Stabilization
+**Current Phase:** Production Readiness (E12-E13)
 
 ---
 
 ## Recent Updates
 
+### 2026-01-06: Repository Cleanup
+- Removed deprecated pgvector/embeddings code (E10.8 cleanup)
+- Deleted archive directories (obsolete planning and test docs)
+- Created [ADR-001](architecture-decisions/adr-001-graphiti-migration.md) documenting E10 architecture decisions
+- Updated documentation versions and epic status
+
+### 2025-12-17: E10 Knowledge Graph Foundation
+- Major architecture pivot: pgvector → Graphiti + Neo4j
+- Voyage embeddings replace OpenAI (1024d vs 3072d)
+- Hybrid search with reranking (20-35% accuracy improvement)
+- See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
+
 ### 2025-12-13: Documentation Consolidation
-- Consolidated 12 test documents into single [testing-guide.md](testing/testing-guide.md)
-- Archived obsolete planning documents to [archive/](archive/)
+- Consolidated test documents into [testing/testing-guide.md](testing/testing-guide.md)
 - Reorganized tech specs into [sprint-artifacts/tech-specs/](sprint-artifacts/tech-specs/)
-- Cleaned up BMAD module duplicates
-- Updated README with current versions
-
-### 2025-12-12: Testing Sprint
-- Manual testing of document processing pipeline
-- Fixed pg-boss schema issues
-- Configured Gemini 2.5 Flash for analysis
-- Verified upload → parse → embed flow
-
-### 2025-12-11: IRL Feature Updates
-- Intelligent Excel parser (v2.7)
-- IRL UX pivot proposal
-- Project creation wizard enhancements
-
----
-
-## Archive
-
-Historical documents that are no longer actively maintained:
-
-### Planning Archive ([archive/planning/](archive/planning/))
-- `brainstorming-session-results-2025-11-19.md` - Initial brainstorming
-- `validation-report-2025-11-19.md` - Planning validation
-- `implementation-readiness-report-*.md` - Readiness reports
-- `frontend-development-plan.md` - Original Lovable.dev approach (not used)
-
-### Session Archive ([archive/sessions/](archive/sessions/))
-- `session-handoff-*.md` - Development session notes
-- `architecture-updates-*.md` - Incremental architecture changes
-
-### Test Archive ([testing/archive/](testing/archive/))
-- Historical test reports and debugging notes
-- Consolidated into [testing-guide.md](testing/testing-guide.md)
 
 ---
 

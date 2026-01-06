@@ -34,7 +34,6 @@ export {
   type JobType,
   type TestJobPayload,
   type DocumentParseJobPayload,
-  type GenerateEmbeddingsJobPayload,
   type AnalyzeDocumentJobPayload,
   type UpdateGraphJobPayload,
   type DetectContradictionsJobPayload,
@@ -42,7 +41,6 @@ export {
   type JobResult,
   type TestJobResult,
   type DocumentParseResult,
-  type GenerateEmbeddingsResult,
   type AnalyzeDocumentResult,
   type EnqueueOptions,
   type WorkerConfig,
@@ -60,7 +58,6 @@ export {
 export {
   enqueueTestJob,
   enqueueDocumentParse,
-  enqueueGenerateEmbeddings,
   enqueueAnalyzeDocument,
   enqueueUpdateGraph,
   enqueueDetectContradictions,
@@ -73,7 +70,6 @@ export {
 export {
   testJobHandler,
   documentParseHandler,
-  generateEmbeddingsHandler,
   analyzeDocumentHandler,
   updateGraphHandler,
 } from './handlers'

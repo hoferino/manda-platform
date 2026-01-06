@@ -506,14 +506,14 @@ class TestEnqueueStageRetry:
         assert result == "job-123"
 
     @pytest.mark.asyncio
-    async def test_embedding_stage_enqueues_generate_embeddings(
+    async def test_embedding_stage_enqueues_ingest_graphiti(
         self,
         retry_manager: RetryManager,
         mock_db_client: MagicMock,
         mock_job_queue: MagicMock,
         sample_document_id: UUID,
     ) -> None:
-        """Test that embedding stage enqueues generate-embeddings job."""
+        """Test that embedding stage enqueues ingest-graphiti job (E10.8)."""
         with patch(
             "src.jobs.retry_manager.get_job_queue",
             return_value=mock_job_queue,
@@ -524,7 +524,7 @@ class TestEnqueueStageRetry:
             )
 
         call_args = mock_job_queue.enqueue.call_args
-        assert call_args[0][0] == "generate-embeddings"
+        assert call_args[0][0] == "ingest-graphiti"
 
     @pytest.mark.asyncio
     async def test_analyzing_stage_enqueues_analyze_document(

@@ -123,11 +123,12 @@ All database queries must include `project_id` in WHERE clauses. RLS policies en
 
 ## Documentation
 
-- **PRD**: `docs/manda-prd.md` (v1.9)
-- **Architecture**: `docs/manda-architecture.md` (v3.3)
-- **Epics/Stories**: `docs/epics.md`, `docs/sprint-artifacts/stories/`
+- **PRD**: `docs/manda-prd.md` (v2.4)
+- **Architecture**: `docs/manda-architecture.md` (v4.2)
+- **Epics/Stories**: `docs/epics.md` (v2.5), `docs/sprint-artifacts/stories/`
 - **Testing Guide**: `docs/testing/testing-guide.md`
 - **Tech Specs**: `docs/sprint-artifacts/tech-specs/`
+- **Architecture Decisions**: `docs/architecture-decisions/` (ADRs)
 
 ## BMAD Framework
 

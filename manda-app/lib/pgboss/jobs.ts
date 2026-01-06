@@ -18,7 +18,6 @@ export const JOB_TYPES = {
 
   // Document Processing (Epic 3)
   DOCUMENT_PARSE: 'document-parse',
-  GENERATE_EMBEDDINGS: 'generate-embeddings',
   ANALYZE_DOCUMENT: 'analyze-document',
 
   // Knowledge Graph (Epic 3/4)
@@ -55,20 +54,6 @@ export interface DocumentParseJobPayload {
   file_path: string
   file_type: 'pdf' | 'docx' | 'xlsx' | 'txt'
   priority?: number
-}
-
-/**
- * Generate embeddings job payload - for creating vector embeddings
- * Will be used in Epic 3 with OpenAI
- */
-export interface GenerateEmbeddingsJobPayload {
-  document_id: string
-  deal_id: string
-  chunks: Array<{
-    id: string
-    text: string
-    metadata: Record<string, unknown>
-  }>
 }
 
 /**
@@ -150,15 +135,6 @@ export interface DocumentParseResult {
 }
 
 /**
- * Generate embeddings result
- */
-export interface GenerateEmbeddingsResult {
-  document_id: string
-  embeddings_created: number
-  model_used: string
-}
-
-/**
  * Analyze document result
  */
 export interface AnalyzeDocumentResult {
@@ -200,13 +176,6 @@ export const DEFAULT_JOB_OPTIONS: Record<JobType, EnqueueOptions> = {
     retryDelay: 5,
     retryBackoff: true,
     expireInSeconds: 3600, // 1 hour
-  },
-  [JOB_TYPES.GENERATE_EMBEDDINGS]: {
-    priority: 4,
-    retryLimit: 3,
-    retryDelay: 2,
-    retryBackoff: true,
-    expireInSeconds: 1800, // 30 minutes
   },
   [JOB_TYPES.ANALYZE_DOCUMENT]: {
     priority: 3,
@@ -262,10 +231,6 @@ export const DEFAULT_WORKER_CONFIG: Record<JobType, WorkerConfig> = {
   [JOB_TYPES.DOCUMENT_PARSE]: {
     batchSize: 3, // Limit due to resource intensity
     pollingIntervalSeconds: 5,
-  },
-  [JOB_TYPES.GENERATE_EMBEDDINGS]: {
-    batchSize: 5,
-    pollingIntervalSeconds: 2,
   },
   [JOB_TYPES.ANALYZE_DOCUMENT]: {
     batchSize: 3, // Limit due to LLM API rate limits

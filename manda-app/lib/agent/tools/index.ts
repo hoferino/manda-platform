@@ -62,3 +62,20 @@ export * from './utils'
  * Order matters for tool selection priority
  */
 export { allChatTools } from './all-tools'
+
+/**
+ * Tool Loader - Tier-Based Tool Loading (E13.2)
+ * Dynamic tool loading based on query complexity
+ */
+export {
+  TOOL_TIERS,
+  getToolsForComplexity,
+  getToolsForIntent,
+  getToolCountForComplexity,
+  getNextTier,
+  canEscalate,
+  isToolNotFoundError,
+  handleToolEscalation,
+  logToolTierSelection,
+  type EscalationResult,
+} from './tool-loader'

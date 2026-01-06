@@ -224,7 +224,7 @@ function detectColumnMapping(headerRow: ExcelJS.Row): ColumnMapping {
  */
 export async function parseExcelIRL(buffer: Buffer): Promise<IRLImportPreview> {
   const workbook = new ExcelJS.Workbook()
-  await workbook.xlsx.load(buffer)
+  await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer)
 
   const worksheet = workbook.worksheets[0]
   if (!worksheet) {

@@ -33,7 +33,7 @@ export default defineConfig({
     isolate: true,
 
     // Reporter configuration
-    reporter: process.env.CI ? ['dot', 'json'] : ['verbose'],
+    reporters: process.env.CI ? ['dot', 'json'] : ['verbose'],
     outputFile: process.env.CI ? './test-results/integration-results.json' : undefined,
 
     // Environment variables for integration tests

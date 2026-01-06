@@ -1711,10 +1711,10 @@ M&A transactions involve analyzing companies across multiple dimensions to asses
 ## Appendix
 
 ### References
-- [Brainstorming Session Results - 2025-11-19](brainstorming-session-results-2025-11-19.md)
 - [Project Documentation Index](manda-index.md)
 - [Sprint Change Proposal 2025-12-14](sprint-change-proposal-2025-12-14.md)
 - [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
+- [ADR-001: Graphiti Migration](architecture-decisions/adr-001-graphiti-migration.md)
 
 ### Changelog
 

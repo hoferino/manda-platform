@@ -161,7 +161,7 @@ export async function fetchDashboardData(
   };
 }
 
-export function exportToCSV(data: DashboardData): string {
+export async function exportToCSV(data: DashboardData): Promise<string> {
   const lines: string[] = [];
 
   lines.push("# Usage Summary");

@@ -21,7 +21,9 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt'
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages'
 import type { BaseMessage } from '@langchain/core/messages'
 import { createLLMClient, createLLMClientWithFallback, type LLMConfig } from '@/lib/llm/client'
-import { allChatTools, validateToolCount } from './tools/all-tools'
+import { allChatTools, TOOL_COUNT } from './tools/all-tools'
+import { getToolsForComplexity, logToolTierSelection } from './tools/tool-loader'
+import type { ComplexityLevel } from './intent'
 import { getSystemPrompt, getSystemPromptWithContext } from './prompts'
 import {
   createToolResultCache,
@@ -32,13 +34,11 @@ import {
 } from './tool-isolation'
 import {
   preModelRetrievalHook,
-  type PreModelHookResult,
   type RetrievalMetrics,
 } from './retrieval'
 import {
   summarizeConversationHistory,
   shouldSummarize,
-  estimateMessagesTokens,
   type SummarizationMetrics,
   type SummarizationConfig,
 } from './summarization'
@@ -65,15 +65,28 @@ export interface ChatAgentConfig {
   isolation?: Partial<IsolationConfig>
   /** Disable tool isolation (for debugging) - E11.1 */
   disableIsolation?: boolean
+  /**
+   * Complexity level for tier-based tool loading - E13.2
+   * - simple: No tools (direct LLM response)
+   * - medium: 5 essential tools
+   * - complex: All 18 tools
+   * - undefined: All tools (backward compatibility)
+   */
+  complexity?: ComplexityLevel
 }
 
 /**
  * Extended agent type with tool result cache access
  * Story: E11.1 - Tool Result Isolation
+ * Story: E13.2 - Tier-Based Tool Loading (adds toolCount for tracing)
  */
 export interface ChatAgentWithCache {
   agent: ReactAgentType
   toolResultCache: ToolResultCache
+  /** Number of tools loaded (for tracing) - E13.2 */
+  toolCount: number
+  /** Complexity tier used (for tracing) - E13.2 */
+  complexity?: ComplexityLevel
 }
 
 /**
@@ -125,11 +138,6 @@ export function convertToLangChainMessages(messages: ConversationMessage[]): Bas
  * ```
  */
 export function createChatAgent(config: ChatAgentConfig): ChatAgentWithCache {
-  // Validate that all 17 tools are present
-  if (!validateToolCount()) {
-    throw new Error('Tool validation failed: Expected 17 tools')
-  }
-
   // Create LLM client with fallback (E12.6: Claude → Gemini on 429/503)
   const llm = createLLMClientWithFallback(config.llmConfig)
 
@@ -141,7 +149,18 @@ export function createChatAgent(config: ChatAgentConfig): ChatAgentWithCache {
   // Create tool result cache for isolation (E11.1)
   const toolResultCache = createToolResultCache()
 
-  // Determine tools to use - isolated or raw
+  // E13.2: Get base tools based on complexity tier
+  // Default to all tools for backward compatibility when complexity is undefined
+  const baseTools = config.complexity
+    ? getToolsForComplexity(config.complexity)
+    : allChatTools
+
+  // Validate tool count for non-filtered case
+  if (!config.complexity && baseTools.length !== TOOL_COUNT) {
+    console.warn(`[Agent] Expected ${TOOL_COUNT} tools, found ${baseTools.length}`)
+  }
+
+  // Determine tools to use - isolated or raw (E11.1)
   const isolationConfig: IsolationConfig = {
     ...DEFAULT_ISOLATION_CONFIG,
     ...config.isolation,
@@ -149,8 +168,11 @@ export function createChatAgent(config: ChatAgentConfig): ChatAgentWithCache {
   }
 
   const tools = config.disableIsolation
-    ? allChatTools
-    : isolateAllTools(allChatTools, toolResultCache, isolationConfig)
+    ? baseTools
+    : isolateAllTools(baseTools, toolResultCache, isolationConfig)
+
+  // Log tool selection for LangSmith tracing (E13.2)
+  logToolTierSelection(config.complexity ?? 'complex', baseTools.length)
 
   // Create the agent using LangGraph's createReactAgent
   const agent = createReactAgent({
@@ -159,7 +181,12 @@ export function createChatAgent(config: ChatAgentConfig): ChatAgentWithCache {
     messageModifier: systemPrompt,
   })
 
-  return { agent, toolResultCache }
+  return {
+    agent,
+    toolResultCache,
+    toolCount: baseTools.length,
+    complexity: config.complexity,
+  }
 }
 
 /**
@@ -328,34 +355,6 @@ export async function streamChat(
       })
     }
 
-    // ==========================================================================
-    // TOKEN DEBUG: Diagnostic logging to trace token consumption
-    // Remove this block after debugging is complete
-    // ==========================================================================
-    const systemPrompt = getSystemPrompt()
-    const systemPromptTokens = Math.ceil(systemPrompt.length / 4)
-    const messageTokens = estimateMessagesTokens(messages)
-    const toolCount = allChatTools.length
-    const toolDescriptionTokens = allChatTools.reduce((sum, tool) => {
-      const descLength = (tool.description || '').length
-      const schemaLength = JSON.stringify(tool.schema || {}).length
-      return sum + Math.ceil((descLength + schemaLength) / 4)
-    }, 0)
-
-    console.log('='.repeat(60))
-    console.log('[TOKEN DEBUG] === Per-Request Token Breakdown ===')
-    console.log(`[TOKEN DEBUG] System prompt: ~${systemPromptTokens} tokens (${systemPrompt.length} chars)`)
-    console.log(`[TOKEN DEBUG] Messages in context: ${messages.length} (~${messageTokens} tokens)`)
-    console.log(`[TOKEN DEBUG] Tool definitions: ${toolCount} tools (~${toolDescriptionTokens} tokens)`)
-    console.log(`[TOKEN DEBUG] User input: ~${Math.ceil(input.length / 4)} tokens`)
-    console.log(`[TOKEN DEBUG] ESTIMATED TOTAL INPUT: ~${systemPromptTokens + messageTokens + toolDescriptionTokens + Math.ceil(input.length / 4)} tokens`)
-    console.log('='.repeat(60))
-
-    // Track LLM iterations (ReAct agent loop)
-    let llmIterationCount = 0
-    let totalStreamedTokens = 0
-    // ==========================================================================
-
     // Use streaming with events
     const eventStream = agent.streamEvents(
       { messages },
@@ -367,42 +366,21 @@ export async function streamChat(
     for await (const event of eventStream) {
       const kind = event.event
 
-      // TOKEN DEBUG: Count LLM iterations
-      if (kind === 'on_chat_model_start') {
-        llmIterationCount++
-        console.log(`[TOKEN DEBUG] LLM iteration #${llmIterationCount} started`)
-      }
-
       if (kind === 'on_chat_model_stream') {
         // Token streaming
         const content = event.data?.chunk?.content
         if (content && typeof content === 'string') {
           fullOutput += content
-          totalStreamedTokens++
           callbacks.onToken?.(content)
         }
       } else if (kind === 'on_tool_start') {
         // Tool invocation started
-        console.log(`[TOKEN DEBUG] Tool started: ${event.name}`)
         callbacks.onToolStart?.(event.name, event.data?.input)
       } else if (kind === 'on_tool_end') {
         // Tool invocation ended
-        const outputStr = typeof event.data?.output === 'string'
-          ? event.data.output
-          : JSON.stringify(event.data?.output || '')
-        console.log(`[TOKEN DEBUG] Tool ended: ${event.name} (output: ~${Math.ceil(outputStr.length / 4)} tokens)`)
         callbacks.onToolEnd?.(event.name, event.data?.output as string)
       }
     }
-
-    // TOKEN DEBUG: Final summary
-    console.log('='.repeat(60))
-    console.log('[TOKEN DEBUG] === Request Complete ===')
-    console.log(`[TOKEN DEBUG] Total LLM iterations: ${llmIterationCount}`)
-    console.log(`[TOKEN DEBUG] Output tokens: ~${Math.ceil(fullOutput.length / 4)}`)
-    console.log(`[TOKEN DEBUG] If iterations > 1, multiply input estimate by iteration count!`)
-    console.log(`[TOKEN DEBUG] ESTIMATED REAL INPUT: ~${(systemPromptTokens + messageTokens + toolDescriptionTokens) * llmIterationCount} tokens`)
-    console.log('='.repeat(60))
 
     // E12.2: Log LLM usage to database
     // NOTE: Token counts are ESTIMATED - LangChain doesn't expose actual usage

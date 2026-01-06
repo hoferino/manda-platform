@@ -21,6 +21,7 @@ interface RouteParams {
 }
 
 // E3.8: Map last_completed_stage to next stage job
+// E10.8: Updated pipeline: parse -> ingest-graphiti -> analyze (removed generate-embeddings)
 function getNextStageJob(lastCompletedStage: string | null): {
   job: string
   status: string
@@ -28,12 +29,14 @@ function getNextStageJob(lastCompletedStage: string | null): {
 } {
   switch (lastCompletedStage) {
     case 'parsed':
+      // E10.8: Now goes to ingest-graphiti instead of generate-embeddings
       return {
-        job: 'generate-embeddings',
-        status: 'embedding',
-        endpoint: '/api/processing/retry/embedding',
+        job: 'ingest-graphiti',
+        status: 'ingesting',
+        endpoint: '/api/processing/retry/ingest',
       }
     case 'embedded':
+    case 'ingested':
       return {
         job: 'analyze-document',
         status: 'analyzing',

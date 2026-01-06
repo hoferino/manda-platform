@@ -75,13 +75,6 @@ DEFAULT_JOB_OPTIONS: dict[str, EnqueueOptions] = {
         retry_backoff=True,
         expire_in_seconds=3600,
     ),
-    "generate-embeddings": EnqueueOptions(
-        priority=4,
-        retry_limit=3,
-        retry_delay=2,
-        retry_backoff=True,
-        expire_in_seconds=1800,
-    ),
     "analyze-document": EnqueueOptions(
         priority=3,
         retry_limit=3,

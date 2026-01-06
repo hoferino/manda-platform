@@ -120,7 +120,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           cat.items.map((item) => ({
             category: cat.name,
             name: item.name,
-            priority: item.priority,
+            priority: item.priority ?? 'medium',
             description: item.description,
           }))
         )

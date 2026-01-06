@@ -159,7 +159,7 @@ export async function logFeatureUsage(params: {
       insertData.error_message = params.errorMessage
     }
     if (params.metadata) {
-      insertData.metadata = params.metadata
+      insertData.metadata = params.metadata as Database['public']['Tables']['feature_usage']['Insert']['metadata']
     }
 
     const { data, error } = await supabase

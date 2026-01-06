@@ -147,9 +147,9 @@ export function DashboardContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datePreset, customStart, customEnd]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!data) return;
-    const csv = exportToCSV(data);
+    const csv = await exportToCSV(data);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
