@@ -3,10 +3,11 @@
  *
  * Story: E13.4 - Supervisor Agent Pattern (AC: #2, #3, #6)
  * Story: E13.5 - Financial Analyst Specialist Agent (AC: #4)
+ * Story: E13.6 - Knowledge Graph Specialist Agent (AC: #4)
  *
  * LangGraph node implementations for specialist agents.
  * E13.5 (Financial Analyst) implemented with real Python backend invocation.
- * E13.6 (Knowledge Graph) is stub - full implementation pending.
+ * E13.6 (Knowledge Graph) implemented with real Python backend invocation.
  *
  * Node Pattern:
  * - Each node receives SupervisorState
@@ -16,6 +17,7 @@
  * References:
  * - [Source: docs/sprint-artifacts/stories/e13-4-supervisor-agent-pattern.md]
  * - [Source: docs/sprint-artifacts/stories/e13-5-financial-analyst-specialist.md]
+ * - [Source: docs/sprint-artifacts/stories/e13-6-knowledge-graph-specialist.md]
  * - [Source: manda-app/lib/agent/executor.ts] - createChatAgent pattern
  */
 
@@ -35,9 +37,10 @@ import { SPECIALIST_IDS } from './routing'
 // =============================================================================
 
 /**
- * Timeout for specialist execution (30 seconds)
+ * Timeout for specialist execution (45 seconds)
+ * Aligned with manda-processing/config/models.yaml knowledge_graph.settings.timeout
  */
-const SPECIALIST_TIMEOUT_MS = 30000
+const SPECIALIST_TIMEOUT_MS = 45000
 
 /**
  * System prompts for specialist agents
@@ -77,9 +80,7 @@ Guidelines:
 3. Provide clear relationship chains when relevant
 4. Note when information may be outdated or superseded
 5. Cite specific sources for entity information
-6. Flag potential data quality issues
-
-Note: This is a preliminary stub implementation. Full specialist agent coming in E13.6.`,
+6. Flag potential data quality issues`,
 
   [SPECIALIST_IDS.GENERAL]: `You are a general M&A due diligence assistant.
 You help with questions that don't require specialized financial or knowledge graph analysis.
@@ -306,15 +307,72 @@ async function invokeFinancialAnalyst(state: SupervisorState): Promise<Specialis
 }
 
 // =============================================================================
-// Knowledge Graph Node (AC: #2) - STUB
+// Knowledge Graph Node (AC: #2) - E13.6 IMPLEMENTATION
 // =============================================================================
 
 /**
+ * Knowledge Graph API response type
+ * Story: E13.6 (AC: #4) - Register as specialist in supervisor routing
+ */
+interface KnowledgeGraphApiResponse {
+  success: boolean
+  result?: {
+    summary: string
+    entities: Array<{
+      name: string
+      entity_type: string
+      confidence: number
+      aliases: string[]
+      source?: {
+        document_id?: string
+        document_name?: string
+        excerpt?: string
+      }
+      properties: Record<string, string>
+    }>
+    paths: Array<{
+      start_entity: string
+      start_entity_type: string
+      end_entity: string
+      end_entity_type: string
+      path: Array<{
+        from_entity: string
+        relationship: string
+        to_entity: string
+      }>
+      total_hops: number
+      path_description: string
+    }>
+    contradictions: Array<{
+      fact1: string
+      fact2: string
+      conflict_type: string
+      severity: string
+      resolution_hint: string
+    }>
+    confidence: number
+    sources: Array<{
+      document_id?: string
+      document_name?: string
+      page_number?: number
+      excerpt?: string
+    }>
+    traversal_explanation?: string
+    limitations?: string
+    follow_up_questions?: string[]
+  }
+  error?: string
+  model_used?: string
+  latency_ms?: number
+}
+
+/**
  * Knowledge Graph Specialist Node
- * Story: E13.4 (AC: #2) - Route to knowledge_graph for entity/relationship queries
+ * Story: E13.6 (AC: #4) - Register as specialist in supervisor routing
  *
- * NOTE: Full implementation in E13.6. This stub uses the general agent
- * with a knowledge graph-focused system prompt.
+ * Invokes the Python backend Knowledge Graph agent for entity resolution,
+ * relationship traversal, and contradiction detection.
+ * Replaces E13.4 stub implementation with real API invocation.
  *
  * @param state - Current supervisor state
  * @returns Partial state update with specialist result
@@ -323,39 +381,186 @@ export async function knowledgeGraphNode(
   state: SupervisorState
 ): Promise<Partial<SupervisorState>> {
   const startTime = Date.now()
-  console.log('[Supervisor] Invoking knowledge_graph specialist (stub)')
+  console.log('[Supervisor] Invoking knowledge_graph specialist (E13.6)')
 
   try {
-    const result = await invokeSpecialistWithAgent(
-      SPECIALIST_IDS.KNOWLEDGE_GRAPH,
-      state,
-      SPECIALIST_PROMPTS[SPECIALIST_IDS.KNOWLEDGE_GRAPH]!
-    )
-
+    const result = await invokeKnowledgeGraph(state)
     return {
-      specialistResults: [{
-        ...result,
-        stub: true, // Flag for tracing
-      }],
+      specialistResults: [result],
     }
   } catch (error) {
     console.error('[Supervisor] Knowledge graph error:', error)
-    return {
-      specialistResults: [
-        createSpecialistResult(
-          SPECIALIST_IDS.KNOWLEDGE_GRAPH,
-          '',
-          0,
-          [],
-          {
-            timing: Date.now() - startTime,
-            stub: true,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          }
-        ),
-      ],
+
+    // Fallback to stub implementation on API failure
+    console.log('[Supervisor] Falling back to stub implementation')
+    try {
+      const fallbackResult = await invokeSpecialistWithAgent(
+        SPECIALIST_IDS.KNOWLEDGE_GRAPH,
+        state,
+        SPECIALIST_PROMPTS[SPECIALIST_IDS.KNOWLEDGE_GRAPH]!
+      )
+
+      return {
+        specialistResults: [{
+          ...fallbackResult,
+          stub: true, // Flag that we fell back to stub
+          error: `API fallback: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        }],
+      }
+    } catch (fallbackError) {
+      return {
+        specialistResults: [
+          createSpecialistResult(
+            SPECIALIST_IDS.KNOWLEDGE_GRAPH,
+            'Unable to analyze knowledge graph data at this time. Please try again.',
+            0.2,
+            [],
+            {
+              timing: Date.now() - startTime,
+              stub: true,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            }
+          ),
+        ],
+      }
     }
   }
+}
+
+/**
+ * Invoke the Knowledge Graph Python API
+ * Story: E13.6 (AC: #4) - Implement invokeKnowledgeGraphAgent() that calls Python backend
+ *
+ * @param state - Current supervisor state with query and context
+ * @returns SpecialistResult from the Knowledge Graph agent
+ */
+async function invokeKnowledgeGraph(state: SupervisorState): Promise<SpecialistResult> {
+  const startTime = Date.now()
+
+  const processingApiUrl = process.env.MANDA_PROCESSING_API_URL
+  if (!processingApiUrl) {
+    throw new Error('MANDA_PROCESSING_API_URL not configured')
+  }
+
+  // Build request body
+  const requestBody = {
+    query: state.query,
+    deal_id: state.dealId,
+    organization_id: state.organizationId,
+    entity_types: state.intent?.suggestedEntityTypes,
+    context: state.intent?.rationale || undefined,
+  }
+
+  console.log('[Knowledge Graph] Calling API:', `${processingApiUrl}/api/agents/knowledge-graph/invoke`)
+
+  const response = await fetch(`${processingApiUrl}/api/agents/knowledge-graph/invoke`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(state.organizationId && { 'x-organization-id': state.organizationId }),
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unknown error')
+    throw new Error(`Knowledge Graph API error: ${response.status} - ${errorText}`)
+  }
+
+  const apiResponse: KnowledgeGraphApiResponse = await response.json()
+
+  if (!apiResponse.success || !apiResponse.result) {
+    throw new Error(apiResponse.error || 'Knowledge Graph API returned unsuccessful result')
+  }
+
+  // Transform API response to SpecialistResult
+  const result = apiResponse.result
+  const sources = result.sources.map((s) => ({
+    documentId: s.document_id,
+    documentName: s.document_name,
+    snippet: s.excerpt,
+  }))
+
+  // Build output text with structured information
+  let output = result.summary
+
+  // Append entity matches if present
+  if (result.entities && result.entities.length > 0) {
+    output += '\n\n**Matched Entities:**\n'
+    for (const entity of result.entities.slice(0, 5)) {
+      output += `- ${entity.name} (${entity.entity_type})`
+      output += ` - Confidence: ${(entity.confidence * 100).toFixed(0)}%`
+      if (entity.aliases && entity.aliases.length > 0) {
+        output += ` [Also known as: ${entity.aliases.slice(0, 3).join(', ')}]`
+      }
+      output += '\n'
+    }
+    if (result.entities.length > 5) {
+      output += `... and ${result.entities.length - 5} more entities\n`
+    }
+  }
+
+  // Append relationship paths if present
+  if (result.paths && result.paths.length > 0) {
+    output += '\n**Relationship Paths:**\n'
+    for (const path of result.paths.slice(0, 3)) {
+      output += `- ${path.path_description || `${path.start_entity} → ${path.end_entity} (${path.total_hops} hops)`}\n`
+    }
+    if (result.paths.length > 3) {
+      output += `... and ${result.paths.length - 3} more paths\n`
+    }
+  }
+
+  // Append contradictions if present
+  if (result.contradictions && result.contradictions.length > 0) {
+    output += '\n**Detected Contradictions:**\n'
+    for (const contradiction of result.contradictions) {
+      const severityIcon = contradiction.severity === 'critical' ? '🔴' :
+                          contradiction.severity === 'moderate' ? '🟡' : '🔵'
+      output += `${severityIcon} ${contradiction.conflict_type}: "${contradiction.fact1}" vs "${contradiction.fact2}"\n`
+      if (contradiction.resolution_hint) {
+        output += `   Hint: ${contradiction.resolution_hint}\n`
+      }
+    }
+  }
+
+  // Append traversal explanation if present
+  if (result.traversal_explanation) {
+    output += `\n**Graph Traversal:** ${result.traversal_explanation}`
+  }
+
+  // Append limitations if present
+  if (result.limitations) {
+    output += `\n**Note:** ${result.limitations}`
+  }
+
+  // Append follow-up questions if present
+  if (result.follow_up_questions && result.follow_up_questions.length > 0) {
+    output += '\n\n**Suggested Follow-up Questions:**\n'
+    for (const q of result.follow_up_questions) {
+      output += `- ${q}\n`
+    }
+  }
+
+  const timing = apiResponse.latency_ms || (Date.now() - startTime)
+
+  console.log('[Knowledge Graph] API response received', {
+    confidence: result.confidence,
+    entitiesCount: result.entities?.length || 0,
+    pathsCount: result.paths?.length || 0,
+    contradictionsCount: result.contradictions?.length || 0,
+    sourcesCount: sources.length,
+    latencyMs: timing,
+  })
+
+  return createSpecialistResult(
+    SPECIALIST_IDS.KNOWLEDGE_GRAPH,
+    output,
+    result.confidence,
+    sources,
+    { timing }
+    // NO stub: true - this is the real implementation
+  )
 }
 
 // =============================================================================

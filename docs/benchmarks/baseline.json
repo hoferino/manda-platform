@@ -1,0 +1,119 @@
+{
+  "runId": "baseline-pre-e13-2026-01-06",
+  "timestamp": "2026-01-06T00:00:00.000Z",
+  "environment": "production",
+  "totalQueries": 100,
+  "successCount": 100,
+  "failureCount": 0,
+  "overallClassificationAccuracy": 0,
+  "overallIntentAccuracy": 0,
+  "byTier": {
+    "simple": {
+      "queryCount": 40,
+      "successCount": 40,
+      "classificationAccuracy": 0,
+      "intentAccuracy": 0,
+      "ttft": {
+        "p50": 15000,
+        "p95": 19400,
+        "p99": 25000,
+        "min": 8000,
+        "max": 30000,
+        "mean": 16000
+      },
+      "latency": {
+        "p50": 18000,
+        "p95": 25000,
+        "p99": 35000,
+        "min": 10000,
+        "max": 45000,
+        "mean": 20000
+      },
+      "cost": {
+        "total": 0.04,
+        "average": 0.001,
+        "min": 0.0008,
+        "max": 0.0015
+      },
+      "tokens": {
+        "avgInput": 8577,
+        "avgOutput": 450,
+        "totalInput": 343080,
+        "totalOutput": 18000
+      }
+    },
+    "medium": {
+      "queryCount": 35,
+      "successCount": 35,
+      "classificationAccuracy": 0,
+      "intentAccuracy": 0,
+      "ttft": {
+        "p50": 16000,
+        "p95": 19400,
+        "p99": 27000,
+        "min": 9000,
+        "max": 35000,
+        "mean": 17000
+      },
+      "latency": {
+        "p50": 20000,
+        "p95": 28000,
+        "p99": 40000,
+        "min": 12000,
+        "max": 50000,
+        "mean": 22000
+      },
+      "cost": {
+        "total": 0.0385,
+        "average": 0.0011,
+        "min": 0.0008,
+        "max": 0.0018
+      },
+      "tokens": {
+        "avgInput": 8577,
+        "avgOutput": 600,
+        "totalInput": 300195,
+        "totalOutput": 21000
+      }
+    },
+    "complex": {
+      "queryCount": 25,
+      "successCount": 25,
+      "classificationAccuracy": 0,
+      "intentAccuracy": 0,
+      "ttft": {
+        "p50": 17000,
+        "p95": 19400,
+        "p99": 30000,
+        "min": 10000,
+        "max": 40000,
+        "mean": 18000
+      },
+      "latency": {
+        "p50": 25000,
+        "p95": 35000,
+        "p99": 50000,
+        "min": 15000,
+        "max": 60000,
+        "mean": 27000
+      },
+      "cost": {
+        "total": 0.035,
+        "average": 0.0014,
+        "min": 0.001,
+        "max": 0.0025
+      },
+      "tokens": {
+        "avgInput": 8577,
+        "avgOutput": 800,
+        "totalInput": 214425,
+        "totalOutput": 20000
+      }
+    }
+  },
+  "targetComparisons": [],
+  "failures": [],
+  "totalCostUsd": 0.1135,
+  "totalDurationMs": 2000000,
+  "_note": "Synthetic baseline based on LangSmith observations. Classification accuracy is 0 because pre-E13 did not classify complexity."
+}

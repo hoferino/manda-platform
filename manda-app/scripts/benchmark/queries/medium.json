@@ -1,0 +1,264 @@
+[
+  {
+    "id": "medium-001",
+    "query": "Compare the Q1 and Q2 revenue figures",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "financial",
+    "notes": "Comparison query"
+  },
+  {
+    "id": "medium-002",
+    "query": "Summarize the company's financial position",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "medium-003",
+    "query": "List all key executives and their roles",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-004",
+    "query": "Find all documents related to revenue",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "medium-005",
+    "query": "Explain the company's business model",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-006",
+    "query": "Describe the organizational structure",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-007",
+    "query": "What are the main revenue streams vs expenses?",
+    "expectedComplexity": "medium",
+    "expectedIntent": "factual",
+    "category": "financial",
+    "notes": "Comparison implied by vs"
+  },
+  {
+    "id": "medium-008",
+    "query": "Find all parties mentioned in the agreements",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-009",
+    "query": "List all intellectual property assets",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "technical"
+  },
+  {
+    "id": "medium-010",
+    "query": "Summarize the terms in document #3",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal",
+    "notes": "Document reference"
+  },
+  {
+    "id": "medium-011",
+    "query": "Compare gross margin versus industry average",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "medium-012",
+    "query": "Find related parties in all contracts",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-013",
+    "query": "Describe the technology infrastructure",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "technical"
+  },
+  {
+    "id": "medium-014",
+    "query": "List all material contracts and their terms",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-015",
+    "query": "Summarize the customer concentration risk",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-016",
+    "query": "Compare 2023 vs 2024 performance",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "medium-017",
+    "query": "Find all warranty obligations",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-018",
+    "query": "Explain the pricing strategy",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-019",
+    "query": "List compliance requirements for this industry",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-020",
+    "query": "Describe the supply chain structure",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-021",
+    "query": "Find all references to earnout provisions",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-022",
+    "query": "Summarize the key risk factors",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-023",
+    "query": "Compare employee benefits across locations",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-024",
+    "query": "List all software licenses and their expiration",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "technical"
+  },
+  {
+    "id": "medium-025",
+    "query": "Describe the go-to-market strategy",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-026",
+    "query": "Find all change of control provisions",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-027",
+    "query": "Summarize the M&A history of the company",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-028",
+    "query": "List all environmental liabilities",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-029",
+    "query": "Compare operating expenses by category",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "medium-030",
+    "query": "Describe the data security measures",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "technical"
+  },
+  {
+    "id": "medium-031",
+    "query": "Find all non-compete agreements",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-032",
+    "query": "Summarize the capital structure",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "medium-033",
+    "query": "List key vendor relationships",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "medium-034",
+    "query": "Describe the R&D pipeline",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "technical"
+  },
+  {
+    "id": "medium-035",
+    "query": "Compare revenue by geographic region",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "medium-036",
+    "query": "Find all insurance policies and coverage",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "medium-037",
+    "query": "Summarize the management team backgrounds",
+    "expectedComplexity": "medium",
+    "expectedIntent": "task",
+    "category": "operational"
+  }
+]

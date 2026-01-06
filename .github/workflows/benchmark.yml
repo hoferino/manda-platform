@@ -1,0 +1,139 @@
+# Performance Benchmark Workflow
+#
+# Story: E13.7 - Performance Benchmarking Suite (AC: #6)
+#
+# Runs benchmark suite and compares against baseline to detect regressions.
+# Triggered manually to control API costs.
+
+name: Performance Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: 'Complexity tier to benchmark (simple|medium|complex|all)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - simple
+          - medium
+          - complex
+      dry_run:
+        description: 'Dry run (classification only, no LLM calls)'
+        required: false
+        default: false
+        type: boolean
+      fail_on_regression:
+        description: 'Fail workflow if regression detected'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: manda-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: manda-app
+        run: npm ci
+
+      - name: Validate benchmark configuration
+        working-directory: manda-app
+        env:
+          MANDA_API_URL: ${{ secrets.STAGING_API_URL }}
+          BENCHMARK_DEAL_ID: ${{ secrets.BENCHMARK_DEAL_ID }}
+          BENCHMARK_AUTH_TOKEN: ${{ secrets.BENCHMARK_AUTH_TOKEN }}
+        run: npm run benchmark validate
+
+      - name: Run benchmarks
+        working-directory: manda-app
+        env:
+          MANDA_API_URL: ${{ secrets.STAGING_API_URL }}
+          BENCHMARK_DEAL_ID: ${{ secrets.BENCHMARK_DEAL_ID }}
+          BENCHMARK_AUTH_TOKEN: ${{ secrets.BENCHMARK_AUTH_TOKEN }}
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_ENDPOINT: https://eu.api.smith.langchain.com
+          LANGSMITH_PROJECT: manda-benchmark
+          LANGCHAIN_TRACING_V2: 'true'
+          NODE_ENV: staging
+        run: |
+          TIER_ARG=""
+          if [ "${{ inputs.tier }}" != "all" ]; then
+            TIER_ARG="--tier ${{ inputs.tier }}"
+          fi
+
+          DRY_RUN_ARG=""
+          if [ "${{ inputs.dry_run }}" == "true" ]; then
+            DRY_RUN_ARG="--dry-run"
+          fi
+
+          npm run benchmark run $TIER_ARG $DRY_RUN_ARG --output benchmark-results.json
+
+      - name: Generate report
+        working-directory: manda-app
+        run: npm run benchmark report --input benchmark-results.json --output benchmark-report.md
+
+      - name: Check against baseline
+        working-directory: manda-app
+        if: ${{ inputs.fail_on_regression }}
+        continue-on-error: ${{ !inputs.fail_on_regression }}
+        run: |
+          if [ -f docs/benchmarks/baseline.json ]; then
+            npm run benchmark compare \
+              --baseline docs/benchmarks/baseline.json \
+              --current benchmark-results.json \
+              --output comparison-report.md \
+              --fail-on-regression
+          else
+            echo "No baseline file found, skipping comparison"
+          fi
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: |
+            manda-app/benchmark-results.json
+            manda-app/benchmark-report.md
+            manda-app/comparison-report.md
+          retention-days: 30
+
+      - name: Create summary
+        working-directory: manda-app
+        run: |
+          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat benchmark-report.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR (if triggered from PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const reportPath = 'manda-app/benchmark-report.md'
+
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8')
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## Benchmark Results\n\n${report}`
+              })
+            }

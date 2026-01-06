@@ -1,0 +1,298 @@
+[
+  {
+    "id": "simple-001",
+    "query": "Hello",
+    "expectedComplexity": "simple",
+    "expectedIntent": "greeting",
+    "category": "greeting",
+    "notes": "Basic greeting"
+  },
+  {
+    "id": "simple-002",
+    "query": "Hi there!",
+    "expectedComplexity": "simple",
+    "expectedIntent": "greeting",
+    "category": "greeting"
+  },
+  {
+    "id": "simple-003",
+    "query": "Good morning",
+    "expectedComplexity": "simple",
+    "expectedIntent": "greeting",
+    "category": "greeting"
+  },
+  {
+    "id": "simple-004",
+    "query": "Thanks for your help",
+    "expectedComplexity": "simple",
+    "expectedIntent": "greeting",
+    "category": "greeting"
+  },
+  {
+    "id": "simple-005",
+    "query": "Thank you",
+    "expectedComplexity": "simple",
+    "expectedIntent": "greeting",
+    "category": "greeting"
+  },
+  {
+    "id": "simple-006",
+    "query": "Goodbye",
+    "expectedComplexity": "simple",
+    "expectedIntent": "greeting",
+    "category": "greeting"
+  },
+  {
+    "id": "simple-007",
+    "query": "What can you do?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "meta",
+    "category": "meta"
+  },
+  {
+    "id": "simple-008",
+    "query": "How do you work?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "meta",
+    "category": "meta"
+  },
+  {
+    "id": "simple-009",
+    "query": "What are your capabilities?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "meta",
+    "category": "meta"
+  },
+  {
+    "id": "simple-010",
+    "query": "Can you help me?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "meta",
+    "category": "meta"
+  },
+  {
+    "id": "simple-011",
+    "query": "What is the company name?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational",
+    "notes": "Single fact lookup"
+  },
+  {
+    "id": "simple-012",
+    "query": "Who is the CEO?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-013",
+    "query": "What year was it founded?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-014",
+    "query": "Where is the headquarters?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-015",
+    "query": "How many employees?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-016",
+    "query": "What industry?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-017",
+    "query": "What is the revenue?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-018",
+    "query": "What is the EBITDA?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-019",
+    "query": "What was profit last year?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-020",
+    "query": "What is the valuation?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-021",
+    "query": "Who are the shareholders?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "legal"
+  },
+  {
+    "id": "simple-022",
+    "query": "What is the legal structure?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "legal"
+  },
+  {
+    "id": "simple-023",
+    "query": "Are there any subsidiaries?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "legal"
+  },
+  {
+    "id": "simple-024",
+    "query": "What products do they sell?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-025",
+    "query": "Who are main customers?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-026",
+    "query": "What technology stack?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "technical"
+  },
+  {
+    "id": "simple-027",
+    "query": "Any patents?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "technical"
+  },
+  {
+    "id": "simple-028",
+    "query": "Number of locations?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-029",
+    "query": "What markets do they serve?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-030",
+    "query": "Who is the CFO?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-031",
+    "query": "Main competitors?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-032",
+    "query": "What is gross margin?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-033",
+    "query": "Revenue growth rate?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-034",
+    "query": "What is the deal status?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-035",
+    "query": "Any debt?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-036",
+    "query": "Cash on hand?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-037",
+    "query": "When does fiscal year end?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-038",
+    "query": "What is the asking price?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "financial"
+  },
+  {
+    "id": "simple-039",
+    "query": "Any pending litigation?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "legal"
+  },
+  {
+    "id": "simple-040",
+    "query": "Key contracts?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "legal"
+  },
+  {
+    "id": "simple-041",
+    "query": "Employee count trend?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  },
+  {
+    "id": "simple-042",
+    "query": "Board members?",
+    "expectedComplexity": "simple",
+    "expectedIntent": "factual",
+    "category": "operational"
+  }
+]

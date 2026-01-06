@@ -1,0 +1,200 @@
+[
+  {
+    "id": "complex-001",
+    "query": "Analyze the revenue trends across all quarters of 2024 and identify any anomalies or seasonal patterns",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial",
+    "notes": "Multi-period analysis with pattern detection"
+  },
+  {
+    "id": "complex-002",
+    "query": "Find any contradictions between the CIM financial projections and the audited financial statements",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial",
+    "notes": "Contradiction detection"
+  },
+  {
+    "id": "complex-003",
+    "query": "Analyze the EBITDA margins from Q1 2023 to Q4 2024 and explain the year-over-year trends",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial",
+    "notes": "Financial + time range + trends"
+  },
+  {
+    "id": "complex-004",
+    "query": "Identify all potential risks across financial, operational, and legal dimensions and assess their impact on valuation",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "operational",
+    "notes": "Multi-dimensional risk analysis"
+  },
+  {
+    "id": "complex-005",
+    "query": "Analyze the correlation between customer churn and revenue growth over the past 8 quarters",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial",
+    "notes": "Correlation analysis"
+  },
+  {
+    "id": "complex-006",
+    "query": "Compare the company's financial performance against industry benchmarks and identify areas of underperformance",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "complex-007",
+    "query": "Trace all related party transactions and analyze their impact on the financial statements",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "legal",
+    "notes": "Multi-hop entity resolution"
+  },
+  {
+    "id": "complex-008",
+    "query": "Identify discrepancies between management representations and third-party data sources",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "operational",
+    "notes": "Discrepancy detection"
+  },
+  {
+    "id": "complex-009",
+    "query": "Analyze the working capital trends and their implications for post-acquisition cash flow",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "complex-010",
+    "query": "Assess the technology debt and its potential impact on future capital expenditure requirements",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "technical"
+  },
+  {
+    "id": "complex-011",
+    "query": "Identify all contractual obligations that could trigger upon change of control and quantify the financial exposure",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "complex-012",
+    "query": "Analyze the customer acquisition cost trends and their correlation with lifetime value across different segments",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "complex-013",
+    "query": "Trace the ownership structure through all subsidiaries and identify any beneficial ownership concerns",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "legal",
+    "notes": "Multi-hop traversal"
+  },
+  {
+    "id": "complex-014",
+    "query": "Analyze the impact of regulatory changes on the business model and project future compliance costs",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "legal"
+  },
+  {
+    "id": "complex-015",
+    "query": "Compare the gross margin evolution against pricing changes and identify margin compression risks",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "complex-016",
+    "query": "Analyze employee productivity metrics across departments and identify efficiency improvement opportunities",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "complex-017",
+    "query": "Identify all revenue recognition policies and assess compliance with current accounting standards",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "complex-018",
+    "query": "Trace the supply chain dependencies and analyze the risk of single-source components",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "complex-019",
+    "query": "Analyze the intellectual property portfolio and its strategic value for competitive positioning",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "technical"
+  },
+  {
+    "id": "complex-020",
+    "query": "Identify inconsistencies between different data sources regarding employee headcount and compensation",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "operational",
+    "notes": "Inconsistency detection"
+  },
+  {
+    "id": "complex-021",
+    "query": "Analyze the debt covenants and assess the risk of breach based on projected financial performance",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "complex-022",
+    "query": "Compare the company's market share evolution against competitors over the past 3 years",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "complex-023",
+    "query": "Analyze the tax structure across jurisdictions and identify potential exposure areas",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "complex-024",
+    "query": "Trace all intercompany transactions and analyze transfer pricing compliance",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  },
+  {
+    "id": "complex-025",
+    "query": "Analyze the customer contract portfolio and identify concentration risks and renewal probability",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "operational"
+  },
+  {
+    "id": "complex-026",
+    "query": "Assess the cybersecurity posture and quantify potential breach exposure",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "technical"
+  },
+  {
+    "id": "complex-027",
+    "query": "Analyze the pension and benefit obligations and their impact on long-term liabilities",
+    "expectedComplexity": "complex",
+    "expectedIntent": "task",
+    "category": "financial"
+  }
+]

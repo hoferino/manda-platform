@@ -37,6 +37,16 @@ agents:
       temperature: 0.3  # Lower for precision in financial calculations
       max_tokens: 4000  # Longer for detailed analysis with citations
 
+  # Story: E13.6 - Knowledge Graph Specialist Agent
+  # Entity resolution, relationship traversal, contradiction detection
+  knowledge_graph:
+    primary: 'google-gla:gemini-2.5-pro'  # Good for structured reasoning
+    fallback: 'anthropic:claude-sonnet-4-0'
+    settings:
+      temperature: 0.3  # Lower for precision
+      max_tokens: 4000  # Longer for complex traversals
+      timeout: 45       # Graph queries can take time
+
 # Cost per 1M tokens (USD) - Dec 2025 pricing
 # Used for cost tracking per provider/model
 costs:

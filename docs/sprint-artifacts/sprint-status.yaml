@@ -2149,15 +2149,24 @@ development_status:
   e13-5-drafted: 2026-01-06
   e13-5-ready-for-dev: 2026-01-06
   e13-5-done: 2026-01-06
-  e13-6-knowledge-graph-specialist: backlog
+  e13-6-knowledge-graph-specialist: done
   e13-6-points: 5
   e13-6-priority: P1
   e13-6-description: "Pydantic AI specialist agent for entity resolution and KG traversal"
+  e13-6-story-file: docs/sprint-artifacts/stories/e13-6-knowledge-graph-specialist.md
+  e13-6-drafted: 2026-01-06
+  e13-6-ready-for-dev: 2026-01-06
+  e13-6-done: 2026-01-06
   # P2 - Medium (Validation)
-  e13-7-performance-benchmarking-suite: backlog
+  e13-7-performance-benchmarking-suite: done
   e13-7-points: 5
   e13-7-priority: P2
   e13-7-description: "Automated benchmark runner with 100+ queries, LangSmith integration"
+  e13-7-story-file: docs/sprint-artifacts/stories/e13-7-performance-benchmarking-suite.md
+  e13-7-drafted: 2026-01-06
+  e13-7-ready-for-dev: 2026-01-06
+  e13-7-review: 2026-01-07
+  e13-7-done: 2026-01-07
   # P1 - Infrastructure (Added 2026-01-06)
   e13-8-redis-caching-layer: backlog
   e13-8-points: 5

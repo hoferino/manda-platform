@@ -28,7 +28,8 @@
     "db:types": "npx supabase gen types typescript --project-id cymfyqussypehaeebedn > lib/supabase/database.types.ts",
     "test:rls": "npx tsx scripts/test-rls.ts",
     "test:performance": "npx tsx scripts/test-performance.ts",
-    "test:db": "npm run test:rls && npm run test:performance"
+    "test:db": "npm run test:rls && npm run test:performance",
+    "benchmark": "npx tsx scripts/benchmark/cli.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -106,9 +107,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.1",
+    "commander": "^14.0.2",
     "eslint": "^9",
     "eslint-config-next": "16.0.4",
     "jsdom": "^27.2.0",
+    "langsmith": "^0.4.5",
+    "p-limit": "^7.2.0",
+    "simple-statistics": "^7.8.8",
     "supabase": "^2.58.5",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
