@@ -28,6 +28,15 @@ agents:
     primary: 'anthropic:claude-sonnet-4-5-20250929'
     fallback: 'google-gla:gemini-1.5-pro'
 
+  # Story: E13.5 - Financial Analyst Specialist Agent
+  # M&A financial analysis specialist for EBITDA, QoE, working capital queries
+  financial_analyst:
+    primary: 'anthropic:claude-sonnet-4-0'
+    fallback: 'google-gla:gemini-2.5-pro'
+    settings:
+      temperature: 0.3  # Lower for precision in financial calculations
+      max_tokens: 4000  # Longer for detailed analysis with citations
+
 # Cost per 1M tokens (USD) - Dec 2025 pricing
 # Used for cost tracking per provider/model
 costs:

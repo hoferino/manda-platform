@@ -2,9 +2,11 @@
  * Specialist Node Implementations
  *
  * Story: E13.4 - Supervisor Agent Pattern (AC: #2, #3, #6)
+ * Story: E13.5 - Financial Analyst Specialist Agent (AC: #4)
  *
  * LangGraph node implementations for specialist agents.
- * E13.5 (Financial Analyst) and E13.6 (Knowledge Graph) are stubs - full implementations pending.
+ * E13.5 (Financial Analyst) implemented with real Python backend invocation.
+ * E13.6 (Knowledge Graph) is stub - full implementation pending.
  *
  * Node Pattern:
  * - Each node receives SupervisorState
@@ -13,6 +15,7 @@
  *
  * References:
  * - [Source: docs/sprint-artifacts/stories/e13-4-supervisor-agent-pattern.md]
+ * - [Source: docs/sprint-artifacts/stories/e13-5-financial-analyst-specialist.md]
  * - [Source: manda-app/lib/agent/executor.ts] - createChatAgent pattern
  */
 
@@ -102,15 +105,48 @@ export type SpecialistNode = (
 ) => Promise<Partial<SupervisorState>>
 
 // =============================================================================
-// Financial Analyst Node (AC: #2) - STUB
+// Financial Analyst Node (AC: #2) - E13.5 IMPLEMENTATION
 // =============================================================================
 
 /**
+ * Financial Analyst API response type
+ * Story: E13.5 (AC: #4) - Register as specialist in supervisor routing
+ */
+interface FinancialAnalystApiResponse {
+  success: boolean
+  result?: {
+    summary: string
+    findings: Array<{
+      metric: string
+      value: string | number
+      confidence: number
+      source?: {
+        document_name?: string
+        page_number?: number
+        excerpt?: string
+      }
+    }>
+    confidence: number
+    sources: Array<{
+      document_id?: string
+      document_name?: string
+      page_number?: number
+      excerpt?: string
+    }>
+    limitations?: string
+    follow_up_questions?: string[]
+  }
+  error?: string
+  model_used?: string
+  latency_ms?: number
+}
+
+/**
  * Financial Analyst Specialist Node
- * Story: E13.4 (AC: #2) - Route to financial_analyst for financial queries
+ * Story: E13.5 (AC: #4) - Register as specialist in supervisor routing
  *
- * NOTE: Full implementation in E13.5. This stub uses the general agent
- * with a financial-focused system prompt.
+ * Invokes the Python backend Financial Analyst agent for complex financial queries.
+ * Replaces E13.4 stub implementation with real API invocation.
  *
  * @param state - Current supervisor state
  * @returns Partial state update with specialist result
@@ -119,39 +155,154 @@ export async function financialAnalystNode(
   state: SupervisorState
 ): Promise<Partial<SupervisorState>> {
   const startTime = Date.now()
-  console.log('[Supervisor] Invoking financial_analyst specialist (stub)')
+  console.log('[Supervisor] Invoking financial_analyst specialist (E13.5)')
 
   try {
-    const result = await invokeSpecialistWithAgent(
-      SPECIALIST_IDS.FINANCIAL_ANALYST,
-      state,
-      SPECIALIST_PROMPTS[SPECIALIST_IDS.FINANCIAL_ANALYST]!
-    )
-
+    const result = await invokeFinancialAnalyst(state)
     return {
-      specialistResults: [{
-        ...result,
-        stub: true, // Flag for tracing
-      }],
+      specialistResults: [result],
     }
   } catch (error) {
     console.error('[Supervisor] Financial analyst error:', error)
-    return {
-      specialistResults: [
-        createSpecialistResult(
-          SPECIALIST_IDS.FINANCIAL_ANALYST,
-          '',
-          0,
-          [],
-          {
-            timing: Date.now() - startTime,
-            stub: true,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          }
-        ),
-      ],
+
+    // Fallback to stub implementation on API failure
+    console.log('[Supervisor] Falling back to stub implementation')
+    try {
+      const fallbackResult = await invokeSpecialistWithAgent(
+        SPECIALIST_IDS.FINANCIAL_ANALYST,
+        state,
+        SPECIALIST_PROMPTS[SPECIALIST_IDS.FINANCIAL_ANALYST]!
+      )
+
+      return {
+        specialistResults: [{
+          ...fallbackResult,
+          stub: true, // Flag that we fell back to stub
+          error: `API fallback: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        }],
+      }
+    } catch (fallbackError) {
+      return {
+        specialistResults: [
+          createSpecialistResult(
+            SPECIALIST_IDS.FINANCIAL_ANALYST,
+            'Unable to analyze financial data at this time. Please try again.',
+            0.2,
+            [],
+            {
+              timing: Date.now() - startTime,
+              stub: true,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            }
+          ),
+        ],
+      }
     }
   }
+}
+
+/**
+ * Invoke the Financial Analyst Python API
+ * Story: E13.5 (AC: #4) - Implement invokeFinancialAnalyst() that calls Python backend
+ *
+ * @param state - Current supervisor state with query and context
+ * @returns SpecialistResult from the Financial Analyst agent
+ */
+async function invokeFinancialAnalyst(state: SupervisorState): Promise<SpecialistResult> {
+  const startTime = Date.now()
+
+  const processingApiUrl = process.env.MANDA_PROCESSING_API_URL
+  if (!processingApiUrl) {
+    throw new Error('MANDA_PROCESSING_API_URL not configured')
+  }
+
+  // Build request body
+  const requestBody = {
+    query: state.query,
+    deal_id: state.dealId,
+    organization_id: state.organizationId,
+    context: state.intent?.rationale || undefined,
+  }
+
+  console.log('[Financial Analyst] Calling API:', `${processingApiUrl}/api/agents/financial-analyst/invoke`)
+
+  const response = await fetch(`${processingApiUrl}/api/agents/financial-analyst/invoke`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(state.organizationId && { 'x-organization-id': state.organizationId }),
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unknown error')
+    throw new Error(`Financial Analyst API error: ${response.status} - ${errorText}`)
+  }
+
+  const apiResponse: FinancialAnalystApiResponse = await response.json()
+
+  if (!apiResponse.success || !apiResponse.result) {
+    throw new Error(apiResponse.error || 'Financial Analyst API returned unsuccessful result')
+  }
+
+  // Transform API response to SpecialistResult
+  const result = apiResponse.result
+  const sources = result.sources.map((s) => ({
+    documentId: s.document_id,
+    documentName: s.document_name,
+    snippet: s.excerpt,
+  }))
+
+  // Build output text with structured information
+  let output = result.summary
+
+  // Append findings if present
+  if (result.findings && result.findings.length > 0) {
+    output += '\n\n**Key Findings:**\n'
+    for (const finding of result.findings) {
+      output += `- ${finding.metric}: ${finding.value}`
+      if (finding.source?.document_name) {
+        output += ` [Source: ${finding.source.document_name}`
+        if (finding.source.page_number) {
+          output += `, p.${finding.source.page_number}`
+        }
+        output += ']'
+      }
+      output += '\n'
+    }
+  }
+
+  // Append limitations if present
+  if (result.limitations) {
+    output += `\n**Note:** ${result.limitations}`
+  }
+
+  // Append follow-up questions if present
+  if (result.follow_up_questions && result.follow_up_questions.length > 0) {
+    output += '\n\n**Suggested Follow-up Questions:**\n'
+    for (const q of result.follow_up_questions) {
+      output += `- ${q}\n`
+    }
+  }
+
+  const timing = apiResponse.latency_ms || (Date.now() - startTime)
+
+  console.log('[Financial Analyst] API response received', {
+    confidence: result.confidence,
+    findingsCount: result.findings?.length || 0,
+    sourcesCount: sources.length,
+    latencyMs: timing,
+  })
+
+  return createSpecialistResult(
+    SPECIALIST_IDS.FINANCIAL_ANALYST,
+    output,
+    result.confidence,
+    sources,
+    { timing }
+    // NO stub: true - this is the real implementation
+  )
 }
 
 // =============================================================================

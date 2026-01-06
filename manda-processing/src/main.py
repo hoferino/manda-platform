@@ -11,7 +11,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import health, webhooks, search, processing, financial_metrics, entities, graphiti
+from src.api.routes import health, webhooks, search, processing, financial_metrics, entities, graphiti, agents
 from src.config import get_settings
 
 
@@ -128,6 +128,7 @@ def create_app() -> FastAPI:
     app.include_router(financial_metrics.router, tags=["Financial Metrics"])  # E3.9
     app.include_router(entities.router, tags=["Entities"])  # E10.6: Entity resolution
     app.include_router(graphiti.router, tags=["Graphiti"])  # E11.3: Knowledge write-back
+    app.include_router(agents.router, tags=["Agents"])  # E13.5: Specialist agents
 
     return app
 
