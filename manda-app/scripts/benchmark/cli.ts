@@ -4,9 +4,14 @@
  *
  * Command-line interface for the performance benchmarking suite.
  * Story: E13.7 - Performance Benchmarking Suite (AC: #2, #4)
+ * Extended: E13 Retrospective - Phased Validation System
  *
  * Usage:
- *   npm run benchmark run [options]
+ *   npm run benchmark setup                    # Create test deal
+ *   npm run benchmark inspect                  # View knowledge graph entities
+ *   npm run benchmark validate <doc-type>      # Validate specific document type
+ *   npm run benchmark edge-cases               # Test missing content handling
+ *   npm run benchmark run [options]            # Full benchmark suite
  *   npm run benchmark report --input results.json --output report.md
  *   npm run benchmark compare --baseline baseline.json --current results.json
  *   npm run benchmark upload --results results.json --dataset my-dataset
@@ -19,6 +24,10 @@ import { BenchmarkRunner, loadQueries, generateRunId } from './runner'
 import { generateReport, generateMarkdownReport, compareReports, generateComparisonMarkdown } from './report-generator'
 import { uploadToDataset, isLangSmithConfigured } from './langsmith'
 import { validateAuthConfig } from './auth'
+import { runSetup, listDeals } from './commands/setup'
+import { runInspect } from './commands/inspect'
+import { runValidate, showValidationStatus } from './commands/validate'
+import { runEdgeCases } from './commands/edge-cases'
 import type { BenchmarkConfig, BenchmarkReport, BenchmarkResult } from './types'
 import type { ComplexityLevel } from '@/lib/agent/intent'
 
@@ -260,13 +269,13 @@ program
   })
 
 /**
- * Validate command
+ * Check config command (validates environment and configuration)
  */
 program
-  .command('validate')
-  .description('Validate benchmark configuration')
+  .command('check-config')
+  .description('Validate benchmark configuration and environment')
   .action(async () => {
-    console.log('🔍 Validating benchmark configuration')
+    console.log('Validating benchmark configuration')
     console.log('')
 
     // Check API URL
@@ -276,23 +285,23 @@ program
     // Check Deal ID
     const dealId = process.env.BENCHMARK_DEAL_ID
     if (dealId) {
-      console.log(`Deal ID: ${dealId} ✅`)
+      console.log(`Deal ID: ${dealId} [OK]`)
     } else {
-      console.log('Deal ID: Not set ⚠️')
+      console.log('Deal ID: Not set [WARN]')
     }
 
     // Check authentication
     const authValidation = validateAuthConfig()
     if (authValidation.valid) {
-      console.log('Authentication: Configured ✅')
+      console.log('Authentication: Configured [OK]')
     } else {
-      console.log('Authentication: Issues found ⚠️')
+      console.log('Authentication: Issues found [WARN]')
       authValidation.errors.forEach((e) => console.log(`   - ${e}`))
     }
 
     // Check LangSmith
     if (isLangSmithConfigured()) {
-      console.log('LangSmith: Configured ✅')
+      console.log('LangSmith: Configured [OK]')
     } else {
       console.log('LangSmith: Not configured (optional)')
     }
@@ -301,7 +310,7 @@ program
     const queriesDir = path.join(__dirname, 'queries')
     try {
       const queries = await loadQueries(queriesDir)
-      console.log(`Queries: ${queries.length} loaded ✅`)
+      console.log(`Queries: ${queries.length} loaded [OK]`)
 
       const simple = queries.filter((q) => q.expectedComplexity === 'simple').length
       const medium = queries.filter((q) => q.expectedComplexity === 'medium').length
@@ -311,9 +320,59 @@ program
       console.log(`   Medium: ${medium}`)
       console.log(`   Complex: ${complex}`)
     } catch (error) {
-      console.log(`Queries: Failed to load ❌`)
+      console.log(`Queries: Failed to load [ERROR]`)
       console.log(`   ${error}`)
     }
+  })
+
+/**
+ * Setup command - create test deal for benchmark
+ */
+program
+  .command('setup')
+  .description('Create test deal for benchmark validation')
+  .option('--list', 'List existing deals instead of creating new one')
+  .action(async (options) => {
+    if (options.list) {
+      await listDeals()
+    } else {
+      await runSetup()
+    }
+  })
+
+/**
+ * Inspect command - view knowledge graph entities
+ */
+program
+  .command('inspect')
+  .description('Inspect knowledge graph entities for a deal')
+  .option('--deal-id <id>', 'Deal ID (or set BENCHMARK_DEAL_ID)')
+  .action(async (options) => {
+    await runInspect(options.dealId)
+  })
+
+/**
+ * Validate command - run queries for specific document type
+ */
+program
+  .command('validate [docType]')
+  .description('Run validation queries for a document type (cim|financials|legal|operational|any)')
+  .action(async (docType) => {
+    if (!docType) {
+      await showValidationStatus()
+    } else {
+      await runValidate(docType)
+    }
+  })
+
+/**
+ * Edge cases command - test missing content handling
+ */
+program
+  .command('edge-cases')
+  .description('Test agent handling of missing content (hallucination detection)')
+  .action(async () => {
+    await runEdgeCases()
   })
 
 program.parse()

@@ -153,6 +153,22 @@ Caching Layer:
     - summarization: 30min TTL, stores conversation summaries
   fallback: In-memory Map if Redis unavailable (graceful degradation)
 
+Checkpoint Persistence:
+  provider: PostgreSQL (Supabase) via @langchain/langgraph-checkpoint-postgres
+  # - Durable workflow state for CIM Builder and Supervisor graphs
+  # - Survives server restarts and browser session changes
+  # - Enables multi-day CIM creation workflows
+  tables:
+    - langgraph_checkpoints: Primary state storage (thread_id, checkpoint JSONB)
+    - langgraph_checkpoint_writes: Atomic write buffer for state updates
+    - langgraph_checkpoint_blobs: Binary data storage for large state values
+  thread_id_formats:
+    - CIM workflow: cim-{dealId}-{cimId}
+    - Supervisor: supervisor-{dealId}-{timestamp}
+  rls: Enabled (extract deal_id from thread_id for tenant isolation)
+  retention: 30 days (cleanup via scheduled job)
+  fallback: In-memory MemorySaver if PostgreSQL unavailable (graceful degradation)
+
 Intelligence Layer:
   ai_framework: LangChain 1.0 + LangGraph 1.0
   type_safety: Pydantic v2.12+
@@ -2597,7 +2613,7 @@ npm install
 | Docker in Production | TBD - targeting Cloud Run | - |
 | Supabase Local vs Cloud | Cloud Supabase in use | 2025-12 |
 | Memory Files vs Redis | ✅ Redis caching adopted over memory files (E13.8). Memory files rejected due to information loss, staleness, and coverage check overhead | 2026-01-06 |
-| CIM State Persistence | ✅ PostgreSQL checkpointer planned (E13.9). Replaces MemorySaver for durable workflow state | 2026-01-06 |
+| CIM State Persistence | ✅ PostgreSQL checkpointer implemented (E13.9). PostgresSaver replaces MemorySaver with graceful fallback. 30-day retention policy. | 2026-01-07 |
 
 ---
 

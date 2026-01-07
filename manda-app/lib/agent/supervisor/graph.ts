@@ -14,7 +14,7 @@
  * - [External: https://docs.langchain.com/oss/javascript/langgraph/graph-api]
  */
 
-import { StateGraph, START, END, MemorySaver, Send } from '@langchain/langgraph'
+import { StateGraph, START, END, Send } from '@langchain/langgraph'
 import {
   SupervisorStateAnnotation,
   type SupervisorState,
@@ -33,6 +33,7 @@ import {
 } from './specialists'
 import { synthesizeResults, getSynthesisStats } from './synthesis'
 import { classifyIntentAsync, type EnhancedIntentResult } from '../intent'
+import { getCheckpointer, createSupervisorThreadId, getCheckpointMetadata } from '@/lib/agent/checkpointer'
 
 // =============================================================================
 // Invocation Types
@@ -277,17 +278,18 @@ function routeToSpecialistNodes(
 /**
  * Create the supervisor graph
  * Story: E13.4 (AC: #1) - Create SupervisorAgent using LangGraph StateGraph
+ * Story: E13.9 - Now uses PostgresSaver for durable state persistence
  *
  * Graph structure:
  * - START → classify → route → [specialists] → synthesize → END
  * - Specialists run in parallel when multiple are selected
- * - MemorySaver used for checkpointing (TODO: PostgresSaver in E13.9)
+ * - PostgresSaver used for checkpointing with MemorySaver fallback
  *
- * @returns Compiled StateGraph
+ * @returns Promise<CompiledStateGraph> - Compiled workflow graph
  */
-export function createSupervisorGraph() {
-  // TODO: E13.9 - Replace with PostgresSaver when implemented
-  const checkpointer = new MemorySaver()
+export async function createSupervisorGraph() {
+  // E13.9 - Get shared checkpointer (PostgresSaver with MemorySaver fallback)
+  const checkpointer = await getCheckpointer()
 
   const workflow = new StateGraph(SupervisorStateAnnotation)
     // Add nodes
@@ -379,8 +381,8 @@ export async function invokeSupervisor(
 
   console.log(`[Supervisor] Invoked for query: "${trimmedQuery.substring(0, 100)}${trimmedQuery.length > 100 ? '...' : ''}"`)
 
-  // Create graph
-  const graph = createSupervisorGraph()
+  // Create graph (E13.9: now async for PostgresSaver)
+  const graph = await createSupervisorGraph()
 
   // Create initial state with validated query
   const initialState = createInitialState(trimmedQuery, dealId, userId, organizationId)
@@ -391,13 +393,14 @@ export async function invokeSupervisor(
   }
 
   // Build config for invocation with LangSmith metadata
+  // E13.9: Include checkpoint metadata for observability
   const config: {
     configurable?: { thread_id: string }
     tags?: string[]
     metadata?: Record<string, unknown>
     runName?: string
   } = {
-    tags: ['supervisor', 'e13.4'],
+    tags: ['supervisor', 'e13.4', 'e13.9'],
     runName: 'SupervisorAgent',
     metadata: {
       dealId,
@@ -406,12 +409,15 @@ export async function invokeSupervisor(
       hasPreclassifiedIntent: !!intent,
       intentType: intent?.intent,
       complexity: intent?.complexity ?? 'unknown',
+      // E13.9: Checkpoint observability
+      ...getCheckpointMetadata(),
     },
   }
 
-  if (threadId) {
-    config.configurable = { thread_id: threadId }
-  }
+  // E13.9: Use provided threadId or generate a consistent one for this conversation
+  // Format: supervisor-{dealId}-{timestamp} for RLS filtering
+  const effectiveThreadId = threadId ?? createSupervisorThreadId(dealId)
+  config.configurable = { thread_id: effectiveThreadId }
 
   // Invoke graph with tracing config
   const finalState = await graph.invoke(initialState, config)

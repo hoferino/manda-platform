@@ -13,7 +13,7 @@
  * - Tool result isolation (E11.1) - summaries in context, full results in cache
  */
 
-import { StateGraph, END, START, MemorySaver } from '@langchain/langgraph'
+import { StateGraph, END, START } from '@langchain/langgraph'
 import { createReactAgent } from '@langchain/langgraph/prebuilt'
 import { AIMessage, HumanMessage, SystemMessage, BaseMessage } from '@langchain/core/messages'
 import { createLLMClient, type LLMConfig } from '@/lib/llm/client'
@@ -28,6 +28,7 @@ import {
   type ToolResultCache,
   DEFAULT_ISOLATION_CONFIG,
 } from '@/lib/agent/tool-isolation'
+import { getCheckpointer, createCIMThreadId } from '@/lib/agent/checkpointer'
 
 // ============================================================================
 // Configuration
@@ -307,8 +308,13 @@ function afterError(state: CIMAgentStateType): string {
 
 /**
  * Create the CIM agent workflow graph
+ *
+ * Story: E13.9 - Now uses PostgresSaver for durable state persistence
+ *
+ * @param config - CIM agent configuration
+ * @returns Promise<CompiledStateGraph> - Compiled workflow graph
  */
-export function createCIMWorkflow(config: CIMAgentConfig) {
+export async function createCIMWorkflow(config: CIMAgentConfig) {
   // Create agent node with config
   const agentNode = createAgentNode(config)
 
@@ -339,8 +345,9 @@ export function createCIMWorkflow(config: CIMAgentConfig) {
     })
     .addEdge('phase_transition', 'router')
 
-  // Add memory checkpointer for state persistence
-  const checkpointer = new MemorySaver()
+  // Get shared checkpointer (PostgresSaver with MemorySaver fallback)
+  // Story: E13.9 - Durable state persistence across server restarts
+  const checkpointer = await getCheckpointer()
 
   // Compile the graph
   const app = workflow.compile({ checkpointer })
@@ -350,8 +357,9 @@ export function createCIMWorkflow(config: CIMAgentConfig) {
 
 /**
  * Type for the compiled CIM workflow
+ * Story: E13.9 - Now async, returns Promise
  */
-export type CIMWorkflow = ReturnType<typeof createCIMWorkflow>
+export type CIMWorkflow = Awaited<ReturnType<typeof createCIMWorkflow>>
 
 // ============================================================================
 // Execution Helpers

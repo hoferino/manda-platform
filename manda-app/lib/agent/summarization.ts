@@ -177,8 +177,9 @@ export function hashMessage(msg: BaseMessage): string {
     : JSON.stringify(msg.content)
   const typePrefix = msg._getType().slice(0, 2) // 'hu', 'ai', 'sy'
   // Use btoa for base64 encoding (works in both browser and Node 16+)
+  // Use 16 chars to avoid collision on similar content (e.g., 'Message 1' vs 'Message 2')
   try {
-    return btoa(`${typePrefix}:${content.slice(0, 100)}`).slice(0, 12)
+    return btoa(`${typePrefix}:${content.slice(0, 100)}`).slice(0, 16)
   } catch {
     // Fallback for non-ASCII content: use character code sum for better uniqueness
     // This preserves hash quality for non-Latin text (Japanese, Chinese, etc.)

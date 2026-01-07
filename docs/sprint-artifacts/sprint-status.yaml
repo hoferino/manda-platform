@@ -2100,9 +2100,11 @@ development_status:
   # Priority: P1 | Points: 46 | Stories: 9
   # Added: 2026-01-06
   # Updated: 2026-01-06 - Added E13.8 (Redis Caching) and E13.9 (PostgreSQL Checkpointer)
-  epic-13: in-progress
+  epic-13: done
   epic-13-jira-id: SCRUM-13
   epic-13-name: "Agent Orchestration Optimization"
+  epic-13-retrospective: done
+  epic-13-retro-file: docs/sprint-artifacts/epic-13-retro-2026-01-07.md
   epic-13-priority: P1
   epic-13-epic-file: docs/sprint-artifacts/epics/epic-E13.md
   epic-13-stories: 9
@@ -2177,10 +2179,15 @@ development_status:
   e13-8-ready-for-dev: 2026-01-07
   e13-8-review: 2026-01-07
   e13-8-done: 2026-01-07
-  e13-9-postgresql-checkpointer: backlog
+  e13-9-postgresql-checkpointer: done
   e13-9-points: 5
   e13-9-priority: P1
   e13-9-description: "Replace MemorySaver with PostgresSaver for durable CIM workflow state"
+  e13-9-story-file: docs/sprint-artifacts/stories/e13-9-postgresql-checkpointer.md
+  e13-9-drafted: 2026-01-07
+  e13-9-ready-for-dev: 2026-01-07
+  e13-9-review: 2026-01-07
+  e13-9-done: 2026-01-07
 
   # Tech Debt items discovered during Phase 1 testing
   phase-2-tech-debt:

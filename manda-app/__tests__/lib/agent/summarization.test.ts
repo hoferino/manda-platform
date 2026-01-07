@@ -206,7 +206,7 @@ describe('Hash Utilities', () => {
     it('should limit hash length', () => {
       const msg = new HumanMessage('A very long message '.repeat(100))
       const hash = hashMessage(msg)
-      expect(hash.length).toBeLessThanOrEqual(12)
+      expect(hash.length).toBeLessThanOrEqual(16)
     })
   })
 

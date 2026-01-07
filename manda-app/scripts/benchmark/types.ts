@@ -3,6 +3,7 @@
  *
  * TypeScript interfaces for the performance benchmarking suite.
  * Story: E13.7 - Performance Benchmarking Suite
+ * Extended: E13 Retrospective - Phased Validation System
  */
 
 import type { ComplexityLevel, IntentType } from '@/lib/agent/intent'
@@ -17,6 +18,34 @@ export type QueryCategory =
   | 'operational'
   | 'legal'
   | 'technical'
+
+/**
+ * Document types for phased validation
+ * Used to map queries to required document content
+ */
+export type DocumentType =
+  | 'cim'         // Confidential Information Memorandum - company overview, management team
+  | 'financials'  // Financial statements, models, projections
+  | 'legal'       // Contracts, cap table, shareholder agreements
+  | 'operational' // Org charts, technology stack, customer lists
+  | 'any'         // Greetings, meta - no document required
+
+/**
+ * Edge case type for testing missing content handling
+ */
+export type EdgeCaseType =
+  | 'missing_doc_type'      // Query requires doc not yet uploaded
+  | 'future_data'           // Query asks about period not in docs
+  | 'wrong_entity'          // Query mentions entity not in docs
+  | 'cross_doc_dependency'  // Query requires multiple doc types
+
+/**
+ * Expected behavior for edge case queries
+ */
+export type EdgeCaseBehavior =
+  | 'graceful_decline'  // "I don't have that information"
+  | 'partial_answer'    // Answer with available info, acknowledge gaps
+  | 'hallucination'     // Agent fabricated answer (BAD)
 
 /**
  * A single benchmark query with expected classification
@@ -36,6 +65,60 @@ export interface BenchmarkQuery {
   expectedToolCount?: number
   /** Optional notes about the query */
   notes?: string
+  /** Document types required to answer this query (at least one needed) */
+  requiredDocTypes?: DocumentType[]
+  /** Document types that enhance the response if available */
+  optionalDocTypes?: DocumentType[]
+}
+
+/**
+ * Edge case query for testing missing content handling
+ */
+export interface EdgeCaseQuery {
+  /** Unique query ID (e.g., "edge-001") */
+  id: string
+  /** The actual query text */
+  query: string
+  /** Type of edge case being tested */
+  edgeCaseType: EdgeCaseType
+  /** Document types that would be needed to answer correctly */
+  requiredDocTypesForSuccess: DocumentType[]
+  /** Expected behavior when content is missing */
+  expectedBehavior: EdgeCaseBehavior
+  /** Patterns indicating graceful decline (good) */
+  acceptablePatterns: string[]
+  /** Patterns indicating hallucination (bad) */
+  hallucinationPatterns: string[]
+  /** Optional notes about the test */
+  notes?: string
+}
+
+/**
+ * Result of an edge case test
+ */
+export interface EdgeCaseResult {
+  /** Query ID from EdgeCaseQuery */
+  queryId: string
+  /** The query text */
+  query: string
+  /** Type of edge case */
+  edgeCaseType: EdgeCaseType
+  /** Expected behavior */
+  expectedBehavior: EdgeCaseBehavior
+  /** Actual observed behavior */
+  actualBehavior: EdgeCaseBehavior
+  /** Whether the test passed (no hallucination) */
+  passed: boolean
+  /** The agent's response */
+  response: string
+  /** Matched acceptable pattern (if any) */
+  matchedAcceptablePattern?: string
+  /** Matched hallucination pattern (if any) */
+  matchedHallucinationPattern?: string
+  /** LangSmith trace ID */
+  traceId?: string
+  /** Total latency in milliseconds */
+  totalLatencyMs: number
 }
 
 /**

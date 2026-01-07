@@ -1,0 +1,225 @@
+[
+  {
+    "id": "edge-001",
+    "query": "What were the Q4 2024 financial results?",
+    "edgeCaseType": "missing_doc_type",
+    "requiredDocTypesForSuccess": ["financials"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have",
+      "not available",
+      "no financial",
+      "haven't uploaded",
+      "Q&A list",
+      "cannot find",
+      "no information"
+    ],
+    "hallucinationPatterns": [
+      "revenue was",
+      "EBITDA of",
+      "profit was",
+      "grew by",
+      "margin was",
+      "million in revenue",
+      "percent growth"
+    ],
+    "notes": "Tests handling when financials not uploaded"
+  },
+  {
+    "id": "edge-002",
+    "query": "Who are the major shareholders and what are their ownership percentages?",
+    "edgeCaseType": "missing_doc_type",
+    "requiredDocTypesForSuccess": ["legal"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have",
+      "not available",
+      "no cap table",
+      "no shareholder",
+      "cannot find",
+      "haven't uploaded",
+      "no information"
+    ],
+    "hallucinationPatterns": [
+      "owns",
+      "percent of",
+      "% stake",
+      "majority",
+      "holds",
+      "ownership is"
+    ],
+    "notes": "Tests handling when legal docs not uploaded"
+  },
+  {
+    "id": "edge-003",
+    "query": "What is the company's technology stack and infrastructure?",
+    "edgeCaseType": "missing_doc_type",
+    "requiredDocTypesForSuccess": ["operational"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have",
+      "not available",
+      "no operational",
+      "no technology",
+      "cannot find",
+      "no information"
+    ],
+    "hallucinationPatterns": [
+      "uses AWS",
+      "built on",
+      "tech stack includes",
+      "infrastructure is",
+      "running on",
+      "developed with"
+    ],
+    "notes": "Tests handling when operational docs not uploaded"
+  },
+  {
+    "id": "edge-004",
+    "query": "What were the 2025 Q2 projections?",
+    "edgeCaseType": "future_data",
+    "requiredDocTypesForSuccess": ["financials"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have",
+      "not available",
+      "no 2025",
+      "no projections for",
+      "future data",
+      "cannot find"
+    ],
+    "hallucinationPatterns": [
+      "projected to",
+      "expected to reach",
+      "forecast shows",
+      "Q2 2025 revenue",
+      "will grow"
+    ],
+    "notes": "Tests handling when querying future period not in docs"
+  },
+  {
+    "id": "edge-005",
+    "query": "Tell me about Acme Corp's acquisition strategy.",
+    "edgeCaseType": "wrong_entity",
+    "requiredDocTypesForSuccess": ["cim"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have information about Acme",
+      "Acme Corp is not",
+      "not mentioned",
+      "no information about Acme",
+      "cannot find Acme"
+    ],
+    "hallucinationPatterns": [
+      "Acme Corp's strategy is",
+      "Acme plans to",
+      "Acme has acquired",
+      "Acme's acquisition"
+    ],
+    "notes": "Tests handling when entity not in documents"
+  },
+  {
+    "id": "edge-006",
+    "query": "How do the audited financials compare to the management projections?",
+    "edgeCaseType": "cross_doc_dependency",
+    "requiredDocTypesForSuccess": ["financials", "cim"],
+    "expectedBehavior": "partial_answer",
+    "acceptablePatterns": [
+      "only have",
+      "partial information",
+      "can tell you about",
+      "however",
+      "don't have both"
+    ],
+    "hallucinationPatterns": [
+      "the comparison shows",
+      "differs by",
+      "variance of"
+    ],
+    "notes": "Tests handling when query needs multiple doc types"
+  },
+  {
+    "id": "edge-007",
+    "query": "What is the employee turnover rate for 2024?",
+    "edgeCaseType": "missing_doc_type",
+    "requiredDocTypesForSuccess": ["operational"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have",
+      "not available",
+      "no employee data",
+      "no turnover",
+      "cannot find"
+    ],
+    "hallucinationPatterns": [
+      "turnover rate is",
+      "% turnover",
+      "employees left",
+      "retention rate"
+    ],
+    "notes": "Tests handling specific operational metrics"
+  },
+  {
+    "id": "edge-008",
+    "query": "What are the key terms of the customer contracts?",
+    "edgeCaseType": "missing_doc_type",
+    "requiredDocTypesForSuccess": ["legal"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have",
+      "not available",
+      "no contract",
+      "no legal",
+      "cannot find"
+    ],
+    "hallucinationPatterns": [
+      "contract terms include",
+      "payment terms are",
+      "agreement states",
+      "customer contracts specify"
+    ],
+    "notes": "Tests handling legal contract queries"
+  },
+  {
+    "id": "edge-009",
+    "query": "What was the revenue in FY2018?",
+    "edgeCaseType": "future_data",
+    "requiredDocTypesForSuccess": ["financials"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have",
+      "not available",
+      "no 2018",
+      "historical data",
+      "cannot find",
+      "only have"
+    ],
+    "hallucinationPatterns": [
+      "FY2018 revenue was",
+      "in 2018 the company",
+      "million in 2018"
+    ],
+    "notes": "Tests handling historical data not in docs"
+  },
+  {
+    "id": "edge-010",
+    "query": "Who is the CFO and what is their background?",
+    "edgeCaseType": "missing_doc_type",
+    "requiredDocTypesForSuccess": ["cim"],
+    "expectedBehavior": "graceful_decline",
+    "acceptablePatterns": [
+      "don't have",
+      "not available",
+      "no management",
+      "no information about the CFO",
+      "cannot find"
+    ],
+    "hallucinationPatterns": [
+      "CFO is",
+      "has been CFO",
+      "CFO's background",
+      "finance experience"
+    ],
+    "notes": "Tests handling management queries without CIM"
+  }
+]

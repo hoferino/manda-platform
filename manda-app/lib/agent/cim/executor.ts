@@ -39,6 +39,7 @@ import {
   Slide,
 } from '@/lib/types/cim'
 import { parseComponentReference } from '@/lib/cim/reference-utils'
+import { createCIMThreadId } from '@/lib/agent/checkpointer'
 
 // ============================================================================
 // Types
@@ -127,18 +128,25 @@ function prepareComponentContext(message: string, slides: Slide[]) {
 
 /**
  * Get or create a workflow for a CIM
+ *
+ * Story: E13.9 - Now async due to PostgresSaver initialization
+ *
+ * @param cimId - CIM ID for cache key
+ * @param config - CIM agent configuration
+ * @returns Promise<CIMWorkflow> - Compiled workflow
  */
-function getOrCreateWorkflow(
+async function getOrCreateWorkflow(
   cimId: string,
   config: CIMAgentConfig
-): CIMWorkflow {
+): Promise<CIMWorkflow> {
   const cached = workflowCache.get(cimId)
 
   if (cached) {
     return cached.workflow
   }
 
-  const workflow = createCIMWorkflow(config)
+  // Story: E13.9 - createCIMWorkflow is now async
+  const workflow = await createCIMWorkflow(config)
   workflowCache.set(cimId, { workflow, config })
 
   return workflow
@@ -187,8 +195,8 @@ export async function executeCIMChat(
     dealName,
   }
 
-  // Get or create workflow
-  const workflow = getOrCreateWorkflow(cimId, config)
+  // Get or create workflow (E13.9: now async for PostgresSaver)
+  const workflow = await getOrCreateWorkflow(cimId, config)
 
   // Build initial state from CIM data
   const conversationMessages = cim.conversationHistory.map(m => ({
@@ -214,8 +222,8 @@ export async function executeCIMChat(
     userId,
   }
 
-  // Execute workflow
-  const threadId = `cim-${cimId}`
+  // Execute workflow with E13.9 thread ID format for RLS
+  const threadId = createCIMThreadId(dealId, cimId)
   const { agentMessage, componentRef, slideRef } = prepareComponentContext(message, cim.slides)
   const result = await executeCIMWorkflow(workflow, agentMessage, threadId, initialState)
 
@@ -324,8 +332,8 @@ export async function* streamCIMChat(
     dealName,
   }
 
-  // Get or create workflow
-  const workflow = getOrCreateWorkflow(cimId, config)
+  // Get or create workflow (E13.9: now async for PostgresSaver)
+  const workflow = await getOrCreateWorkflow(cimId, config)
 
   // Build initial state from CIM data
   const conversationMessages = cim.conversationHistory.map(m => ({
@@ -349,8 +357,8 @@ export async function* streamCIMChat(
     userId,
   }
 
-  // Stream execution
-  const threadId = `cim-${cimId}`
+  // Stream execution with E13.9 thread ID format for RLS
+  const threadId = createCIMThreadId(dealId, cimId)
   const { agentMessage, componentRef, slideRef } = prepareComponentContext(message, cim.slides)
   let fullContent = ''
   let finalState: CIMAgentStateType | null = null
