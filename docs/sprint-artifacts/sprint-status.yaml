@@ -2168,10 +2168,15 @@ development_status:
   e13-7-review: 2026-01-07
   e13-7-done: 2026-01-07
   # P1 - Infrastructure (Added 2026-01-06)
-  e13-8-redis-caching-layer: backlog
+  e13-8-redis-caching-layer: done
   e13-8-points: 5
   e13-8-priority: P1
   e13-8-description: "Migrate in-memory caches to Upstash Redis for cross-instance sharing and cold start resilience"
+  e13-8-story-file: docs/sprint-artifacts/stories/e13-8-redis-caching-layer.md
+  e13-8-drafted: 2026-01-07
+  e13-8-ready-for-dev: 2026-01-07
+  e13-8-review: 2026-01-07
+  e13-8-done: 2026-01-07
   e13-9-postgresql-checkpointer: backlog
   e13-9-points: 5
   e13-9-priority: P1

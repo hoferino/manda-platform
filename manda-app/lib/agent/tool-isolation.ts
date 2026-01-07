@@ -6,12 +6,18 @@
  * results separately, preserving context window tokens for meaningful conversation.
  *
  * Story: E11.1 - Tool Result Isolation
+ * Story: E13.8 - Redis Caching Layer (AC: #2, #10)
  *
  * @see https://blog.langchain.com/context-engineering-for-agents/ - "Isolate" strategy
  */
 
 import type { StructuredToolInterface } from '@langchain/core/tools'
 import { estimateTokens } from './context'
+import {
+  cacheToolResult as cacheToRedis,
+  getToolResult as getFromRedis,
+  type ToolResultCacheEntry as RedisToolResultEntry,
+} from '@/lib/cache/tool-result-cache'
 
 // ============================================================================
 // Types
@@ -92,13 +98,18 @@ export function createToolResultCache(): ToolResultCache {
  * Store a tool result in the cache
  *
  * Story: E11.1 - Tool Result Isolation (AC: #2)
+ * Story: E13.8 - Redis Caching Layer (AC: #2, #10)
+ *
+ * Stores in both:
+ * - Local Map (for same-request access, backward compatibility)
+ * - Redis (for cross-instance sharing, survives restarts)
  */
 export function cacheToolResult(
   cache: ToolResultCache,
   entry: ToolResultCacheEntry,
   config: IsolationConfig = DEFAULT_ISOLATION_CONFIG
 ): void {
-  // Evict oldest if at capacity
+  // Evict oldest if at capacity (local Map only)
   if (cache.size >= config.maxEntries) {
     const oldest = [...cache.entries()].sort(
       (a, b) => a[1].timestamp.getTime() - b[1].timestamp.getTime()
@@ -106,13 +117,23 @@ export function cacheToolResult(
     if (oldest) cache.delete(oldest[0])
   }
 
+  // Store in local Map for immediate access
   cache.set(entry.toolCallId, entry)
+
+  // Store in Redis for cross-instance sharing (fire-and-forget, non-blocking)
+  // E13.8: Redis cache handles TTL, maxEntries, and fallback automatically
+  cacheToRedis(entry).catch((error) => {
+    console.warn('[tool-isolation] Redis cache write failed:', error)
+  })
 }
 
 /**
- * Retrieve a cached tool result
+ * Retrieve a cached tool result (sync - local cache only)
  *
  * Story: E11.1 - Tool Result Isolation (AC: #4)
+ *
+ * NOTE: For backward compatibility, this is still synchronous and only
+ * checks the local Map. Use getToolResultAsync for Redis lookups.
  */
 export function getToolResult(
   cache: ToolResultCache,
@@ -129,6 +150,41 @@ export function getToolResult(
   }
 
   return entry.fullResult
+}
+
+/**
+ * Retrieve a cached tool result (async - checks Redis for cross-instance sharing)
+ *
+ * Story: E13.8 - Redis Caching Layer (AC: #2, #10)
+ *
+ * Checks in order:
+ * 1. Local Map (fastest, same-instance)
+ * 2. Redis (cross-instance sharing)
+ *
+ * @param cache - Local tool result cache
+ * @param toolCallId - Tool call ID to look up
+ * @param config - Isolation configuration
+ * @returns Full tool result or null if not found
+ */
+export async function getToolResultAsync(
+  cache: ToolResultCache,
+  toolCallId: string,
+  config: IsolationConfig = DEFAULT_ISOLATION_CONFIG
+): Promise<unknown | null> {
+  // First check local cache (fastest)
+  const localResult = getToolResult(cache, toolCallId, config)
+  if (localResult !== null) {
+    return localResult
+  }
+
+  // Check Redis for cross-instance hit
+  try {
+    const redisResult = await getFromRedis(toolCallId)
+    return redisResult
+  } catch (error) {
+    console.warn('[tool-isolation] Redis cache read failed:', error)
+    return null
+  }
 }
 
 /**

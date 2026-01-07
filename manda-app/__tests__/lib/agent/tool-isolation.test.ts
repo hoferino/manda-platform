@@ -11,6 +11,7 @@ import {
   createToolResultCache,
   cacheToolResult,
   getToolResult,
+  getToolResultAsync,
   clearExpiredEntries,
   getCacheStats,
   isolateToolResult,
@@ -683,5 +684,59 @@ describe('IsolationMetricsTracker', () => {
     expect(agg.toolCalls).toBe(0)
     expect(agg.totalSavings).toBe(0)
     expect(agg.savingsPercent).toBe(0)
+  })
+})
+
+// ============================================================================
+// getToolResultAsync Tests (E13.8 - Redis Cross-Instance Lookup)
+// ============================================================================
+
+describe('getToolResultAsync', () => {
+  let cache: ToolResultCache
+
+  beforeEach(() => {
+    cache = createToolResultCache()
+  })
+
+  it('should return result from local cache if present', async () => {
+    const entry = createTestEntry('call_local')
+    cacheToolResult(cache, entry)
+
+    const result = await getToolResultAsync(cache, 'call_local')
+
+    expect(result).toEqual(entry.fullResult)
+  })
+
+  it('should return null for missing key when no Redis', async () => {
+    // Without Redis configured, should check local then return null
+    const result = await getToolResultAsync(cache, 'non-existent-id')
+
+    expect(result).toBeNull()
+  })
+
+  it('should check local cache before Redis', async () => {
+    // Store entry only in local cache
+    const entry = createTestEntry('call_priority')
+    cacheToolResult(cache, entry)
+
+    // getToolResultAsync should find it in local cache first
+    const result = await getToolResultAsync(cache, 'call_priority')
+
+    expect(result).toEqual(entry.fullResult)
+  })
+
+  it('should handle TTL expiry in local cache', async () => {
+    // Directly set an expired entry in the local Map (bypassing cacheToolResult
+    // which also writes to Redis with a fresh TTL)
+    const entry = createTestEntry('call_expired', {
+      timestamp: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago (expired)
+    })
+    cache.set(entry.toolCallId, entry)
+
+    // Local cache should return null for expired entry
+    // Note: getToolResultAsync falls back to Redis if local returns null
+    // but without Redis env vars, Redis check also returns null
+    const localResult = getToolResult(cache, 'call_expired')
+    expect(localResult).toBeNull()
   })
 })

@@ -52,14 +52,8 @@ const LATENCY_TARGET_MS = 500
 // Types
 // =============================================================================
 
-/**
- * Cached retrieval result
- */
-interface CachedResult {
-  context: string
-  entities: string[]
-  timestamp: number
-}
+// CachedResult type moved to lib/cache/retrieval-cache.ts as CachedRetrievalResult
+// Story: E13.8 - Redis Caching Layer (AC: #3)
 
 /**
  * Result from the pre-model retrieval hook
@@ -115,29 +109,32 @@ export interface RetrievalMetrics {
 
 // =============================================================================
 // Retrieval Cache (AC: #6)
+// Story: E13.8 - Redis Caching Layer (AC: #3, #10)
 // =============================================================================
 
+import {
+  retrievalCache as redisRetrievalCache,
+  type CachedRetrievalResult,
+} from '@/lib/cache/retrieval-cache'
+
 /**
- * Simple LRU cache for retrieval results
+ * Redis-backed retrieval cache wrapper
+ *
+ * Story: E13.8 - Redis Caching Layer (AC: #3, #10)
+ * - Migrated from in-memory Map to Redis
+ * - Async API for all operations
+ * - Graceful fallback to in-memory when Redis unavailable
  *
  * Key: topic-based key from query + dealId
  * Value: CachedResult with context and timestamp
  *
  * Features:
- * - TTL-based expiry (default 5 minutes)
- * - LRU eviction when max size reached
+ * - TTL-based expiry (5 minutes)
+ * - ZSET-based max entries (20 entries)
  * - Topic-based key generation (ignores word order)
+ * - Cross-instance cache sharing via Redis
  */
 export class RetrievalCache {
-  private cache = new Map<string, CachedResult>()
-  private readonly ttlMs: number
-  private readonly maxSize: number
-
-  constructor(ttlMs = CACHE_TTL_MS, maxSize = MAX_CACHE_SIZE) {
-    this.ttlMs = ttlMs
-    this.maxSize = maxSize
-  }
-
   /**
    * Generate cache key from query and dealId
    *
@@ -145,72 +142,50 @@ export class RetrievalCache {
    * for topic-based matching (e.g., "Q3 revenue" matches "revenue Q3")
    */
   generateKey(query: string, dealId: string): string {
-    const words = query
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .split(/\s+/)
-      .filter((w) => w.length > 3)
-      .sort()
-      .join('_')
-    return `${dealId}:${words}`
+    return redisRetrievalCache.generateKey(query, dealId)
   }
 
   /**
    * Get cached result if valid (not expired)
+   *
+   * Story: E13.8 (AC: #3, #10 - async API)
    */
-  get(key: string): CachedResult | undefined {
-    const cached = this.cache.get(key)
-    if (!cached) return undefined
-
-    // Check TTL
-    if (Date.now() - cached.timestamp > this.ttlMs) {
-      this.cache.delete(key)
-      return undefined
-    }
-
-    return cached
+  async get(key: string): Promise<CachedRetrievalResult | null> {
+    return redisRetrievalCache.get(key)
   }
 
   /**
-   * Set cached result with LRU eviction
+   * Set cached result
+   *
+   * Story: E13.8 (AC: #3, #10 - async API)
    */
-  set(key: string, value: CachedResult): void {
-    // LRU eviction: delete oldest entry if at capacity
-    if (this.cache.size >= this.maxSize) {
-      const oldestKey = this.cache.keys().next().value
-      if (oldestKey) this.cache.delete(oldestKey)
-    }
-
-    this.cache.set(key, value)
+  async set(key: string, value: CachedRetrievalResult): Promise<void> {
+    await redisRetrievalCache.set(key, value)
   }
 
   /**
-   * Check if key exists and is valid
+   * Check if key exists (async version)
    */
-  has(key: string): boolean {
-    return this.get(key) !== undefined
+  async has(key: string): Promise<boolean> {
+    return redisRetrievalCache.has(key)
   }
 
   /**
    * Clear the cache
    */
-  clear(): void {
-    this.cache.clear()
+  async clear(): Promise<void> {
+    await redisRetrievalCache.clear()
   }
 
   /**
    * Get cache stats for monitoring
    */
-  getStats(): { size: number; maxSize: number; ttlMs: number } {
-    return {
-      size: this.cache.size,
-      maxSize: this.maxSize,
-      ttlMs: this.ttlMs,
-    }
+  async getStats(): Promise<{ size: number; maxSize: number; ttlMs: number }> {
+    return redisRetrievalCache.getStats()
   }
 }
 
-// Global cache instance (per-process)
+// Global cache instance (delegates to Redis-backed cache)
 const retrievalCache = new RetrievalCache()
 
 // =============================================================================
@@ -444,8 +419,9 @@ export async function preModelRetrievalHook(
   }
 
   // Check cache (AC: #6)
+  // E13.8: Now uses Redis-backed cache with async API
   const cacheKey = retrievalCache.generateKey(userQuery, dealId)
-  const cached = retrievalCache.get(cacheKey)
+  const cached = await retrievalCache.get(cacheKey)
 
   if (cached) {
     console.log(`[preModelRetrievalHook] Cache hit for: ${cacheKey}`)
@@ -478,7 +454,8 @@ export async function preModelRetrievalHook(
   const { context, tokenCount } = formatRetrievedContext(searchResult.results)
 
   // Cache the result (AC: #6)
-  retrievalCache.set(cacheKey, {
+  // E13.8: Now uses Redis-backed cache with async API
+  await retrievalCache.set(cacheKey, {
     context,
     entities: searchResult.entities || [],
     timestamp: Date.now(),

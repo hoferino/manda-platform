@@ -210,94 +210,74 @@ export function getCacheKey(messages: BaseMessage[], dealId: string): string {
 
 // =============================================================================
 // Summarization Cache (AC: #5)
+// Story: E13.8 - Redis Caching Layer (AC: #4, #10)
 // =============================================================================
 
+import {
+  summarizationCache as redisSummarizationCache,
+  type CachedSummary as RedisCachedSummary,
+} from '@/lib/cache/summarization-cache'
+
 /**
- * LRU cache for summarization results
+ * Redis-backed summarization cache wrapper
+ *
+ * Story: E13.8 - Redis Caching Layer (AC: #4, #10)
+ * - Migrated from in-memory Map to Redis
+ * - Async API for all operations
+ * - Graceful fallback to in-memory when Redis unavailable
+ * - Cross-instance cache sharing for consistent performance
  *
  * Features:
- * - TTL-based expiry (default 30 minutes)
- * - LRU eviction when max size reached
+ * - TTL-based expiry (30 minutes)
+ * - ZSET-based max entries (50 entries)
+ * - Atomic hit/miss counters with Redis INCR
  * - lastMessageHash for cache invalidation when new messages added
  * - Hit rate tracking for observability (AC: #7)
  */
 export class SummarizationCache {
-  private cache = new Map<string, CachedSummary>()
-  private readonly ttlMs: number
-  private readonly maxSize: number
-  /** Track cache hits for hit rate calculation (AC: #7) */
-  private hits = 0
-  private misses = 0
-  private fallbackCount = 0
-
-  constructor(ttlMs = CACHE_TTL_MS, maxSize = MAX_CACHE_SIZE) {
-    this.ttlMs = ttlMs
-    this.maxSize = maxSize
-  }
-
   /**
    * Get cached summary if valid (not expired)
+   *
+   * Story: E13.8 (AC: #4, #10 - async API)
    */
-  get(key: string): CachedSummary | undefined {
-    const cached = this.cache.get(key)
-    if (!cached) {
-      this.misses++
-      return undefined
-    }
-
-    // Check TTL
-    if (Date.now() - cached.timestamp > this.ttlMs) {
-      this.cache.delete(key)
-      this.misses++
-      return undefined
-    }
-
-    // Move to end for LRU ordering (delete and re-add)
-    this.cache.delete(key)
-    this.cache.set(key, cached)
-
-    this.hits++
-    return cached
+  async get(key: string): Promise<RedisCachedSummary | null> {
+    return redisSummarizationCache.get(key)
   }
 
   /**
-   * Set cached summary with LRU eviction
+   * Set cached summary
+   *
+   * Story: E13.8 (AC: #4, #10 - async API)
    */
-  set(key: string, value: CachedSummary): void {
-    // LRU eviction: delete oldest entry if at capacity
-    if (this.cache.size >= this.maxSize) {
-      const oldestKey = this.cache.keys().next().value
-      if (oldestKey) this.cache.delete(oldestKey)
-    }
-
-    this.cache.set(key, value)
+  async set(key: string, value: CachedSummary): Promise<void> {
+    await redisSummarizationCache.set(key, value)
   }
 
   /**
-   * Check if key exists and is valid
+   * Check if key exists (async version)
    */
-  has(key: string): boolean {
-    return this.get(key) !== undefined
+  async has(key: string): Promise<boolean> {
+    return redisSummarizationCache.has(key)
   }
 
   /**
    * Clear the cache
    */
-  clear(): void {
-    this.cache.clear()
+  async clear(): Promise<void> {
+    await redisSummarizationCache.clear()
   }
 
   /**
-   * Record a fallback for metrics tracking (AC: #7)
+   * Delete a specific entry
    */
-  recordFallback(): void {
-    this.fallbackCount++
+  async delete(key: string): Promise<boolean> {
+    return redisSummarizationCache.delete(key)
   }
 
   /**
    * Get cache stats for monitoring (AC: #7)
    */
-  getStats(): {
+  async getStats(): Promise<{
     size: number
     maxSize: number
     ttlMs: number
@@ -306,49 +286,35 @@ export class SummarizationCache {
     hitRate: number
     fallbackCount: number
     fallbackRate: number
-  } {
-    const totalRequests = this.hits + this.misses
+  }> {
+    const stats = await redisSummarizationCache.getStats()
     return {
-      size: this.cache.size,
-      maxSize: this.maxSize,
-      ttlMs: this.ttlMs,
-      hits: this.hits,
-      misses: this.misses,
-      hitRate: totalRequests > 0 ? this.hits / totalRequests : 0,
-      fallbackCount: this.fallbackCount,
-      fallbackRate: totalRequests > 0 ? this.fallbackCount / totalRequests : 0,
+      size: stats.size,
+      maxSize: stats.maxSize,
+      ttlMs: stats.ttlMs,
+      hits: stats.hits,
+      misses: stats.misses,
+      hitRate: stats.hitRate,
+      fallbackCount: stats.fallbacks,
+      fallbackRate: stats.fallbackRate,
     }
   }
 
   /**
    * Reset stats counters (useful for testing)
    */
-  resetStats(): void {
-    this.hits = 0
-    this.misses = 0
-    this.fallbackCount = 0
-  }
-
-  /**
-   * Delete a specific entry
-   */
-  delete(key: string): boolean {
-    return this.cache.delete(key)
+  async resetStats(): Promise<void> {
+    await redisSummarizationCache.resetStats()
   }
 }
 
 /**
- * Global cache instance (per-process singleton)
+ * Global cache instance (delegates to Redis-backed cache)
  *
- * Thread-safety notes for serverless/edge environments:
- * - In Vercel Edge Functions: Each isolate has its own cache instance.
- *   Cache is NOT shared across concurrent requests in different isolates.
- * - In Lambda cold starts: Cache is re-initialized on each cold start.
- *   Cache persists across warm invocations within the same container.
- * - In traditional Node.js: Cache is shared across all requests in the process.
- *
- * This is intentional for summarization caching - we get cache benefits within
- * a warm container/isolate lifecycle, but don't risk stale data across deployments.
+ * Story: E13.8 - Redis Caching Layer (AC: #4)
+ * - Now uses Redis for cross-instance sharing
+ * - Survives server restarts and cold starts
+ * - Graceful fallback to in-memory when Redis unavailable
  */
 const summarizationCache = new SummarizationCache()
 
@@ -618,8 +584,9 @@ export async function summarizeConversationHistory(
   const messagesSummarized = oldMessages.length
 
   // Check cache first (AC: #5)
+  // E13.8: Now uses Redis-backed cache with async API
   const cacheKey = getCacheKey(messages, dealId)
-  const cached = summarizationCache.get(cacheKey)
+  const cached = await summarizationCache.get(cacheKey)
 
   if (cached) {
     const summaryMessage = new SystemMessage(`Previous context: ${cached.summaryText}`)
@@ -658,9 +625,10 @@ export async function summarizeConversationHistory(
     ])
 
     // Cache the result
+    // E13.8: Now uses Redis-backed cache with async API
     const messageHashes = oldMessages.map(hashMessage)
     const lastMessageForCache = messages[messages.length - 1]
-    summarizationCache.set(cacheKey, {
+    await summarizationCache.set(cacheKey, {
       summaryText: summary,
       messageHashes,
       lastMessageHash: lastMessageForCache ? hashMessage(lastMessageForCache) : 'empty',
@@ -708,9 +676,6 @@ export async function summarizeConversationHistory(
 
       console.log(`[summarization] Fallback success: extracted topics`)
 
-      // Record fallback for metrics (AC: #7)
-      summarizationCache.recordFallback()
-
       return {
         messages: resultMessages,
         summaryText: fallbackSummary,
@@ -731,9 +696,6 @@ export async function summarizeConversationHistory(
       // Level 2: Basic truncation message (guaranteed to work)
       const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
       console.warn(`[summarization] Fallback failed, using truncation message:`, fallbackErrorMsg)
-
-      // Record fallback for metrics (AC: #7)
-      summarizationCache.recordFallback()
 
       const truncationMessage = `Earlier conversation included ${messagesSummarized} messages.`
       const summaryMessage = new SystemMessage(truncationMessage)
