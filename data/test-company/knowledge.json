@@ -1,0 +1,708 @@
+{
+  "metadata": {
+    "company_name": "Vio Transgrup SRL",
+    "analysis_date": "2025-01-07",
+    "data_sources": [
+      "II -1 Unternehmenspräsenation.pdf",
+      "marktanalyse.pdf",
+      "FiMo_VIO_Dez.xlsm",
+      "Projekt Vio - GuV und Bilanz - 2022-2024.xlsx",
+      "V - 1+2 Customer revenue list.xlsx",
+      "Supplier Analysis for last three years - Steinbeis.xlsx",
+      "VII - 3.Number of employees.xlsx",
+      "IX - 1 Fleet overview.xlsx",
+      "VIII - 5. one offs_amounts for adjusted ebitda.xlsx",
+      "VIII - 3 BVC Vio Transgrup 2026 plan.xlsx",
+      "Leistungsindikatoren Master VIO.xlsx"
+    ]
+  },
+  "company_overview": {
+    "legal_name": "Vio Transgrup SRL",
+    "trade_name": "VIO TRANSGROUP",
+    "founded": 2000,
+    "headquarters": "Targoviste, Romania",
+    "secondary_location": "Arad, Romania (Zone Industriala Sud Street)",
+    "legal_form": "SRL (Limited Liability Company)",
+    "ownership": "Privately owned",
+    "industry": "Freight Forwarding / Road Transport & Logistics",
+    "website": "https://viotransgrup.ro/en/",
+    "key_milestones": [
+      {"year": 2000, "event": "Company founded as trucking company"},
+      {"year": 2010, "event": "First HVC (High Value Cargo) transport launched in partnership with DHL International"},
+      {"year": 2013, "event": "TAPA certified - earliest in region"},
+      {"year": 2015, "event": "Accepted as V1 standards carrier"},
+      {"year": 2016, "event": "New office building constructed"},
+      {"year": 2016, "event": "Became TAPA member, certification process began"},
+      {"year": 2017, "event": "Certified TAPA TSR1 by TUV"},
+      {"year": 2020, "event": "Successfully navigated COVID-19 pandemic"},
+      {"year": 2022, "event": "Reached 100+ trucks in own fleet equipped for security transport"}
+    ]
+  },
+  "business_model": {
+    "core_services": [
+      {
+        "service": "General Goods Transport",
+        "description": "Standard FTL/LTL transport with convertible tarpaulin trailers, variable height, multiple loading options",
+        "differentiation": "Low-margin commodity segment (2-3% industry margin)"
+      },
+      {
+        "service": "High Value Cargo (HVC) / TAPA Security Transport",
+        "description": "Transport of high-value goods under TAPA TSR Level 1 standards since 2010",
+        "differentiation": "Core profit driver with 15-20% margin premium vs standard transport",
+        "applications": ["Pharmaceuticals", "Electronics", "Branded consumer goods"]
+      },
+      {
+        "service": "Temperature Controlled Goods",
+        "description": "Frigo transport at controlled temperature from -25°C to +30°C",
+        "equipment": "150+ box vans with thermo diagram printers"
+      },
+      {
+        "service": "Pharma Goods",
+        "description": "GDP-compliant pharmaceutical transport throughout Europe",
+        "certification": "GDP Good Distribution Practice certified"
+      },
+      {
+        "service": "Dangerous Goods (ADR)",
+        "description": "Transport for ADR classes 2,3,4,5,6,8,9 in FTL and groupage",
+        "compliance": "European Agreement ADR compliant"
+      },
+      {
+        "service": "Automotive Transport",
+        "description": "JIS/JIT transport for OEMs and Tier 1-3 suppliers",
+        "experience": "25 years in automotive parts logistics",
+        "features": ["24/7 operations", "Live tracking updates", "EU-wide coverage"]
+      },
+      {
+        "service": "Special Transport",
+        "types": ["Express Van/Car", "On-Board Courier", "Aircraft Charters"],
+        "use_cases": ["Urgent go-now parts", "Prototypes/samples", "Product launches"]
+      },
+      {
+        "service": "Groupage / LTL",
+        "routes": ["RO-Germany-RO", "RO-Czech Republic-RO", "RO-Greece-RO", "RO-Italy-RO", "RO-Northern EU/UK-RO", "RO-Netherlands/Belgium-RO"]
+      },
+      {
+        "service": "Truck & Trailer Service",
+        "description": "Authorized Schmitz Cargobull service partner in Dambovita County",
+        "capabilities": ["Mechanics", "Electrical", "Tinsmith", "Mobile workshop 24/7", "Truck wash"]
+      }
+    ],
+    "value_proposition": "TAPA-certified security transport specialist with early-mover advantage (since 2013) in CEE/Balkan region, offering premium margins through specialized pharma, automotive, and high-value cargo services"
+  },
+  "financials": {
+    "currency": "EUR",
+    "fx_rate_ron_eur": 4.974,
+    "annual_data": {
+      "2022": {
+        "revenue": 38216486,
+        "revenue_growth_yoy": null,
+        "gross_profit": 38216486,
+        "personnel_expenses": 3420668,
+        "other_operating_income": 448483,
+        "other_operating_expenses": 32748155,
+        "ebitda_reported": 2496145,
+        "ebitda_margin": 0.0653,
+        "depreciation": 2860043,
+        "ebit": 2496145,
+        "ebit_margin": 0.0646,
+        "financial_result": -156641,
+        "interest_income": 579823,
+        "interest_expense": 736463,
+        "ebt": 2339505,
+        "income_tax": 364368,
+        "effective_tax_rate": 0.156,
+        "net_profit": 1975137,
+        "net_profit_margin": 0.0517
+      },
+      "2023": {
+        "revenue": 37396294,
+        "revenue_growth_yoy": -0.0215,
+        "gross_profit": 37396294,
+        "personnel_expenses": 4168543,
+        "other_operating_income": 551488,
+        "other_operating_expenses": 32035191,
+        "ebitda_reported": 1744048,
+        "ebitda_margin": 0.0466,
+        "depreciation": 2910385,
+        "ebit": 1744048,
+        "ebit_margin": 0.0466,
+        "financial_result": -182249,
+        "interest_income": 774901,
+        "interest_expense": 957150,
+        "ebt": 1561799,
+        "income_tax": 270600,
+        "effective_tax_rate": 0.173,
+        "net_profit": 1291199,
+        "net_profit_margin": 0.0345
+      },
+      "2024": {
+        "revenue": 34006909,
+        "revenue_growth_yoy": -0.0906,
+        "gross_profit": 34006909,
+        "personnel_expenses": 4283541,
+        "other_operating_income": 600960,
+        "other_operating_expenses": 29772457,
+        "ebitda_reported": 551872,
+        "ebitda_margin": 0.0162,
+        "depreciation": 2502104,
+        "ebit": 551872,
+        "ebit_margin": 0.0162,
+        "financial_result": -60010,
+        "interest_income": 411228,
+        "interest_expense": 471238,
+        "ebt": 491862,
+        "income_tax": 132156,
+        "effective_tax_rate": 0.269,
+        "net_profit": 359705,
+        "net_profit_margin": 0.0106
+      },
+      "2025_forecast": {
+        "data_type": "FC (Forecast)",
+        "revenue": 34687047,
+        "revenue_growth_yoy": 0.02,
+        "gross_profit": 34687047,
+        "personnel_expenses": 3780171,
+        "personnel_expenses_pct": 0.109,
+        "other_operating_income": 0,
+        "other_operating_expenses": 29935327,
+        "other_operating_expenses_pct": 0.863,
+        "ebitda_reported": 971549,
+        "ebitda_margin": 0.028,
+        "depreciation": 0,
+        "ebit": 971549,
+        "ebit_margin": 0.028,
+        "financial_result": 720471,
+        "interest_income": 1412472,
+        "interest_expense": 692001,
+        "ebt": 1692019,
+        "ebt_margin": 0.0488,
+        "income_tax": 507606,
+        "effective_tax_rate": 0.30,
+        "net_profit": 1184413,
+        "net_profit_margin": 0.0341
+      }
+    },
+    "ebitda_adjustments_2025": {
+      "publicity_costs": 141390,
+      "rent_utilities": 121251,
+      "holding_related_costs": 803695,
+      "other_one_offs": 31032,
+      "total_adjustments": 1097368,
+      "monthly_run_rate": 102256
+    },
+    "plan_2026": {
+      "revenue": 33000000,
+      "cost_of_goods_sold": 22000000,
+      "cogs_percentage": 0.667,
+      "gross_profit": 11000000,
+      "gross_margin": 0.333,
+      "salaries_wages": 4050000,
+      "other_expenses": 4225000,
+      "ebitda": 2725000,
+      "ebitda_margin": 0.0826,
+      "depreciation": 1800000,
+      "ebit": 925000,
+      "other_operating_income": 325000,
+      "interest_expense": 195000,
+      "other_financial_income": 205000,
+      "ebt": 1260000,
+      "income_tax": 122718,
+      "net_profit": 1137282,
+      "net_profit_margin": 0.0345
+    },
+    "key_metrics_commentary": {
+      "revenue_trend": "Declining from EUR 38.2M (2022) to EUR 34.0M (2024), -11% CAGR due to market pricing pressure and capacity oversupply",
+      "ebitda_pressure": "EBITDA margin compressed from 6.5% (2022) to 1.6% (2024) due to rising personnel costs and spot market weakness",
+      "profitability_recovery": "2025 forecast shows partial recovery with EBITDA EUR 972K (2.8% margin); 2026 plan targets EUR 2.7M EBITDA (8.3% margin)",
+      "tapa_contribution": "4.2% EBIT margin indicates TAPA security transport carries profitability; standard FTL is low-margin (2-3%)"
+    }
+  },
+  "balance_sheet": {
+    "currency": "EUR",
+    "annual_data": {
+      "2022": {
+        "total_assets": 21097742,
+        "fixed_assets": 9583464,
+        "intangibles": 4011,
+        "ppe": 9576643,
+        "financial_assets": 2809,
+        "current_assets": 11355768,
+        "inventories": 144371,
+        "trade_receivables": 6410443,
+        "receivables_affiliates": 509000,
+        "other_assets": 982637,
+        "cash": 3309318,
+        "prepaid_expenses": 158510,
+        "total_equity": 1607300,
+        "common_stock": 2021,
+        "additional_paid_in_capital": 39651,
+        "retained_earnings": -409509,
+        "net_profit_current_year": 1975137,
+        "total_liabilities": 19490441,
+        "bank_debt": 14025812,
+        "trade_payables": 3341738,
+        "liabilities_affiliates": 899709,
+        "other_liabilities": 1223182
+      },
+      "2023": {
+        "total_assets": 18809246,
+        "fixed_assets": 7426478,
+        "intangibles": 25586,
+        "ppe": 7390514,
+        "financial_assets": 10379,
+        "current_assets": 11208924,
+        "inventories": 133188,
+        "trade_receivables": 5777056,
+        "receivables_affiliates": 3977135,
+        "other_assets": 234282,
+        "cash": 1087264,
+        "prepaid_expenses": 173845,
+        "total_equity": 2550801,
+        "common_stock": 2010,
+        "additional_paid_in_capital": 39444,
+        "retained_earnings": 1218147,
+        "net_profit_current_year": 1291199,
+        "total_liabilities": 16258446,
+        "bank_debt": 11663180,
+        "trade_payables": 3288471,
+        "liabilities_affiliates": 0,
+        "other_liabilities": 1306795
+      },
+      "2024": {
+        "total_assets": 13571359,
+        "fixed_assets": 5209764,
+        "intangibles": 19984,
+        "ppe": 5179702,
+        "financial_assets": 10078,
+        "current_assets": 8166426,
+        "inventories": 141271,
+        "trade_receivables": 5051499,
+        "receivables_affiliates": 1379249,
+        "other_assets": 322053,
+        "cash": 1272354,
+        "prepaid_expenses": 195169,
+        "total_equity": 2911019,
+        "common_stock": 2010,
+        "additional_paid_in_capital": 39452,
+        "retained_earnings": 2509851,
+        "net_profit_current_year": 359705,
+        "total_liabilities": 12484111,
+        "bank_debt": 8608824,
+        "trade_payables": 2804519,
+        "liabilities_affiliates": 0,
+        "other_liabilities": 1070768
+      }
+    },
+    "key_ratios": {
+      "2022": {
+        "equity_ratio": 0.076,
+        "debt_to_equity": 12.13,
+        "current_ratio": 0.58,
+        "net_debt": 10716494
+      },
+      "2023": {
+        "equity_ratio": 0.136,
+        "debt_to_equity": 6.37,
+        "current_ratio": 0.69,
+        "net_debt": 10575916
+      },
+      "2024": {
+        "equity_ratio": 0.214,
+        "debt_to_equity": 4.29,
+        "current_ratio": 0.65,
+        "net_debt": 7336470
+      }
+    },
+    "commentary": "Asset-light trend with PP&E declining from EUR 9.6M to EUR 5.2M (2022-2024) as leased fleet increases. Bank debt reduced from EUR 14.0M to EUR 8.6M. Equity strengthening from 7.6% to 21.4% of total assets."
+  },
+  "customers": {
+    "customer_concentration": {
+      "top_10_share": {
+        "2022": 0.506,
+        "2023": 0.501,
+        "2024": 0.548,
+        "2025_ytd": 0.576
+      },
+      "top_20_share": {
+        "2022": 0.617,
+        "2023": 0.610,
+        "2024": 0.657,
+        "2025_ytd": 0.658
+      }
+    },
+    "top_customers_2024_revenue_eur": [
+      {"rank": 1, "name": "Client 1", "revenue": 5102254, "share": 0.150},
+      {"rank": 2, "name": "Client 2", "revenue": 2947704, "share": 0.087},
+      {"rank": 3, "name": "Client 3", "revenue": 2803967, "share": 0.082},
+      {"rank": 4, "name": "Client 4", "revenue": 2696620, "share": 0.079},
+      {"rank": 5, "name": "Client 5", "revenue": 1996817, "share": 0.059}
+    ],
+    "total_customers": "3000+",
+    "customer_dynamics": "Increasing concentration risk - Top 10 customers grew from 50.6% (2022) to 57.6% (2025 YTD) of revenue",
+    "key_sectors_served": ["Automotive OEMs & Tier 1-3", "Pharmaceuticals", "Electronics", "Consumer Goods", "Logistics/3PL"]
+  },
+  "suppliers": {
+    "total_procurement_eur": {
+      "2022": 157931608,
+      "2023": 140023863,
+      "2024": 129826075,
+      "2025_ytd": 91855474
+    },
+    "procurement_trend": "Declining in line with revenue contraction",
+    "key_cost_categories": ["Fuel", "Subcontractor transport", "Leasing payments", "Maintenance/repairs", "Insurance", "Tolls"],
+    "supplier_concentration": "Diversified supplier base with 4000+ vendors over 3 years"
+  },
+  "employees": {
+    "headcount": {
+      "2022": {"year_average": 220, "year_end": 269},
+      "2023": {"year_average": 225, "year_end": 234},
+      "2024": {"year_average": 220, "year_end": 228},
+      "2025_dec": 207
+    },
+    "personnel_costs_eur": {
+      "2022": 3420668,
+      "2023": 4168543,
+      "2024": 4283541
+    },
+    "cost_per_employee_eur": {
+      "2022": 15548,
+      "2023": 18527,
+      "2024": 19471
+    },
+    "kpis": {
+      "employee_turnover": {
+        "2022": 0.0526,
+        "2023": 0.0635,
+        "2024": 0.0570,
+        "target": 0.09,
+        "status": "Below target - good retention"
+      },
+      "open_positions_rate": {
+        "2023": 0.0485,
+        "2024": 0.0524,
+        "target": 0.07,
+        "status": "Below target"
+      }
+    },
+    "key_roles": ["Drivers (majority)", "Operations/Dispatchers", "Mechanics/Service", "Administration/Finance", "Sales"],
+    "commentary": "Stable workforce with low turnover (5-6% vs 9% target). Personnel costs rising faster than headcount due to wage inflation in Romania. Key person risk: company dependent on founder/management expertise."
+  },
+  "fleet": {
+    "total_units": 287,
+    "composition": {
+      "trucks_lkw": {
+        "count": 99,
+        "emission_standard": "Euro 6",
+        "brands": ["Volvo", "Scania", "Mercedes-Benz", "MAN"]
+      },
+      "trailers": {
+        "count": 160,
+        "types": ["Frigo trailers (TAPA certified)", "Krone mega trailers (5 XL certified)", "Schmitz trailers"],
+        "brands": ["Krone", "Schmitz Cargobull"]
+      },
+      "vans_pkw": {
+        "count": 28,
+        "types": ["Express vans", "Company cars"],
+        "brands": ["Mercedes-Benz", "BMW", "Aston Martin", "Rolls-Royce"]
+      }
+    },
+    "ownership_structure": {
+      "owned_outright": "Majority",
+      "leased_financed": "Selected newer vehicles marked 'Yes' for leasing"
+    },
+    "fleet_age": "Production years range from 2014-2025, majority 2018-2022",
+    "tapa_certified_trailers": 160,
+    "temperature_control_capability": "-25°C to +30°C",
+    "fleet_kpis": {
+      "empty_km_ratio": {
+        "2022": 0.0991,
+        "2023": 0.1174,
+        "2024": 0.0413,
+        "target": 0.10,
+        "commentary": "Major efficiency improvement in 2024 - empty kilometers dropped to 4.1% vs 10% target"
+      },
+      "traffic_fines_per_month": {
+        "2022": 10.9,
+        "2023": 12.1,
+        "2024": 9.75,
+        "target": 13,
+        "status": "Below target"
+      },
+      "accident_rate": {
+        "2022": 0.0021,
+        "2023": 0.0007,
+        "2024": 0.0001,
+        "commentary": "Declining accident rate - strong safety culture"
+      },
+      "theft_incidents": 0,
+      "unauthorized_access_incidents": 0
+    },
+    "sustainability_initiatives": [
+      "E-Trucks program (Mercedes eActros, MAN electric trucks)",
+      "51% electricity from renewable sources",
+      "12% reduction in transport CO2 emissions",
+      "27% reduction in plant CO2 emissions",
+      "95% waste sent to recovery",
+      "21% reduction in water withdrawal",
+      "Eco-driving training campaigns",
+      "Intermodal transport investment",
+      "Renewable energy investments"
+    ]
+  },
+  "certifications": {
+    "quality_management": {
+      "standard": "ISO 9001:2015",
+      "scope": "Quality Management System",
+      "certifier": "DQS GmbH",
+      "valid_until": "2027"
+    },
+    "environmental_management": {
+      "standard": "ISO 14001:2015",
+      "scope": "Environmental Management System",
+      "certifier": "DQS GmbH",
+      "valid_until": "2027"
+    },
+    "health_safety": {
+      "standard": "ISO 45001:2018",
+      "scope": "Occupational Health and Safety",
+      "certifier": "DQS GmbH",
+      "valid_until": "2027"
+    },
+    "supply_chain_security": {
+      "standard": "TAPA TSR 2020 Level 1",
+      "scope": "Trucking Security Requirements - hard-sided truck/trailer, Level 1 locking systems",
+      "certifier": "TUV / DQS GmbH",
+      "valid_until": "2026",
+      "first_certified": 2013
+    },
+    "information_security": {
+      "standard": "ISO 27001:2022",
+      "scope": "Information Security Management",
+      "certifier": "Bureau Veritas",
+      "valid_until": "2028"
+    },
+    "pharma_logistics": {
+      "standard": "GDP (Good Distribution Practice)",
+      "scope": "Freight transport by road under controlled temperature - EU Directive 2001/83/EC",
+      "certifier": "Procert",
+      "valid_until": "2026"
+    },
+    "automotive_security": {
+      "standard": "TISAX",
+      "scope": "Standard Scope 2.0.1 - Information security for automotive industry partners",
+      "assessment_id": "S16MX9",
+      "valid_until": "2026"
+    }
+  },
+  "market_analysis": {
+    "geographic_markets": {
+      "romania_home_market": {
+        "market_size_eur": "3-4B annually",
+        "characteristics": "Fragmented, 10,000+ carriers",
+        "vio_position": "#1 in Arad region (IA-Group), 2-4% national market share",
+        "tailwinds": ["Romania #2 global load capacity hub Q3 2025 (+27% YoY)", "EU nearshoring trend"],
+        "headwinds": ["Spot market price pressure", "Capacity oversupply 2024-25"]
+      },
+      "balkan_region": {
+        "countries": ["Serbia", "Greece", "Bosnia", "North Macedonia"],
+        "market_size_eur": "0.5-3B annually per country",
+        "characteristics": "Ultra-fragmented",
+        "vio_position": "Top-5 security carrier (TAPA certified since 2013)",
+        "tailwinds": ["EU-Balkan trade volume +28.6% since 2021", "Common Regional Market integration"],
+        "opportunities": ["Pharma hub Serbia", "Port Piraeus Greece", "Specialized transport demand"]
+      },
+      "central_europe": {
+        "countries": ["Poland", "Czech Republic", "Hungary", "Slovakia"],
+        "market_size_eur": "2-2.5B annually combined",
+        "vio_position": "Secondary, ad-hoc relations",
+        "characteristics": "Auto supply chain (JIT, secure), e-commerce, established competitors (Raben, Dachser)"
+      },
+      "western_europe_uk": {
+        "vio_position": "Minimal, backhaul utilization only",
+        "assessment": "No scale to compete with Tier-1 (DB Schenker, DHL, Gefco, Raben)"
+      }
+    },
+    "segment_analysis": {
+      "tapa_security_transport": {
+        "description": "Core competency and profit driver",
+        "addressable_market_eur": "200-400M annually (Romania + Balkan combined)",
+        "margin_premium": "15-20% vs standard 2-3%",
+        "competition": "<50 TAPA-certified carriers in CEE/Balkan",
+        "vio_advantage": "Regional expert + early certification (2013)",
+        "market_drivers": ["Pharma supply chain regionalization", "E-commerce boom (electronics, beauty)", "EU GDP compliance requirements"]
+      },
+      "standard_ftl_ltl": {
+        "description": "Secondary income stream",
+        "margin": "2-3% (commodity)",
+        "market_situation_2024_25": ["Oversupply", "Price correction EUR 1.44-1.74/km", "12% capacity reduction (insolvencies)", "Consolidation pressure"]
+      }
+    },
+    "competitive_landscape": {
+      "local_competitors": ["Dinamic-Logistik", "Raben Romania", "Small independents"],
+      "regional_tapa_competitors": ["NTG Neptun (Scandinavia)", "Jan de Rijk (Netherlands)"],
+      "tier_1_pan_european": ["Raben", "Dachser", "Gefco", "DB Schenker", "DHL"],
+      "vio_positioning": "Mid-small scale + TAPA niche (not commodity FTL)"
+    },
+    "megatrends": {
+      "tailwinds": [
+        "Romania +27% capacity (Q3 2025)",
+        "Balkan-EU integration +28.6% trade since 2021",
+        "Pharma/E-Commerce boom",
+        "Regulatory tailwind (EURO 6 = capacity reduction)",
+        "Consolidation opportunity (50+ small TAPA carriers)"
+      ],
+      "headwinds": [
+        "Spot market oversupply (short-medium term)",
+        "Fuel & toll costs rising (Red Diesel phase-in, CO2 components)",
+        "Structural driver shortage, personnel cost inflation",
+        "Technology investment gap (TMS, AI routing)",
+        "Tier-1 expansion into CEE/Balkan"
+      ]
+    },
+    "market_scenarios_2025_2028": {
+      "base_case": {
+        "assumptions": "+2-3% transport demand CAGR, spot correction, consolidation",
+        "vio_outcome": "EUR 18-28M revenue, 5-5.5% margin, consolidation necessity"
+      },
+      "upside": {
+        "assumptions": "Pharma regionalization, Balkan growth, 3-5 M&A bolt-ons",
+        "vio_outcome": "EUR 40-50M revenue, 6-7% margin, regional leader"
+      },
+      "downside": {
+        "assumptions": "Tier-1 dominance, EURO 6 shock, fuel cost spike",
+        "vio_outcome": "EUR 12-18M revenue, 2-3% margin, forced sale (distressed)"
+      }
+    }
+  },
+  "risks": {
+    "operational_risks": [
+      {
+        "risk": "Customer concentration",
+        "severity": "Medium-High",
+        "detail": "Top 10 customers = 57.6% of revenue (2025 YTD), increasing from 50.6% (2022)",
+        "mitigation": "Diversification efforts, long-term contracts with key accounts"
+      },
+      {
+        "risk": "Driver shortage / personnel cost inflation",
+        "severity": "Medium",
+        "detail": "Personnel costs increased from EUR 15.5K to EUR 19.5K per employee (2022-2024)",
+        "mitigation": "Low turnover (5.7% vs 9% target), training programs"
+      },
+      {
+        "risk": "Fleet age and replacement capex",
+        "severity": "Low-Medium",
+        "detail": "Fleet production years 2014-2025, some vehicles aging out",
+        "mitigation": "Leasing strategy, phased replacement"
+      }
+    ],
+    "market_risks": [
+      {
+        "risk": "Spot market price pressure",
+        "severity": "High",
+        "detail": "Capacity oversupply 2024-25, prices EUR 1.44-1.74/km",
+        "mitigation": "Focus on TAPA premium segment, reduce spot exposure"
+      },
+      {
+        "risk": "Tier-1 competitor expansion",
+        "severity": "Medium",
+        "detail": "Raben, Dachser, DHL expanding in CEE/Balkan",
+        "mitigation": "Niche specialization in TAPA/pharma, regional expertise"
+      }
+    ],
+    "financial_risks": [
+      {
+        "risk": "Thin margins / cash flow pressure",
+        "severity": "High",
+        "detail": "EBITDA margin collapsed from 6.5% (2022) to 1.6% (2024)",
+        "mitigation": "EBITDA adjustments identified (EUR 1.1M), cost restructuring"
+      },
+      {
+        "risk": "Bank debt dependency",
+        "severity": "Medium",
+        "detail": "EUR 8.6M bank debt (2024), though declining from EUR 14.0M (2022)",
+        "mitigation": "Debt reduction trajectory, improving equity ratio"
+      }
+    ],
+    "compliance_risks": [
+      {
+        "risk": "TAPA certification maintenance",
+        "severity": "Medium",
+        "detail": "Core differentiator requires ongoing compliance investment",
+        "status": "Current through 2026"
+      },
+      {
+        "risk": "Hazardous materials without updated safety data sheets",
+        "severity": "Medium",
+        "detail": "7 substances without current FDS (2024) vs target <1",
+        "status": "Compliance gap requiring attention"
+      }
+    ],
+    "strategic_risks": [
+      {
+        "risk": "Scale constraint",
+        "severity": "Medium-High",
+        "detail": "EUR 34M revenue insufficient for standalone viability in consolidating market",
+        "mitigation": "Strategic M&A or partnership necessary"
+      },
+      {
+        "risk": "Key person dependency",
+        "severity": "Medium",
+        "detail": "Founder-led, management expertise concentrated",
+        "mitigation": "Organizational development, succession planning"
+      }
+    ]
+  },
+  "investment_thesis": {
+    "summary": "Vio Transgrup is a CEE-focused TAPA-certified security transport specialist operating in structurally attractive but scaled markets. The niche offers 15-20% margin premium but scale is a constraint. Best positioned as a consolidation platform for CEE-Pharma/Security-Transport with add-on acquisitions.",
+    "key_investment_highlights": [
+      "Early-mover TAPA TSR1 certification (2013) - rare in Balkan region",
+      "Comprehensive certification stack (ISO 9001/14001/45001/27001, GDP, TISAX)",
+      "Strong operational KPIs (4.1% empty km ratio, <1% accident rate)",
+      "160 TAPA-certified temperature-controlled trailers",
+      "25 years automotive logistics experience with OEM relationships",
+      "Low employee turnover (5.7%) in tight labor market",
+      "Sustainability initiatives (E-trucks, 51% renewable electricity)",
+      "Deleveraging trajectory (bank debt EUR 14M → EUR 8.6M)"
+    ],
+    "key_concerns": [
+      "Revenue decline (-11% CAGR 2022-2024)",
+      "EBITDA margin compression (6.5% → 1.6%)",
+      "Customer concentration increasing (Top 10 = 58% revenue)",
+      "Scale insufficient for standalone viability",
+      "Market overcapacity and price pressure in standard FTL",
+      "Technology/TMS investment gap"
+    ],
+    "expected_roi": "+200-300 bps margin lift, +5-7% revenue CAGR",
+    "buyer_fit": {
+      "strategic_acquirer": "Strong fit - synergies in network, TAPA capability transfer, CEE expansion platform",
+      "financial_buyer_pe": "Moderate fit - requires buy-and-build thesis with bolt-on M&A",
+      "competitor": "Strong fit - consolidation play, capacity acquisition"
+    }
+  },
+  "kpi_dashboard": {
+    "financial": {
+      "revenue_eur_m": {"2022": 38.2, "2023": 37.4, "2024": 34.0, "2025_fc": 34.7, "plan_2026": 33.0},
+      "ebitda_eur_m": {"2022": 2.50, "2023": 1.74, "2024": 0.55, "2025_fc": 0.97, "plan_2026": 2.73},
+      "ebitda_margin_pct": {"2022": 6.5, "2023": 4.7, "2024": 1.6, "2025_fc": 2.8, "plan_2026": 8.3},
+      "net_profit_eur_m": {"2022": 1.98, "2023": 1.29, "2024": 0.36, "2025_fc": 1.18, "plan_2026": 1.14},
+      "ebt_eur_m": {"2022": 2.34, "2023": 1.56, "2024": 0.49, "2025_fc": 1.69, "plan_2026": 1.26}
+    },
+    "operational": {
+      "fleet_size_units": {"current": 287},
+      "trucks_count": {"current": 99},
+      "trailers_count": {"current": 160},
+      "employees": {"2022": 220, "2023": 225, "2024": 220, "dec_2025": 207},
+      "empty_km_ratio_pct": {"2022": 9.9, "2023": 11.7, "2024": 4.1, "target": 10.0},
+      "employee_turnover_pct": {"2022": 5.3, "2023": 6.4, "2024": 5.7, "target": 9.0}
+    },
+    "customer": {
+      "total_customers": "3000+",
+      "top_10_concentration_pct": {"2022": 50.6, "2023": 50.1, "2024": 54.8, "2025_ytd": 57.6}
+    },
+    "safety": {
+      "accident_rate_pct": {"2022": 0.21, "2023": 0.07, "2024": 0.01},
+      "theft_incidents": {"2022": 0, "2023": 0, "2024": 0},
+      "traffic_fines_monthly": {"2022": 10.9, "2023": 12.1, "2024": 9.8, "target": 13.0}
+    }
+  }
+}
