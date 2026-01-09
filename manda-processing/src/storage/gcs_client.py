@@ -11,6 +11,7 @@ This module provides async-compatible GCS operations:
 import asyncio
 import os
 import tempfile
+import unicodedata
 from pathlib import Path
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -115,6 +116,59 @@ class GCSClient:
 
         return parts[0], parts[1]
 
+    def _normalize_object_path(self, bucket_name: str, object_path: str) -> str:
+        """
+        Normalize object path to match GCS blob naming.
+
+        GCS blobs uploaded from macOS may use NFD Unicode normalization
+        (decomposed form), while paths from other sources may use NFC
+        (precomposed form). This method tries both forms to find the
+        correct blob.
+
+        Args:
+            bucket_name: Name of the GCS bucket
+            object_path: Path to the object within the bucket
+
+        Returns:
+            The normalized object path that exists in GCS
+
+        Raises:
+            GCSFileNotFoundError: If blob doesn't exist with either normalization
+        """
+        bucket = self.client.bucket(bucket_name)
+
+        # Try the original path first
+        blob = bucket.blob(object_path)
+        if blob.exists():
+            return object_path
+
+        # Try NFD normalization (macOS default)
+        nfd_path = unicodedata.normalize("NFD", object_path)
+        if nfd_path != object_path:
+            blob_nfd = bucket.blob(nfd_path)
+            if blob_nfd.exists():
+                logger.debug(
+                    "Found blob with NFD normalization",
+                    original_path=object_path,
+                    normalized_path=nfd_path,
+                )
+                return nfd_path
+
+        # Try NFC normalization (most other systems)
+        nfc_path = unicodedata.normalize("NFC", object_path)
+        if nfc_path != object_path:
+            blob_nfc = bucket.blob(nfc_path)
+            if blob_nfc.exists():
+                logger.debug(
+                    "Found blob with NFC normalization",
+                    original_path=object_path,
+                    normalized_path=nfc_path,
+                )
+                return nfc_path
+
+        # Blob not found with any normalization
+        raise GCSFileNotFoundError(f"gs://{bucket_name}/{object_path}")
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=0, max=90),
@@ -136,18 +190,17 @@ class GCSClient:
             destination_path: Local path to save the file
         """
         try:
+            # Handle Unicode normalization differences between systems
+            normalized_path = self._normalize_object_path(bucket_name, object_path)
+
             bucket = self.client.bucket(bucket_name)
-            blob = bucket.blob(object_path)
-
-            if not blob.exists():
-                raise GCSFileNotFoundError(f"gs://{bucket_name}/{object_path}")
-
+            blob = bucket.blob(normalized_path)
             blob.download_to_filename(destination_path)
 
             logger.debug(
                 "Blob downloaded",
                 bucket=bucket_name,
-                object_path=object_path,
+                object_path=normalized_path,
                 destination=destination_path,
             )
 

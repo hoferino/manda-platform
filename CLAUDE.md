@@ -104,10 +104,39 @@ Upload → GCS Storage → Webhook → pg-boss Queue → Workers
 
 ## Key Patterns
 
+### Chat Orchestrator (3-Path LangGraph)
+
+The chat system uses a lightweight LangGraph orchestrator with three paths:
+
+```
+User Message → Router (<5ms) → [vanilla | retrieval | analysis] → Response
+```
+
+| Path | Trigger | Model | Description |
+|------|---------|-------|-------------|
+| **Vanilla** | Greetings, general chat | gpt-4o-mini | Direct LLM, no tools/retrieval |
+| **Retrieval** | Document questions | gpt-4o-mini | Neo4j/Graphiti context injection |
+| **Analysis** | Complex analysis requests | Varies by specialist | Supervisor subagent routing |
+
+**Key Files:**
+- `lib/agent/orchestrator/router.ts` - Regex/keyword routing (<5ms, no LLM)
+- `lib/agent/orchestrator/graph.ts` - LangGraph StateGraph orchestrator
+- `lib/agent/orchestrator/paths/vanilla.ts` - Direct LLM path
+- `lib/agent/orchestrator/paths/retrieval.ts` - Context injection path
+- `lib/agent/orchestrator/paths/analysis.ts` - Subagent delegation path
+- `lib/agent/orchestrator/index.ts` - Module exports
+
+**Router Logic** (`router.ts`):
+- `GREETING_PATTERNS`: Regex for greetings → vanilla path
+- `RETRIEVAL_KEYWORDS`: Document-related terms → retrieval path
+- `ANALYSIS_KEYWORDS`: Analysis verbs + complexity indicators → analysis path
+
+**API Entry Point:** `app/api/projects/[id]/chat/route.ts` calls `streamOrchestrator()`
+
 ### LangChain Integration
 
 Both services use LangChain for LLM operations:
-- Frontend: `@langchain/anthropic`, `@langchain/google-genai`, `@langchain/openai`
+- Frontend: `@langchain/anthropic`, `@langchain/google-genai`, `@langchain/openai`, `@langchain/langgraph`
 - Backend: `langchain`, `langchain-google-genai`, `pydantic-ai`
 
 ### Testing
@@ -124,7 +153,7 @@ All database queries must include `project_id` in WHERE clauses. RLS policies en
 ## Documentation
 
 - **PRD**: `docs/manda-prd.md` (v2.4)
-- **Architecture**: `docs/manda-architecture.md` (v4.2)
+- **Architecture**: `docs/manda-architecture.md` (v4.3)
 - **Epics/Stories**: `docs/epics.md` (v2.5), `docs/sprint-artifacts/stories/`
 - **Testing Guide**: `docs/testing/testing-guide.md`
 - **Tech Specs**: `docs/sprint-artifacts/tech-specs/`

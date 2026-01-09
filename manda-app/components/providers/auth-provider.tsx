@@ -39,6 +39,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session: initialSession } } = await supabase.auth.getSession()
       setSession(initialSession)
       setUser(initialSession?.user ?? null)
+
+      // Ensure organization ID is set for existing session (E12.9 fix)
+      if (initialSession?.user) {
+        const existingOrgId = localStorage.getItem('manda_current_org_id')
+        if (!existingOrgId) {
+          const { data: memberships } = await supabase
+            .from('organization_members')
+            .select('organization_id')
+            .eq('user_id', initialSession.user.id)
+            .limit(1)
+
+          if (memberships?.[0]?.organization_id) {
+            localStorage.setItem('manda_current_org_id', memberships[0].organization_id)
+          }
+        }
+      }
+
       setLoading(false)
     }
 
@@ -52,10 +69,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
 
         // Handle specific auth events
-        if (event === 'SIGNED_IN') {
+        if (event === 'SIGNED_IN' && currentSession?.user) {
           console.log('User signed in:', currentSession?.user?.email)
+
+          // Ensure organization ID is set in localStorage (E12.9 fix)
+          // This prevents race condition with OrganizationProvider
+          const existingOrgId = localStorage.getItem('manda_current_org_id')
+          if (!existingOrgId) {
+            const { data: memberships } = await supabase
+              .from('organization_members')
+              .select('organization_id')
+              .eq('user_id', currentSession.user.id)
+              .limit(1)
+
+            if (memberships?.[0]?.organization_id) {
+              localStorage.setItem('manda_current_org_id', memberships[0].organization_id)
+            }
+          }
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out')
+          localStorage.removeItem('manda_current_org_id')
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed')
         }

@@ -26,7 +26,7 @@ export function LoginForm() {
     setError(null)
     setMessage(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -35,6 +35,20 @@ export function LoginForm() {
       setError(error.message)
       setLoading(false)
       return
+    }
+
+    // Fetch and set organization ID immediately after login to avoid race condition
+    // with OrganizationProvider (E12.9 fix)
+    if (data.user) {
+      const { data: memberships } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', data.user.id)
+        .limit(1)
+
+      if (memberships?.[0]?.organization_id) {
+        localStorage.setItem('manda_current_org_id', memberships[0].organization_id)
+      }
     }
 
     router.push('/projects')

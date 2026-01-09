@@ -17,8 +17,19 @@ const PUBLIC_ROUTES = ["/auth", "/api/auth", "/login", "/signup"];
 // Routes that require auth but don't need organization context
 const ORG_EXEMPT_ROUTES = ["/api/organizations", "/api/user/organizations"];
 
+// Routes that handle their own auth (support Bearer token)
+// These routes can accept Authorization header for CLI tools, benchmarks, etc.
+const SELF_AUTH_ROUTES = ["/api/projects"];
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+  const pathname = request.nextUrl.pathname;
+
+  // Skip middleware auth for routes that handle their own authentication
+  // This allows these routes to support both cookies and Bearer tokens
+  if (SELF_AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
+    return supabaseResponse;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,8 +56,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   // Skip auth check for public routes
   if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {

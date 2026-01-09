@@ -201,7 +201,7 @@ export const TOOLS_BY_COMPLEXITY: Record<ComplexityLevel, string[] | 'all'> = {
  * Story: E13.1 - Enhanced Intent Classification (AC: #1)
  */
 export const MODEL_BY_COMPLEXITY: Record<ComplexityLevel, string> = {
-  simple: 'gemini-2.0-flash-lite',
+  simple: 'gemini-2.0-flash', // Changed from flash-lite (doesn't support tools)
   medium: 'gemini-2.5-pro',
   complex: 'claude-sonnet-4-20250514',
 }

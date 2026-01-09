@@ -27,30 +27,31 @@ import type { LLMConfig, LLMProvider } from './config'
  * - Medium: Balanced settings
  * - Complex: Higher temp for creativity, longer responses, longer timeout
  */
+// TEMPORARY: Using OpenAI for all tiers to test flow (Google GenAI bindTools issue)
 export const MODEL_ROUTING_CONFIG: Record<ComplexityLevel, LLMConfig> = {
   simple: {
-    provider: 'google' as LLMProvider,
-    model: MODEL_BY_COMPLEXITY.simple, // gemini-2.0-flash-lite
-    temperature: 0.3, // Lower temp for simple factual responses
-    maxTokens: 500, // Short responses for simple queries
-    retryAttempts: 2, // Fewer retries - fast fail, fast escalate
-    timeout: 5000, // 5s timeout - we want speed
+    provider: 'openai' as LLMProvider,
+    model: 'gpt-4o-mini', // Cheap, fast, supports tools
+    temperature: 0.3,
+    maxTokens: 500,
+    retryAttempts: 2,
+    timeout: 5000,
   },
   medium: {
-    provider: 'google' as LLMProvider,
-    model: MODEL_BY_COMPLEXITY.medium, // gemini-2.5-pro
+    provider: 'openai' as LLMProvider,
+    model: 'gpt-4o-mini',
     temperature: 0.5,
     maxTokens: 2000,
     retryAttempts: 3,
     timeout: 30000,
   },
   complex: {
-    provider: 'anthropic' as LLMProvider,
-    model: MODEL_BY_COMPLEXITY.complex, // claude-sonnet-4-20250514
+    provider: 'openai' as LLMProvider,
+    model: 'gpt-4o',
     temperature: 0.7,
     maxTokens: 4096,
     retryAttempts: 3,
-    timeout: 60000, // Longer timeout for complex analysis
+    timeout: 60000,
   },
 }
 

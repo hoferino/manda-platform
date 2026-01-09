@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { IRLTemplate } from '@/lib/types/irl'
+import { getOrganizationId } from '@/lib/api/client'
 
 export interface UseIRLTemplatesResult {
   templates: IRLTemplate[]
@@ -27,7 +28,12 @@ export function useIRLTemplates(projectId: string): UseIRLTemplatesResult {
     setError(null)
 
     try {
-      const response = await fetch(`/api/projects/${projectId}/irls/templates`)
+      const headers: Record<string, string> = {}
+      const orgId = getOrganizationId()
+      if (orgId) {
+        headers['x-organization-id'] = orgId
+      }
+      const response = await fetch(`/api/projects/${projectId}/irls/templates`, { headers })
 
       if (!response.ok) {
         const data = await response.json()

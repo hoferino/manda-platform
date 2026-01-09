@@ -4,6 +4,22 @@
  * Story: E2.2 Enhancement - Persistent folder storage
  */
 
+import { getOrganizationId } from './client'
+
+/**
+ * Get headers with organization ID for API requests
+ */
+function getHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  const orgId = getOrganizationId()
+  if (orgId) {
+    headers['x-organization-id'] = orgId
+  }
+  return headers
+}
+
 export interface Folder {
   id: string
   dealId: string
@@ -43,7 +59,9 @@ interface FolderResponse {
  */
 export async function getFolders(projectId: string): Promise<{ folders: Folder[]; error?: string }> {
   try {
-    const response = await fetch(`/api/projects/${projectId}/folders`)
+    const response = await fetch(`/api/projects/${projectId}/folders`, {
+      headers: getHeaders(),
+    })
 
     if (!response.ok) {
       const data = await response.json()
@@ -80,7 +98,7 @@ export async function createFolder(
   try {
     const response = await fetch(`/api/projects/${projectId}/folders`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ name, parentPath }),
     })
 
@@ -119,7 +137,7 @@ export async function renameFolder(
   try {
     const response = await fetch(`/api/projects/${projectId}/folders/${folderId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ name: newName }),
     })
 
@@ -157,6 +175,7 @@ export async function deleteFolder(
   try {
     const response = await fetch(`/api/projects/${projectId}/folders/${folderId}`, {
       method: 'DELETE',
+      headers: getHeaders(),
     })
 
     if (!response.ok) {

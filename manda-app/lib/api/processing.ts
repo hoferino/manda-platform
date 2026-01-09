@@ -5,6 +5,20 @@
  * Client-side functions for interacting with the processing queue API.
  */
 
+import { getOrganizationId } from './client'
+
+/**
+ * Get headers with organization ID for API requests
+ */
+function getHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {}
+  const orgId = getOrganizationId()
+  if (orgId) {
+    headers['x-organization-id'] = orgId
+  }
+  return headers
+}
+
 /**
  * Queue job status
  */
@@ -65,7 +79,9 @@ export async function fetchQueueJobs(
     offset: offset.toString(),
   })
 
-  const response = await fetch(`/api/processing/queue?${params}`)
+  const response = await fetch(`/api/processing/queue?${params}`, {
+    headers: getHeaders(),
+  })
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}))
@@ -86,6 +102,7 @@ export async function cancelQueueJob(
 
   const response = await fetch(`/api/processing/queue/${jobId}?${params}`, {
     method: 'DELETE',
+    headers: getHeaders(),
   })
 
   if (!response.ok) {

@@ -90,9 +90,18 @@ function inferUploadedDocTypes(entities: GraphitiEntity[]): DocumentType[] {
 }
 
 /**
+ * Construct the composite group_id used by Graphiti
+ * Format: org_id_deal_id (matches Python manda-processing convention)
+ */
+function buildGroupId(dealId: string, orgId?: string): string {
+  const organizationId = orgId || process.env.BENCHMARK_ORG_ID || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  return `${organizationId}_${dealId}`
+}
+
+/**
  * Run the inspect command
  */
-export async function runInspect(dealId?: string): Promise<void> {
+export async function runInspect(dealId?: string, orgId?: string): Promise<void> {
   // Get deal ID from argument or environment
   const targetDealId = dealId || process.env.BENCHMARK_DEAL_ID
 
@@ -104,13 +113,17 @@ export async function runInspect(dealId?: string): Promise<void> {
     process.exit(1)
   }
 
+  // Build composite group_id for Neo4j queries
+  const groupId = buildGroupId(targetDealId, orgId)
+
   console.log('=== Knowledge Graph Inspection ===')
   console.log('')
   console.log(`Deal ID: ${targetDealId}`)
+  console.log(`Group ID: ${groupId}`)
   console.log('')
 
   // Check if any data exists
-  const hasData = await hasGraphData(targetDealId)
+  const hasData = await hasGraphData(groupId)
 
   if (!hasData) {
     console.log('No knowledge graph data found for this deal.')
@@ -127,8 +140,8 @@ export async function runInspect(dealId?: string): Promise<void> {
     return
   }
 
-  // Get full summary
-  const summary = await getKnowledgeGraphSummary(targetDealId)
+  // Get full summary using composite group_id
+  const summary = await getKnowledgeGraphSummary(groupId)
 
   // Entity counts
   console.log('Entity Counts:')

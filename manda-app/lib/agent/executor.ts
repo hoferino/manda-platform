@@ -158,10 +158,10 @@ export function createChatAgent(config: ChatAgentConfig): ChatAgentWithCache {
   // E13.3: Get the effective model config for logging/tracing
   const effectiveConfig = getEffectiveModelConfig(config.complexity)
 
-  // Create LLM client with fallback (E12.6 + E13.3)
+  // Create LLM client (TEMPORARY: disabled fallback due to bindTools issue)
   // - E12.6: Primary → Fallback on 429/503 errors
   // - E13.3: Complexity-based primary model selection
-  const llm = createLLMClientWithFallback(llmOptions)
+  const llm = createLLMClient(llmOptions)
 
   // E13.3: Log model selection alongside tool tier selection
   console.log(

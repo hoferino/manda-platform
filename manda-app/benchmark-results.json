@@ -1,0 +1,191 @@
+{
+  "runId": "bench-2026-01-08T23-43-58-184Z-zz3asn",
+  "timestamp": "2026-01-08T23:44:40.741Z",
+  "environment": "development",
+  "totalQueries": 42,
+  "successCount": 42,
+  "failureCount": 0,
+  "overallClassificationAccuracy": 0,
+  "overallIntentAccuracy": 0.7619047619047619,
+  "byTier": {
+    "simple": {
+      "queryCount": 42,
+      "successCount": 42,
+      "classificationAccuracy": 0,
+      "intentAccuracy": 0.7619047619047619,
+      "ttft": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "min": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "latency": {
+        "p50": 1788.9191455000005,
+        "p95": 4223.478292,
+        "p99": 5943.935666999998,
+        "min": 1303.1335409999992,
+        "max": 5943.935666999998,
+        "mean": 2147.788226238095
+      },
+      "cost": {
+        "total": 0.00027,
+        "average": 0.000006428571428571429,
+        "min": 0.0000024999999999999998,
+        "max": 0.00000875
+      },
+      "tokens": {
+        "avgInput": 5.142857142857143,
+        "avgOutput": 0,
+        "totalInput": 216,
+        "totalOutput": 0
+      }
+    },
+    "medium": {
+      "queryCount": 0,
+      "successCount": 0,
+      "classificationAccuracy": 0,
+      "intentAccuracy": 0,
+      "ttft": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "min": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "latency": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "min": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "cost": {
+        "total": 0,
+        "average": 0,
+        "min": 0,
+        "max": 0
+      },
+      "tokens": {
+        "avgInput": 0,
+        "avgOutput": 0,
+        "totalInput": 0,
+        "totalOutput": 0
+      }
+    },
+    "complex": {
+      "queryCount": 0,
+      "successCount": 0,
+      "classificationAccuracy": 0,
+      "intentAccuracy": 0,
+      "ttft": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "min": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "latency": {
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "min": 0,
+        "max": 0,
+        "mean": 0
+      },
+      "cost": {
+        "total": 0,
+        "average": 0,
+        "min": 0,
+        "max": 0
+      },
+      "tokens": {
+        "avgInput": 0,
+        "avgOutput": 0,
+        "totalInput": 0,
+        "totalOutput": 0
+      }
+    }
+  },
+  "targetComparisons": [
+    {
+      "tier": "simple",
+      "metric": "ttftP95Ms",
+      "target": 500,
+      "actual": 0,
+      "passed": true,
+      "percentDiff": -100
+    },
+    {
+      "tier": "simple",
+      "metric": "costUsd",
+      "target": 0.0001,
+      "actual": 0.000006428571428571429,
+      "passed": true,
+      "percentDiff": -93.57142857142857
+    },
+    {
+      "tier": "simple",
+      "metric": "inputTokens",
+      "target": 2000,
+      "actual": 5.142857142857143,
+      "passed": true,
+      "percentDiff": -99.74285714285715
+    },
+    {
+      "tier": "medium",
+      "metric": "ttftP95Ms",
+      "target": 3000,
+      "actual": 0,
+      "passed": true,
+      "percentDiff": -100
+    },
+    {
+      "tier": "medium",
+      "metric": "costUsd",
+      "target": 0.001,
+      "actual": 0,
+      "passed": true,
+      "percentDiff": -100
+    },
+    {
+      "tier": "medium",
+      "metric": "inputTokens",
+      "target": 4000,
+      "actual": 0,
+      "passed": true,
+      "percentDiff": -100
+    },
+    {
+      "tier": "complex",
+      "metric": "ttftP95Ms",
+      "target": 15000,
+      "actual": 0,
+      "passed": true,
+      "percentDiff": -100
+    },
+    {
+      "tier": "complex",
+      "metric": "costUsd",
+      "target": 0.01,
+      "actual": 0,
+      "passed": true,
+      "percentDiff": -100
+    },
+    {
+      "tier": "complex",
+      "metric": "inputTokens",
+      "target": 10000,
+      "actual": 0,
+      "passed": true,
+      "percentDiff": -100
+    }
+  ],
+  "failures": [],
+  "totalCostUsd": 0.00027,
+  "totalDurationMs": 42554.57225
+}

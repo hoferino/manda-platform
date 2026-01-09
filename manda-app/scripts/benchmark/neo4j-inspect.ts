@@ -195,9 +195,9 @@ export async function getRecentEntities(
       e.group_id AS groupId,
       e.created_at AS createdAt
     ORDER BY e.created_at DESC
-    LIMIT $limit
+    LIMIT toInteger($limit)
     `,
-    { groupId, limit }
+    { groupId, limit: Math.floor(limit) }
   )
 
   return result.map((row) => ({

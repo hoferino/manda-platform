@@ -4,32 +4,19 @@
  * POST /api/projects/[id]/chat
  * Send a message to the AI agent and receive a streaming SSE response.
  *
- * Story: E5.3 - Build Chat Interface with Conversation History
- * Story: E5.6 - Add Conversation Context and Multi-turn Support
- * Story: E5.7 - Implement Confidence Indicators and Uncertainty Handling
- * Story: E11.4 - Intent-Aware Knowledge Retrieval
- * Story: E12.6 - Error Handling & Graceful Degradation
- * Story: E13.2 - Tier-Based Tool Loading (dynamic tool loading based on complexity)
- * Story: E13.3 - Model Selection Matrix (model routing based on complexity)
- * Story: E13.4 - Supervisor Agent Pattern (multi-agent routing for complex queries)
- * AC: #2 (Message Submission), #3 (Streaming Responses), #8 (API Routes)
- * AC: E5.6 #1 (Last N Messages), #3 (Context Persists), #4 (Long Conversations), #5 (Token Management)
- * AC: E5.7 #1 (Confidence Score Extraction), #6 (Multiple Finding Aggregation)
- * AC: E11.4 #3 (Graphiti hybrid retrieval), #4 (Context injection), #7 (Latency tracking)
- * AC: E12.6 #4 (Error logging), #5 (User-friendly messages)
- * AC: E13.2 #3 (Dynamic tool loading), #4 (Tool count in metadata)
- * AC: E13.3 #4 (Model in traces), #5 (Cost tracking per tier)
- * AC: E13.4 #7 (Conditional routing based on complexity)
+ * Architecture: 3-Path Orchestrator
+ * - Vanilla: Direct LLM response (greetings, general chat)
+ * - Retrieval: Neo4j context injection + LLM (document questions)
+ * - Analysis: Subagent routing (complex analysis)
+ *
+ * Feature Flag: USE_ORCHESTRATOR (default: true)
+ * Set to 'false' to use legacy agent system
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createClientFromAuthHeader } from '@/lib/supabase/server'
 import { ChatRequestSchema } from '@/lib/types/chat'
 import { toUserFacingError } from '@/lib/errors/types'
-import {
-  createChatAgent,
-  streamChat,
-} from '@/lib/agent/executor'
 import {
   createSSEStream,
   getSSEHeaders,
@@ -37,16 +24,16 @@ import {
   generateFollowupSuggestions,
 } from '@/lib/agent/streaming'
 import {
-  ConversationContextManager,
-  type DatabaseMessage,
   DEFAULT_CONTEXT_OPTIONS,
 } from '@/lib/agent/context'
-import { classifyIntentAsync, type ComplexityLevel } from '@/lib/agent/intent'
-import { handleToolEscalation, getNextTier, canEscalate } from '@/lib/agent/tools/tool-loader'
 import { logFeatureUsage } from '@/lib/observability/usage'
-import { getTokenCosts, calculateModelCost } from '@/lib/llm/config'
-// E13.4: Supervisor for complex query multi-agent routing
-import { invokeSupervisor, type SupervisorInvokeResult } from '@/lib/agent/supervisor'
+
+// New orchestrator
+import {
+  streamOrchestrator,
+  type OrchestratorResult,
+  type RoutePath,
+} from '@/lib/agent/orchestrator'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -54,16 +41,21 @@ interface RouteContext {
 
 /**
  * Context window size - number of messages to include in LLM context
- * Configured via DEFAULT_CONTEXT_OPTIONS in context.ts (default: 10 messages, 8000 tokens)
  */
 const CONTEXT_WINDOW_SIZE = DEFAULT_CONTEXT_OPTIONS.maxMessages
+
+/**
+ * Feature flag: Use new orchestrator (default: true)
+ * Set USE_ORCHESTRATOR=false to use legacy agent system
+ */
+const USE_ORCHESTRATOR = process.env.USE_ORCHESTRATOR !== 'false'
 
 /**
  * POST /api/projects/[id]/chat
  * Send a message and receive streaming SSE response
  */
 export async function POST(request: NextRequest, context: RouteContext) {
-  const chatStartTime = Date.now() // E12.2: Track timing for usage logging
+  const chatStartTime = Date.now()
 
   try {
     const { id: projectId } = await context.params
@@ -81,18 +73,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const { message, conversationId } = parseResult.data
 
-    const supabase = await createClient()
+    // Try cookie-based auth first, then fall back to Authorization header
+    // This supports both browser sessions and API clients (benchmarks, CLI tools)
+    let supabase = await createClient()
+    let user = (await supabase.auth.getUser()).data.user
 
-    // Authenticate user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
+    if (!user) {
+      // Try Authorization header (Bearer token)
+      const authHeader = request.headers.get('Authorization')
+      const headerClient = await createClientFromAuthHeader(authHeader)
+      if (headerClient) {
+        supabase = headerClient
+        user = (await supabase.auth.getUser()).data.user
+      }
+    }
+
+    if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    // Verify user has access to this project and get organization_id for usage tracking
+    // Verify user has access to this project and get organization_id
     const { data: project, error: projectError } = await supabase
       .from('deals')
       .select('id, name, organization_id')
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Save user message to database
-    const { data: userMessage, error: userMsgError } = await supabase
+    const { error: userMsgError } = await supabase
       .from('messages')
       .insert({
         conversation_id: activeConversationId,
@@ -157,228 +157,73 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // Continue anyway - we don't want to block the response
     }
 
-    // Fetch conversation history for context (E5.6: AC1, AC3, AC4, AC5)
-    // Load more messages than needed to allow for token-based truncation
-    // Note: Only select columns needed for context (sources not required for history)
+    // Fetch conversation history for context
     const { data: historyMessages } = await supabase
       .from('messages')
-      .select('id, conversation_id, role, content, tool_calls, created_at')
+      .select('id, role, content, created_at')
       .eq('conversation_id', activeConversationId)
       .order('created_at', { ascending: true })
-      .limit(CONTEXT_WINDOW_SIZE * 3) // Load extra for token-aware truncation
+      .limit(CONTEXT_WINDOW_SIZE * 2)
 
-    // Use ConversationContextManager for intelligent context formatting
-    // This handles token counting and truncation (AC4, AC5)
-    const contextManager = new ConversationContextManager()
-    const formattedContext = contextManager.loadFromDatabase(
-      (historyMessages || []) as unknown as DatabaseMessage[]
-    )
-
-    // Log context stats for debugging
-    if (formattedContext.wasTruncated) {
-      console.log(
-        `[api/chat] Context truncated: ${formattedContext.originalMessageCount} → ${formattedContext.messages.length} messages, ${formattedContext.tokenCount} tokens`
-      )
-    }
-
-    // Convert formatted context to the format expected by streamChat
-    // The ConversationContextManager already produces LangChain BaseMessage objects
-    // but streamChat expects ConversationMessage format, so we need to convert back
+    // Convert to chat history format
     const chatHistory = (historyMessages || [])
-      .slice(-CONTEXT_WINDOW_SIZE * 2)
+      .slice(0, -1) // Exclude the message we just saved
       .map((msg) => ({
         role: (msg.role === 'human' || msg.role === 'user' ? 'user' :
               msg.role === 'ai' || msg.role === 'assistant' ? 'assistant' :
               msg.role) as 'user' | 'assistant' | 'system',
         content: msg.content,
-        timestamp: msg.created_at,
       }))
 
     // Create SSE stream
     const { stream, writer } = createSSEStream()
     const handler = new AgentStreamHandler(writer)
 
-    // E13.2: Classify intent to determine complexity for tier-based tool loading
-    // This runs before agent creation to optimize tool set selection
-    const intentResult = await classifyIntentAsync(message)
-    const { complexity } = intentResult
-
-    console.log(
-      `[api/chat] Intent classified: ${intentResult.intent}, complexity: ${complexity ?? 'default'}, ` +
-      `confidence: ${intentResult.complexityConfidence ?? 'N/A'}`
-    )
-
-    // E13.4: Feature flag for supervisor routing
-    // Set to true to enable multi-agent supervisor for complex queries
-    const ENABLE_SUPERVISOR = process.env.ENABLE_SUPERVISOR_AGENT === 'true'
-
-    // E13.4: Route complex queries to supervisor for multi-agent processing (AC: #7)
-    if (ENABLE_SUPERVISOR && complexity === 'complex') {
-      console.log('[api/chat] Routing to supervisor agent for complex query')
-
-      try {
-        const supervisorResult = await invokeSupervisor({
-          query: message,
-          dealId: projectId,
-          userId: user.id,
-          organizationId: project.organization_id ?? undefined,
-          intent: intentResult,
-        })
-
-        // Generate message ID for the response
-        const messageId = crypto.randomUUID()
-
-        // Save assistant message from supervisor
-        const { error: assistantMsgError } = await supabase.from('messages').insert({
-          id: messageId,
-          conversation_id: activeConversationId,
-          role: 'assistant',
-          content: supervisorResult.content,
-          sources: supervisorResult.sources.length > 0 ? JSON.stringify(supervisorResult.sources) : null,
-        })
-
-        if (assistantMsgError) {
-          console.error('[api/chat] Error saving supervisor message:', assistantMsgError)
-        }
-
-        // Update conversation updated_at
-        await supabase
-          .from('conversations')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', activeConversationId)
-
-        // E13.4: Log supervisor usage (AC: #5)
-        try {
-          await logFeatureUsage({
-            dealId: projectId,
-            userId: user.id,
-            organizationId: project.organization_id ?? undefined,
-            featureName: 'chat_supervisor',
-            status: 'success',
-            durationMs: supervisorResult.metrics.totalLatencyMs,
-            metadata: {
-              conversationId: activeConversationId,
-              messageLength: message.length,
-              responseLength: supervisorResult.content.length,
-              // E13.4: Supervisor-specific metadata
-              specialists: supervisorResult.specialists,
-              wasSynthesized: supervisorResult.wasSynthesized,
-              confidence: supervisorResult.confidence,
-              sourceCount: supervisorResult.sources.length,
-              // Routing details
-              routingSpecialists: supervisorResult.routing.selectedSpecialists,
-              routingRationale: supervisorResult.routing.rationale,
-              routingParallel: supervisorResult.routing.isParallel,
-              // Timing breakdown
-              classifyLatencyMs: supervisorResult.metrics.classifyLatencyMs,
-              routeLatencyMs: supervisorResult.metrics.routeLatencyMs,
-              synthesizeLatencyMs: supervisorResult.metrics.synthesizeLatencyMs,
-            },
-          })
-        } catch (loggingError) {
-          console.error('[api/chat] Supervisor usage logging failed:', loggingError)
-        }
-
-        // Return non-streaming JSON response for supervisor path
-        // TODO: E13.8 - Add streaming support to supervisor
-        return NextResponse.json({
-          content: supervisorResult.content,
-          messageId,
-          conversationId: activeConversationId,
-          confidence: supervisorResult.confidence,
-          sources: supervisorResult.sources,
-          specialists: supervisorResult.specialists,
-          wasSynthesized: supervisorResult.wasSynthesized,
-          routing: supervisorResult.routing,
-          metrics: supervisorResult.metrics,
-        }, {
-          headers: {
-            'X-Conversation-Id': activeConversationId,
-            'X-Complexity-Tier': 'complex',
-            'X-Agent-Mode': 'supervisor',
-            'X-Specialists': supervisorResult.specialists.join(','),
-          },
-        })
-      } catch (supervisorError) {
-        // Log error and fall back to regular agent
-        console.error('[api/chat] Supervisor error, falling back to regular agent:', supervisorError)
-        try {
-          await logFeatureUsage({
-            dealId: projectId,
-            userId: user.id,
-            organizationId: project.organization_id ?? undefined,
-            featureName: 'chat_supervisor',
-            status: 'error',
-            durationMs: Date.now() - chatStartTime,
-            errorMessage: supervisorError instanceof Error ? supervisorError.message : String(supervisorError),
-          })
-        } catch (logErr) {
-          console.error('[api/chat] Supervisor error logging failed:', logErr)
-        }
-        // Continue to regular agent path below
-      }
-    }
-
-    // Create the agent with complexity-based tool loading (E13.2)
-    const agent = createChatAgent({
-      dealId: projectId,
-      userId: user.id,
-      dealName: project.name,
-      complexity, // E13.2: Pass complexity for tier-based tool loading
-    })
-
     // Start streaming in the background
     const streamPromise = (async () => {
       try {
-        // E11.4: Pass dealId to enable pre-model retrieval
-        await streamChat(
-          agent,
-          message,
-          chatHistory,
+        console.log(`[api/chat] Using orchestrator for message: "${message.slice(0, 50)}..."`)
+
+        const result = await streamOrchestrator(
           {
-            onToken: (token) => handler.onToken(token),
-            onToolStart: (tool, input) => handler.onToolStart(tool, input),
-            onToolEnd: (tool, output) => handler.onToolEnd(tool, output as string),
-            onError: (error) => handler.onError(error),
-            // E11.4: Track retrieval metrics (AC: #7)
-            onRetrievalComplete: (metrics) => {
-              console.log(
-                `[api/chat] Pre-model retrieval: ${metrics.latencyMs}ms, ` +
-                `intent=${metrics.intent}, cache=${metrics.cacheHit}, skipped=${metrics.skipped}`
-              )
-            },
-          },
-          {
+            message,
             dealId: projectId,
             userId: user.id,
-            organizationId: project.organization_id ?? undefined, // E12.9: Multi-tenant isolation
-          } // E11.4: Enable pre-model retrieval, E12.2: Usage logging
+            organizationId: project.organization_id ?? undefined,
+            chatHistory,
+          },
+          {
+            onToken: (token) => handler.onToken(token),
+            onRouteDecision: (routeResult) => {
+              console.log(
+                `[api/chat] Route decision: ${routeResult.path} ` +
+                `(confidence: ${routeResult.confidence.toFixed(2)}, ` +
+                `reason: ${routeResult.reason})`
+              )
+            },
+            onError: (error) => handler.onError(error),
+          }
         )
 
         // Generate follow-up suggestions
-        const content = handler.getContent()
-        const followups = generateFollowupSuggestions(content)
-
-        // Extract confidence from tool results (E5.7)
-        const confidence = handler.getConfidence()
+        const followups = generateFollowupSuggestions(result.content)
 
         // Generate message ID for the response
         const messageId = crypto.randomUUID()
 
         // Save assistant message to database
-        // Note: confidence column removed - doesn't exist in schema yet
         const { error: assistantMsgError } = await supabase.from('messages').insert({
           id: messageId,
           conversation_id: activeConversationId,
           role: 'assistant',
-          content,
-          sources: handler.getSources().length > 0 ? JSON.stringify(handler.getSources()) : null,
+          content: result.content,
+          sources: result.sources.length > 0 ? JSON.stringify(result.sources) : null,
         })
 
         if (assistantMsgError) {
           console.error('[api/chat] Error saving assistant message:', assistantMsgError)
         } else {
-          console.log('[api/chat] Assistant message saved:', messageId, 'to conversation:', activeConversationId)
+          console.log('[api/chat] Assistant message saved:', messageId)
         }
 
         // Update conversation updated_at
@@ -387,103 +232,57 @@ export async function POST(request: NextRequest, context: RouteContext) {
           .update({ updated_at: new Date().toISOString() })
           .eq('id', activeConversationId)
 
-        // E12.2 + E13.3: Log feature usage for chat with model information
+        // Log feature usage
         try {
-          // E13.3: Calculate estimated cost using model-specific pricing
-          const estimatedInputTokens = Math.ceil(message.length / 4)
-          const estimatedOutputTokens = Math.ceil(content.length / 4)
-          const modelUsed = agent.selectedModel ?? 'claude-sonnet-4-20250514'
-          const estimatedCost = calculateModelCost(modelUsed, estimatedInputTokens, estimatedOutputTokens)
-
           await logFeatureUsage({
             dealId: projectId,
             userId: user.id,
-            organizationId: project.organization_id ?? undefined, // E12.9: Multi-tenant isolation
+            organizationId: project.organization_id ?? undefined,
             featureName: 'chat',
             status: 'success',
             durationMs: Date.now() - chatStartTime,
             metadata: {
               conversationId: activeConversationId,
               messageLength: message.length,
-              responseLength: content.length,
-              // E13.2: Tool tier metadata for LangSmith tracing
-              toolTier: agent.complexity ?? 'complex',
-              toolCount: agent.toolCount,
-              intent: intentResult.intent,
-              complexityConfidence: intentResult.complexityConfidence,
-              // E13.3: Model selection metadata
-              modelUsed: `${agent.selectedProvider}:${agent.selectedModel}`,
-              modelTier: agent.complexity ?? 'complex',
-              estimatedInputTokens,
-              estimatedOutputTokens,
-              estimatedCostUsd: estimatedCost,
+              responseLength: result.content.length,
+              // Orchestrator metadata
+              path: result.path,
+              routeConfidence: result.routing.confidence,
+              routeReason: result.routing.reason,
+              matchedKeywords: result.routing.matchedKeywords,
+              // Timing
+              routeLatencyMs: result.metrics.routeLatencyMs,
+              pathLatencyMs: result.metrics.pathLatencyMs,
+              totalLatencyMs: result.metrics.totalLatencyMs,
+              // Path-specific
+              model: result.metrics.model,
+              specialists: result.metrics.specialists,
+              retrievalLatencyMs: result.metrics.retrievalLatencyMs,
+              hadContext: result.metrics.hadContext,
+              sourceCount: result.sources.length,
             },
           })
         } catch (loggingError) {
           console.error('[api/chat] Usage logging failed:', loggingError)
-          // Non-blocking - don't fail the chat for logging errors
         }
 
         // Complete the stream
         handler.onComplete(messageId, followups)
       } catch (error) {
         console.error('[api/chat] Stream error:', error)
-
-        // E13.2: Check if this error indicates a need for escalation
-        // Log escalation events for classification improvement
-        const escalationResult = handleToolEscalation(error, agent.complexity ?? 'complex')
-        if (escalationResult.shouldEscalate) {
-          console.warn(
-            `[api/chat] Escalation needed: ${agent.complexity} → ${escalationResult.nextTier}. ` +
-            `Query: "${message.substring(0, 100)}..." Reason: ${escalationResult.reason}`
-          )
-          // Log escalation event for future classification improvement
-          try {
-            await logFeatureUsage({
-              dealId: projectId,
-              userId: user.id,
-              organizationId: project.organization_id ?? undefined,
-              featureName: 'chat_escalation',
-              status: 'error', // Escalation is triggered by an error
-              durationMs: Date.now() - chatStartTime,
-              metadata: {
-                escalationType: 'tier_upgrade_needed',
-                originalTier: agent.complexity ?? 'complex',
-                suggestedTier: escalationResult.nextTier,
-                intent: intentResult.intent,
-                messagePreview: message.substring(0, 200),
-                errorMessage: error instanceof Error ? error.message : String(error),
-              },
-            })
-          } catch (logErr) {
-            console.error('[api/chat] Escalation logging failed:', logErr)
-          }
-        }
-
         handler.onError(error instanceof Error ? error : new Error(String(error)), 'STREAM_ERROR')
       }
     })()
 
     // Return the streaming response
-    // E13.2: Include tool tier metadata in headers for debugging/tracing
-    // E13.3: Include model selection metadata in headers
-    // Note: wasEscalated would be set if we implemented full retry logic
-    // Currently we log escalation events for classification improvement
     return new NextResponse(stream, {
       headers: {
         ...getSSEHeaders(),
         'X-Conversation-Id': activeConversationId,
-        // E13.2: Tool tier metadata
-        'X-Tool-Tier': agent.complexity ?? 'complex',
-        'X-Tool-Count': String(agent.toolCount),
-        'X-Was-Escalated': 'false', // E13.2: Would be true if escalation retry occurred
-        // E13.3: Model selection metadata for LangSmith tracing (AC: #4)
-        'X-Model-Used': `${agent.selectedProvider}:${agent.selectedModel}`,
-        'X-Complexity-Tier': agent.complexity ?? 'complex',
+        'X-Agent-Mode': 'orchestrator',
       },
     })
   } catch (err) {
-    // E12.6: Standardized error response
     const userError = toUserFacingError(err)
     console.error('[api/chat] Error:', userError.cause ?? err)
 
