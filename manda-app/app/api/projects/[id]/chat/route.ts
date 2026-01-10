@@ -1,277 +1,280 @@
 /**
- * Chat API Route (Legacy)
+ * Chat API Route (Agent System v2.0)
  *
+ * Story: 1-4 Implement Thread ID Generation and Management
+ * Story: 1-6 Implement Basic Error Recovery (AC: #4)
+ * Story: 1-7 Remove Legacy Agent Code (route consolidation)
  * POST /api/projects/[id]/chat
  *
- * Story 1.7: This route now forwards to the v2 agent system at /chat-v2.
- * The legacy orchestrator has been removed as part of the agent system v2.0 migration.
+ * Entry point for Agent System v2.0 conversations. Connects the frontend
+ * chat UI to the LangGraph-based agent with PostgresSaver checkpointing.
  *
- * This route maintains backward compatibility by forwarding requests to chat-v2
- * with appropriate response handling and conversation management.
+ * Features:
+ * - Thread ID generation for new conversations
+ * - Thread resumption for existing conversations
+ * - Deal-scoped isolation via RLS
+ * - SSE streaming of agent responses
+ * - Proper error handling with structured error events (Story 1.6)
  *
- * @deprecated Use /api/projects/[id]/chat-v2 for new integrations
+ * References:
+ * - [Source: _bmad-output/planning-artifacts/agent-system-architecture.md#Chat API Route]
+ * - [Source: _bmad-output/planning-artifacts/agent-system-architecture.md#Error Handling Patterns]
+ * - [Source: CLAUDE.md#Agent System v2.0]
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createClientFromAuthHeader } from '@/lib/supabase/server'
-import { ChatRequestSchema } from '@/lib/types/chat'
-import { toUserFacingError } from '@/lib/errors/types'
-import {
-  createSSEStream,
-  getSSEHeaders,
-  AgentStreamHandler,
-  generateFollowupSuggestions,
-} from '@/lib/agent/streaming'
-import { logFeatureUsage } from '@/lib/observability/usage'
+import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
 import { HumanMessage } from '@langchain/core/messages'
 import {
   createV2ThreadId,
   safeStreamAgent,
   createInitialState,
+  generateConversationId,
   toUserFriendlyMessage,
   type SafeStreamErrorEvent,
 } from '@/lib/agent/v2'
+
+// =============================================================================
+// Request Validation (AC: #1 - Task 4)
+// =============================================================================
+
+/**
+ * Valid workflow modes for v2 agent
+ */
+const WorkflowModeSchema = z.enum(['chat', 'cim', 'irl'])
+
+/**
+ * Chat v2 request body schema
+ */
+const ChatV2RequestSchema = z.object({
+  /** User message content */
+  message: z
+    .string()
+    .min(1, 'Message is required')
+    .max(10000, 'Message exceeds maximum length of 10,000 characters'),
+  /** Existing conversation ID (UUID) for thread resumption */
+  conversationId: z.string().uuid().optional(),
+  /** Workflow mode determines system prompt and tool filtering */
+  workflowMode: WorkflowModeSchema.optional().default('chat'),
+})
+
+// =============================================================================
+// Route Context Type
+// =============================================================================
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
+// =============================================================================
+// POST Handler
+// =============================================================================
+
 /**
  * POST /api/projects/[id]/chat
- * Send a message and receive streaming SSE response
  *
- * Story 1.7: Now uses Agent System v2.0 instead of legacy orchestrator.
- * Maintains same API contract for backward compatibility.
+ * Send a message to the v2 agent and receive a streaming SSE response.
+ *
+ * Request body:
+ * - message: string (required) - User's message
+ * - conversationId?: string (optional) - UUID to resume existing conversation
+ * - workflowMode?: 'chat' | 'cim' | 'irl' (optional, default: 'chat')
+ *
+ * Response:
+ * - SSE stream of agent events
+ * - X-Conversation-Id header with conversation UUID
+ *
+ * Error responses:
+ * - 400: Invalid request (missing message, invalid format)
+ * - 401: Unauthorized (no auth session)
+ * - 404: Deal not found
+ * - 500: Internal server error
+ *
+ * SSE Error Event Format (Story 1.6):
+ * ```json
+ * {
+ *   "type": "error",
+ *   "error": {
+ *     "code": "LLM_ERROR",
+ *     "message": "I'm having trouble thinking. Let me try again."
+ *   },
+ *   "conversationId": "...",
+ *   "timestamp": "..."
+ * }
+ * ```
  */
 export async function POST(request: NextRequest, context: RouteContext) {
-  const chatStartTime = Date.now()
-
   try {
-    const { id: projectId } = await context.params
+    // Extract deal ID from route params
+    const { id: dealId } = await context.params
 
-    // Parse and validate request body
-    const body = await request.json()
-    const parseResult = ChatRequestSchema.safeParse(body)
+    // ==========================================================================
+    // Authentication (AC: #3 - Task 5)
+    // ==========================================================================
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // ==========================================================================
+    // Deal Access Verification (AC: #3 - Task 5)
+    // ==========================================================================
+    // RLS policy automatically enforces access control
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .select('id, name')
+      .eq('id', dealId)
+      .single()
+
+    if (dealError || !deal) {
+      return NextResponse.json({ error: 'Deal not found' }, { status: 404 })
+    }
+
+    // ==========================================================================
+    // Request Validation (AC: #1 - Task 4)
+    // ==========================================================================
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
+    const parseResult = ChatV2RequestSchema.safeParse(body)
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Invalid request', details: parseResult.error.flatten() },
+        {
+          error: 'Invalid request',
+          details: parseResult.error.flatten().fieldErrors,
+        },
         { status: 400 }
       )
     }
 
-    const { message, conversationId } = parseResult.data
+    const {
+      message,
+      conversationId: providedConversationId,
+      workflowMode,
+    } = parseResult.data
 
-    // Try cookie-based auth first, then fall back to Authorization header
-    // This supports both browser sessions and API clients (benchmarks, CLI tools)
-    let supabase = await createClient()
-    let user = (await supabase.auth.getUser()).data.user
+    // Note: conversationId is already validated as UUID by Zod schema
 
-    if (!user) {
-      // Try Authorization header (Bearer token)
-      const authHeader = request.headers.get('Authorization')
-      const headerClient = await createClientFromAuthHeader(authHeader)
-      if (headerClient) {
-        supabase = headerClient
-        user = (await supabase.auth.getUser()).data.user
-      }
-    }
+    // ==========================================================================
+    // Conversation ID Management (AC: #1, #2 - Tasks 2, 3)
+    // ==========================================================================
+    // Generate new conversation ID or use existing for thread resumption
+    const conversationId = providedConversationId || generateConversationId()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+    // Build thread ID for checkpointer isolation
+    // Format: {workflowMode}:{dealId}:{userId}:{conversationId}
+    const threadId = createV2ThreadId(
+      workflowMode,
+      dealId,
+      user.id,
+      conversationId
+    )
 
-    // Verify user has access to this project and get organization_id
-    const { data: project, error: projectError } = await supabase
-      .from('deals')
-      .select('id, name, organization_id')
-      .eq('id', projectId)
-      .single()
+    // ==========================================================================
+    // Agent State Initialization (AC: #2 - Task 3)
+    // ==========================================================================
+    // Create initial state with workflow mode and deal context placeholder
+    // Context loader middleware (Story 3-1) will populate full deal context
+    const state = createInitialState(workflowMode, dealId, user.id)
 
-    if (projectError || !project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-    }
-
-    // Get or create conversation
-    let activeConversationId: string
-
-    if (conversationId) {
-      // Verify conversation exists and belongs to user
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('id', conversationId)
-        .eq('deal_id', projectId)
-        .eq('user_id', user.id)
-        .single()
-
-      if (convError || !conversation) {
-        return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
-      }
-      activeConversationId = conversationId
-    } else {
-      // Create new conversation
-      const title = message.length > 50 ? message.substring(0, 47) + '...' : message
-      const { data: newConversation, error: createError } = await supabase
-        .from('conversations')
-        .insert({
-          deal_id: projectId,
-          user_id: user.id,
-          title,
-        })
-        .select('id')
-        .single()
-
-      if (createError || !newConversation) {
-        console.error('[api/chat] Error creating conversation:', createError)
-        return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 })
-      }
-
-      activeConversationId = newConversation.id
-    }
-
-    // Save user message to database
-    const { error: userMsgError } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: activeConversationId,
-        role: 'user',
-        content: message,
-      })
-      .select('id')
-      .single()
-
-    if (userMsgError) {
-      console.error('[api/chat] Error saving user message:', userMsgError)
-      // Continue anyway - we don't want to block the response
-    }
-
-    // Create SSE stream
-    const { stream, writer } = createSSEStream()
-    const handler = new AgentStreamHandler(writer)
-
-    // Build thread ID for v2 agent (Story 1.7: using v2 system)
-    const threadId = createV2ThreadId('chat', projectId, user.id, activeConversationId)
-
-    // Create initial state for v2 agent
-    const state = createInitialState('chat', projectId, user.id)
+    // Add user message to state
+    // messagesStateReducer will append to existing messages if resuming
     state.messages = [new HumanMessage(message)]
 
-    // Start streaming in the background using v2 agent
-    // Note: This IIFE runs asynchronously to populate the SSE stream.
-    // Errors are caught and sent via handler.onError(), not thrown.
-    void (async () => {
-      try {
-        let fullContent = ''
+    // ==========================================================================
+    // SSE Streaming Response with Error Handling (Story 1.6 AC: #4)
+    // TODO: Consider using AgentStreamHandler from @/lib/agent/streaming for
+    // consistency with the legacy chat route. Currently using raw SSE encoding.
+    // ==========================================================================
+    const encoder = new TextEncoder()
 
-        // Stream using v2 agent
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Use safeStreamAgent - catches errors and yields error events instead of throwing
         for await (const event of safeStreamAgent(state, threadId, {
           metadata: {
             api_route: '/api/projects/[id]/chat',
-            deal_id: projectId,
+            deal_id: dealId,
             user_id: user.id,
-            conversation_id: activeConversationId,
+            conversation_id: conversationId,
           },
         })) {
-          // Check for error events using type guard
+          // Check if this is an error event from safeStreamAgent
+          // Use 'in' operator for type narrowing since SafeStreamErrorEvent has 'type' property
           if ('type' in event && event.type === 'error') {
             const errorEvent = event as SafeStreamErrorEvent
-            handler.onError(
-              new Error(toUserFriendlyMessage(errorEvent.error)),
-              errorEvent.error.code
-            )
+
+            // Send structured error event with user-friendly message
+            const errorData = JSON.stringify({
+              type: 'error',
+              error: {
+                code: errorEvent.error.code,
+                message: toUserFriendlyMessage(errorEvent.error),
+              },
+              conversationId,
+              timestamp: new Date().toISOString(),
+            })
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+
+            // Close stream after error - conversation state is preserved in checkpoint
+            controller.close()
             return
           }
 
-          // Handle LangGraph stream events using type guards
-          if ('event' in event && 'data' in event) {
-            const streamEvent = event as { event: string; data?: unknown }
-            if (streamEvent.event === 'on_llm_stream' && streamEvent.data) {
-              // Safely extract token content with optional chaining
-              const data = streamEvent.data as Record<string, unknown>
-              const chunk = data.chunk as Record<string, unknown> | undefined
-              const token = typeof chunk?.content === 'string' ? chunk.content : undefined
-              if (token) {
-                fullContent += token
-                handler.onToken(token)
-              }
-            }
-          }
-        }
-
-        // Generate follow-up suggestions
-        const followups = generateFollowupSuggestions(fullContent)
-
-        // Generate message ID for the response
-        const messageId = crypto.randomUUID()
-
-        // Save assistant message to database
-        const { error: assistantMsgError } = await supabase.from('messages').insert({
-          id: messageId,
-          conversation_id: activeConversationId,
-          role: 'assistant',
-          content: fullContent,
-        })
-
-        if (assistantMsgError) {
-          console.error('[api/chat] Error saving assistant message:', assistantMsgError)
-        } else {
-          console.log('[api/chat] Assistant message saved:', messageId)
-        }
-
-        // Update conversation updated_at
-        await supabase
-          .from('conversations')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', activeConversationId)
-
-        // Log feature usage
-        try {
-          await logFeatureUsage({
-            dealId: projectId,
-            userId: user.id,
-            organizationId: project.organization_id ?? undefined,
-            featureName: 'chat',
-            status: 'success',
-            durationMs: Date.now() - chatStartTime,
-            metadata: {
-              conversationId: activeConversationId,
-              messageLength: message.length,
-              responseLength: fullContent.length,
-              agentVersion: 'v2',
-            },
+          // Convert LangGraph event to SSE format
+          // StreamEvent has 'event' and 'data' properties
+          const streamEvent = event as { event: string; data?: unknown }
+          const sseData = JSON.stringify({
+            event: streamEvent.event,
+            data: streamEvent.data,
+            conversationId, // Include for client tracking
+            timestamp: new Date().toISOString(),
           })
-        } catch (loggingError) {
-          console.error('[api/chat] Usage logging failed:', loggingError)
+          controller.enqueue(encoder.encode(`data: ${sseData}\n\n`))
         }
 
-        // Complete the stream
-        handler.onComplete(messageId, followups)
-      } catch (error) {
-        console.error('[api/chat] Stream error:', error)
-        handler.onError(error instanceof Error ? error : new Error(String(error)), 'STREAM_ERROR')
-      }
-    })()
+        // Send done event
+        const doneData = JSON.stringify({
+          type: 'done',
+          conversationId,
+          timestamp: new Date().toISOString(),
+        })
+        controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
 
-    // Return the streaming response
-    return new NextResponse(stream, {
-      headers: {
-        ...getSSEHeaders(),
-        'X-Conversation-Id': activeConversationId,
-        'X-Agent-Mode': 'v2',
+        controller.close()
       },
     })
-  } catch (err) {
-    const userError = toUserFacingError(err)
-    console.error('[api/chat] Error:', userError.cause ?? err)
+
+    // Return SSE response with conversation ID header
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no', // Disable nginx buffering
+        'X-Conversation-Id': conversationId, // For client to store
+        'X-Thread-Id': threadId, // For debugging
+        'X-Agent-Version': 'v2',
+      },
+    })
+  } catch (error) {
+    // Handle errors before streaming starts (auth, validation, etc.)
+    console.error('[chat] Unexpected error:', error)
 
     return NextResponse.json(
-      {
-        error: userError.message,
-        isRetryable: userError.isRetryable,
-        errorType: userError.constructor.name,
-      },
-      { status: userError.statusCode }
+      { error: 'Internal server error' },
+      { status: 500 }
     )
   }
 }

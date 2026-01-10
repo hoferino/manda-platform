@@ -1,7 +1,8 @@
 /**
- * Chat v2 API Route - Integration Tests
+ * Chat API Route - Integration Tests (Agent System v2.0)
  *
  * Story: 1-4 Implement Thread ID Generation and Management (AC: #2, #3)
+ * Story: 1-7 Remove Legacy Agent Code (route consolidation)
  *
  * Integration tests verify:
  * - Conversation persists across multiple requests

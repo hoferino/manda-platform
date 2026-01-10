@@ -106,7 +106,7 @@ Upload → GCS Storage → Webhook → pg-boss Queue → Workers
 
 ### Agent System v2.0 (Single StateGraph + Middleware)
 
-> **Story 1.7 Complete:** The legacy 3-path regex router (`lib/agent/orchestrator/`), supervisor module, and executor have been removed. Agent System v2.0 is now the primary implementation. The `/api/projects/[id]/chat` route has been migrated to use v2 internally. See `_bmad-output/planning-artifacts/agent-system-architecture.md` for full details.
+> **Story 1.7 Complete:** The legacy 3-path regex router (`lib/agent/orchestrator/`), supervisor module, and executor have been removed. Agent System v2.0 is now the sole implementation. Routes have been consolidated - `/api/projects/[id]/chat` is now the v2 agent endpoint. See `_bmad-output/planning-artifacts/agent-system-architecture.md` for full details.
 
 The agent system uses a single LangGraph StateGraph with middleware-based context engineering:
 
@@ -156,8 +156,7 @@ User Message → Middleware Stack → Single StateGraph → Response
 - `lib/agent/graph.ts` - Legacy root graph (DELETED)
 
 **API Entry Points:**
-- `app/api/projects/[id]/chat/route.ts` - Uses v2 agent system
-- `app/api/projects/[id]/chat-v2/route.ts` - Direct v2 route (preferred)
+- `app/api/projects/[id]/chat/route.ts` - v2 agent system (sole entry point)
 
 ### LangChain Integration
 

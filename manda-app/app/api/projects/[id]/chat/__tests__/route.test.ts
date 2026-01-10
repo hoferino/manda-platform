@@ -1,7 +1,8 @@
 /**
- * Chat v2 API Route - Unit Tests
+ * Chat API Route - Unit Tests (Agent System v2.0)
  *
  * Story: 1-4 Implement Thread ID Generation and Management (AC: #1)
+ * Story: 1-7 Remove Legacy Agent Code (route consolidation)
  *
  * Tests:
  * - New conversation generates conversationId

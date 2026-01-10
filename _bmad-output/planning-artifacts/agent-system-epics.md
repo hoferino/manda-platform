@@ -620,8 +620,8 @@ So that **I get relevant responses instead of generic fallbacks**.
 **Given** the v2 StateGraph from Epic 1
 **When** I create `lib/agent/v2/nodes/supervisor.ts`
 **Then** it implements a supervisor node that:
-- Uses Claude Sonnet via Vertex AI
-- Has access to specialist tools (placeholder definitions)
+- Uses Gemini via Vertex AI (EU region for NFR8 compliance)
+- Has access to specialist tools (defined in `lib/agent/v2/tools/specialist-definitions.ts`)
 - Routes via LLM tool-calling (not regex patterns)
 - Returns direct responses for simple queries (FR14)
 
@@ -633,6 +633,11 @@ So that **I get relevant responses instead of generic fallbacks**.
 **Given** a simple question about the system
 **When** processed by the supervisor
 **Then** it responds directly without unnecessary tool calls
+
+**Pre-requisites (from Epic 1 Tech Debt):**
+- `@langchain/google-vertexai` installed with `GOOGLE_VERTEX_PROJECT` and `GOOGLE_VERTEX_LOCATION` env vars
+- Specialist tool stubs defined in `lib/agent/v2/tools/specialist-definitions.ts`
+- Routes consolidated: `/api/projects/[id]/chat-v2` merged into `/api/projects/[id]/chat`
 
 ---
 
