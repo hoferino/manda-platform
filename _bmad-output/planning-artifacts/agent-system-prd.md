@@ -708,6 +708,8 @@ Agent operations respect existing platform roles:
 - FR62: System stores conversation summaries as retrievable nodes linked to deal context
 - FR63: System maintains separation between conversational history and deal intelligence (prevents semantic pollution)
 - FR64: Extracted facts and summaries are available for retrieval in future conversations
+- FR65: System detects user corrections and offers to persist them to knowledge graph
+- FR66: Corrections include provenance metadata (source: user_correction, timestamp, original_value)
 
 ---
 
