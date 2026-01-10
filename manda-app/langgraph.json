@@ -4,8 +4,7 @@
   "dockerfile_lines": [],
   "dependencies": ["."],
   "graphs": {
-    "chat": "./lib/agent/orchestrator/graph.ts:orchestratorGraph",
-    "chat-legacy": "./lib/agent/graph.ts:chatGraph"
+    "chat": "./lib/agent/v2/graph.ts:agentGraph"
   },
   "env": ".env.local"
 }

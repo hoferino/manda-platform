@@ -63,7 +63,7 @@ This document provides the complete epic and story breakdown for Agent System v2
 **Human-in-the-Loop (FR32-FR36)**
 - FR32: System presents plans for approval before executing complex multi-step tasks
 - FR33: Users can approve, modify, or reject proposed plans
-- FR34: System requests approval before modifying Q&A list entries
+- FR34: System suggests Q&A entries when detecting information gaps; user confirms with one click
 - FR35: System requests approval before persisting data to knowledge base
 - FR36: System pauses execution pending user approval for data modifications
 
@@ -144,7 +144,7 @@ This document provides the complete epic and story breakdown for Agent System v2
 - 70% compression threshold for context window (prevents hallucination in M&A analysis)
 - Build in `lib/agent/v2/` directory (parallel development)
 - 4-phase migration strategy with sunset plan for legacy code
-- Thread ID pattern: `{workflowMode}-{dealId}-{userId}-{conversationId}`
+- Thread ID pattern: `{workflowMode}:{dealId}:{userId}:{conversationId}` (uses `:` delimiter to support UUIDs with hyphens)
 
 **Cache TTLs:**
 - Deal context: 1 hour
@@ -213,7 +213,7 @@ lib/agent/v2/
 | FR31 | Epic 4 | Specialist handoff |
 | FR32 | Epic 5 | Plan presentation |
 | FR33 | Epic 5 | Approve/modify/reject |
-| FR34 | Epic 5 | Q&A approval |
+| FR34 | Epic 5 | Q&A suggestion confirmation |
 | FR35 | Epic 5 | KB persistence approval |
 | FR36 | Epic 5 | Execution pause |
 | FR37 | Epic 6 | Flexible workflow navigation |
@@ -314,7 +314,7 @@ Users maintain control - they approve plans before complex tasks execute, and ap
 **Delivers:**
 - Plan presentation before complex tasks
 - Approve/modify/reject UI
-- Q&A list modification approval
+- Q&A suggestion and one-click confirmation
 - Knowledge base persistence approval
 - Execution pause pending approval
 
@@ -434,7 +434,7 @@ So that **all conversation state is properly typed and can be persisted/restored
 - `activeSpecialist: string | null` for delegation tracking
 - `errors: AgentError[]` for error handling
 - `dealContext: DealContext | null` for loaded deal data
-- `workflowMode: 'chat' | 'cim' | 'irl' | 'qa'` for routing
+- `workflowMode: 'chat' | 'cim' | 'irl'` for routing (Q&A is a cross-cutting tool, not a workflow mode)
 - `cimState: CIMWorkflowState | null` for CIM workflow
 - `scratchpad: Record<string, unknown>` for agent notes
 - `historySummary: string | null` for compressed history
@@ -488,14 +488,18 @@ So that **I can continue where I left off**.
 **And** closing and reopening the browser restores the conversation
 **And** `chatHistory` in LangSmith traces shows previous messages (not empty array)
 
-**Given** a thread ID like `chat-deal123-user456-conv789`
+**Given** a thread ID like `chat:deal123:user456:conv789`
 **When** the graph is invoked with this thread config
 **Then** state is isolated to this specific thread
 **And** other threads cannot access this state
 
 ---
 
-### Story 1.4: Implement Thread ID Generation and Management
+### Story 1.4: Implement Thread ID Generation and Chat API Route
+
+> **Note:** This story consolidates Stories 1.4 and 1.5 from the original breakdown.
+> Story 1.3 already implemented the thread ID utilities (`createV2ThreadId`, `parseV2ThreadId`).
+> This story focuses on using those utilities to create the v2 chat API route.
 
 As a **user**,
 I want **each conversation to have a unique thread**,
@@ -503,38 +507,28 @@ So that **my conversations are isolated per deal and don't interfere with each o
 
 **Depends On:** Story 1.3 (PostgresSaver Checkpointer)
 
-**Test Type:** Unit
+**Test Type:** Integration
 
 **Acceptance Criteria:**
 
 **Given** a user starts a new conversation in a deal
 **When** the chat API is called without a `conversationId`
-**Then** a new thread ID is generated following pattern: `{workflowMode}-{dealId}-{userId}-{conversationId}`
+**Then** a new thread ID is generated following pattern: `{workflowMode}:{dealId}:{userId}:{conversationId}`
 **And** the `conversationId` is returned to the client for future requests
+**And** thread ID uses `:` delimiter (not `-`) to support UUIDs with hyphens
 
 **Given** a user continues an existing conversation
 **When** the chat API is called with a `conversationId`
 **Then** the existing thread is resumed from checkpoint
-**And** previous messages are loaded from state
+**And** previous messages are loaded from state (via PostgresSaver)
+**And** user sees their conversation history intact
 
 **Given** thread isolation requirements (FR5)
 **When** any graph operation occurs
 **Then** data is scoped to the deal's `project_id`
 **And** cross-deal access is prevented
-
----
-
-### Story 1.5: Implement Chat API Route for v2
-
-As a **developer**,
-I want a **new chat API route that uses the v2 graph**,
-So that **we can test the new system without affecting production**.
-
-**Depends On:** Story 1.4 (Thread ID Generation)
-
-**Test Type:** Integration
-
-**Acceptance Criteria:**
+**And** different users in the same deal have separate chat threads
+**And** CIM threads are shared within deal (collaborative mode)
 
 **Given** parallel development strategy
 **When** I create `app/api/projects/[id]/chat-v2/route.ts`
@@ -544,10 +538,13 @@ So that **we can test the new system without affecting production**.
 **And** thread config uses the correct thread ID pattern
 **And** the route is protected by existing auth middleware
 
-**Given** a request without `conversationId`
-**When** the API is called
-**Then** a new conversation is created
-**And** the new `conversationId` is included in the response
+---
+
+### ~~Story 1.5: Implement Chat API Route for v2~~ (Merged into 1.4)
+
+> **MERGED:** This story has been consolidated into Story 1.4 above.
+> The original Story 1.3 already delivered thread ID utilities, making the split
+> between "thread management" (1.4) and "API route" (1.5) artificial.
 
 ---
 
@@ -557,7 +554,7 @@ As a **user**,
 I want **the system to recover from interruptions**,
 So that **I don't lose my conversation if something goes wrong**.
 
-**Depends On:** Story 1.5 (Chat API Route)
+**Depends On:** Story 1.4 (Thread ID Generation and Chat API Route)
 
 **Test Type:** Integration
 
@@ -573,6 +570,34 @@ So that **I don't lose my conversation if something goes wrong**.
 **When** the user sends a new message
 **Then** the graph resumes from the last successful checkpoint (FR54)
 **And** the conversation continues normally
+
+---
+
+### Story 1.7: Remove Legacy Agent Code
+
+As a **developer**,
+I want to **remove the deprecated v1 agent orchestrator and related dead code**,
+So that **the codebase is clean and free of confusion between old and new implementations**.
+
+**Depends On:** Story 1.4 (Chat API Route) - v2 must be functional before removing v1
+
+**Test Type:** Unit
+
+**Acceptance Criteria:**
+
+**Given** the legacy code marked for deletion in CLAUDE.md
+**When** the cleanup is complete
+**Then** the following are deleted:
+- `lib/agent/orchestrator/` (entire directory)
+- `lib/agent/executor.ts`
+- `lib/agent/intent.ts`
+
+**And** the following are KEPT (reused by v2):
+- `lib/agent/checkpointer.ts`
+- `lib/agent/streaming.ts`
+- `lib/agent/tools/*.ts`
+
+**And** `npm run build` and `npm run type-check` pass with no errors
 
 ---
 
@@ -1129,31 +1154,40 @@ So that **the frontend can send user responses**.
 
 ---
 
-### Story 5.4: Implement Q&A Modification Approval
+### Story 5.4: Implement Q&A Suggestion and Confirmation
 
 As a **user**,
-I want to **approve changes to the Q&A list**,
-So that **I control what gets added to my knowledge base**.
+I want the **system to suggest Q&A entries when it detects information gaps**,
+So that **I can quickly track questions for the client**.
 
-**Depends On:** Story 5.2 (Plan Approval), Story 5.3 (Approval API)
+**Depends On:** Story 3.1 (Retrieval Node), Story 2.1 (Supervisor Node)
 
 **Test Type:** Integration
 
 **Acceptance Criteria:**
 
-**Given** a request to add/modify/delete Q&A entries (FR34)
-**When** the agent prepares the modification
-**Then** it requests approval before executing
-**And** shows what will be changed
+**Given** a query about information not found in documents (FR34)
+**When** the agent detects ambiguous or missing information
+**Then** it suggests a Q&A entry with:
+- Pre-filled question based on the gap detected
+- Context showing what is known vs unknown
+- Source document reference if applicable
+**And** displays [Add to Q&A] [Skip] buttons
 
-**Given** user approves Q&A modification
-**When** the modification executes
-**Then** it confirms success with [Undo] option
+**Given** user clicks [Add to Q&A]
+**When** the Q&A entry is created
+**Then** it appears in the Q&A table
+**And** includes timestamp and source attribution
+**And** confirmation message is shown
 
-**Given** user rejects Q&A modification
-**When** rejection is processed
-**Then** no changes are made
-**And** agent acknowledges
+**Given** user clicks [Skip]
+**When** the suggestion is dismissed
+**Then** no Q&A entry is created
+**And** conversation continues normally
+
+**Given** a direct Q&A instruction ("add X to Q&A")
+**When** the user explicitly requests
+**Then** the entry is added immediately with confirmation
 
 ---
 

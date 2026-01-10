@@ -106,7 +106,7 @@ Upload → GCS Storage → Webhook → pg-boss Queue → Workers
 
 ### Agent System v2.0 (Single StateGraph + Middleware)
 
-> **Migration Note:** The old 3-path regex router (`lib/agent/orchestrator/`) is being replaced by Agent System v2.0. During migration, new code goes in `lib/agent/v2/`. See `_bmad-output/planning-artifacts/agent-system-architecture.md` for full details.
+> **Story 1.7 Complete:** The legacy 3-path regex router (`lib/agent/orchestrator/`), supervisor module, and executor have been removed. Agent System v2.0 is now the primary implementation. The `/api/projects/[id]/chat` route has been migrated to use v2 internally. See `_bmad-output/planning-artifacts/agent-system-architecture.md` for full details.
 
 The agent system uses a single LangGraph StateGraph with middleware-based context engineering:
 
@@ -139,17 +139,25 @@ User Message → Middleware Stack → Single StateGraph → Response
 - `lib/agent/v2/nodes/specialists/` - Financial analyst, document researcher, etc.
 - `lib/agent/v2/nodes/cim/` - CIM workflow nodes
 
-**Files to Keep (existing):**
-- `lib/agent/checkpointer.ts` - PostgresSaver (works)
-- `lib/agent/streaming.ts` - SSE helpers
-- `lib/agent/tools/*.ts` - Tool definitions
+**Supporting Files (shared):**
+- `lib/agent/checkpointer.ts` - PostgresSaver for conversation persistence
+- `lib/agent/streaming.ts` - SSE helpers for response streaming
+- `lib/agent/tools/*.ts` - Tool definitions (18 tools)
+- `lib/agent/intent.ts` - Intent classification (used by retrieval, LLM routing)
+- `lib/agent/retrieval.ts` - Pre-model retrieval hook
+- `lib/agent/summarization.ts` - Conversation summarization
+- `lib/agent/tool-isolation.ts` - Tool result isolation (used by CIM)
+- `lib/agent/cim/` - CIM workflow (intact, uses v2 infrastructure)
 
-**Files Being Sunset:**
-- `lib/agent/orchestrator/` - Broken regex router (DO NOT USE)
-- `lib/agent/executor.ts` - Legacy agent executor
-- `lib/agent/intent.ts` - Unused complexity classifier
+**Removed in Story 1.7:**
+- `lib/agent/orchestrator/` - Legacy 3-path regex router (DELETED)
+- `lib/agent/executor.ts` - Legacy agent executor (DELETED)
+- `lib/agent/supervisor/` - Legacy supervisor module (DELETED)
+- `lib/agent/graph.ts` - Legacy root graph (DELETED)
 
-**API Entry Point:** `app/api/projects/[id]/chat/route.ts`
+**API Entry Points:**
+- `app/api/projects/[id]/chat/route.ts` - Uses v2 agent system
+- `app/api/projects/[id]/chat-v2/route.ts` - Direct v2 route (preferred)
 
 ### LangChain Integration
 

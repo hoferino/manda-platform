@@ -136,7 +136,7 @@ Single StateGraph
     │
     ├─→ workflowMode: 'chat' → supervisor node
     ├─→ workflowMode: 'cim' → cim/phase-router node
-    └─→ [future: 'irl', 'qa']
+    └─→ [future: 'irl']
 ```
 
 **Why Single Graph + Middleware (not regex router or dual graphs):**
@@ -156,11 +156,12 @@ Single StateGraph
 | Deal Analyst | Claude Sonnet | KG search, financials, docs | Deal-specific analysis |
 | Research | Gemini Flash + Grounding | Web search, market data | External research |
 | Financial | Claude/GPT-4 | Modeling tools | Financial analysis |
+| Q&A Manager | Claude Sonnet | Q&A CRUD, gap detection | Track client questions |
 
 ### Human-in-the-Loop (MVP Scope)
 
 **Approval Required For:**
-- Q&A list modifications (append, edit, delete)
+- Q&A list additions (system suggests, user confirms with one click)
 - Multi-step task plans before execution
 - Any data persistence operations
 
@@ -298,23 +299,27 @@ The agent analyzes the image, extracts the pricing data, then searches the knowl
 
 ---
 
-### Journey 5: Jordan Kim - Knowledge Base Updates
+### Journey 5: Jordan Kim - Proactive Q&A Detection
 
-Jordan identifies gaps while reviewing documents and wants to track them. She types: "Add a question about the Q2 2023 revenue decline to the Q&A list."
+Jordan is analyzing revenue trends for a sell-side deal. She asks: "What caused the revenue decline in Q2 2023?"
 
-The agent executes immediately and confirms:
+The agent searches the knowledge graph but finds no explanation. It responds:
 
-✓ Added to Q&A list:
-  Q: Please explain the revenue decline in Q2 2023
-  Category: Financial Performance
-  Source: CIM page 18
-  [Undo]
+"The documents show a 15% revenue decline in Q2 2023 (CIM page 18) but don't explain the cause.
 
-Later, Jordan shares context from a call: "The CFO said the Q2 decline was a one-time inventory write-off."
+**Suggested Q&A for Client:**
+- Q: What caused the revenue decline in Q2 2023?
+- Context: CIM shows 15% YoY decline but no explanation provided
 
-The agent responds: "Added to knowledge base: Q2 2023 revenue decline attributed to one-time inventory write-off (source: CFO call, user-provided). This context is now available for future queries."
+[Add to Q&A] [Skip]"
 
-**Capabilities revealed:** Q&A skill with direct execution, knowledge base updates from conversation, undo capability
+Jordan clicks [Add to Q&A]. The question appears in her Q&A table, ready to send to the client.
+
+Later, after a client call, Jordan shares: "The CFO said the Q2 decline was a one-time inventory write-off."
+
+The agent responds: "Got it. I've added this to the knowledge base: Q2 2023 revenue decline attributed to one-time inventory write-off (source: CFO call, user-provided). This will be used for future analysis."
+
+**Capabilities revealed:** Proactive gap detection, Q&A suggestion with one-click confirmation, knowledge base updates from conversation
 
 ---
 
@@ -340,11 +345,12 @@ The structured workflow guides but doesn't constrain.
 
 | Scenario | Agent Behavior |
 |----------|----------------|
-| Direct instruction ("add X to Q&A") | Execute + confirm + [Undo] |
 | Simple query ("what is the EBITDA?") | Search + respond (no approval) |
 | Complex multi-step task ("build comp analysis") | Present plan → approval → execute |
 | User provides new information | Add to knowledge base + confirm |
 | Ambiguous request | Clarify with options |
+| Gap detected (missing info in docs) | Suggest Q&A entry → [Add to Q&A] / [Skip] |
+| Direct Q&A instruction ("add X to Q&A") | Execute + confirm |
 
 **Key Principles:**
 - Direct instructions execute immediately with confirmation
@@ -659,7 +665,7 @@ Agent operations respect existing platform roles:
 
 - FR32: System presents plans for approval before executing complex multi-step tasks
 - FR33: Users can approve, modify, or reject proposed plans
-- FR34: System requests approval before modifying Q&A list entries
+- FR34: System suggests Q&A entries when detecting information gaps; user confirms with one click
 - FR35: System requests approval before persisting data to knowledge base
 - FR36: System pauses execution pending user approval for data modifications
 
@@ -710,6 +716,16 @@ Agent operations respect existing platform roles:
 - FR64: Extracted facts and summaries are available for retrieval in future conversations
 - FR65: System detects user corrections and offers to persist them to knowledge graph
 - FR66: Corrections include provenance metadata (source: user_correction, timestamp, original_value)
+
+### Q&A Management (Sell-Side)
+
+- FR67: System detects ambiguous or missing information during conversation analysis
+- FR68: System proactively suggests adding detected gaps to the Q&A list for client follow-up
+- FR69: Q&A suggestions include relevant context (source document, what's known vs unknown)
+- FR70: Users can add Q&A entries with one click from suggestions ([Add to Q&A] button)
+- FR71: Q&A list is accessible as a table view separate from chat
+- FR72: Users can mark Q&A entries as answered, edit, or delete them
+- FR73: Q&A entries include source attribution and creation timestamp
 
 ---
 

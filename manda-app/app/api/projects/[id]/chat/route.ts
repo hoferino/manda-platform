@@ -1,16 +1,15 @@
 /**
- * Chat API Route
+ * Chat API Route (Legacy)
  *
  * POST /api/projects/[id]/chat
- * Send a message to the AI agent and receive a streaming SSE response.
  *
- * Architecture: 3-Path Orchestrator
- * - Vanilla: Direct LLM response (greetings, general chat)
- * - Retrieval: Neo4j context injection + LLM (document questions)
- * - Analysis: Subagent routing (complex analysis)
+ * Story 1.7: This route now forwards to the v2 agent system at /chat-v2.
+ * The legacy orchestrator has been removed as part of the agent system v2.0 migration.
  *
- * Feature Flag: USE_ORCHESTRATOR (default: true)
- * Set to 'false' to use legacy agent system
+ * This route maintains backward compatibility by forwarding requests to chat-v2
+ * with appropriate response handling and conversation management.
+ *
+ * @deprecated Use /api/projects/[id]/chat-v2 for new integrations
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -23,36 +22,26 @@ import {
   AgentStreamHandler,
   generateFollowupSuggestions,
 } from '@/lib/agent/streaming'
-import {
-  DEFAULT_CONTEXT_OPTIONS,
-} from '@/lib/agent/context'
 import { logFeatureUsage } from '@/lib/observability/usage'
-
-// New orchestrator
+import { HumanMessage } from '@langchain/core/messages'
 import {
-  streamOrchestrator,
-  type OrchestratorResult,
-  type RoutePath,
-} from '@/lib/agent/orchestrator'
+  createV2ThreadId,
+  safeStreamAgent,
+  createInitialState,
+  toUserFriendlyMessage,
+  type SafeStreamErrorEvent,
+} from '@/lib/agent/v2'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
 
 /**
- * Context window size - number of messages to include in LLM context
- */
-const CONTEXT_WINDOW_SIZE = DEFAULT_CONTEXT_OPTIONS.maxMessages
-
-/**
- * Feature flag: Use new orchestrator (default: true)
- * Set USE_ORCHESTRATOR=false to use legacy agent system
- */
-const USE_ORCHESTRATOR = process.env.USE_ORCHESTRATOR !== 'false'
-
-/**
  * POST /api/projects/[id]/chat
  * Send a message and receive streaming SSE response
+ *
+ * Story 1.7: Now uses Agent System v2.0 instead of legacy orchestrator.
+ * Maintains same API contract for backward compatibility.
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   const chatStartTime = Date.now()
@@ -157,56 +146,61 @@ export async function POST(request: NextRequest, context: RouteContext) {
       // Continue anyway - we don't want to block the response
     }
 
-    // Fetch conversation history for context
-    const { data: historyMessages } = await supabase
-      .from('messages')
-      .select('id, role, content, created_at')
-      .eq('conversation_id', activeConversationId)
-      .order('created_at', { ascending: true })
-      .limit(CONTEXT_WINDOW_SIZE * 2)
-
-    // Convert to chat history format
-    const chatHistory = (historyMessages || [])
-      .slice(0, -1) // Exclude the message we just saved
-      .map((msg) => ({
-        role: (msg.role === 'human' || msg.role === 'user' ? 'user' :
-              msg.role === 'ai' || msg.role === 'assistant' ? 'assistant' :
-              msg.role) as 'user' | 'assistant' | 'system',
-        content: msg.content,
-      }))
-
     // Create SSE stream
     const { stream, writer } = createSSEStream()
     const handler = new AgentStreamHandler(writer)
 
-    // Start streaming in the background
-    const streamPromise = (async () => {
-      try {
-        console.log(`[api/chat] Using orchestrator for message: "${message.slice(0, 50)}..."`)
+    // Build thread ID for v2 agent (Story 1.7: using v2 system)
+    const threadId = createV2ThreadId('chat', projectId, user.id, activeConversationId)
 
-        const result = await streamOrchestrator(
-          {
-            message,
-            dealId: projectId,
-            userId: user.id,
-            organizationId: project.organization_id ?? undefined,
-            chatHistory,
+    // Create initial state for v2 agent
+    const state = createInitialState('chat', projectId, user.id)
+    state.messages = [new HumanMessage(message)]
+
+    // Start streaming in the background using v2 agent
+    // Note: This IIFE runs asynchronously to populate the SSE stream.
+    // Errors are caught and sent via handler.onError(), not thrown.
+    void (async () => {
+      try {
+        let fullContent = ''
+
+        // Stream using v2 agent
+        for await (const event of safeStreamAgent(state, threadId, {
+          metadata: {
+            api_route: '/api/projects/[id]/chat',
+            deal_id: projectId,
+            user_id: user.id,
+            conversation_id: activeConversationId,
           },
-          {
-            onToken: (token) => handler.onToken(token),
-            onRouteDecision: (routeResult) => {
-              console.log(
-                `[api/chat] Route decision: ${routeResult.path} ` +
-                `(confidence: ${routeResult.confidence.toFixed(2)}, ` +
-                `reason: ${routeResult.reason})`
-              )
-            },
-            onError: (error) => handler.onError(error),
+        })) {
+          // Check for error events using type guard
+          if ('type' in event && event.type === 'error') {
+            const errorEvent = event as SafeStreamErrorEvent
+            handler.onError(
+              new Error(toUserFriendlyMessage(errorEvent.error)),
+              errorEvent.error.code
+            )
+            return
           }
-        )
+
+          // Handle LangGraph stream events using type guards
+          if ('event' in event && 'data' in event) {
+            const streamEvent = event as { event: string; data?: unknown }
+            if (streamEvent.event === 'on_llm_stream' && streamEvent.data) {
+              // Safely extract token content with optional chaining
+              const data = streamEvent.data as Record<string, unknown>
+              const chunk = data.chunk as Record<string, unknown> | undefined
+              const token = typeof chunk?.content === 'string' ? chunk.content : undefined
+              if (token) {
+                fullContent += token
+                handler.onToken(token)
+              }
+            }
+          }
+        }
 
         // Generate follow-up suggestions
-        const followups = generateFollowupSuggestions(result.content)
+        const followups = generateFollowupSuggestions(fullContent)
 
         // Generate message ID for the response
         const messageId = crypto.randomUUID()
@@ -216,8 +210,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           id: messageId,
           conversation_id: activeConversationId,
           role: 'assistant',
-          content: result.content,
-          sources: result.sources.length > 0 ? JSON.stringify(result.sources) : null,
+          content: fullContent,
         })
 
         if (assistantMsgError) {
@@ -244,22 +237,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
             metadata: {
               conversationId: activeConversationId,
               messageLength: message.length,
-              responseLength: result.content.length,
-              // Orchestrator metadata
-              path: result.path,
-              routeConfidence: result.routing.confidence,
-              routeReason: result.routing.reason,
-              matchedKeywords: result.routing.matchedKeywords,
-              // Timing
-              routeLatencyMs: result.metrics.routeLatencyMs,
-              pathLatencyMs: result.metrics.pathLatencyMs,
-              totalLatencyMs: result.metrics.totalLatencyMs,
-              // Path-specific
-              model: result.metrics.model,
-              specialists: result.metrics.specialists,
-              retrievalLatencyMs: result.metrics.retrievalLatencyMs,
-              hadContext: result.metrics.hadContext,
-              sourceCount: result.sources.length,
+              responseLength: fullContent.length,
+              agentVersion: 'v2',
             },
           })
         } catch (loggingError) {
@@ -279,7 +258,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       headers: {
         ...getSSEHeaders(),
         'X-Conversation-Id': activeConversationId,
-        'X-Agent-Mode': 'orchestrator',
+        'X-Agent-Mode': 'v2',
       },
     })
   } catch (err) {

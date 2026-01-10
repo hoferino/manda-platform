@@ -2,27 +2,24 @@
  * Agent Module Barrel Export
  *
  * Exports all agent-related functionality for the M&A Due Diligence Assistant.
- * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
- * Story: E11.2 - Conversation Summarization
- * Story: E11.4 - Intent-Aware Knowledge Retrieval
+ *
+ * Story 1.7: Removed legacy executor exports (createChatAgent, executeChat, etc.)
+ * Use @/lib/agent/v2 for new agent functionality.
+ *
+ * Stories:
+ * - E5.2 - Implement LangChain Agent with 11 Chat Tools
+ * - E11.2 - Conversation Summarization
+ * - E11.4 - Intent-Aware Knowledge Retrieval
+ * - Story 1.7 - Remove Legacy Agent Code
  */
 
-// Agent executor and core functionality
-export {
-  createChatAgent,
-  executeChat,
-  streamChat,
-  getAvailableTools,
-  getAgentToolCache,
-  ConversationContext,
-  convertToLangChainMessages,
-  type ChatAgentConfig,
-  type ChatAgentWithCache,
-  type ConversationMessage,
-  type ChatExecutionOptions,
-} from './executor'
-
 // Intent classification (E11.4)
+// Note: intent.ts is retained despite v2 migration due to dependencies in:
+// - retrieval.ts (classifyIntent, shouldRetrieve)
+// - lib/llm/routing.ts (ComplexityLevel, MODEL_BY_COMPLEXITY)
+// - lib/llm/client.ts (ComplexityLevel)
+// - tools/tool-loader.ts (TOOLS_BY_COMPLEXITY, EnhancedIntentResult)
+// TODO: Consider extracting shared types to a dedicated types file in future cleanup.
 export {
   classifyIntent,
   classifyIntentAsync,

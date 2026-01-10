@@ -156,13 +156,13 @@ LangGraph (TypeScript) for agent orchestration.
 ├─────────────────────────────────────────────────────────────────────────┤
 │  SINGLE STATEGRAPH                                                      │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  Entry: workflowMode → 'chat' | 'cim' | 'irl' | 'qa'            │   │
+│  │  Entry: workflowMode → 'chat' | 'cim' | 'irl'                    │   │
 │  │                                                                  │   │
 │  │  Shared Nodes:           Workflow-Specific Nodes:               │   │
 │  │  ├─ supervisor           ├─ cim/phaseRouter                     │   │
 │  │  ├─ retrieval            ├─ cim/slideCreation                   │   │
 │  │  ├─ specialists/*        ├─ cim/dependencyCheck                 │   │
-│  │  └─ approval (HITL)      └─ (future: irl/*, qa/*)               │   │
+│  │  └─ approval (HITL)      └─ (future: irl/*)                     │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  DATA SOURCES                                                           │
@@ -199,8 +199,7 @@ graph.addConditionalEntryPoint(
   {
     'chat': 'supervisor',
     'cim': 'cimPhaseRouter',
-    'irl': 'irlPhaseRouter',  // Future
-    'qa': 'qaBuilder'         // Future
+    'irl': 'irlPhaseRouter'   // Future
   }
 );
 ```
@@ -270,12 +269,12 @@ const AgentState = Annotation.Root({
   dealContext: Annotation<DealContext | null>,
 
   // Workflow mode
-  workflowMode: Annotation<'chat' | 'cim' | 'irl' | 'qa'>,
+  workflowMode: Annotation<'chat' | 'cim' | 'irl'>,
 
   // Workflow-specific (nullable)
   cimState: Annotation<CIMWorkflowState | null>,
   irlState: Annotation<IRLWorkflowState | null>,  // Future
-  qaState: Annotation<QAWorkflowState | null>,    // Future
+  // Note: Q&A is NOT a workflow mode - it's a cross-cutting tool available in all workflows
 
   // Context management
   scratchpad: Annotation<Record<string, unknown>>,
@@ -288,11 +287,13 @@ const AgentState = Annotation.Root({
 
 **Choice:** Deal + User scoped isolation.
 
-**Thread ID Pattern:** `{workflowMode}-{dealId}-{userId}-{conversationId}`
+**Thread ID Pattern:** `{workflowMode}:{dealId}:{userId}:{conversationId}`
+
+> **Note:** Uses `:` delimiter (not `-`) to support UUIDs with hyphens in dealId/userId/conversationId.
 
 Examples:
-- `chat-deal123-user456-conv789`
-- `cim-deal123-cim001` (CIM scoped to deal, not user)
+- `chat:550e8400-e29b-41d4-a716-446655440000:user-123:conv-456`
+- `cim:550e8400-e29b-41d4-a716-446655440000:cim-001` (CIM scoped to deal, not user)
 
 **Isolation Model:**
 - Conversations cannot access data from other deals
@@ -443,7 +444,7 @@ Use `interface` for data structures, `type` for unions and aliases.
 // ✅ Correct
 interface DealContext { ... }
 interface ApprovalRequest { ... }
-type WorkflowMode = 'chat' | 'cim' | 'irl' | 'qa'
+type WorkflowMode = 'chat' | 'cim' | 'irl'
 type AgentStreamEvent = { type: 'token' } | { type: 'done' }
 
 // ❌ Wrong - type for data shapes
@@ -922,7 +923,7 @@ All 7 core architectural decisions work together without conflicts:
 - Cache key patterns use consistent `{scope}:{id}:{type}` format throughout
 
 **Structure Alignment:**
-- Project structure supports all 4 workflow modes (chat, cim, irl, qa)
+- Project structure supports all 3 workflow modes (chat, cim, irl) plus Q&A as cross-cutting tool
 - Middleware order (context → router → tools → summarization) respects dependencies
 - Node organization in `nodes/` mirrors architectural decision hierarchy
 - Sunset plan preserves working infrastructure while replacing broken components
