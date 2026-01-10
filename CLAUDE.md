@@ -104,34 +104,52 @@ Upload → GCS Storage → Webhook → pg-boss Queue → Workers
 
 ## Key Patterns
 
-### Chat Orchestrator (3-Path LangGraph)
+### Agent System v2.0 (Single StateGraph + Middleware)
 
-The chat system uses a lightweight LangGraph orchestrator with three paths:
+> **Migration Note:** The old 3-path regex router (`lib/agent/orchestrator/`) is being replaced by Agent System v2.0. During migration, new code goes in `lib/agent/v2/`. See `_bmad-output/planning-artifacts/agent-system-architecture.md` for full details.
+
+The agent system uses a single LangGraph StateGraph with middleware-based context engineering:
 
 ```
-User Message → Router (<5ms) → [vanilla | retrieval | analysis] → Response
+User Message → Middleware Stack → Single StateGraph → Response
+                    ↓
+    context-loader → workflow-router → tool-selector → summarization (70%)
 ```
 
-| Path | Trigger | Model | Description |
-|------|---------|-------|-------------|
-| **Vanilla** | Greetings, general chat | gpt-4o-mini | Direct LLM, no tools/retrieval |
-| **Retrieval** | Document questions | gpt-4o-mini | Neo4j/Graphiti context injection |
-| **Analysis** | Complex analysis requests | Varies by specialist | Supervisor subagent routing |
+| Workflow Mode | Entry Point | Description |
+|---------------|-------------|-------------|
+| **chat** | supervisor node | General conversation + specialist routing |
+| **cim** | cim/phase-router | CIM Builder multi-phase workflow |
+| **irl** | (future) | Information Request List workflow |
+| **qa** | (future) | Q&A Builder workflow |
 
-**Key Files:**
-- `lib/agent/orchestrator/router.ts` - Regex/keyword routing (<5ms, no LLM)
-- `lib/agent/orchestrator/graph.ts` - LangGraph StateGraph orchestrator
-- `lib/agent/orchestrator/paths/vanilla.ts` - Direct LLM path
-- `lib/agent/orchestrator/paths/retrieval.ts` - Context injection path
-- `lib/agent/orchestrator/paths/analysis.ts` - Subagent delegation path
-- `lib/agent/orchestrator/index.ts` - Module exports
+**Architecture Decisions:**
+- Single graph with conditional entry points (not dual graphs)
+- LLM handles routing via tool-calling (not regex patterns)
+- 70% compression threshold (prevents hallucination in M&A analysis)
+- Specialists as tools, not separate graphs
+- PostgresSaver checkpointing for conversation persistence
+- Redis caching for tool results and deal context
 
-**Router Logic** (`router.ts`):
-- `GREETING_PATTERNS`: Regex for greetings → vanilla path
-- `RETRIEVAL_KEYWORDS`: Document-related terms → retrieval path
-- `ANALYSIS_KEYWORDS`: Analysis verbs + complexity indicators → analysis path
+**Key Files (v2):**
+- `lib/agent/v2/graph.ts` - Single StateGraph definition
+- `lib/agent/v2/state.ts` - Unified AgentState schema
+- `lib/agent/v2/middleware/` - Context engineering middleware
+- `lib/agent/v2/nodes/supervisor.ts` - Main routing node
+- `lib/agent/v2/nodes/specialists/` - Financial analyst, document researcher, etc.
+- `lib/agent/v2/nodes/cim/` - CIM workflow nodes
 
-**API Entry Point:** `app/api/projects/[id]/chat/route.ts` calls `streamOrchestrator()`
+**Files to Keep (existing):**
+- `lib/agent/checkpointer.ts` - PostgresSaver (works)
+- `lib/agent/streaming.ts` - SSE helpers
+- `lib/agent/tools/*.ts` - Tool definitions
+
+**Files Being Sunset:**
+- `lib/agent/orchestrator/` - Broken regex router (DO NOT USE)
+- `lib/agent/executor.ts` - Legacy agent executor
+- `lib/agent/intent.ts` - Unused complexity classifier
+
+**API Entry Point:** `app/api/projects/[id]/chat/route.ts`
 
 ### LangChain Integration
 
@@ -159,6 +177,95 @@ All database queries must include `project_id` in WHERE clauses. RLS policies en
 - **Tech Specs**: `docs/sprint-artifacts/tech-specs/`
 - **Architecture Decisions**: `docs/architecture-decisions/` (ADRs)
 
+## Agent System v2.0 - Implementation Rules
+
+When implementing Agent System v2.0 code, follow these patterns exactly:
+
+### Naming Conventions
+
+```typescript
+// ✅ State & Variables: camelCase
+dealContext, workflowMode, cimState, activeSpecialist
+
+// ✅ Files & Directories: kebab-case
+lib/agent/middleware/context-loader.ts
+lib/agent/nodes/cim/phase-router.ts
+
+// ✅ Graph Nodes: short descriptive, workflow prefix
+'supervisor', 'retrieval', 'approval'
+'cim/phaseRouter', 'cim/slideCreation'
+
+// ✅ Specialist Tools: kebab-case
+'financial-analyst', 'document-researcher', 'kg-expert'
+```
+
+### Type Patterns
+
+```typescript
+// ✅ Discriminated unions for events (matches existing SSEEvent pattern)
+export type AgentStreamEvent =
+  | { type: 'token'; content: string; timestamp: string }
+  | { type: 'source_added'; source: SourceCitation; timestamp: string }
+  | { type: 'approval_required'; request: ApprovalRequest; timestamp: string }
+  | { type: 'done'; state: FinalState; timestamp: string }
+
+// ✅ Standard specialist result shape
+interface SpecialistResult {
+  answer: string
+  sources: SourceCitation[]
+  confidence?: number
+  data?: unknown
+}
+```
+
+### Middleware Order (Critical)
+
+```typescript
+// ✅ Correct order - dependencies flow left to right
+const middlewareStack = [
+  contextLoaderMiddleware,    // 1. Load deal context first
+  workflowRouterMiddleware,   // 2. Set system prompt by mode
+  toolSelectorMiddleware,     // 3. Filter tools by permissions
+  summarizationMiddleware,    // 4. Compress at 70% (last)
+]
+```
+
+### Cache Keys
+
+```typescript
+// ✅ Pattern: {scope}:{identifier}:{type}:{hash?}
+`deal:${dealId}:context`                          // 1 hour TTL
+`deal:${dealId}:kg:${queryHash}`                  // 30 min TTL
+`deal:${dealId}:specialist:${tool}:${inputHash}`  // 30 min TTL
+```
+
+### Anti-Patterns to Avoid
+
+```typescript
+// ❌ Don't use old orchestrator code
+import { streamOrchestrator } from '@/lib/agent/orchestrator'  // DEPRECATED
+
+// ❌ Don't mix naming conventions
+const deal_context = state.dealContext  // snake_case variable
+
+// ❌ Don't skip timestamps in events
+yield { type: 'token', content: '...' }  // Missing timestamp
+
+// ❌ Don't return unstructured tool results
+return { answer: '...' }  // Missing sources array
+
+// ❌ Don't import from deep paths
+import { supervisor } from '@/lib/agent/nodes/supervisor'  // Import from index
+```
+
+### Thread ID Pattern
+
+```typescript
+// Format: {workflowMode}-{dealId}-{userId}-{conversationId}
+'chat-deal123-user456-conv789'
+'cim-deal123-cim001'  // CIM is deal-scoped, not user-scoped
+```
+
 ## BMAD Framework
 
 This project uses BMAD (Build Mad Agentic Delivery) for AI-assisted development. Key workflows:
@@ -166,3 +273,10 @@ This project uses BMAD (Build Mad Agentic Delivery) for AI-assisted development.
 - `/bmad:bmm:workflows:code-review` - Adversarial code review
 - `/bmad:bmm:workflows:create-story` - Create next story from epic
 - `/bmad:bmm:workflows:sprint-status` - Check sprint progress
+
+## Agent System Documentation
+
+- **PRD**: `_bmad-output/planning-artifacts/agent-system-prd.md`
+- **Architecture**: `_bmad-output/planning-artifacts/agent-system-architecture.md`
+- **LangGraph Reference**: `docs/langgraph-reference.md`
+- **Behavior Spec**: `docs/agent-behavior-spec.md` (needs update after v2 implementation)

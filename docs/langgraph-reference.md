@@ -650,3 +650,297 @@ export const agentConfig = {
 - [LangGraph How-Tos](https://langchain-ai.github.io/langgraph/how-tos/)
 - [LangGraph TypeScript SDK](https://langchain-ai.github.io/langgraphjs/)
 - [LangGraph Studio](https://github.com/langchain-ai/langgraph-studio)
+
+---
+
+## Advanced: Durable Execution & Fault Tolerance
+
+### Durable Execution Modes
+
+LangGraph offers three durability modes:
+
+| Mode | Persistence Timing | Use Case |
+|------|-------------------|----------|
+| **"exit"** | Only when execution ends | High performance, limited recovery |
+| **"async"** | Asynchronously between steps | Balanced (recommended) |
+| **"sync"** | Before each step | Maximum durability |
+
+### Automatic Resume After Failure
+
+```typescript
+// If a node fails, the graph can resume from the last checkpoint
+try {
+  await graph.invoke(input, config)
+} catch (error) {
+  // Retry will resume from last successful checkpoint
+  await graph.invoke(null, config) // Pass null to resume
+}
+```
+
+### Idempotency Pattern
+
+For operations that shouldn't run twice (payments, API calls):
+
+```typescript
+import crypto from 'crypto'
+
+async function idempotentNode(state: AgentState) {
+  // Generate deterministic key BEFORE operation
+  const idempotencyKey = crypto
+    .createHash('sha256')
+    .update(`${state.userId}_${state.orderId}`)
+    .digest('hex')
+
+  // Check if already processed
+  const existing = await redis.get(`processed:${idempotencyKey}`)
+  if (existing) {
+    return { status: 'already_processed', result: JSON.parse(existing) }
+  }
+
+  // Execute operation
+  const result = await processPayment(state)
+
+  // Mark as processed
+  await redis.set(`processed:${idempotencyKey}`, JSON.stringify(result), 'EX', 86400)
+
+  return { status: 'success', result }
+}
+```
+
+---
+
+## Advanced: Time Travel Debugging
+
+### Replay from Any Checkpoint
+
+```typescript
+// Get execution history
+const history = []
+for await (const snapshot of graph.getStateHistory(config)) {
+  history.push(snapshot)
+}
+
+// Find a specific checkpoint
+const targetCheckpoint = history.find(s => s.values.step === 'before_error')
+
+// Replay from that point
+const result = await graph.invoke(null, {
+  configurable: {
+    thread_id: config.configurable.thread_id,
+    checkpoint_id: targetCheckpoint.config.configurable.checkpoint_id,
+  },
+})
+```
+
+### Fork Execution for "What-If" Analysis
+
+```typescript
+// Get state at specific point
+const pastState = await graph.getState({
+  configurable: {
+    thread_id: 'original-thread',
+    checkpoint_id: 'checkpoint-before-decision',
+  },
+})
+
+// Modify state for alternative path
+const modifiedState = {
+  ...pastState.values,
+  decision: 'alternative_choice',
+}
+
+// Run alternative execution with new thread
+await graph.updateState(
+  { configurable: { thread_id: 'fork-thread' } },
+  modifiedState
+)
+
+const alternativeResult = await graph.invoke(null, {
+  configurable: { thread_id: 'fork-thread' },
+})
+```
+
+---
+
+## Advanced: Memory Types
+
+### Three Memory Categories
+
+| Type | Purpose | Storage | Example |
+|------|---------|---------|---------|
+| **Semantic** | Facts about users/entities | Key-value store | "User prefers formal tone" |
+| **Episodic** | Past experiences | Searchable index | Previous successful resolutions |
+| **Procedural** | Rules & instructions | System prompts | Refined agent behaviors |
+
+### Semantic Memory (User Profiles)
+
+```typescript
+// Store in external database (Redis/PostgreSQL)
+async function updateUserProfile(userId: string, info: object) {
+  await store.put(`user:${userId}:profile`, {
+    ...await store.get(`user:${userId}:profile`),
+    ...info,
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+// Load before LLM invocation
+async function agentNode(state: AgentState) {
+  const profile = await store.get(`user:${state.userId}:profile`)
+
+  const systemPrompt = `
+    You're talking to ${profile.name}.
+    Communication style: ${profile.preferences.style}
+    Recent context: ${profile.recentTopics.join(', ')}
+  `
+
+  return await llm.invoke([
+    new SystemMessage(systemPrompt),
+    ...state.messages,
+  ])
+}
+```
+
+### Episodic Memory (Few-Shot Examples)
+
+```typescript
+// Store successful interactions
+async function storeEpisode(userId: string, episode: object) {
+  const episodes = await store.get(`user:${userId}:episodes`) || []
+  episodes.push({ ...episode, timestamp: Date.now() })
+
+  // Keep only last 100 episodes
+  if (episodes.length > 100) episodes.shift()
+
+  await store.put(`user:${userId}:episodes`, episodes)
+}
+
+// Retrieve similar past experiences
+async function getFewShotExamples(userId: string, currentTask: string) {
+  const episodes = await store.get(`user:${userId}:episodes`) || []
+
+  // Find similar episodes (could use embedding similarity)
+  const similar = episodes
+    .filter(e => e.taskType === currentTask)
+    .slice(-3) // Last 3 similar
+
+  return similar.map(e => `
+Example: ${e.input}
+Successful approach: ${e.approach}
+Outcome: ${e.outcome}
+  `).join('\n')
+}
+```
+
+---
+
+## Advanced: Hierarchical Multi-Agent
+
+### When to Use Hierarchy
+
+- Worker complexity exceeds single supervisor capacity
+- Worker count > 5 agents
+- Logical task groupings exist
+
+### Architecture Pattern
+
+```
+User Input
+    ↓
+Top Supervisor (routes to domains)
+    ├─→ Research Supervisor
+    │   ├─→ Literature Worker
+    │   ├─→ Data Worker
+    │   └─→ Analysis Worker
+    ├─→ Financial Supervisor
+    │   ├─→ Modeling Worker
+    │   └─→ Forecast Worker
+    └─→ Summary Worker (synthesis)
+```
+
+### Implementation
+
+```typescript
+// Create specialized supervisor subgraph
+const researchSupervisor = new StateGraph(SupervisorState)
+  .addNode('route', researchRouterNode)
+  .addNode('literature', literatureAgent)
+  .addNode('data', dataAgent)
+  .addNode('analysis', analysisAgent)
+  .addEdge(START, 'route')
+  .addConditionalEdges('route', selectWorker)
+  .compile()
+
+// Parent graph uses supervisor as node
+const topLevelGraph = new StateGraph(TopState)
+  .addNode('top_router', topRouterNode)
+  .addNode('research', researchSupervisor) // Subgraph
+  .addNode('financial', financialSupervisor) // Subgraph
+  .addNode('synthesize', synthesisNode)
+  .addEdge(START, 'top_router')
+  .addConditionalEdges('top_router', selectDomain)
+  .addEdge('research', 'synthesize')
+  .addEdge('financial', 'synthesize')
+  .addEdge('synthesize', END)
+```
+
+---
+
+## Manda-Specific: Current Infrastructure
+
+### Existing Redis Cache
+
+From `lib/cache/redis-cache.ts`:
+
+```typescript
+import { RedisCache } from '@/lib/cache/redis-cache'
+
+// Tool result caching (30min TTL, 50 entries)
+const toolCache = new RedisCache<ToolResult>('cache:tool:', 1800, 50)
+
+// Retrieval caching (5min TTL, 100 entries)
+const retrievalCache = new RedisCache<RetrievalResult>('cache:retrieval:', 300, 100)
+
+// Summarization caching (30min TTL, 50 entries)
+const summaryCache = new RedisCache<string>('cache:summary:', 1800, 50)
+```
+
+### Existing PostgreSQL Checkpointer
+
+From `lib/agent/checkpointer.ts`:
+
+```typescript
+import { getCheckpointer } from '@/lib/agent/checkpointer'
+
+// Get singleton checkpointer (PostgresSaver or MemorySaver fallback)
+const checkpointer = await getCheckpointer()
+
+// Thread ID patterns
+const cimThreadId = createCIMThreadId(dealId, cimId)  // cim-{dealId}-{cimId}
+const supervisorThreadId = createSupervisorThreadId(dealId)  // supervisor-{dealId}-{ts}
+```
+
+### LangSmith Trace Analysis
+
+Recent traces show:
+
+| Issue | Evidence | Root Cause |
+|-------|----------|------------|
+| Memory loss | `chatHistory: []` in all outputs | No checkpointing for chat |
+| Wrong routing | "what was first question" → retrieval | Regex pattern too broad |
+| Always Q&A fallback | Same response for all retrievals | System prompt hardcoded |
+
+---
+
+## Decision Matrix: Feature Selection
+
+| Requirement | Feature | Priority |
+|-------------|---------|----------|
+| Remember conversation | PostgresSaver + thread_id | **P0** |
+| Natural tool use | LLM routing (not regex) | **P0** |
+| Handle greetings | Vanilla path (working) | Done |
+| Knowledge retrieval | Graphiti integration | **P1** |
+| Human approval | interrupt() pattern | **P2** |
+| Multi-agent | Supervisor + subgraphs | **P2** |
+| Multimodal | Vision model binding | **P2** |
+| Long-term memory | Redis/PostgreSQL store | **P3** |
