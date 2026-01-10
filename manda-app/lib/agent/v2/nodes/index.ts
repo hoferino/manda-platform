@@ -13,7 +13,7 @@
  */
 
 // Core nodes
-export { supervisorNode } from './supervisor'
+export { supervisorNode, buildSupervisorSystemPrompt } from './supervisor'
 
 // CIM workflow nodes
 export { cimPhaseRouterNode } from './cim'

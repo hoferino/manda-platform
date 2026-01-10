@@ -7,9 +7,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock @upstash/redis to simulate no Redis available
-vi.mock('@upstash/redis', () => ({
-  Redis: vi.fn().mockImplementation(() => ({
+// Mock ioredis to simulate no Redis available (graceful fallback testing)
+vi.mock('ioredis', () => ({
+  default: vi.fn().mockImplementation(() => ({
     get: vi.fn(),
     setex: vi.fn(),
     del: vi.fn(),
@@ -17,11 +17,16 @@ vi.mock('@upstash/redis', () => ({
     zrange: vi.fn(),
     zcard: vi.fn(),
     zremrangebyrank: vi.fn(),
+    zrem: vi.fn(),
     incr: vi.fn(),
     ping: vi.fn().mockRejectedValue(new Error('No Redis')),
+    quit: vi.fn().mockResolvedValue('OK'),
+    on: vi.fn(),
     pipeline: vi.fn(() => ({
       setex: vi.fn().mockReturnThis(),
       zadd: vi.fn().mockReturnThis(),
+      del: vi.fn().mockReturnThis(),
+      zrem: vi.fn().mockReturnThis(),
       exec: vi.fn().mockResolvedValue([]),
     })),
   })),

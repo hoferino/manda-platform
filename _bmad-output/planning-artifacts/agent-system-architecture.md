@@ -830,9 +830,8 @@ lib/agent/
     ├── state.ts
     └── ...
 ```
-- New API route: `app/api/projects/[id]/chat-v2/route.ts`
-- Both systems run in parallel
-- No production impact during development
+- API route updated: `app/api/projects/[id]/chat/route.ts` (now uses v2 agent)
+- NOTE: Route consolidation completed in Epic 1 Story 1.7 - `/chat-v2` merged into `/chat`
 
 **Phase 2: Validation**
 - Record regression fixtures from current system
@@ -1105,6 +1104,26 @@ mkdir -p manda-app/lib/agent/v2/{middleware,nodes/specialists,nodes/cim,tools,ut
 7. `nodes/specialists/*` - Specialist agents as tools
 8. `nodes/cim/*` - CIM workflow nodes
 9. `nodes/approval.ts` - HITL interrupt flow
+
+---
+
+## Implementation Status Updates
+
+### Epic 1 Complete (2026-01-10)
+
+Foundation infrastructure implemented. See `epic-1-retro-2026-01-10.md` for details.
+
+**Key Files Created:**
+- `lib/agent/v2/state.ts` - Unified AgentState with 11 fields
+- `lib/agent/v2/graph.ts` - StateGraph with conditional entry points
+- `lib/agent/v2/nodes/supervisor.ts` - Placeholder (full impl in Story 2.1)
+- `lib/agent/v2/tools/specialist-definitions.ts` - 4 specialist tools
+- `lib/agent/v2/utils/*.ts` - Error handling, retry, thread utilities
+
+**Pre-Epic 2 Work (commit d6906bb):**
+- `@langchain/google-vertexai` package installed
+- `GOOGLE_VERTEX_PROJECT`, `GOOGLE_VERTEX_LOCATION` env vars added
+- Route consolidation: `/chat-v2` merged into `/chat`
 
 ---
 

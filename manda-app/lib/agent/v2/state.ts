@@ -40,7 +40,7 @@ import type {
  * - Append: messagesStateReducer for messages (handles ID-based updates)
  * - Accumulate: concat for arrays (sources, errors)
  *
- * All 11 required fields per AC #1:
+ * All 12 required fields per AC #1 + Story 2.3:
  * 1. messages - conversation history with messagesStateReducer
  * 2. sources - attribution tracking (accumulate)
  * 3. pendingApproval - HITL approval state (replace)
@@ -52,6 +52,7 @@ import type {
  * 9. scratchpad - agent notes (replace/merge)
  * 10. historySummary - compressed history (replace)
  * 11. tokenCount - context usage tracking (replace)
+ * 12. systemPrompt - workflow-specific system prompt (replace, Story 2.3)
  *
  * @example
  * ```typescript
@@ -162,6 +163,16 @@ export const AgentState = Annotation.Root({
     reducer: (_, next) => next,
     default: () => 0,
   }),
+
+  /**
+   * System prompt set by workflow-router middleware.
+   * Supervisor reads this field instead of building inline.
+   * Story: 2-3 Implement Workflow Router Middleware (AC: #3, #5)
+   */
+  systemPrompt: Annotation<string | null>({
+    reducer: (_, next) => next,
+    default: () => null,
+  }),
 })
 
 /**
@@ -223,6 +234,7 @@ export function createInitialState(
     scratchpad: userId ? { userId } : {},
     historySummary: null,
     tokenCount: 0,
+    systemPrompt: null, // To be set by workflow-router middleware
   }
 }
 
@@ -274,5 +286,6 @@ export function createInitialCIMState(
     scratchpad: { userId },
     historySummary: null,
     tokenCount: 0,
+    systemPrompt: null, // To be set by workflow-router middleware
   }
 }

@@ -2,15 +2,20 @@
  * Prompt Tests
  *
  * Story: E8.4 - Conversational Q&A Suggestion Flow
+ * Story: 2-4 Implement Professional Response Tone (AC: #1, #2, #4, #5)
  *
  * Tests:
  * - System prompt includes Q&A suggestion guidance
  * - Tool usage prompt includes add_qa_item guidance
  * - Prompts require user confirmation
+ * - Professional tone section exists with DO/DON'T examples (Story 2.4)
+ * - Hedging phrases are banned via DON'T guidance (Story 2.4)
+ * - Operation confirmation patterns present (Story 2.4 FR44)
  */
 
 import { describe, it, expect } from 'vitest'
 import { AGENT_SYSTEM_PROMPT, TOOL_USAGE_PROMPT, getSystemPrompt } from './prompts'
+import { getIRLSystemPrompt } from './v2/middleware/workflow-router'
 
 describe('AGENT_SYSTEM_PROMPT', () => {
   describe('Q&A Suggestion Flow Section (AC #1, #2, #3, #4)', () => {
@@ -204,5 +209,140 @@ describe('Prompt Content Quality', () => {
     // Uses markdown formatting
     expect(AGENT_SYSTEM_PROMPT).toContain('**')
     expect(AGENT_SYSTEM_PROMPT).toContain('|')
+  })
+})
+
+// =============================================================================
+// Story 2.4: Professional Response Tone Tests (AC: #1, #2, #4, #5)
+// =============================================================================
+
+describe('Professional Communication Style (Story 2.4)', () => {
+  describe('Section Presence (AC: #1)', () => {
+    it('should include Professional Communication Style section', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('## Professional Communication Style')
+    })
+
+    it('should include DO guidance with confident language examples', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('DO use confident, direct language')
+      expect(AGENT_SYSTEM_PROMPT).toContain('Based on available data')
+    })
+
+    it('should include DON\'T guidance with hedging to avoid', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain("DON'T use hedging or filler phrases")
+    })
+  })
+
+  describe('Hedging Phrase Bans (AC: #1, #5)', () => {
+    // These tests verify the prompt INSTRUCTS to avoid these phrases
+    // (the phrases appear in DON'T examples, which is correct)
+    it('should ban "I think" hedging phrase via DON\'T guidance', () => {
+      const promptLower = AGENT_SYSTEM_PROMPT.toLowerCase()
+      // Must contain it in the DON'T section
+      expect(promptLower).toContain('"i think..."')
+    })
+
+    it('should ban "I believe" hedging phrase via DON\'T guidance', () => {
+      const promptLower = AGENT_SYSTEM_PROMPT.toLowerCase()
+      expect(promptLower).toContain('"i believe..."')
+    })
+
+    it('should ban "Maybe" hedging phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"Maybe..."')
+    })
+
+    it('should ban "Perhaps" hedging phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"Perhaps..."')
+    })
+
+    it('should ban "Probably" hedging phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"Probably..."')
+    })
+
+    it('should ban "Might be" hedging phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"Might be..."')
+    })
+
+    it('should ban "Could be" hedging phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"Could be..."')
+    })
+
+    it('should ban "It seems like" hedging phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"It seems like..."')
+    })
+
+    it('should ban "I\'m not sure, but" hedging phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain("\"I'm not sure, but...\"")
+    })
+  })
+
+  describe('Filler Phrase Bans (AC: #1, #5)', () => {
+    it('should ban "Let me" filler phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"Let me..."')
+    })
+
+    it('should ban "Sure, I can" filler phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"Sure, I can..."')
+    })
+
+    it('should ban "Great question!" filler phrase via DON\'T guidance', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('"Great question!"')
+    })
+  })
+
+  describe('Operation Confirmation Patterns (AC: #2, FR44)', () => {
+    it('should include Operation Confirmation Patterns table', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('Operation Confirmation Patterns (FR44)')
+    })
+
+    it('should include good confirmation pattern for Q&A item', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('Added: [summary]. Total: N items.')
+    })
+
+    it('should include good confirmation pattern for search', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('Found X results across Y documents.')
+    })
+
+    it('should show contrast with bad confirmation patterns', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain("I've successfully added")
+      expect(AGENT_SYSTEM_PROMPT).toContain('I was able to find')
+    })
+  })
+
+  describe('Uncertainty Expression (AC: #4)', () => {
+    it('should reference Handling Uncertainty section', () => {
+      expect(AGENT_SYSTEM_PROMPT).toContain('Reference the "Handling Uncertainty" section')
+    })
+
+    it('should provide replacement patterns for hedging', () => {
+      // Check for the pattern guidance
+      expect(AGENT_SYSTEM_PROMPT).toContain('Use "Based on available data, ..." NOT "I think..."')
+      expect(AGENT_SYSTEM_PROMPT).toContain('Use "The documents show..." NOT "It looks like maybe..."')
+    })
+  })
+})
+
+// =============================================================================
+// Story 2.4: IRL Prompt Professional Tone Tests (AC: #1, #3)
+// =============================================================================
+
+describe('getIRLSystemPrompt Professional Tone (Story 2.4)', () => {
+  it('should include Response Style section', () => {
+    const prompt = getIRLSystemPrompt()
+    expect(prompt).toContain('## Response Style')
+  })
+
+  it('should include professional language guidance', () => {
+    const prompt = getIRLSystemPrompt()
+    expect(prompt).toContain("DON'T use hedging or filler phrases")
+  })
+
+  it('should specify hedging phrases to avoid', () => {
+    const prompt = getIRLSystemPrompt()
+    expect(prompt).toContain('"I think"')
+  })
+
+  it('should include IRL-specific confirmation example', () => {
+    const prompt = getIRLSystemPrompt()
+    expect(prompt).toContain('Added to IRL: [item]. Outstanding items: N.')
   })
 })

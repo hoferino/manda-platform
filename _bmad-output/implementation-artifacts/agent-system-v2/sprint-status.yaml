@@ -49,17 +49,18 @@ development_status:
 
   # Epic 2: Intelligent Conversation - Supervisor & Routing
   # FRs: FR13, FR14, FR16, FR17, FR18, FR44, FR45
-  epic-2: backlog
-  2-1-implement-supervisor-node-with-tool-calling: backlog
-  2-2-implement-real-time-token-streaming: backlog
-  2-3-implement-workflow-router-middleware: backlog
-  2-4-implement-professional-response-tone: backlog
-  epic-2-retrospective: optional
+  # COMPLETED: 2026-01-10
+  epic-2: done
+  2-1-implement-supervisor-node-with-tool-calling: done  # Code review passed 2026-01-10
+  2-2-implement-real-time-token-streaming: done
+  2-3-implement-workflow-router-middleware: done
+  2-4-implement-professional-response-tone: done  # Code review passed 2026-01-10
+  epic-2-retrospective: done  # See: epic-2-retro-2026-01-10.md
 
   # Epic 3: Knowledge & Retrieval - Deal Intelligence
   # FRs: FR23, FR24, FR25, FR26, FR41, FR42, FR43
-  epic-3: backlog
-  3-1-implement-context-loader-middleware: backlog
+  epic-3: in-progress
+  3-1-implement-context-loader-middleware: ready-for-dev  # Story created 2026-01-10
   3-2-implement-retrieval-node-with-graphiti-integration: backlog
   3-3-implement-source-attribution: backlog
   3-4-implement-honest-uncertainty-handling: backlog

@@ -3,12 +3,19 @@
  *
  * Story: 1-2 Create Base StateGraph Structure (AC: #2)
  * Story: 1-6 Implement Basic Error Recovery (AC: #1, #3)
- *
- * Placeholder implementation that passes state unchanged.
- * Full implementation with LLM routing in Story 2.1.
+ * Story: 2-1 Implement Supervisor Node with Tool-Calling (AC: #1, #2, #3, #4)
+ * Story: 2-3 Implement Workflow Router Middleware (AC: #5)
  *
  * The supervisor node is the main entry point for chat, irl, and qa workflows.
- * It routes messages to appropriate handlers based on user intent.
+ * It uses Gemini via Vertex AI with specialist tool bindings to:
+ * - Respond naturally to greetings and simple queries (FR17)
+ * - Route complex queries to specialists via LLM tool-calling
+ * - Never fall back to generic "I don't see that in documents" responses (FR16)
+ *
+ * System Prompt Pattern (Story 2.3):
+ * - Reads state.systemPrompt set by workflow-router middleware
+ * - Falls back to inline build if systemPrompt is null (backward compatibility)
+ * - Appends specialist routing guidance on top of base prompt
  *
  * Error Handling Pattern (Story 1.6):
  * - LLM errors are caught and added to state.errors
@@ -22,6 +29,9 @@
  * - [Source: docs/langgraph-reference.md]
  */
 
+import { SystemMessage, AIMessage } from '@langchain/core/messages'
+import type { BaseMessage } from '@langchain/core/messages'
+
 import type { AgentStateType } from '../state'
 import type { AgentError } from '../types'
 import { AgentErrorCode } from '../types'
@@ -31,6 +41,9 @@ import {
   isRecoverableError,
   logError,
 } from '../utils/errors'
+import { withRetry } from '../utils/retry'
+import { getSupervisorLLMWithTools } from '../llm/gemini'
+import { getSystemPromptWithContext } from '@/lib/agent/prompts'
 
 /**
  * Node identifier for error tracking.
@@ -38,61 +51,159 @@ import {
 const NODE_ID = 'supervisor'
 
 /**
+ * Specialist routing guidance appended to all supervisor prompts.
+ *
+ * Story: 2-3 Implement Workflow Router Middleware (AC: #5)
+ *
+ * This guidance is added on top of the base prompt (from middleware or inline)
+ * to provide specialist tool routing instructions.
+ */
+export const SPECIALIST_GUIDANCE = `
+
+## Specialist Delegation (Agent System v2)
+
+When a question requires specialized analysis beyond document search, delegate to the appropriate specialist tool:
+
+| Specialist | Use When |
+|------------|----------|
+| **financial-analyst** | EBITDA, margins, valuation, comparables, projections, P&L analysis |
+| **document-researcher** | Deep multi-document search, cross-referencing, detailed extraction |
+| **kg-expert** | Entity relationships, network analysis, how entities connect |
+| **due-diligence** | Risk assessment, DD findings, red flags, checklist status |
+
+**IMPORTANT:** Only call specialists for questions requiring their expertise.
+- Greetings → respond directly with a friendly, natural response
+- Simple factual questions → respond directly if you know the answer
+- General questions about the deal → respond directly using available context
+- Complex analysis requiring document search → use specialists
+
+**Examples:**
+- "Hello" → Respond naturally: "Hello! How can I help you with this deal today?"
+- "What's your name?" → Respond directly: "I'm your M&A Due Diligence Assistant."
+- "What is the EBITDA margin?" → Use financial-analyst (requires financial analysis)
+- "Find all mentions of revenue" → Use document-researcher (deep document search)
+- "Who are the key shareholders?" → Use kg-expert (entity relationships)
+- "Any red flags?" → Use due-diligence (risk assessment)
+
+Do NOT use generic fallback responses like "I don't see that in the documents" for simple queries.
+`
+
+/**
  * Supervisor node - routes messages to appropriate handlers.
  *
- * Placeholder implementation - passes state unchanged.
- * Full implementation in Story 2.1 will add:
- * - LLM-based intent detection
- * - Tool calling for specialist routing
- * - Response generation
+ * Story: 2-1 Implement Supervisor Node with Tool-Calling (AC: #1, #2, #3, #4)
+ *
+ * The supervisor uses Gemini via Vertex AI with specialist tools to:
+ * 1. Respond naturally to greetings without searching documents (AC: #2)
+ * 2. Answer simple queries directly without unnecessary tool calls (AC: #3)
+ * 3. Route complex queries to specialists via LLM tool-calling (AC: #4)
  *
  * Error Handling (Story 1.6):
- * When Story 2.1 adds LLM calls, errors will be:
- * 1. Caught in try-catch
- * 2. Classified using isLLMError/isToolError
- * 3. Added to state.errors (reducer auto-appends)
- * 4. Logged with context
- * 5. Either retried (if recoverable) or halted
+ * - LLM errors are caught and classified
+ * - withRetry provides automatic retry for transient failures
+ * - Errors are added to state.errors (reducer auto-appends)
+ * - User-friendly messages via toUserFriendlyMessage()
  *
- * @param _state - Current agent state (unused in placeholder)
- * @returns Partial state update (empty for placeholder)
+ * @param state - Current agent state with messages and context
+ * @returns Partial state update with AI response and optional activeSpecialist
  *
  * @example
  * ```typescript
  * const graphBuilder = new StateGraph(AgentState)
  * graphBuilder.addNode('supervisor', supervisorNode)
  * ```
- *
- * @example Error handling pattern (Story 2.1)
- * ```typescript
- * try {
- *   const response = await llm.invoke(messages)
- *   return { messages: [response] }
- * } catch (err) {
- *   const error = classifyAndLogError(err, state)
- *   if (isRecoverableError(error)) {
- *     // Retry logic (handled by withRetry wrapper)
- *   }
- *   // Return error in state - reducer will append
- *   return { errors: [error] }
- * }
- * ```
  */
 export async function supervisorNode(
-  _state: AgentStateType
+  state: AgentStateType
 ): Promise<Partial<AgentStateType>> {
-  // Placeholder: pass through unchanged
-  // Story 2.1 will implement LLM routing logic here with error handling:
-  //
-  // try {
-  //   const response = await withRetry(() => llm.invoke(messages))
-  //   return { messages: [response] }
-  // } catch (err) {
-  //   const error = classifyAndLogError(err, _state)
-  //   return { errors: [error] }
-  // }
-  //
-  return {}
+  // Read base prompt from middleware (Story 2.3) or fall back for backward compat
+  const dealName = state.dealContext?.dealName || undefined
+  const basePrompt = state.systemPrompt ?? getSystemPromptWithContext(dealName)
+
+  // Append specialist guidance (supervisor's responsibility)
+  const systemPrompt = basePrompt + SPECIALIST_GUIDANCE
+
+  // Construct messages array with system prompt
+  const messages = [new SystemMessage(systemPrompt), ...state.messages]
+
+  try {
+    // Get LLM with specialist tools bound
+    const llm = getSupervisorLLMWithTools()
+
+    // Invoke with retry for transient failures
+    // Type assertion needed: LangChain's bindTools() returns a complex generic type
+    // (Runnable<BaseLanguageModelInput, AIMessageChunk, ...>) that doesn't cleanly
+    // accept BaseMessage[]. This is a known LangChain typing limitation.
+    // The runtime behavior is correct - messages array is valid input.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await withRetry(() => llm.invoke(messages as any))
+
+    // Check for tool calls (indicates specialist routing needed)
+    // Response from tool-bound LLM has tool_calls property
+    const toolCalls = response.tool_calls
+    if (toolCalls && toolCalls.length > 0) {
+      // Route to first tool call (typically only one specialist per turn)
+      const firstToolCall = toolCalls[0]
+      // Safely access tool name - should always be present for valid tool calls
+      const specialistName = firstToolCall?.name
+      if (specialistName) {
+        // Convert to AIMessage for proper state handling
+        const aiMessage = new AIMessage({
+          content: response.content,
+          tool_calls: response.tool_calls,
+        })
+        return {
+          messages: [aiMessage],
+          activeSpecialist: specialistName, // e.g., 'financial-analyst'
+        }
+      }
+    }
+
+    // Direct response (greetings, simple queries) - no specialist needed
+    // Convert to AIMessage for state compatibility
+    const aiMessage = new AIMessage({
+      content: response.content,
+    })
+    return { messages: [aiMessage] }
+  } catch (err) {
+    // Classify error and add to state
+    const error = classifyAndLogError(err, state)
+    return { errors: [error] }
+  }
+}
+
+/**
+ * Build supervisor system prompt extending the existing comprehensive prompt.
+ *
+ * Story: 2-1 Implement Supervisor Node with Tool-Calling (AC: #1)
+ * Story: 2-3 Implement Workflow Router Middleware (AC: #5)
+ *
+ * **DEPRECATED:** This function is kept for backward compatibility.
+ * Prefer using workflow-router middleware to set state.systemPrompt,
+ * then let supervisorNode append SPECIALIST_GUIDANCE.
+ *
+ * Adds specialist routing guidance while preserving all existing behaviors:
+ * - Source attribution rules (P2 compliance)
+ * - Query behavior patterns (7 use cases)
+ * - Multi-turn context handling (P4 compliance)
+ * - Q&A suggestion flow
+ * - Zero-document scenario handling
+ *
+ * @param _state - Agent state for context (unused, kept for API compatibility)
+ * @param dealName - Optional deal name for context
+ * @returns Complete system prompt with specialist guidance
+ *
+ * @deprecated Use workflow-router middleware + SPECIALIST_GUIDANCE constant instead
+ */
+export function buildSupervisorSystemPrompt(
+  _state: AgentStateType,
+  dealName?: string
+): string {
+  // Start with existing comprehensive prompt (400+ lines)
+  const basePrompt = getSystemPromptWithContext(dealName)
+
+  // Add specialist routing guidance (now extracted to SPECIALIST_GUIDANCE constant)
+  return basePrompt + SPECIALIST_GUIDANCE
 }
 
 /**

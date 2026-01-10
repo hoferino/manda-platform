@@ -4,6 +4,7 @@
  * Story: 1-4 Implement Thread ID Generation and Management
  * Story: 1-6 Implement Basic Error Recovery (AC: #4)
  * Story: 1-7 Remove Legacy Agent Code (route consolidation)
+ * Story: 2-2 Implement Real-Time Token Streaming (AC: #1, #4, #7)
  * POST /api/projects/[id]/chat
  *
  * Entry point for Agent System v2.0 conversations. Connects the frontend
@@ -13,12 +14,13 @@
  * - Thread ID generation for new conversations
  * - Thread resumption for existing conversations
  * - Deal-scoped isolation via RLS
- * - SSE streaming of agent responses
+ * - SSE streaming of agent responses with real-time token streaming
  * - Proper error handling with structured error events (Story 1.6)
  *
  * References:
  * - [Source: _bmad-output/planning-artifacts/agent-system-architecture.md#Chat API Route]
  * - [Source: _bmad-output/planning-artifacts/agent-system-architecture.md#Error Handling Patterns]
+ * - [Source: _bmad-output/planning-artifacts/agent-system-architecture.md#Streaming Event Patterns]
  * - [Source: CLAUDE.md#Agent System v2.0]
  */
 
@@ -28,12 +30,13 @@ import { createClient } from '@/lib/supabase/server'
 import { HumanMessage } from '@langchain/core/messages'
 import {
   createV2ThreadId,
-  safeStreamAgent,
+  streamAgentWithTokens,
   createInitialState,
   generateConversationId,
   toUserFriendlyMessage,
-  type SafeStreamErrorEvent,
+  type TokenStreamEvent,
 } from '@/lib/agent/v2'
+import { AgentErrorCode, type AgentError } from '@/lib/agent/v2'
 
 // =============================================================================
 // Request Validation (AC: #1 - Task 4)
@@ -193,66 +196,94 @@ export async function POST(request: NextRequest, context: RouteContext) {
     state.messages = [new HumanMessage(message)]
 
     // ==========================================================================
-    // SSE Streaming Response with Error Handling (Story 1.6 AC: #4)
-    // TODO: Consider using AgentStreamHandler from @/lib/agent/streaming for
-    // consistency with the legacy chat route. Currently using raw SSE encoding.
+    // SSE Streaming Response with Token Streaming (Story 2-2 AC: #1, #4, #7)
     // ==========================================================================
     const encoder = new TextEncoder()
 
+    // Track accumulated content for done event (AC #6)
+    let fullContent = ''
+    const messageId = crypto.randomUUID()
+
     const stream = new ReadableStream({
       async start(controller) {
-        // Use safeStreamAgent - catches errors and yields error events instead of throwing
-        for await (const event of safeStreamAgent(state, threadId, {
-          metadata: {
-            api_route: '/api/projects/[id]/chat',
-            deal_id: dealId,
-            user_id: user.id,
-            conversation_id: conversationId,
-          },
-        })) {
-          // Check if this is an error event from safeStreamAgent
-          // Use 'in' operator for type narrowing since SafeStreamErrorEvent has 'type' property
-          if ('type' in event && event.type === 'error') {
-            const errorEvent = event as SafeStreamErrorEvent
+        try {
+          // Use streamAgentWithTokens for real-time token streaming
+          for await (const event of streamAgentWithTokens(state, threadId, {
+            metadata: {
+              api_route: '/api/projects/[id]/chat',
+              deal_id: dealId,
+              user_id: user.id,
+              conversation_id: conversationId,
+            },
+          })) {
+            // Handle token events from streamAgentWithTokens (Story 2-2)
+            if ('type' in event && event.type === 'token') {
+              const tokenEvent = event as TokenStreamEvent
+              // Accumulate content for done event
+              fullContent += tokenEvent.content
+              const sseData = JSON.stringify({
+                type: 'token',
+                content: tokenEvent.content,
+                node: tokenEvent.node,
+                conversationId,
+                timestamp: tokenEvent.timestamp,
+              })
+              controller.enqueue(encoder.encode(`data: ${sseData}\n\n`))
+              continue
+            }
 
-            // Send structured error event with user-friendly message
-            const errorData = JSON.stringify({
-              type: 'error',
-              error: {
-                code: errorEvent.error.code,
-                message: toUserFriendlyMessage(errorEvent.error),
-              },
+            // Handle original LangGraph stream events (tool calls, etc.)
+            // StreamEvent has 'event' and 'data' properties
+            const streamEvent = event as { event: string; data?: unknown }
+            const sseData = JSON.stringify({
+              event: streamEvent.event,
+              data: streamEvent.data,
               conversationId,
               timestamp: new Date().toISOString(),
             })
-            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
-
-            // Close stream after error - conversation state is preserved in checkpoint
-            controller.close()
-            return
+            controller.enqueue(encoder.encode(`data: ${sseData}\n\n`))
           }
 
-          // Convert LangGraph event to SSE format
-          // StreamEvent has 'event' and 'data' properties
-          const streamEvent = event as { event: string; data?: unknown }
-          const sseData = JSON.stringify({
-            event: streamEvent.event,
-            data: streamEvent.data,
-            conversationId, // Include for client tracking
+          // Send done event with complete response (AC #6)
+          const doneData = JSON.stringify({
+            type: 'done',
+            messageId,
+            content: fullContent,
+            sources: [], // TODO: Extract from state when retrieval node is implemented (Epic 3)
+            conversationId,
             timestamp: new Date().toISOString(),
           })
-          controller.enqueue(encoder.encode(`data: ${sseData}\n\n`))
+          controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
+
+          controller.close()
+        } catch (streamError) {
+          // Handle errors during streaming (Story 1.6 AC: #4)
+          console.error('[chat] Streaming error:', streamError)
+
+          // Create structured error
+          const agentError: AgentError = {
+            code: AgentErrorCode.STREAMING_ERROR,
+            message:
+              streamError instanceof Error
+                ? streamError.message
+                : 'Stream interrupted',
+            recoverable: true,
+            timestamp: new Date().toISOString(),
+          }
+
+          const errorData = JSON.stringify({
+            type: 'error',
+            error: {
+              code: agentError.code,
+              message: toUserFriendlyMessage(agentError),
+            },
+            conversationId,
+            timestamp: new Date().toISOString(),
+          })
+          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
+
+          controller.close()
         }
-
-        // Send done event
-        const doneData = JSON.stringify({
-          type: 'done',
-          conversationId,
-          timestamp: new Date().toISOString(),
-        })
-        controller.enqueue(encoder.encode(`data: ${doneData}\n\n`))
-
-        controller.close()
       },
     })
 

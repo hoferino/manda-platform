@@ -3,6 +3,7 @@
  *
  * Redis-backed cache with TTL, maxEntries (ZSET-based), and fallback support.
  * Story: E13.8 - Redis Caching Layer (AC: #1, #5, #6)
+ * Action Item: Epic 2 Retro - Updated for ioredis compatibility
  *
  * Features:
  * - Generic type-safe caching
@@ -118,23 +119,32 @@ export class RedisCache<T> {
     // Try Redis first
     if (redis) {
       try {
-        const value = await redis.get<T>(fullKey)
+        // ioredis returns string | null, need to parse JSON
+        const rawValue = await redis.get(fullKey)
         const latencyMs = Math.round(performance.now() - startTime)
 
-        if (value !== null) {
+        if (rawValue !== null) {
+          // Parse JSON to get typed value
+          const value = JSON.parse(rawValue) as T
+
           // Cache hit - update index score (refresh access time for LRU)
           await this.recordHit()
-          await redis.zadd(this.indexKey, { score: Date.now(), member: fullKey }).catch(() => {})
+          // ioredis zadd syntax: zadd(key, score, member)
+          await redis.zadd(this.indexKey, Date.now(), fullKey).catch(() => {})
 
           // AC #6: Log for LangSmith observability
-          console.log(`[cache] hit namespace=${this.namespace} key=${key} source=redis latency_ms=${latencyMs}`)
+          console.log(
+            `[cache] hit namespace=${this.namespace} key=${key} source=redis latency_ms=${latencyMs}`
+          )
           return { value, source: 'redis', hit: true, latencyMs }
         }
 
         // Cache miss
         await this.recordMiss()
         // AC #6: Log for LangSmith observability
-        console.log(`[cache] miss namespace=${this.namespace} key=${key} source=redis latency_ms=${latencyMs}`)
+        console.log(
+          `[cache] miss namespace=${this.namespace} key=${key} source=redis latency_ms=${latencyMs}`
+        )
         return { value: null, source: 'redis', hit: false, latencyMs }
       } catch (error) {
         console.warn(`[RedisCache] Redis get failed, falling back:`, error)
@@ -150,13 +160,17 @@ export class RedisCache<T> {
     if (fallbackResult) {
       this.localHits++
       // AC #6: Log for LangSmith observability
-      console.log(`[cache] hit namespace=${this.namespace} key=${key} source=fallback latency_ms=${latencyMs}`)
+      console.log(
+        `[cache] hit namespace=${this.namespace} key=${key} source=fallback latency_ms=${latencyMs}`
+      )
       return { value: fallbackResult, source: 'fallback', hit: true, latencyMs }
     }
 
     this.localMisses++
     // AC #6: Log for LangSmith observability
-    console.log(`[cache] miss namespace=${this.namespace} key=${key} source=fallback latency_ms=${latencyMs}`)
+    console.log(
+      `[cache] miss namespace=${this.namespace} key=${key} source=fallback latency_ms=${latencyMs}`
+    )
     return { value: null, source: 'fallback', hit: false, latencyMs }
   }
 
@@ -182,11 +196,12 @@ export class RedisCache<T> {
         // Pipeline: set value + add to index + trim excess
         const pipeline = redis.pipeline()
 
-        // Set the value with TTL
+        // Set the value with TTL (JSON stringified)
         pipeline.setex(fullKey, this.ttlSeconds, JSON.stringify(value))
 
         // Add to ZSET index with timestamp as score
-        pipeline.zadd(this.indexKey, { score: now, member: fullKey })
+        // ioredis zadd syntax: zadd(key, score, member)
+        pipeline.zadd(this.indexKey, now, fullKey)
 
         // Execute pipeline
         await pipeline.exec()
@@ -253,8 +268,8 @@ export class RedisCache<T> {
         // Get all keys in the index
         const keys = await redis.zrange(this.indexKey, 0, -1)
         if (keys.length > 0) {
-          const keyStrings = keys.map(k => String(k))
-          await redis.del(...keyStrings)
+          // ioredis returns string[]
+          await redis.del(...keys)
         }
         await redis.del(this.indexKey)
         // Reset stats
@@ -284,22 +299,27 @@ export class RedisCache<T> {
 
     if (redis) {
       try {
-        const [hits, misses, fallbacks, size] = await Promise.all([
-          redis.get<number>(this.statsKeys.hits),
-          redis.get<number>(this.statsKeys.misses),
-          redis.get<number>(this.statsKeys.fallbacks),
+        const [hitsRaw, missesRaw, fallbacksRaw, size] = await Promise.all([
+          redis.get(this.statsKeys.hits),
+          redis.get(this.statsKeys.misses),
+          redis.get(this.statsKeys.fallbacks),
           redis.zcard(this.indexKey),
         ])
 
-        const totalHits = (hits ?? 0) + this.localHits
-        const totalMisses = (misses ?? 0) + this.localMisses
+        // Parse string values to numbers (ioredis returns strings)
+        const hits = hitsRaw ? parseInt(hitsRaw, 10) : 0
+        const misses = missesRaw ? parseInt(missesRaw, 10) : 0
+        const fallbacks = fallbacksRaw ? parseInt(fallbacksRaw, 10) : 0
+
+        const totalHits = hits + this.localHits
+        const totalMisses = misses + this.localMisses
         const totalRequests = totalHits + totalMisses
 
         return {
           size: size ?? 0,
           hits: totalHits,
           misses: totalMisses,
-          fallbacks: (fallbacks ?? 0) + this.localFallbacks,
+          fallbacks: fallbacks + this.localFallbacks,
           hitRate: totalRequests > 0 ? totalHits / totalRequests : 0,
           source: 'redis',
         }
@@ -342,8 +362,8 @@ export class RedisCache<T> {
 
       if (keysToRemove.length > 0) {
         // Delete the keys and remove from index
-        const keysArray = keysToRemove.map(k => String(k))
-        await redis.del(...keysArray)
+        // ioredis returns string[]
+        await redis.del(...keysToRemove)
         await redis.zremrangebyrank(this.indexKey, 0, excess - 1)
       }
     } catch (error) {

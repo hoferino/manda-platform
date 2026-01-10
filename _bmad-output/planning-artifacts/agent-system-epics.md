@@ -530,8 +530,8 @@ So that **my conversations are isolated per deal and don't interfere with each o
 **And** different users in the same deal have separate chat threads
 **And** CIM threads are shared within deal (collaborative mode)
 
-**Given** parallel development strategy
-**When** I create `app/api/projects/[id]/chat-v2/route.ts`
+**Given** parallel development strategy (NOTE: Route consolidation complete - see Epic 1 Story 1.7)
+**When** I update `app/api/projects/[id]/chat/route.ts` to use v2 agent
 **Then** it accepts POST requests with `{ message, conversationId?, workflowMode? }`
 **And** it invokes the v2 StateGraph with PostgresSaver checkpointing
 **And** it returns streaming SSE responses
@@ -1145,7 +1145,7 @@ So that **the frontend can send user responses**.
 **Acceptance Criteria:**
 
 **Given** a pending approval in graph state
-**When** `POST /api/projects/[id]/chat-v2/approve` is called
+**When** `POST /api/projects/[id]/chat/approve` is called
 **Then** it accepts `{ conversationId, decision: 'approve' | 'modify' | 'reject', modifications?: object }`
 **And** resumes the graph with the decision
 

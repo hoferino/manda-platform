@@ -41,7 +41,7 @@ import {
 // =============================================================================
 
 describe('AgentState Type Compilation', () => {
-  it('should compile AgentState with all 11 required fields', () => {
+  it('should compile AgentState with all 12 required fields', () => {
     // This test verifies that AgentState.State type has all required fields
     // by accessing them (compilation would fail if fields are missing)
     const state: AgentStateType = {
@@ -56,10 +56,11 @@ describe('AgentState Type Compilation', () => {
       scratchpad: {},
       historySummary: null,
       tokenCount: 0,
+      systemPrompt: null,
     }
 
     expect(state).toBeDefined()
-    expect(Object.keys(state)).toHaveLength(11)
+    expect(Object.keys(state)).toHaveLength(12)
   })
 
   it('should export AgentState as a LangGraph Annotation', () => {
@@ -85,6 +86,7 @@ describe('AgentState Type Compilation', () => {
     expect(keys).toContain('scratchpad')
     expect(keys).toContain('historySummary')
     expect(keys).toContain('tokenCount')
+    expect(keys).toContain('systemPrompt')
   })
 })
 
@@ -150,6 +152,11 @@ describe('Default Value Initialization', () => {
   it('should initialize tokenCount to 0', () => {
     const state = createInitialState()
     expect(state.tokenCount).toBe(0)
+  })
+
+  it('should initialize systemPrompt to null', () => {
+    const state = createInitialState()
+    expect(state.systemPrompt).toBeNull()
   })
 })
 
@@ -441,6 +448,7 @@ describe('createInitialState()', () => {
     expect(state.activeSpecialist).toBeNull()
     expect(state.cimState).toBeNull()
     expect(state.historySummary).toBeNull()
+    expect(state.systemPrompt).toBeNull()
   })
 })
 
@@ -688,8 +696,8 @@ describe('Edge Cases', () => {
       workflowMode: 'cim',
       cimState: {
         cimId: 'cim-1',
-        currentPhase: 'content',
-        completedPhases: ['persona', 'outline'],
+        currentPhase: 'content_creation',
+        completedPhases: ['persona', 'thesis', 'outline'],
         buyerPersona: 'Strategic acquirer',
         investmentThesis: 'Strong growth potential',
         outline: ['Executive Summary', 'Company Overview'],
@@ -706,6 +714,7 @@ describe('Edge Cases', () => {
       },
       historySummary: 'Previous conversation discussed financials...',
       tokenCount: 15000,
+      systemPrompt: 'Test system prompt for full state validation',
     }
 
     expect(fullState.messages).toHaveLength(1)
@@ -715,7 +724,7 @@ describe('Edge Cases', () => {
     expect(fullState.errors).toHaveLength(1)
     expect(fullState.dealContext?.dealName).toBe('Test Deal')
     expect(fullState.workflowMode).toBe('cim')
-    expect(fullState.cimState?.completedPhases).toEqual(['persona', 'outline'])
+    expect(fullState.cimState?.completedPhases).toEqual(['persona', 'thesis', 'outline'])
     expect(fullState.scratchpad.lastQuery).toBe('financials')
     expect(fullState.historySummary).toContain('financials')
     expect(fullState.tokenCount).toBe(15000)

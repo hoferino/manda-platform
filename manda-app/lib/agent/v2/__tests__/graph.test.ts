@@ -183,15 +183,22 @@ describe('agentGraph', () => {
       expect((result.scratchpad.nested as { data: number }).data).toBe(123)
     })
 
-    it('should preserve errors through placeholder nodes', async () => {
+    it('should preserve errors through nodes (errors accumulate)', async () => {
       const state = createInitialState('chat')
       // @ts-expect-error - testing with partial error for simplicity
       state.errors = [{ code: 'LLM_ERROR', message: 'Test error' }]
 
       const result = await agentGraph.invoke(state)
 
-      // Errors should pass through unchanged
-      expect(result.errors).toHaveLength(1)
+      // Errors accumulate - original error should be preserved
+      // Additional errors may be added if LLM fails during node execution
+      expect(result.errors.length).toBeGreaterThanOrEqual(1)
+      // Original error should still be present (reducer appends)
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'LLM_ERROR', message: 'Test error' }),
+        ])
+      )
     })
 
     it('should preserve all 11 state fields through invocation', async () => {
@@ -246,11 +253,12 @@ describe('agentGraph', () => {
     })
 
     it('should handle concurrent invocations', async () => {
+      // Test all valid workflow modes: chat, cim, irl (qa is a cross-cutting tool, not a mode)
       const states = [
         createInitialState('chat', 'deal-1'),
         createInitialState('cim', 'deal-2'),
         createInitialState('irl', 'deal-3'),
-        createInitialState('qa', 'deal-4'),
+        createInitialState('chat', 'deal-4'), // Another chat instance
       ]
 
       const results = await Promise.all(states.map((s) => agentGraph.invoke(s)))

@@ -199,9 +199,14 @@ export interface DealContext {
 
 /**
  * CIM Builder workflow phases.
- * Ordered sequence of phases for the CIM creation process.
+ * Re-exported from lib/types/cim.ts for consistency across the codebase.
+ *
+ * Phases: 'persona' | 'thesis' | 'outline' | 'content_creation' | 'visual_concepts' | 'review' | 'complete'
+ *
+ * @see lib/types/cim.ts for the authoritative definition and phase helper functions.
  */
-export type CIMPhase = 'persona' | 'outline' | 'content' | 'visuals' | 'export'
+export type { CIMPhase } from '@/lib/types/cim'
+import type { CIMPhase } from '@/lib/types/cim'
 
 /**
  * Individual slide in the CIM document.
@@ -248,11 +253,17 @@ export interface CIMWorkflowState {
 
 /**
  * Token streaming event - partial response content.
+ *
+ * Story: 2-2 Implement Real-Time Token Streaming (AC: #4, #5)
  */
 export interface TokenStreamEvent {
   type: 'token'
+  /** Token content being streamed */
   content: string
+  /** ISO 8601 timestamp of token emission */
   timestamp: string
+  /** Optional node identifier (extracted from LangGraph tags) */
+  node?: string
 }
 
 /**

@@ -7,9 +7,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock the entire @upstash/redis module
-vi.mock('@upstash/redis', () => ({
-  Redis: vi.fn().mockImplementation(() => ({
+// Mock ioredis to simulate no Redis available (graceful fallback testing)
+vi.mock('ioredis', () => ({
+  default: vi.fn().mockImplementation(() => ({
     get: vi.fn(),
     setex: vi.fn(),
     del: vi.fn(),
@@ -17,8 +17,11 @@ vi.mock('@upstash/redis', () => ({
     zrange: vi.fn(),
     zcard: vi.fn(),
     zremrangebyrank: vi.fn(),
+    zrem: vi.fn(),
     incr: vi.fn(),
     ping: vi.fn().mockResolvedValue('PONG'),
+    quit: vi.fn().mockResolvedValue('OK'),
+    on: vi.fn(),
     pipeline: vi.fn(() => ({
       setex: vi.fn().mockReturnThis(),
       zadd: vi.fn().mockReturnThis(),
@@ -44,7 +47,7 @@ describe('RedisCache - In-Memory Fallback (no Redis)', () => {
   })
 
   it('should store and retrieve values from in-memory cache', async () => {
-    // Without UPSTASH_REDIS_REST_URL set, should use fallback
+    // Without REDIS_URL set, should use fallback
     await cache.set('key1', { value: 'value1' })
     const result = await cache.get('key1')
 
