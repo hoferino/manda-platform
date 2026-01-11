@@ -19,7 +19,7 @@
 import { StateGraph, START, END } from '@langchain/langgraph'
 
 import { AgentState, type AgentStateType } from './state'
-import { supervisorNode, cimPhaseRouterNode } from './nodes'
+import { supervisorNode, cimPhaseRouterNode, retrievalNode } from './nodes'
 import { getCheckpointer } from '@/lib/agent/checkpointer'
 
 // =============================================================================
@@ -27,7 +27,20 @@ import { getCheckpointer } from '@/lib/agent/checkpointer'
 // =============================================================================
 
 /**
- * Router function - determines entry point based on workflowMode.
+ * Router function from START - always goes to retrieval first.
+ *
+ * Story 3.1/3.3: All requests go through retrieval to populate
+ * state.sources before supervisor handles them.
+ *
+ * @param _state - Current agent state (unused)
+ * @returns 'retrieval' node name
+ */
+function routeFromStart(_state: AgentStateType): string {
+  return 'retrieval'
+}
+
+/**
+ * Router function - determines next node after retrieval based on workflowMode.
  *
  * Routes:
  * - 'cim' → 'cim/phaseRouter' node for CIM Builder workflow
@@ -56,17 +69,19 @@ function routeByWorkflowMode(state: AgentStateType): string {
 /**
  * Build the agent graph with conditional entry points.
  *
- * Graph Structure (placeholder phase - Story 1.2):
+ * Graph Structure (Story 3.1, 3.3):
  * ```
- *                    ┌─── supervisor ───┐
- *                    │                  │
- * START ─[router]────┤                  ├──── END
- *                    │                  │
- *                    └─ cim/phaseRouter ┘
+ *                         ┌─── supervisor ───┐
+ *                         │                  │
+ * START ─── retrieval ────┤                  ├──── END
+ *                         │                  │
+ *                         └─ cim/phaseRouter ┘
  * ```
  *
- * NOTE: This diagram reflects the placeholder phase. Update this diagram
- * when edges are modified in later stories (2.1, 6.1, etc.).
+ * Flow:
+ * 1. START always routes to retrieval (populates state.sources)
+ * 2. Retrieval routes to supervisor or cim/phaseRouter based on workflowMode
+ * 3. Supervisor/CIM route to END (specialist routing added in Epic 4)
  *
  * Note: Using chained builder pattern for proper type inference of node names.
  *
@@ -76,9 +91,15 @@ export const graphBuilder = new StateGraph(AgentState)
   // Add nodes - names MUST match routing targets
   .addNode('supervisor', supervisorNode)
   .addNode('cim/phaseRouter', cimPhaseRouterNode)
+  // Story 3.1: Retrieval node - called before supervisor for context enrichment
+  .addNode('retrieval', retrievalNode)
   // Conditional entry from START - routes based on workflowMode
   // Using array format for pathMap as this is the standard pattern in this codebase
-  .addConditionalEdges(START, routeByWorkflowMode, [
+  .addConditionalEdges(START, routeFromStart, [
+    'retrieval', // All paths go through retrieval first
+  ])
+  // Retrieval routes to appropriate handler based on workflow mode
+  .addConditionalEdges('retrieval', routeByWorkflowMode, [
     'supervisor',
     'cim/phaseRouter',
   ])
@@ -116,10 +137,10 @@ export const graphBuilder = new StateGraph(AgentState)
 export const agentGraph = graphBuilder.compile()
 
 /**
- * Export the router function for testing and extension.
+ * Export the router functions for testing and extension.
  * Can be used to verify routing logic or extend with custom routing.
  */
-export { routeByWorkflowMode }
+export { routeFromStart, routeByWorkflowMode }
 
 // =============================================================================
 // Compiled Graph with Checkpointer (Story 1.3)

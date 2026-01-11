@@ -181,8 +181,8 @@ export interface DealContext {
   dealName: string
   /** Project/tenant ID for RLS */
   projectId: string
-  /** Optional organization scope */
-  organizationId?: string
+  /** Organization ID for multi-tenant isolation (always populated from deals.organization_id) */
+  organizationId: string
   /** Deal lifecycle status */
   status: 'active' | 'closed' | 'archived'
   /** Number of uploaded documents */

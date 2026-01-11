@@ -1,6 +1,25 @@
-# Story 3.1: Implement Context Loader Middleware
+# DEFERRED: Context Loader Middleware
 
-Status: ready-for-dev
+> **STATUS: CODE EXISTS BUT NOT IN USE**
+>
+> This story was completed (code written, tests passing), but we decided NOT to use it in the agent invocation path. The decision was made on 2026-01-11 after reviewing:
+>
+> 1. **Not real middleware** - LangGraph has a proper middleware API; this is just a pre-invoke function
+> 2. **Premature optimization** - Runs on every message, even "hello" which doesn't need deal context
+> 3. **Wrong data** - Loads cosmetic metadata (dealName, status) instead of useful M&A intelligence
+> 4. **API route already sufficient** - The chat route validates deal access via RLS (sufficient security)
+> 5. **Another point of failure** - Adds complexity with unclear benefit
+>
+> **Code location:** `lib/agent/v2/middleware/context-loader.ts`
+> **Tests location:** `lib/agent/v2/middleware/__tests__/context-loader.test.ts`
+>
+> If we need rich deal context in the future, see Story 3-5 (Deal Summary Generation) for the lazy-loading approach that was proposed as an alternative.
+
+---
+
+# Original Story: Context Loader Middleware
+
+Status: done (code exists, NOT IN USE)
 
 ## Story
 
@@ -61,35 +80,35 @@ So that **the agent has relevant deal context without repeated loading and datab
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add cache namespace for deal context (AC: #2)
-  - [ ] 1.1 Add `dealContext: 'cache:deal:context:'` to `CACHE_NAMESPACES` in `lib/cache/redis-client.ts`
-  - [ ] 1.2 Create `DealContextCache` instance in new file or export from cache module
-  - [ ] 1.3 Set TTL to 3600 seconds (1 hour) per architecture spec
-  - [ ] 1.4 Set maxEntries to 100 (reasonable limit for concurrent deals)
+- [x] Task 1: Add cache namespace for deal context (AC: #2)
+  - [x] 1.1 Add `dealContext: 'cache:deal:context:'` to `CACHE_NAMESPACES` in `lib/cache/redis-client.ts`
+  - [x] 1.2 Create `DealContextCache` instance in new file or export from cache module
+  - [x] 1.3 Set TTL to 3600 seconds (1 hour) per architecture spec
+  - [x] 1.4 Set maxEntries to 100 (reasonable limit for concurrent deals)
 
-- [ ] Task 2: Create context loader middleware (AC: #1, #4, #5)
-  - [ ] 2.1 Create `lib/agent/v2/middleware/context-loader.ts`
-  - [ ] 2.2 Define `contextLoaderMiddleware` as async function (needs DB/cache access)
-  - [ ] 2.3 Update `Middleware` type in index.ts to support both sync and async:
+- [x] Task 2: Create context loader middleware (AC: #1, #4, #5)
+  - [x] 2.1 Create `lib/agent/v2/middleware/context-loader.ts`
+  - [x] 2.2 Define `contextLoaderMiddleware` as async function (needs DB/cache access)
+  - [x] 2.3 Update `Middleware` type in index.ts to support both sync and async:
     ```typescript
     export type Middleware = (state: AgentStateType) => AgentStateType | Promise<AgentStateType>
     ```
-  - [ ] 2.4 Early return if `state.dealContext` is already fully populated (skip loading)
-  - [ ] 2.5 Extract `dealId` from partial `state.dealContext.dealId` (set by `createInitialState`)
-  - [ ] 2.6 Handle case where `dealContext` is null (no deal context needed - chat without deal)
+  - [x] 2.4 Early return if `state.dealContext` is already fully populated (skip loading)
+  - [x] 2.5 Extract `dealId` from partial `state.dealContext.dealId` (set by `createInitialState`)
+  - [x] 2.6 Handle case where `dealContext` is null (no deal context needed - chat without deal)
 
-- [ ] Task 3: Implement cache-first loading (AC: #2)
-  - [ ] 3.1 Check Redis cache first with key `deal:{dealId}:context`
-  - [ ] 3.2 If cache hit, return cached `DealContext` directly (~5ms)
-  - [ ] 3.3 If cache miss, fetch from Supabase
-  - [ ] 3.4 Cache the result with 1-hour TTL
-  - [ ] 3.5 Log cache hit/miss for observability: `[context-loader] cache=hit|miss dealId=xxx`
+- [x] Task 3: Implement cache-first loading (AC: #2)
+  - [x] 3.1 Check Redis cache first with key `deal:{dealId}:context`
+  - [x] 3.2 If cache hit, return cached `DealContext` directly (~5ms)
+  - [x] 3.3 If cache miss, fetch from Supabase
+  - [x] 3.4 Cache the result with 1-hour TTL
+  - [x] 3.5 Log cache hit/miss for observability: `[context-loader] cache=hit|miss dealId=xxx`
 
-- [ ] Task 4: Implement Supabase data fetching (AC: #6, #7)
-  - [ ] 4.1 Import `createClient` from `@/lib/supabase/server`
-  - [ ] 4.2 Query `deals` table: `supabase.from('deals').select('*').eq('id', dealId).single()`
-  - [ ] 4.3 Query document count: `supabase.from('documents').select('id', { count: 'exact' }).eq('deal_id', dealId)`
-  - [ ] 4.4 Map Supabase `Deal` row to `DealContext` interface:
+- [x] Task 4: Implement Supabase data fetching (AC: #6, #7)
+  - [x] 4.1 Import `createClient` from `@/lib/supabase/server`
+  - [x] 4.2 Query `deals` table: `supabase.from('deals').select('*').eq('id', dealId).single()`
+  - [x] 4.3 Query document count: `supabase.from('documents').select('id', { count: 'exact' }).eq('deal_id', dealId)`
+  - [x] 4.4 Map Supabase `Deal` row to `DealContext` interface:
     - `dealId` = `deal.id`
     - `dealName` = `deal.name`
     - `projectId` = `deal.id` (deals table IS projects)
@@ -97,24 +116,24 @@ So that **the agent has relevant deal context without repeated loading and datab
     - `status` = map `deal.status` ('active' | 'closed' | 'archived', default 'active')
     - `documentCount` = count from documents query
     - `createdAt` = `deal.created_at`
-  - [ ] 4.5 RLS policies on `deals` table enforce tenant isolation automatically
+  - [x] 4.5 RLS policies on `deals` table enforce tenant isolation automatically
 
-- [ ] Task 5: Implement error handling (AC: #3)
-  - [ ] 5.1 Wrap Supabase queries in try/catch
-  - [ ] 5.2 If deal not found (error or null result):
+- [x] Task 5: Implement error handling (AC: #3)
+  - [x] 5.1 Wrap Supabase queries in try/catch
+  - [x] 5.2 If deal not found (error or null result):
     - Create `AgentError` with code `CONTEXT_ERROR`
     - Set `recoverable: false` (can't proceed with invalid deal)
     - Set `message: 'Deal not found or access denied'`
     - Add to `state.errors` array
-  - [ ] 5.3 If cache error (Redis fail):
+  - [x] 5.3 If cache error (Redis fail):
     - Log warning but don't add to state.errors (non-fatal)
     - Fall through to Supabase query
-  - [ ] 5.4 Return state with `dealContext: null` on error (agent can still handle general queries)
+  - [x] 5.4 Return state with `dealContext: null` on error (agent can still handle general queries)
 
-- [ ] Task 6: Export and integrate middleware (AC: #4)
-  - [ ] 6.1 Export `contextLoaderMiddleware` from `lib/agent/v2/middleware/index.ts`
-  - [ ] 6.2 Export from `lib/agent/v2/index.ts`
-  - [ ] 6.3 Document middleware order in JSDoc:
+- [x] Task 6: Export and integrate middleware (AC: #4)
+  - [x] 6.1 Export `contextLoaderMiddleware` from `lib/agent/v2/middleware/index.ts`
+  - [x] 6.2 Export from `lib/agent/v2/index.ts`
+  - [x] 6.3 Document middleware order in JSDoc:
     ```typescript
     /**
      * Middleware Order (Critical):
@@ -125,21 +144,21 @@ So that **the agent has relevant deal context without repeated loading and datab
      */
     ```
 
-- [ ] Task 7: Write unit tests (AC: #1, #2, #3, #5, #7)
-  - [ ] 7.1 Create `lib/agent/v2/middleware/__tests__/context-loader.test.ts`
-  - [ ] 7.2 Test: skips loading when dealContext already populated
-  - [ ] 7.3 Test: loads from cache when available (mock Redis hit)
-  - [ ] 7.4 Test: loads from Supabase on cache miss (mock Supabase)
-  - [ ] 7.5 Test: caches result after Supabase load
-  - [ ] 7.6 Test: maps Deal fields to DealContext correctly
-  - [ ] 7.7 Test: includes document count in context
-  - [ ] 7.8 Test: handles deal not found (sets CONTEXT_ERROR)
-  - [ ] 7.9 Test: handles cache error gracefully (falls through to Supabase)
-  - [ ] 7.10 Test: preserves all other state fields unchanged
-  - [ ] 7.11 Test: does NOT modify messages array
-  - [ ] 7.12 Test: handles null dealContext (no deal context needed)
+- [x] Task 7: Write unit tests (AC: #1, #2, #3, #5, #7)
+  - [x] 7.1 Create `lib/agent/v2/middleware/__tests__/context-loader.test.ts`
+  - [x] 7.2 Test: skips loading when dealContext already populated
+  - [x] 7.3 Test: loads from cache when available (mock Redis hit)
+  - [x] 7.4 Test: loads from Supabase on cache miss (mock Supabase)
+  - [x] 7.5 Test: caches result after Supabase load
+  - [x] 7.6 Test: maps Deal fields to DealContext correctly
+  - [x] 7.7 Test: includes document count in context
+  - [x] 7.8 Test: handles deal not found (sets CONTEXT_ERROR)
+  - [x] 7.9 Test: handles cache error gracefully (falls through to Supabase)
+  - [x] 7.10 Test: preserves all other state fields unchanged
+  - [x] 7.11 Test: does NOT modify messages array
+  - [x] 7.12 Test: handles null dealContext (no deal context needed)
 
-- [ ] Task 8: Write integration tests (AC: #4, #6)
+- [ ] Task 8: Write integration tests (AC: #4, #6) - SKIPPED (requires live infrastructure)
   - [ ] 8.1 Create `lib/agent/v2/__tests__/context-loader.integration.test.ts`
   - [ ] 8.2 Test: context-loader populates dealContext, workflow-router reads it
   - [ ] 8.3 Test: middleware chain order is enforced
@@ -254,6 +273,10 @@ The existing `RedisCache` class handles:
 
 **This means:** Context loader can use Redis caching, and it will automatically fall back to in-memory if Redis isn't configured. No special handling needed.
 
+### organizationId Note
+
+While `organizationId` is marked optional in the `DealContext` interface, **always populate it** from `deals.organization_id` for proper multi-tenant isolation tracking. This field is critical for downstream tenant isolation and audit logging.
+
 ### Error Handling from Architecture
 
 From `agent-system-architecture.md`, use standard error codes:
@@ -332,22 +355,18 @@ export async function contextLoaderMiddleware(
 async function loadDealContextFromSupabase(dealId: string): Promise<DealContext | null> {
   const supabase = await createClient()
 
-  // Fetch deal
-  const { data: deal, error: dealError } = await supabase
-    .from('deals')
-    .select('*')
-    .eq('id', dealId)
-    .single()
+  // Parallel queries for better performance
+  const [dealResult, countResult] = await Promise.all([
+    supabase.from('deals').select('*').eq('id', dealId).single(),
+    supabase.from('documents').select('id', { count: 'exact', head: true }).eq('deal_id', dealId),
+  ])
+
+  const { data: deal, error: dealError } = dealResult
+  const { count } = countResult
 
   if (dealError || !deal) {
     return null
   }
-
-  // Fetch document count
-  const { count } = await supabase
-    .from('documents')
-    .select('id', { count: 'exact', head: true })
-    .eq('deal_id', dealId)
 
   return {
     dealId: deal.id,
@@ -446,6 +465,12 @@ return { ...state, messages: [...state.messages, msg] }
 // ❌ Don't hardcode deal IDs or skip RLS
 .eq('id', 'hardcoded-deal-id')
 
+// ❌ Don't import DealContext from irl-tools (different local interface)
+import { DealContext } from '@/lib/agent/tools/irl-tools'  // WRONG!
+
+// ✅ DO import from v2/types (unified interface)
+import type { DealContext } from '../types'
+
 // ✅ DO skip if context already loaded
 if (state.dealContext?.dealName) return state
 
@@ -487,11 +512,46 @@ From Epic 2 stories, patterns to follow:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+N/A
+
 ### Completion Notes List
 
+1. **Cache namespace added** - Added `dealContext: 'cache:deal:context:'` to `CACHE_NAMESPACES` in `lib/cache/redis-client.ts`
+
+2. **Async middleware type** - Extended `Middleware` type to support both sync and async middleware via `SyncMiddleware | AsyncMiddleware` union
+
+3. **Cache-first pattern** - Implementation uses separate try/catch for cache and DB operations, so cache failures gracefully fall through to Supabase
+
+4. **29 unit tests passing** - Comprehensive test suite covering all ACs
+
+5. **Integration tests skipped** - Requires live Supabase/Redis infrastructure
+
+### Code Review Fixes (2026-01-11)
+
+1. **[HIGH] organizationId made non-optional** - Updated `DealContext.organizationId` from `string | undefined` to `string` in `lib/agent/v2/types.ts` per multi-tenant isolation requirements
+
+2. **[MEDIUM] Cache write error test added** - Added 2 tests for cache write error graceful fallthrough (Tests #13.1, #13.2)
+
+3. **[MEDIUM] Cache latency test added** - Added 2 tests verifying ~5ms cache hit performance (Tests #14.1, #14.2)
+
+4. **[MEDIUM] Integration test scaffold created** - Created `lib/agent/v2/__tests__/context-loader.integration.test.ts` with placeholder tests for RLS, middleware order, and Redis integration
+
+5. **33 unit tests now passing** (was 29)
+
 ### File List
+
+**Created:**
+- `manda-app/lib/agent/v2/middleware/context-loader.ts` - Main middleware implementation
+- `manda-app/lib/agent/v2/middleware/__tests__/context-loader.test.ts` - 33 unit tests
+- `manda-app/lib/agent/v2/__tests__/context-loader.integration.test.ts` - Integration test scaffold
+
+**Modified:**
+- `manda-app/lib/cache/redis-client.ts` - Added `dealContext` namespace
+- `manda-app/lib/agent/v2/middleware/index.ts` - Added async middleware types, exported contextLoaderMiddleware
+- `manda-app/lib/agent/v2/index.ts` - Exported contextLoaderMiddleware and new middleware types
+- `manda-app/lib/agent/v2/types.ts` - Made `organizationId` non-optional in `DealContext`
 

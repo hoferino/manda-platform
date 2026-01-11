@@ -206,6 +206,15 @@ class HybridSearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=10000, description="Search query text")
     deal_id: str = Field(..., description="Deal UUID for namespace isolation")
     num_results: int = Field(default=10, ge=1, le=50, description="Number of results to return")
+    search_method: Optional[Literal["hybrid", "vector", "auto"]] = Field(
+        default="auto",
+        description=(
+            "Search method selection for performance optimization (Story 3-1 AC #2). "
+            "'vector': Fast vector-only search (~100ms), best for simple factual queries. "
+            "'hybrid': Full vector + BM25 + graph search (~300-500ms), best for complex relational queries. "
+            "'auto': Use hybrid (default)."
+        ),
+    )
 
 
 class HybridSourceCitation(BaseModel):
@@ -303,6 +312,7 @@ async def hybrid_search(
         query_length=len(request.query),
         deal_id=request.deal_id,
         num_results=request.num_results,
+        search_method=request.search_method,
     )
 
     # Verify deal exists (API key validates service-to-service auth)
@@ -318,15 +328,34 @@ async def hybrid_search(
 
     try:
         # Import here to avoid circular imports and lazy load
-        # Uses factory function that respects RAG_MODE feature flag
-        from src.graphiti import get_retrieval_service
+        from src.graphiti import HybridRetrievalService, get_retrieval_service
+        from src.graphiti.chunk_retrieval import search_chunks
 
-        service = get_retrieval_service()
-        result = await service.retrieve(
-            query=request.query,
-            deal_id=request.deal_id,
-            num_results=request.num_results,
-        )
+        # Story 3-1 AC #2: Search method selection for performance optimization
+        # 'vector' uses fast chunk search (~100ms), 'hybrid' uses full graph search (~300-500ms)
+        search_method = request.search_method or "auto"
+
+        if search_method == "vector":
+            # Fast path: vector-only search via chunk retrieval
+            # Best for simple factual queries like "What is Q3 revenue?"
+            chunk_result = await search_chunks(
+                query=request.query,
+                deal_id=request.deal_id,
+                organization_id=request.deal_id,  # Temporary: use deal_id until schema updated
+                num_results=request.num_results,
+            )
+            # Convert chunk result to standard retrieval result format
+            service = HybridRetrievalService()
+            result = service._convert_chunk_result(chunk_result)
+        else:
+            # Full hybrid path: vector + BM25 + graph traversal
+            # Best for complex relational queries like "How does X relate to Y?"
+            service = get_retrieval_service()
+            result = await service.retrieve(
+                query=request.query,
+                deal_id=request.deal_id,
+                num_results=request.num_results,
+            )
 
         # Transform results to response model
         response_results = []
@@ -371,9 +400,12 @@ async def hybrid_search(
                 )
             )
 
-        # Get current RAG mode for response
+        # Get current RAG mode for response - reflect actual method used
         from src.config import get_settings
-        current_rag_mode = get_settings().rag_mode
+        if search_method == "vector":
+            current_rag_mode = "vector"
+        else:
+            current_rag_mode = get_settings().rag_mode
 
         response = HybridSearchResponse(
             query=request.query,

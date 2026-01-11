@@ -5,6 +5,7 @@
  * Story: 1-6 Implement Basic Error Recovery (AC: #4)
  * Story: 1-7 Remove Legacy Agent Code (route consolidation)
  * Story: 2-2 Implement Real-Time Token Streaming (AC: #1, #4, #7)
+ * Story: 3-2 Implement Source Attribution (AC: #1, #3, #4)
  * POST /api/projects/[id]/chat
  *
  * Entry point for Agent System v2.0 conversations. Connects the frontend
@@ -35,6 +36,8 @@ import {
   generateConversationId,
   toUserFriendlyMessage,
   type TokenStreamEvent,
+  type SourceAddedEvent,
+  type SourceCitation,
 } from '@/lib/agent/v2'
 import { AgentErrorCode, type AgentError } from '@/lib/agent/v2'
 
@@ -200,8 +203,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // ==========================================================================
     const encoder = new TextEncoder()
 
-    // Track accumulated content for done event (AC #6)
+    // Track accumulated content and sources for done event (AC #6, Story 3-2)
     let fullContent = ''
+    const collectedSources: SourceCitation[] = []
     const messageId = crypto.randomUUID()
 
     const stream = new ReadableStream({
@@ -232,6 +236,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
               continue
             }
 
+            // Handle source_added events from streamAgentWithTokens (Story 3-2)
+            if ('type' in event && event.type === 'source_added') {
+              const sourceEvent = event as SourceAddedEvent
+              // Collect sources for done event
+              collectedSources.push(sourceEvent.source)
+              const sseData = JSON.stringify({
+                type: 'source_added',
+                source: sourceEvent.source,
+                conversationId,
+                timestamp: sourceEvent.timestamp,
+              })
+              controller.enqueue(encoder.encode(`data: ${sseData}\n\n`))
+              continue
+            }
+
             // Handle original LangGraph stream events (tool calls, etc.)
             // StreamEvent has 'event' and 'data' properties
             const streamEvent = event as { event: string; data?: unknown }
@@ -244,12 +263,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
             controller.enqueue(encoder.encode(`data: ${sseData}\n\n`))
           }
 
-          // Send done event with complete response (AC #6)
+          // Send done event with complete response (AC #6, Story 3-2)
           const doneData = JSON.stringify({
             type: 'done',
             messageId,
             content: fullContent,
-            sources: [], // TODO: Extract from state when retrieval node is implemented (Epic 3)
+            sources: collectedSources,
             conversationId,
             timestamp: new Date().toISOString(),
           })

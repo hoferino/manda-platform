@@ -24,8 +24,8 @@ export { cimPhaseRouterNode } from './cim'
 // export { documentResearcherNode } from './specialists/document-researcher'
 // export { kgExpertNode } from './specialists/kg-expert'
 
-// Retrieval (Story 3.x):
-// export { retrievalNode } from './retrieval'
+// Retrieval (Story 3.1)
+export { retrievalNode } from './retrieval'
 
 // Approval (Story 5.x):
 // export { approvalNode } from './approval'

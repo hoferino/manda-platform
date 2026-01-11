@@ -41,3 +41,23 @@ export {
   DEFAULT_RETRY_CONFIG,
   type RetryConfig,
 } from './retry'
+
+// Source attribution utilities (Story 3-2)
+export {
+  formatCitation,
+  deduplicateSources,
+  rankSourcesByRelevance,
+} from './source-attribution'
+
+// Uncertainty handling utilities (Story 3-3)
+export {
+  detectUncertainty,
+  generateNextSteps,
+  buildUncertaintyContext,
+  validateResponseHonesty,
+} from './uncertainty'
+export type {
+  UncertaintyLevel,
+  UncertaintyResult,
+  ValidationResult,
+} from './uncertainty'

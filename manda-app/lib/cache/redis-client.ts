@@ -30,11 +30,15 @@ export type CacheSource = 'redis' | 'fallback'
 
 /**
  * Cache namespace prefixes (per architecture spec)
+ *
+ * Story: 3-1 Implement Context Loader Middleware (AC: #2)
+ * - Added dealContext namespace for deal context caching
  */
 export const CACHE_NAMESPACES = {
   toolResult: 'cache:tool:',
   retrieval: 'cache:retrieval:',
   summary: 'cache:summary:',
+  dealContext: 'cache:deal:context:',
 } as const
 
 export type CacheNamespace = keyof typeof CACHE_NAMESPACES

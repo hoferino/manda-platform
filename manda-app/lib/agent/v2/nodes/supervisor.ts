@@ -5,17 +5,25 @@
  * Story: 1-6 Implement Basic Error Recovery (AC: #1, #3)
  * Story: 2-1 Implement Supervisor Node with Tool-Calling (AC: #1, #2, #3, #4)
  * Story: 2-3 Implement Workflow Router Middleware (AC: #5)
+ * Story: 3-3 Implement Honest Uncertainty Handling (AC: #1-#5)
  *
  * The supervisor node is the main entry point for chat, irl, and qa workflows.
  * It uses Gemini via Vertex AI with specialist tool bindings to:
  * - Respond naturally to greetings and simple queries (FR17)
  * - Route complex queries to specialists via LLM tool-calling
  * - Never fall back to generic "I don't see that in documents" responses (FR16)
+ * - Inject uncertainty context when sources are missing or low-quality (FR41-43)
  *
  * System Prompt Pattern (Story 2.3):
  * - Reads state.systemPrompt set by workflow-router middleware
  * - Falls back to inline build if systemPrompt is null (backward compatibility)
  * - Appends specialist routing guidance on top of base prompt
+ *
+ * Uncertainty Handling Pattern (Story 3.3):
+ * - Detects uncertainty level from state.sources relevance scores
+ * - Injects context into system prompt for high/complete uncertainty
+ * - Validates responses for prohibited phrases (logging only, soft enforcement)
+ * - Defensive: handles missing dealContext gracefully
  *
  * Error Handling Pattern (Story 1.6):
  * - LLM errors are caught and added to state.errors
@@ -42,6 +50,11 @@ import {
   logError,
 } from '../utils/errors'
 import { withRetry } from '../utils/retry'
+import {
+  detectUncertainty,
+  buildUncertaintyContext,
+  validateResponseHonesty,
+} from '../utils'
 import { getSupervisorLLMWithTools } from '../llm/gemini'
 import { getSystemPromptWithContext } from '@/lib/agent/prompts'
 
@@ -116,12 +129,32 @@ Do NOT use generic fallback responses like "I don't see that in the documents" f
 export async function supervisorNode(
   state: AgentStateType
 ): Promise<Partial<AgentStateType>> {
+  // Story 3.3: Defensive check for dealContext
+  const dealContext = state.dealContext
+  if (!dealContext) {
+    console.warn('[uncertainty] dealContext not loaded, assuming no documents')
+  }
+  const hasDocuments = dealContext?.documentCount != null && dealContext.documentCount > 0
+
+  // Story 3.3: Detect uncertainty from sources (populated by retrieval node)
+  // Get query from last human message for context
+  const lastHumanMessage = [...state.messages]
+    .reverse()
+    .find((m) => m._getType() === 'human')
+  const query = typeof lastHumanMessage?.content === 'string' ? lastHumanMessage.content : ''
+
+  const { level: uncertaintyLevel } = detectUncertainty(
+    state.sources ?? [],
+    query
+  )
+
   // Read base prompt from middleware (Story 2.3) or fall back for backward compat
-  const dealName = state.dealContext?.dealName || undefined
+  const dealName = dealContext?.dealName || undefined
   const basePrompt = state.systemPrompt ?? getSystemPromptWithContext(dealName)
 
-  // Append specialist guidance (supervisor's responsibility)
-  const systemPrompt = basePrompt + SPECIALIST_GUIDANCE
+  // Story 3.3: Inject uncertainty context between base prompt and specialist guidance
+  const uncertaintyContext = buildUncertaintyContext(uncertaintyLevel, hasDocuments)
+  const systemPrompt = basePrompt + uncertaintyContext + SPECIALIST_GUIDANCE
 
   // Construct messages array with system prompt
   const messages = [new SystemMessage(systemPrompt), ...state.messages]
@@ -137,6 +170,19 @@ export async function supervisorNode(
     // The runtime behavior is correct - messages array is valid input.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await withRetry(() => llm.invoke(messages as any))
+
+    // Story 3.3: Post-LLM response validation (logging only, don't block)
+    const responseContent =
+      typeof response.content === 'string' ? response.content : ''
+    if (responseContent) {
+      const validation = validateResponseHonesty(responseContent)
+      if (!validation.isValid) {
+        console.warn(
+          '[uncertainty] response validation issues:',
+          validation.issues
+        )
+      }
+    }
 
     // Check for tool calls (indicates specialist routing needed)
     // Response from tool-bound LLM has tool_calls property

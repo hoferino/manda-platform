@@ -51,8 +51,8 @@ export { AgentState, type AgentStateType } from './state'
 export { createInitialState, createInitialCIMState } from './state'
 
 // Graph and nodes (Story 1-2)
-export { agentGraph, routeByWorkflowMode } from './graph'
-export { supervisorNode, cimPhaseRouterNode } from './nodes'
+export { agentGraph, routeFromStart, routeByWorkflowMode } from './graph'
+export { supervisorNode, cimPhaseRouterNode, retrievalNode } from './nodes'
 
 // Graph factory and invocation helpers (Story 1-3)
 export {
@@ -100,8 +100,13 @@ export {
 export { streamAgentWithTokens } from './stream'
 
 // Middleware (Story 2-3)
-export type { Middleware } from './middleware'
-export { workflowRouterMiddleware, getIRLSystemPrompt } from './middleware'
+// Note: contextLoaderMiddleware removed per Epic 3 retro decision (2026-01-11)
+// Deal context is now passed via createInitialState() and used by retrieval node
+export type { Middleware, SyncMiddleware, AsyncMiddleware } from './middleware'
+export {
+  workflowRouterMiddleware,
+  getIRLSystemPrompt,
+} from './middleware'
 
 // Supervisor constants (Story 2-3)
 export { SPECIALIST_GUIDANCE } from './nodes/supervisor'

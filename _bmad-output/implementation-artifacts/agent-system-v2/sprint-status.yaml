@@ -59,13 +59,34 @@ development_status:
 
   # Epic 3: Knowledge & Retrieval - Deal Intelligence
   # FRs: FR23, FR24, FR25, FR26, FR41, FR42, FR43
-  epic-3: in-progress
-  3-1-implement-context-loader-middleware: ready-for-dev  # Story created 2026-01-10
-  3-2-implement-retrieval-node-with-graphiti-integration: backlog
-  3-3-implement-source-attribution: backlog
-  3-4-implement-honest-uncertainty-handling: backlog
-  3-5-implement-redis-caching-for-retrieval: backlog
-  epic-3-retrospective: optional
+  #
+  # DECISION (2026-01-11): Context Loader Middleware DEFERRED
+  # ---------------------------------------------------------
+  # We built a "context-loader middleware" that pre-loads deal metadata before
+  # every agent invocation. After review, we decided NOT to use it because:
+  # 1. Not real LangGraph middleware - just a pre-invoke function
+  # 2. Premature optimization - runs on every message, even "hello"
+  # 3. Wrong data - loads cosmetic metadata, not useful M&A intelligence
+  # 4. API route already validates deal access via RLS (sufficient)
+  # 5. Another point of failure with unclear benefit
+  #
+  # COMPLETED: 2026-01-11 (core stories done, 3-4 and 3-5 intentionally deferred)
+  #
+  # ACTION ITEMS (Epic 3 Retro):
+  # [x] 1. Wire retrieval node - ALREADY WIRED (graph.ts: START → retrieval → supervisor)
+  # [x] 2. Delete context-loader middleware - DELETED 2026-01-11 (dead code removed)
+  # [ ] 3. Max's manual testing with real deal queries - PENDING
+  #
+  # Note: Context-loader middleware was DELETED per retro decision. Deal context
+  # is now passed via createInitialState() and used by retrieval node directly.
+  #
+  epic-3: done
+  3-1-implement-retrieval-node-with-graphiti-integration: done
+  3-2-implement-source-attribution: done  # Review complete 2026-01-11
+  3-3-implement-honest-uncertainty-handling: done  # Code review complete 2026-01-11
+  3-4-implement-redis-caching-for-retrieval: backlog  # DEFERRED - Redis optional per Epic 2 retro decision
+  3-5-implement-deal-summary-generation: backlog  # DEFERRED - revisit when we know user patterns
+  epic-3-retrospective: done  # See: epic-3-retro-2026-01-11.md
 
   # Epic 4: Specialist Agents - Expert Delegation
   # FRs: FR15, FR27, FR28, FR29, FR30, FR31, FR48, FR57, FR58, FR59

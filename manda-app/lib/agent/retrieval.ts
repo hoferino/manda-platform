@@ -310,15 +310,27 @@ export async function safeGraphitiSearch(
 }
 
 /**
+ * Search method for Graphiti API.
+ * Story: 3-1 Implement Retrieval Node (AC: #2)
+ *
+ * - 'vector': Fast vector-only search (~100ms), best for simple factual queries
+ * - 'hybrid': Full vector + BM25 + graph search (~300-500ms), best for complex relational queries
+ * - 'auto': Let the API decide (defaults to hybrid)
+ */
+export type SearchMethod = 'vector' | 'hybrid' | 'auto'
+
+/**
  * Call Graphiti hybrid search API
  *
  * @param query - User query
  * @param dealId - Deal UUID for namespace isolation
+ * @param searchMethod - Search method: 'vector' (fast), 'hybrid' (full), or 'auto' (default)
  * @returns HybridSearchResponse or null on error
  */
 async function callGraphitiSearch(
   query: string,
-  dealId: string
+  dealId: string,
+  searchMethod: SearchMethod = 'auto'
 ): Promise<HybridSearchResponse | null> {
   try {
     const response = await fetch(`${PROCESSING_API_URL}/api/search/hybrid`, {
@@ -331,6 +343,7 @@ async function callGraphitiSearch(
         query,
         deal_id: dealId,
         num_results: 5, // Top 5 for context injection
+        search_method: searchMethod,
       }),
     })
 
