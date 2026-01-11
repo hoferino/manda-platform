@@ -39,12 +39,25 @@ npm run db:push      # Push migrations to Supabase
 
 ```bash
 cd manda-processing
-pip install -e ".[dev]"                           # Install with dev dependencies
+
+# Setup (first time only)
+uv venv .venv                                     # Create virtual environment with uv
+source .venv/bin/activate                         # Activate venv
+uv pip install -e ".[dev]"                        # Install with dev dependencies
+
+# Always activate venv before running commands
+source .venv/bin/activate                         # Activate venv (do this in each terminal session)
+
+# Development
 uvicorn src.main:app --reload --port 8000         # Start API server
 python -m src.jobs                                # Start background worker
+
+# Testing
 pytest                                            # Run all tests
 pytest tests/unit/test_api/test_health.py         # Run single test file
 pytest --cov=src --cov-report=html                # Tests with coverage
+
+# Code Quality
 ruff check .                                      # Linting
 mypy src                                          # Type checking
 ```
