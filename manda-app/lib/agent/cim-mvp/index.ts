@@ -102,6 +102,12 @@ export async function* streamCIMMVP(
     // Get graph with checkpointer for persistence
     const graph = await getCIMMVPGraph()
 
+    // Get current state to know how many messages already exist
+    // This prevents re-yielding old messages from checkpointed state
+    const currentState = await graph.getState(config)
+    const existingMessageCount = currentState.values?.messages?.length || 0
+    console.log(`[streamCIMMVP] Thread ${threadId} has ${existingMessageCount} existing messages`)
+
     // Stream the graph execution
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const stream = await graph.stream(input as any, {
@@ -109,7 +115,8 @@ export async function* streamCIMMVP(
       streamMode: 'values',
     })
 
-    let lastMessageCount = 0
+    // Start from existing count + 1 (for the new human message we just sent)
+    let lastMessageCount = existingMessageCount + 1
     let lastSlideUpdate: string | null = null
     let lastPhase: string | null = null
 

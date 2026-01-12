@@ -28,6 +28,28 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { formatComponentReference } from '@/lib/cim/reference-utils'
 import type { SlideUpdate, CIMPhase } from '@/lib/agent/cim-mvp'
+import type { Slide } from '@/lib/types/cim'
+
+/**
+ * Convert MVP agent SlideUpdate to database Slide format
+ */
+function slideUpdateToSlide(update: SlideUpdate): Slide {
+  return {
+    id: update.slideId,
+    section_id: update.sectionId,
+    title: update.title,
+    components: update.components.map((c) => ({
+      id: c.id,
+      type: c.type,
+      content: c.content,
+      metadata: c.data ? { data: c.data } : undefined,
+    })),
+    visual_concept: null,
+    status: update.status === 'approved' ? 'approved' : 'draft',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+}
 
 interface CIMBuilderPageProps {
   projectId: string
@@ -69,9 +91,11 @@ export function CIMBuilderPage({
 
   // Handle slide update from MVP agent
   const handleSlideUpdate = React.useCallback((slide: SlideUpdate) => {
+    console.log('[CIMBuilderPage] Received slide update:', slide.slideId, slide.title, slide.components.length, 'components')
     setSlideUpdates((prev) => {
       const next = new Map(prev)
       next.set(slide.slideId, slide)
+      console.log('[CIMBuilderPage] Total slides now:', next.size)
       return next
     })
     // Also trigger refresh to persist
@@ -121,6 +145,46 @@ export function CIMBuilderPage({
     [setSourceRef]
   )
 
+  // Merge database slides with real-time MVP agent slides
+  // MVP slides take precedence and are appended if new
+  const mergedSlides = React.useMemo(() => {
+    if (!useMVPAgent || slideUpdates.size === 0) {
+      return cim?.slides || []
+    }
+
+    const dbSlides = cim?.slides || []
+    const mvpSlides = Array.from(slideUpdates.values()).map(slideUpdateToSlide)
+
+    // Create a map of all slides, with MVP slides overriding DB slides by ID
+    const slideMap = new Map<string, Slide>()
+    for (const slide of dbSlides) {
+      slideMap.set(slide.id, slide)
+    }
+    for (const slide of mvpSlides) {
+      slideMap.set(slide.id, slide)
+    }
+
+    // Return slides in order: DB slides first, then new MVP slides
+    const result: Slide[] = []
+    const addedIds = new Set<string>()
+
+    // Add DB slides (potentially overridden by MVP)
+    for (const slide of dbSlides) {
+      result.push(slideMap.get(slide.id)!)
+      addedIds.add(slide.id)
+    }
+
+    // Add new MVP slides not in DB
+    for (const slide of mvpSlides) {
+      if (!addedIds.has(slide.id)) {
+        result.push(slide)
+        addedIds.add(slide.id)
+      }
+    }
+
+    return result
+  }, [cim?.slides, slideUpdates, useMVPAgent])
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -162,8 +226,9 @@ export function CIMBuilderPage({
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-semibold truncate">{cim.title}</h1>
           <p className="text-xs text-muted-foreground">
-            {cim.slides.length} slides | {cim.outline.length} sections
+            {mergedSlides.length} slides | {cim.outline.length} sections
             {useMVPAgent && ` | Phase: ${currentPhase.replace(/_/g, ' ')}`}
+            {useMVPAgent && slideUpdates.size > 0 && ` | ${slideUpdates.size} new`}
           </p>
         </div>
         {/* MVP Agent Toggle */}
@@ -210,7 +275,7 @@ export function CIMBuilderPage({
           }
           previewPanel={
             <PreviewPanel
-              slides={cim.slides}
+              slides={mergedSlides}
               currentIndex={currentSlideIndex}
               onIndexChange={setCurrentSlideIndex}
               onComponentSelect={handleComponentSelect}

@@ -8,7 +8,7 @@
  */
 
 import { StateGraph, START, END } from '@langchain/langgraph'
-import { ChatOpenAI } from '@langchain/openai'
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
 import { ToolNode } from '@langchain/langgraph/prebuilt'
 import { AIMessage } from '@langchain/core/messages'
 
@@ -22,18 +22,22 @@ import { getCheckpointer, type Checkpointer } from '@/lib/agent/checkpointer'
 // LLM Configuration
 // =============================================================================
 
-const model = new ChatOpenAI({
-  modelName: 'gpt-4o-mini',
+const baseModel = new ChatGoogleGenerativeAI({
+  model: 'gemini-2.5-flash',
+  apiKey: process.env.GOOGLE_AI_API_KEY,
   temperature: 0.7,
-  maxTokens: 4096,
-}).withConfig({
+  maxOutputTokens: 4096,
+})
+
+// Bind tools first, then add config (Gemini SDK requires this order)
+const model = baseModel.bindTools(cimMVPTools).withConfig({
   runName: 'cim-mvp-agent',
-  tags: ['cim-mvp', 'gpt-4o-mini'],
+  tags: ['cim-mvp', 'gemini-2.5-flash'],
   metadata: {
     graph: 'cim-mvp',
     version: '1.0.0',
   },
-}).bindTools(cimMVPTools)
+})
 
 // =============================================================================
 // Graph Nodes
@@ -71,6 +75,20 @@ async function agentNode(
     knowledgeLoaded,
     companyName,
   })
+
+  // Debug: Log message count to verify history is preserved
+  console.log(`[CIM-MVP] Agent node invoked with ${state.messages.length} messages`)
+  if (state.messages.length > 0) {
+    const lastMsg = state.messages[state.messages.length - 1]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const msgType = typeof (lastMsg as any)._getType === 'function'
+      ? (lastMsg as any)._getType()
+      : (lastMsg as any).type || 'unknown'
+    const content = typeof lastMsg.content === 'string'
+      ? lastMsg.content.substring(0, 100)
+      : JSON.stringify(lastMsg.content).substring(0, 100)
+    console.log(`[CIM-MVP] Last message (${msgType}): ${content}...`)
+  }
 
   // Invoke the model
   const response = await model.invoke([
@@ -139,6 +157,14 @@ async function postToolNode(
               components: result.components || [],
               status: 'draft',
             }],
+          }
+        }
+
+        // Handle save_context tool - merge gathered context into state
+        if (result.gatheredContext) {
+          console.log('[postToolNode] Merging gathered context into state')
+          return {
+            gatheredContext: result.gatheredContext,
           }
         }
       } catch {

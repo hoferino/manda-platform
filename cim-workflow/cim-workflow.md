@@ -33,7 +33,7 @@ Guide the user through creating a Company Overview chapter using a deeply conver
 
 **Investment Banking Best Practices:**
 
-A great CIM (50-100 pages) is a **storytelling vehicle**, not a data dump:
+A great CIM (30+ pages) is a **storytelling vehicle**, not a data dump:
 - Distills mission, achievements, and value into compelling narrative
 - Balances transparency (including risks) with growth opportunity
 - Tailors narrative to buyer type and their specific motivations

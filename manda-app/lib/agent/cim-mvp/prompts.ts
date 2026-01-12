@@ -7,8 +7,106 @@
  * Story: CIM MVP Fast Track
  */
 
-import type { CIMMVPStateType, CIMPhase } from './state'
+import type { CIMMVPStateType, CIMPhase, GatheredContext } from './state'
 import { getDataSummary, getDataGaps } from './knowledge-loader'
+
+/**
+ * Format gathered context for display in system prompt
+ */
+function formatGatheredContext(ctx: GatheredContext): string {
+  if (!ctx || Object.keys(ctx).length === 0) {
+    return 'No information gathered yet.'
+  }
+
+  const sections: string[] = []
+
+  // Company basics
+  if (ctx.companyName || ctx.description || ctx.foundingYear || ctx.employeeCount) {
+    const basics: string[] = []
+    if (ctx.companyName) basics.push(`Company: ${ctx.companyName}`)
+    if (ctx.description) basics.push(`Description: ${ctx.description}`)
+    if (ctx.foundingYear) basics.push(`Founded: ${ctx.foundingYear}`)
+    if (ctx.headquarters) basics.push(`HQ: ${ctx.headquarters}`)
+    if (ctx.employeeCount) basics.push(`Employees: ${ctx.employeeCount}`)
+    sections.push(`**Company Basics:**\n${basics.join('\n')}`)
+  }
+
+  // Financial metrics
+  const financials: string[] = []
+  if (ctx.revenue) financials.push(`Revenue: ${ctx.revenue}`)
+  if (ctx.revenueGrowth) financials.push(`Growth: ${ctx.revenueGrowth}`)
+  if (ctx.grossMargin) financials.push(`Gross Margin: ${ctx.grossMargin}`)
+  if (ctx.ebitda) financials.push(`EBITDA: ${ctx.ebitda}`)
+  if (ctx.burnRate) financials.push(`Burn Rate: ${ctx.burnRate}`)
+  if (ctx.runway) financials.push(`Runway: ${ctx.runway}`)
+  if (financials.length > 0) {
+    sections.push(`**Financials:**\n${financials.join('\n')}`)
+  }
+
+  // Business metrics
+  const metrics: string[] = []
+  if (ctx.customerCount) metrics.push(`Customers: ${ctx.customerCount}`)
+  if (ctx.retentionRate) metrics.push(`Retention: ${ctx.retentionRate}`)
+  if (ctx.nrr) metrics.push(`NRR: ${ctx.nrr}`)
+  if (ctx.ltvCac) metrics.push(`LTV/CAC: ${ctx.ltvCac}`)
+  if (ctx.paybackMonths) metrics.push(`Payback: ${ctx.paybackMonths} months`)
+  if (metrics.length > 0) {
+    sections.push(`**Business Metrics:**\n${metrics.join('\n')}`)
+  }
+
+  // Investment highlights
+  if (ctx.investmentHighlights?.length) {
+    sections.push(`**Investment Highlights:**\n${ctx.investmentHighlights.map(h => `- ${h}`).join('\n')}`)
+  }
+
+  // Team
+  if (ctx.founders?.length) {
+    sections.push(`**Founders:**\n${ctx.founders.map(f => `- ${f.name} (${f.role})${f.background ? `: ${f.background}` : ''}`).join('\n')}`)
+  }
+  if (ctx.keyExecutives?.length) {
+    sections.push(`**Key Executives:**\n${ctx.keyExecutives.map(e => `- ${e.name} (${e.role})${e.background ? `: ${e.background}` : ''}`).join('\n')}`)
+  }
+
+  // Products
+  if (ctx.products?.length) {
+    sections.push(`**Products/Services:**\n${ctx.products.map(p => `- ${p.name}: ${p.description}`).join('\n')}`)
+  }
+  if (ctx.targetMarket) sections.push(`**Target Market:** ${ctx.targetMarket}`)
+  if (ctx.valueProposition) sections.push(`**Value Proposition:** ${ctx.valueProposition}`)
+
+  // Market
+  const market: string[] = []
+  if (ctx.tam) market.push(`TAM: ${ctx.tam}`)
+  if (ctx.sam) market.push(`SAM: ${ctx.sam}`)
+  if (ctx.som) market.push(`SOM: ${ctx.som}`)
+  if (ctx.marketGrowth) market.push(`Growth: ${ctx.marketGrowth}`)
+  if (market.length > 0) {
+    sections.push(`**Market:**\n${market.join('\n')}`)
+  }
+
+  // Competition
+  if (ctx.competitors?.length) {
+    sections.push(`**Competitors:**\n${ctx.competitors.map(c => `- ${c.name}${c.differentiator ? `: ${c.differentiator}` : ''}`).join('\n')}`)
+  }
+  if (ctx.competitiveAdvantages?.length) {
+    sections.push(`**Competitive Advantages:**\n${ctx.competitiveAdvantages.map(a => `- ${a}`).join('\n')}`)
+  }
+
+  // Growth & Risks
+  if (ctx.growthPlans?.length) {
+    sections.push(`**Growth Plans:**\n${ctx.growthPlans.map(g => `- ${g}`).join('\n')}`)
+  }
+  if (ctx.risks?.length) {
+    sections.push(`**Risks:**\n${ctx.risks.map(r => `- ${r.risk}${r.mitigation ? ` (Mitigation: ${r.mitigation})` : ''}`).join('\n')}`)
+  }
+
+  // Notes
+  if (ctx.notes?.length) {
+    sections.push(`**Notes:**\n${ctx.notes.map(n => `- ${n}`).join('\n')}`)
+  }
+
+  return sections.join('\n\n')
+}
 
 /**
  * Get the main system prompt for the CIM MVP agent
@@ -58,6 +156,9 @@ ${phaseInstructions}
 ## Completed Phases
 ${(state.completedPhases || []).length > 0 ? (state.completedPhases || []).map(p => `✅ ${p.replace(/_/g, ' ')}`).join('\n') : 'None yet - starting fresh'}
 
+## Information Gathered So Far
+${formatGatheredContext(state.gatheredContext || {})}
+
 ${knowledgeSection}
 
 ## Guidelines
@@ -88,11 +189,42 @@ ${knowledgeSection}
 - Track progress across the CIM
 
 ## Tools Available
+- **save_context**: IMPORTANT - Save information from user to memory. Use this whenever the user provides company data!
 - **knowledge_search**: Find specific information in the deal documents
 - **get_section_context**: Get all findings for a CIM section
 - **web_search**: Research market data, competitors, industry trends
 - **update_slide**: Create/update slide content (triggers preview update)
 - **navigate_phase**: Move to a different CIM section
+
+## CRITICAL RULES - YOU MUST FOLLOW THESE
+
+### Rule 1: ALWAYS Use Tools - Never Pretend
+- You MUST actually call tools - never just describe what you would do
+- If you say "I've created a slide" but didn't call update_slide, that's a LIE
+- If you say "I've saved the information" but didn't call save_context, that's a LIE
+- NEVER claim to have done something without actually using the tool
+
+### Rule 2: Save User Information Immediately
+When the user provides ANY company information:
+1. FIRST call save_context with ALL the data they provided
+2. THEN respond to confirm you've stored it
+3. Do NOT ask for information already in "Information Gathered So Far"
+
+### Rule 3: Follow the Workflow Step by Step
+For the Executive Summary phase, gather information in this order:
+1. Company name and description (what do they do?)
+2. Key metrics (revenue, growth, customers)
+3. Investment highlights (why is this attractive?)
+4. ONLY AFTER gathering sufficient info, use update_slide to create each slide
+
+### Rule 4: One Slide at a Time
+- Don't claim to create multiple slides at once
+- Create ONE slide, wait for feedback, then continue
+- Each slide should be created with an actual update_slide tool call
+
+### Rule 5: Confirm Before Moving On
+- Before moving to the next phase, ask if the user is satisfied
+- Use navigate_phase tool to actually change phases
 
 ## Response Style
 - Be concise but thorough
@@ -100,7 +232,7 @@ ${knowledgeSection}
 - Highlight key numbers and metrics
 - Maintain a professional M&A advisor tone
 
-Remember: You're building a professional CIM that will be shown to potential buyers. Quality and accuracy matter.`
+Remember: You're building a professional CIM that will be shown to potential buyers. Quality and accuracy matter. ALWAYS use tools - never fake it.`
 }
 
 /**

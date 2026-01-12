@@ -14,8 +14,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { streamCIMMVP, executeCIMMVP } from '@/lib/agent/cim-mvp'
+import { streamCIMMVP, executeCIMMVP, getCIMMVPGraph } from '@/lib/agent/cim-mvp'
 import { getSSEHeaders } from '@/lib/agent/streaming'
+import { updateCIM } from '@/lib/services/cim'
+import type { ConversationMessage } from '@/lib/types/cim'
 
 interface RouteContext {
   params: Promise<{ id: string; cimId: string }>
@@ -77,9 +79,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // Handle streaming vs non-streaming
     if (stream) {
-      return handleStreamingResponse(message, threadId, knowledgePath)
+      return handleStreamingResponse(message, threadId, cimId, knowledgePath)
     } else {
-      return handleNonStreamingResponse(message, threadId, knowledgePath)
+      return handleNonStreamingResponse(message, threadId, cimId, knowledgePath)
     }
   } catch (err) {
     console.error('[api/cims/chat-mvp] Error:', err)
@@ -91,11 +93,82 @@ export async function POST(request: NextRequest, context: RouteContext) {
 }
 
 /**
+ * Sync LangGraph messages to CIM conversation_history in database
+ *
+ * This ensures conversation is persisted to the CIM record so it loads
+ * on page refresh, not just in LangGraph's checkpointer.
+ */
+async function syncConversationToCIM(
+  cimId: string,
+  threadId: string
+): Promise<void> {
+  try {
+    const graph = await getCIMMVPGraph()
+    const config = { configurable: { thread_id: threadId } }
+
+    // Get current state from LangGraph
+    const state = await graph.getState(config)
+    if (!state.values?.messages) {
+      console.log('[syncConversationToCIM] No messages in state')
+      return
+    }
+
+    // Convert LangGraph messages to ConversationMessage format
+    // Only include user messages and assistant messages with actual text content
+    // Skip: tool calls, tool results, and AI messages that only contain tool invocations
+    const conversationHistory: ConversationMessage[] = []
+
+    for (const msg of state.values.messages) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msgAny = msg as any
+      const msgType = typeof msgAny._getType === 'function'
+        ? msgAny._getType()
+        : msgAny.type || 'unknown'
+
+      // Skip tool messages (results from tool executions)
+      if (msgType === 'tool') continue
+
+      // Skip messages with no content
+      if (!msg.content) continue
+
+      // For AI messages, skip if they have tool calls (these are intermediate steps)
+      // Only include AI messages that are actual responses to the user
+      if (msgType === 'ai' && msgAny.tool_calls?.length > 0) continue
+
+      const role = msgType === 'human' ? 'user' : 'assistant'
+      const content = typeof msg.content === 'string'
+        ? msg.content
+        : JSON.stringify(msg.content)
+
+      // Skip empty content
+      if (!content.trim()) continue
+
+      conversationHistory.push({
+        id: msgAny.id || crypto.randomUUID(),
+        role,
+        content,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
+    // Update CIM with conversation history
+    const supabase = await createClient()
+    await updateCIM(supabase, cimId, { conversationHistory })
+
+    console.log(`[syncConversationToCIM] Synced ${conversationHistory.length} messages to CIM ${cimId}`)
+  } catch (error) {
+    console.error('[syncConversationToCIM] Error:', error)
+    // Don't throw - this is best-effort persistence
+  }
+}
+
+/**
  * Handle streaming chat request using SSE
  */
 function handleStreamingResponse(
   message: string,
   threadId: string,
+  cimId: string,
   knowledgePath?: string
 ): Response {
   const encoder = new TextEncoder()
@@ -108,6 +181,9 @@ function handleStreamingResponse(
           const data = `data: ${JSON.stringify(event)}\n\n`
           controller.enqueue(encoder.encode(data))
         }
+
+        // After streaming completes, sync conversation to CIM record
+        await syncConversationToCIM(cimId, threadId)
       } catch (error) {
         console.error('[handleStreamingResponse] Error:', error)
         const errorEvent = {
@@ -133,10 +209,14 @@ function handleStreamingResponse(
 async function handleNonStreamingResponse(
   message: string,
   threadId: string,
+  cimId: string,
   knowledgePath?: string
 ): Promise<NextResponse> {
   try {
     const result = await executeCIMMVP(message, threadId, knowledgePath)
+
+    // Sync conversation to CIM record after execution
+    await syncConversationToCIM(cimId, threadId)
 
     return NextResponse.json({
       messageId: crypto.randomUUID(),

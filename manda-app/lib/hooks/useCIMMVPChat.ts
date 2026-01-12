@@ -181,6 +181,7 @@ export function useCIMMVPChat({
 
                   case 'slide_update':
                     // Notify parent of slide update
+                    console.log('[useCIMMVPChat] Received slide_update event:', event.slide?.slideId, event.slide?.title)
                     onSlideUpdate?.(event.slide)
                     break
 
