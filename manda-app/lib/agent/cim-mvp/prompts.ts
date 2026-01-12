@@ -1,14 +1,268 @@
 /**
  * CIM MVP Prompts
  *
- * System prompts for the simplified CIM workflow agent.
- * Phase-aware prompts guide the agent through CIM creation.
+ * System prompts for the workflow-based CIM agent.
+ * Workflow stage-aware prompts guide the agent through structured CIM creation.
  *
- * Story: CIM MVP Fast Track
+ * Story: CIM MVP Workflow Fix
  */
 
-import type { CIMMVPStateType, CIMPhase, GatheredContext } from './state'
+import type {
+  CIMMVPStateType,
+  CIMPhase,
+  GatheredContext,
+  WorkflowStage,
+  WorkflowProgress,
+  BuyerPersona,
+  HeroContext,
+  CIMOutline,
+} from './state'
 import { getDataSummary, getDataGaps } from './knowledge-loader'
+
+// =============================================================================
+// Workflow Stage Instructions (Story 3.1)
+// =============================================================================
+
+/**
+ * Get detailed instructions for a workflow stage
+ */
+export function getWorkflowStageInstructions(stage: WorkflowStage): string {
+  const instructions: Record<WorkflowStage, string> = {
+    welcome: `**Goal:** Greet the user and set context.
+
+**What to do:**
+- Confirm knowledge base is loaded (or explain we'll work without it)
+- Briefly explain the CIM creation process (buyer persona → hero concept → thesis → outline → sections)
+- Ask if user is ready to begin
+
+**Tools:** None needed
+
+**Exit criteria:** User is ready to proceed → call advance_workflow to move to buyer_persona`,
+
+    buyer_persona: `**Goal:** Understand who will be reading this CIM.
+
+**Questions to ask:**
+- Who is the target buyer? (strategic acquirer, financial/PE, public company, competitor)
+- What are their primary motivations? (growth, synergies, market entry, technology)
+- What concerns should we address proactively? (integration risk, customer concentration, etc.)
+
+**Tools:** save_buyer_persona when user confirms their buyer profile
+
+**Exit criteria:** Buyer persona saved → call advance_workflow to move to hero_concept`,
+
+    hero_concept: `**Goal:** Identify the story hook - what makes this company special.
+
+**What to do:**
+- Based on knowledge base and buyer persona, present 3 hero concept options
+- Each option should have supporting data points from the knowledge base
+- Explain why each would resonate with the buyer type
+- Let user pick, refine, or suggest an alternative
+
+**Example hero concepts:**
+- "The Category Creator" - first mover in emerging space
+- "The Growth Machine" - exceptional metrics and trajectory
+- "The Platform Play" - extensible technology with network effects
+- "The Market Leader" - dominant position in valuable niche
+
+**Tools:** save_hero_concept when user confirms their selection
+
+**Exit criteria:** Hero concept selected → call advance_workflow to move to investment_thesis`,
+
+    investment_thesis: `**Goal:** Create the 3-part investment thesis.
+
+**What to do:**
+Draft the thesis based on the hero concept:
+1. **The Asset:** What makes this company valuable? (technology, team, market position, IP)
+2. **The Timing:** Why is now the right time? (market inflection, competitive window, growth stage)
+3. **The Opportunity:** What's the upside for the buyer? (synergies, market expansion, capability acquisition)
+
+**Process:**
+- Present the draft thesis
+- Get user feedback and iterate
+- Finalize when user approves
+
+**Tools:** save_hero_concept (to update the thesis fields) when user approves
+
+**Exit criteria:** Investment thesis approved → call advance_workflow to move to outline`,
+
+    outline: `**Goal:** Define the CIM structure.
+
+**What to do:**
+- Propose sections based on:
+  - Knowledge base content
+  - Buyer persona and concerns
+  - Hero concept (what supports the story)
+- Explain the logical flow and why this order makes sense
+- Let user add/remove/reorder sections
+- Create the outline when approved
+
+**Typical CIM sections (customize based on context):**
+- Executive Summary
+- Company Overview
+- Investment Thesis
+- Products & Services
+- Market Opportunity
+- Financial Performance
+- Management Team
+- Growth Strategy
+- Risk Factors
+
+**Tools:** create_outline when user approves the structure
+
+**Exit criteria:** Outline created → call advance_workflow to move to building_sections`,
+
+    building_sections: `**Goal:** Build each section collaboratively.
+
+**Process for each section:**
+1. Use start_section to begin working on a section
+2. **Content Development:** Discuss what key points to include
+3. **For each slide:**
+   - Define slide content (what information to show)
+   - Design visual layout (how to present it)
+   - Create slide with update_slide
+   - Get user approval
+4. Mark section complete, move to next
+
+**Section workflow:**
+- Let user choose which section to work on (or suggest one)
+- Focus on one section at a time
+- Track progress with sectionProgress
+
+**Tools:**
+- start_section: Begin a new section
+- knowledge_search / get_section_context: Find relevant data
+- update_slide: Create slides with content and layout
+- update_outline: Modify outline if needed
+
+**Exit criteria:** All sections complete → call advance_workflow to move to complete`,
+
+    complete: `**Goal:** CIM is complete!
+
+**What to do:**
+- Congratulate the user
+- Summarize what was created (number of sections, slides)
+- Offer to review or revise any section
+- Explain next steps (export, share with team)
+
+**Tools:** None needed (unless user wants to revise)
+
+**Note:** User can always go back to building_sections to make changes.`,
+  }
+
+  return instructions[stage]
+}
+
+// =============================================================================
+// Formatting Functions (Story 3.2-3.5)
+// =============================================================================
+
+/**
+ * Format workflow progress as a checklist
+ */
+export function formatWorkflowProgress(progress: WorkflowProgress): string {
+  const stages: WorkflowStage[] = [
+    'welcome',
+    'buyer_persona',
+    'hero_concept',
+    'investment_thesis',
+    'outline',
+    'building_sections',
+    'complete',
+  ]
+
+  const stageLabels: Record<WorkflowStage, string> = {
+    welcome: 'Welcome & Setup',
+    buyer_persona: 'Buyer Persona',
+    hero_concept: 'Hero Concept',
+    investment_thesis: 'Investment Thesis',
+    outline: 'Outline',
+    building_sections: 'Building Sections',
+    complete: 'Complete',
+  }
+
+  const lines = stages.map((stage) => {
+    const isCompleted = progress.completedStages.includes(stage)
+    const isCurrent = progress.currentStage === stage
+    const label = stageLabels[stage]
+
+    if (isCompleted) {
+      return `✅ ${label}`
+    } else if (isCurrent) {
+      return `👉 **${label}** (current)`
+    } else {
+      return `⬜ ${label}`
+    }
+  })
+
+  let result = lines.join('\n')
+
+  // Add section progress if in building_sections stage
+  if (progress.currentStage === 'building_sections') {
+    const sectionEntries = Object.entries(progress.sectionProgress)
+    if (sectionEntries.length > 0) {
+      result += '\n\n**Section Progress:**'
+      for (const [sectionId, sectionProg] of sectionEntries) {
+        const statusIcon = sectionProg.status === 'complete' ? '✅' :
+                          sectionProg.status === 'building_slides' ? '🔨' :
+                          sectionProg.status === 'content_development' ? '📝' : '⬜'
+        result += `\n${statusIcon} ${sectionId}: ${sectionProg.status.replace(/_/g, ' ')}`
+        if (sectionProg.slides.length > 0) {
+          const approved = sectionProg.slides.filter(s => s.contentApproved && s.visualApproved).length
+          result += ` (${approved}/${sectionProg.slides.length} slides approved)`
+        }
+      }
+    }
+    if (progress.currentSectionId) {
+      result += `\n\n**Currently working on:** ${progress.currentSectionId}`
+    }
+  }
+
+  return result
+}
+
+/**
+ * Format buyer persona for display
+ */
+export function formatBuyerPersona(persona: BuyerPersona | null): string {
+  if (!persona) {
+    return 'Not yet defined.'
+  }
+
+  return `**Type:** ${persona.type}
+**Motivations:**
+${persona.motivations.map(m => `- ${m}`).join('\n')}
+**Concerns to address:**
+${persona.concerns.map(c => `- ${c}`).join('\n')}`
+}
+
+/**
+ * Format hero context for display
+ */
+export function formatHeroContext(hero: HeroContext | null): string {
+  if (!hero) {
+    return 'Not yet defined.'
+  }
+
+  return `**Hero Concept:** ${hero.selectedHero}
+
+**Investment Thesis:**
+- **The Asset:** ${hero.investmentThesis.asset}
+- **The Timing:** ${hero.investmentThesis.timing}
+- **The Opportunity:** ${hero.investmentThesis.opportunity}`
+}
+
+/**
+ * Format CIM outline for display
+ */
+export function formatCIMOutline(outline: CIMOutline | null): string {
+  if (!outline || outline.sections.length === 0) {
+    return 'Not yet created.'
+  }
+
+  return outline.sections
+    .map((section, i) => `${i + 1}. **${section.title}** - ${section.description}`)
+    .join('\n')
+}
 
 /**
  * Format gathered context for display in system prompt
@@ -110,10 +364,16 @@ function formatGatheredContext(ctx: GatheredContext): string {
 
 /**
  * Get the main system prompt for the CIM MVP agent
+ * Updated for workflow-based approach (Story 3.6)
  */
 export function getSystemPrompt(state: CIMMVPStateType): string {
-  const currentPhase = state.currentPhase || 'executive_summary'
-  const phaseInstructions = getPhaseInstructions(currentPhase)
+  const workflowProgress = state.workflowProgress || {
+    currentStage: 'welcome' as WorkflowStage,
+    completedStages: [],
+    sectionProgress: {},
+  }
+  const currentStage = workflowProgress.currentStage
+  const stageInstructions = getWorkflowStageInstructions(currentStage)
   const hasKnowledge = state.knowledgeLoaded || false
 
   // Only try to get data summary if knowledge is loaded
@@ -137,317 +397,118 @@ ${dataSummary}
 
 ${dataGapsSection}`
     : `## No Knowledge Base Loaded
-The user hasn't run /manda-analyze yet. That's fine - you can still help them.`
+The user hasn't run /manda-analyze yet. That's fine - we'll gather information through conversation.`
 
   return `You are an expert M&A advisor helping create a Confidential Information Memorandum (CIM)${state.companyName ? ` for ${state.companyName}` : ''}.
 
 ## Your Role
-You guide the user through CIM creation, using a collaborative approach:
-${hasKnowledge ? `- Use the knowledge base as your primary source of truth
-- Search the web for market context, comps, and industry data` : `- Help the user plan and structure their CIM
-- Gather information through conversation`}
-- Create professional slides with clear, compelling content
-- Always cite your sources when using specific data
-- Ask clarifying questions when needed
+You guide the user through a structured CIM creation workflow:
+1. **Buyer Persona** - Who is the target buyer?
+2. **Hero Concept** - What's the compelling story hook?
+3. **Investment Thesis** - Why should they buy?
+4. **Outline** - What sections to include?
+5. **Build Sections** - Create each section collaboratively
 
-## Current Phase: ${currentPhase.replace(/_/g, ' ').toUpperCase()}
-${phaseInstructions}
+${hasKnowledge ? `You have access to a knowledge base extracted from deal documents - use it as your primary source.` : `We'll gather information through conversation as we go.`}
 
-## Completed Phases
-${(state.completedPhases || []).length > 0 ? (state.completedPhases || []).map(p => `✅ ${p.replace(/_/g, ' ')}`).join('\n') : 'None yet - starting fresh'}
+## Workflow Progress
+${formatWorkflowProgress(workflowProgress)}
+
+## Current Stage: ${currentStage.replace(/_/g, ' ').toUpperCase()}
+${stageInstructions}
+
+## Buyer Persona
+${formatBuyerPersona(state.buyerPersona || null)}
+
+## Hero Concept & Investment Thesis
+${formatHeroContext(state.heroContext || null)}
+
+## CIM Outline
+${formatCIMOutline(state.cimOutline || null)}
 
 ## Information Gathered So Far
 ${formatGatheredContext(state.gatheredContext || {})}
 
 ${knowledgeSection}
 
-## Guidelines
+## Handling Detours (IMPORTANT)
+If the user asks a question unrelated to the current workflow stage:
+1. Help them with their question
+2. Save any useful findings using save_context
+3. Then ask: "Would you like to continue where we left off in [current stage]?"
 
-### 1. Be Proactive
-- Suggest what content to include based on the knowledge base
-- Offer multiple options with reasoning
-- Flag when information is missing or incomplete
-
-### 2. Cite Sources
-- Always mention where information comes from
-- Format: "[Source: document.pdf, page X]"
-- Be transparent about confidence levels
-
-### 3. Create Slides
-- Use the update_slide tool when you have enough info
-- Include clear titles and well-structured components
-- Balance text with visual elements (tables, metrics, bullets)
-
-### 4. Ask Questions
-- Clarify the user's intent when unclear
-- Ask about buyer type and their priorities
-- Confirm before making major decisions
-
-### 5. Navigate Flexibly
-- User can skip ahead or go back anytime
-- Use navigate_phase tool to change sections
-- Track progress across the CIM
+This keeps the user in control while ensuring we don't lose our place in the workflow.
 
 ## Tools Available
-- **save_context**: IMPORTANT - Save information from user to memory. Use this whenever the user provides company data!
-- **knowledge_search**: Find specific information in the deal documents
-- **get_section_context**: Get all findings for a CIM section
-- **web_search**: Research market data, competitors, industry trends
-- **update_slide**: Create/update slide content (triggers preview update)
-- **navigate_phase**: Move to a different CIM section
 
-## CRITICAL RULES - YOU MUST FOLLOW THESE
+### Workflow Tools
+- **advance_workflow**: Move to the next workflow stage (use when current stage is complete)
+- **save_buyer_persona**: Save buyer type, motivations, and concerns
+- **save_hero_concept**: Save the hero concept and investment thesis
+- **create_outline**: Create the CIM section structure
+- **update_outline**: Modify the outline (add/remove/reorder sections)
+- **start_section**: Begin working on a specific section
+
+### Content Tools
+- **update_slide**: Create/update slide with content and visual layout
+- **save_context**: Save company information to memory
+
+### Research Tools
+- **knowledge_search**: Find specific information in deal documents
+- **get_section_context**: Get all findings for a section
+- **web_search**: Research market data, competitors, industry trends
+
+## CRITICAL RULES
 
 ### Rule 1: ALWAYS Use Tools - Never Pretend
 - You MUST actually call tools - never just describe what you would do
-- If you say "I've created a slide" but didn't call update_slide, that's a LIE
-- If you say "I've saved the information" but didn't call save_context, that's a LIE
+- If you say "I've saved the buyer persona" but didn't call save_buyer_persona, that's a LIE
 - NEVER claim to have done something without actually using the tool
 
-### Rule 2: Save User Information Immediately
-When the user provides ANY company information:
-1. FIRST call save_context with ALL the data they provided
-2. THEN respond to confirm you've stored it
-3. Do NOT ask for information already in "Information Gathered So Far"
+### Rule 2: Follow the Workflow
+- Complete each stage before moving to the next
+- Use advance_workflow to transition between stages
+- The workflow ensures we gather all necessary context before creating slides
 
-### Rule 3: Follow the Workflow Step by Step
-For the Executive Summary phase, gather information in this order:
-1. Company name and description (what do they do?)
-2. Key metrics (revenue, growth, customers)
-3. Investment highlights (why is this attractive?)
-4. ONLY AFTER gathering sufficient info, use update_slide to create each slide
+### Rule 3: Save Information Immediately
+When the user provides information:
+1. Call the appropriate save tool (save_context, save_buyer_persona, etc.)
+2. Confirm you've stored it
+3. Don't ask for information you already have
 
-### Rule 4: One Slide at a Time
-- Don't claim to create multiple slides at once
-- Create ONE slide, wait for feedback, then continue
-- Each slide should be created with an actual update_slide tool call
+### Rule 4: Collaborate on Slides
+In building_sections stage:
+- Discuss content first, then visual layout
+- Create ONE slide at a time with update_slide
+- Get user approval before moving on
+- Use layoutType to specify slide design
 
-### Rule 5: Confirm Before Moving On
-- Before moving to the next phase, ask if the user is satisfied
-- Use navigate_phase tool to actually change phases
+### Rule 5: Use Visual Layouts
+When creating slides with update_slide:
+- Choose appropriate layoutType (split-horizontal, quadrant, hero-with-details, etc.)
+- Position components using the position field
+- Style components for emphasis and hierarchy
 
 ## Response Style
 - Be concise but thorough
 - Use bullet points for clarity
 - Highlight key numbers and metrics
 - Maintain a professional M&A advisor tone
+- Reference where you are in the workflow
 
-Remember: You're building a professional CIM that will be shown to potential buyers. Quality and accuracy matter. ALWAYS use tools - never fake it.`
+Remember: You're building a professional CIM. The workflow ensures quality by gathering context (buyer, hero, thesis) before creating content. ALWAYS use tools - never fake it.`
 }
 
-/**
- * Get phase-specific instructions
- */
-function getPhaseInstructions(phase: CIMPhase): string {
-  const instructions: Record<CIMPhase, string> = {
-    executive_summary: `
-**Focus Areas:**
-- Company snapshot (what they do, when founded, key metrics)
-- 3-5 compelling investment highlights
-- Financial summary (revenue, growth, margins)
-- Transaction rationale (why now, why this buyer)
-
-**Slide Components to Create:**
-1. Company Overview Slide (name, description, key stats)
-2. Investment Highlights Slide (3-5 bullet points)
-3. Financial Snapshot Slide (key metrics table or chart)
-
-**Tips:**
-- This is the hook - make it compelling
-- Lead with the most impressive metrics
-- Keep it concise - details come later`,
-
-    company_overview: `
-**Focus Areas:**
-- Company history and founding story
-- Mission and vision statements
-- Key milestones (timeline format works well)
-- Corporate structure and ownership
-- Geographic footprint
-
-**Slide Components to Create:**
-1. Founding Story Slide (narrative with timeline)
-2. Milestones Timeline Slide (visual timeline)
-3. Corporate Structure Slide (org chart or ownership table)
-4. Geographic Presence Slide (map or location list)
-
-**Tips:**
-- Tell a compelling founding story
-- Highlight pivotal moments that built value
-- Show growth trajectory visually`,
-
-    management_team: `
-**Focus Areas:**
-- Executive bios (name, title, background)
-- Years of relevant experience
-- Previous companies and achievements
-- Board composition
-- Organizational structure
-
-**Slide Components to Create:**
-1. Leadership Team Slide (photos if available, bios)
-2. Executive Experience Slide (track record highlights)
-3. Org Structure Slide (reporting structure)
-
-**Tips:**
-- Lead with most impressive credentials
-- Highlight industry-specific experience
-- Show depth of leadership bench`,
-
-    products_services: `
-**Focus Areas:**
-- Product/service descriptions
-- Platform capabilities
-- Technology differentiation
-- Pricing model overview
-- Product roadmap highlights
-
-**Slide Components to Create:**
-1. Product Overview Slide (what they sell)
-2. Platform Architecture Slide (tech stack, capabilities)
-3. Product Roadmap Slide (future plans)
-
-**Tips:**
-- Focus on value delivered to customers
-- Highlight proprietary technology
-- Show innovation trajectory`,
-
-    market_opportunity: `
-**Focus Areas:**
-- Total Addressable Market (TAM)
-- Serviceable Addressable Market (SAM)
-- Market growth rates and drivers
-- Target customer segments
-- Industry trends and tailwinds
-
-**Slide Components to Create:**
-1. Market Size Slide (TAM/SAM/SOM breakdown)
-2. Market Growth Slide (trends and drivers)
-3. Target Segments Slide (ICP profiles)
-
-**Tips:**
-- Use credible third-party sources for market data
-- Show why the market is attractive NOW
-- Connect market trends to company positioning
-- Use web_search for current market data`,
-
-    business_model: `
-**Focus Areas:**
-- Revenue model (subscription, usage, services)
-- Pricing strategy and structure
-- Unit economics (CAC, LTV, LTV:CAC, payback)
-- Customer acquisition channels
-- Contract structure (term, renewal rates)
-
-**Slide Components to Create:**
-1. Revenue Model Slide (how they make money)
-2. Unit Economics Slide (CAC, LTV, ratios)
-3. Go-to-Market Slide (sales channels, motion)
-
-**Tips:**
-- Show strong unit economics if available
-- Highlight recurring revenue characteristics
-- Demonstrate scalability of the model`,
-
-    financial_performance: `
-**Focus Areas:**
-- Revenue history and projections
-- Growth rates (YoY, CAGR)
-- Profitability metrics (gross margin, EBITDA)
-- SaaS metrics if applicable (ARR, NRR, churn)
-- Key financial ratios
-
-**Slide Components to Create:**
-1. Revenue Growth Slide (chart showing trajectory)
-2. Profitability Slide (margins over time)
-3. SaaS Metrics Slide (ARR, NRR, churn)
-4. Financial Summary Table
-
-**Tips:**
-- Lead with growth story
-- Show path to profitability if not profitable
-- Highlight improving unit economics
-- Use charts to visualize trends`,
-
-    competitive_landscape: `
-**Focus Areas:**
-- Direct competitors and their positioning
-- Competitive advantages and moats
-- Market share if available
-- Differentiation factors
-- Win/loss dynamics
-
-**Slide Components to Create:**
-1. Competitive Matrix Slide (comparison table)
-2. Differentiation Slide (key advantages)
-3. Market Position Slide (where they fit)
-
-**Tips:**
-- Be honest but strategic about competition
-- Focus on sustainable advantages
-- Use web_search for competitor research`,
-
-    growth_strategy: `
-**Focus Areas:**
-- Geographic expansion plans
-- Product expansion roadmap
-- New market segments
-- M&A or partnership strategy
-- Go-to-market evolution
-
-**Slide Components to Create:**
-1. Growth Drivers Slide (key initiatives)
-2. Expansion Roadmap Slide (timeline)
-3. Strategic Priorities Slide (top 3-5 initiatives)
-
-**Tips:**
-- Show concrete, achievable plans
-- Quantify opportunity where possible
-- Connect strategy to market opportunity`,
-
-    risk_factors: `
-**Focus Areas:**
-- Business risks (concentration, dependency)
-- Market risks (competition, disruption)
-- Operational risks (key person, scalability)
-- Financial risks
-- Mitigation strategies for each
-
-**Slide Components to Create:**
-1. Risk Overview Slide (key risks with mitigations)
-2. Risk Mitigation Slide (detailed strategies)
-
-**Tips:**
-- Be transparent - buyers will find issues anyway
-- Always pair risks with mitigations
-- Show proactive risk management`,
-
-    appendix: `
-**Focus Areas:**
-- Detailed financial tables
-- Customer list (if shareable)
-- Product screenshots
-- Technical architecture details
-- Additional supporting data
-
-**Slide Components to Create:**
-1. Detailed Financials (multi-year tables)
-2. Customer Evidence (logos, case studies)
-3. Technical Deep Dive (architecture, integrations)
-
-**Tips:**
-- Include anything that supports the story
-- Organize for easy reference
-- Don't repeat main deck content`,
-  }
-
-  return instructions[phase] || 'Gather relevant information and create slides for this section.'
-}
+// =============================================================================
+// Legacy Phase Functions (Deprecated - Story 3.9)
+// =============================================================================
 
 /**
  * Get a brief phase description for navigation
+ * @deprecated Use workflow stages and getWorkflowStageInstructions instead.
  */
 export function getPhaseDescription(phase: CIMPhase): string {
+  console.warn('[DEPRECATED] getPhaseDescription() is deprecated. Use workflow stages instead.')
   const descriptions: Record<CIMPhase, string> = {
     executive_summary: 'Hook the reader with key highlights and metrics',
     company_overview: 'Tell the founding story and company history',
@@ -461,14 +522,15 @@ export function getPhaseDescription(phase: CIMPhase): string {
     risk_factors: 'Address risks with mitigation strategies',
     appendix: 'Provide supporting details and data',
   }
-
   return descriptions[phase] || phase.replace(/_/g, ' ')
 }
 
 /**
  * Get the list of all CIM phases in order
+ * @deprecated Use workflow stages instead. This is kept for backward compatibility.
  */
 export function getAllPhases(): CIMPhase[] {
+  console.warn('[DEPRECATED] getAllPhases() is deprecated. Use workflow stages instead.')
   return [
     'executive_summary',
     'company_overview',

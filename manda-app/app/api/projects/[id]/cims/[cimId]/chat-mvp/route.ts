@@ -1,23 +1,28 @@
 /**
  * CIM MVP Chat API Route
  *
- * Simplified CIM agent endpoint for MVP testing.
+ * Workflow-based CIM agent endpoint.
  * Uses JSON knowledge file from manda-analyze skill.
  *
- * Story: CIM MVP Fast Track
+ * Story: CIM MVP Workflow Fix (Story 5)
  *
  * Features:
  * - SSE streaming for real-time responses
- * - Slide update events for preview panel
- * - Phase tracking for workflow navigation
+ * - Workflow progress tracking events
+ * - Outline creation/update events
+ * - Section navigation events
+ * - Slide update events with layout support
+ * - Database sync for outline and workflow state
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { streamCIMMVP, executeCIMMVP, getCIMMVPGraph } from '@/lib/agent/cim-mvp'
+import type { CIMOutline, WorkflowProgress, CIMMVPStreamEvent } from '@/lib/agent/cim-mvp'
 import { getSSEHeaders } from '@/lib/agent/streaming'
 import { updateCIM } from '@/lib/services/cim'
 import type { ConversationMessage } from '@/lib/types/cim'
+import type { Json } from '@/lib/supabase/types'
 
 interface RouteContext {
   params: Promise<{ id: string; cimId: string }>
@@ -163,7 +168,54 @@ async function syncConversationToCIM(
 }
 
 /**
+ * Story 5.6: Sync outline to CIM database record
+ */
+async function syncOutlineToCIM(
+  cimId: string,
+  outline: CIMOutline
+): Promise<void> {
+  try {
+    const supabase = await createClient()
+    // Store outline sections in the CIM record
+    // Cast to Json for Supabase type compatibility
+    await supabase
+      .from('cims')
+      .update({ outline: outline.sections as unknown as Json })
+      .eq('id', cimId)
+
+    console.log(`[syncOutlineToCIM] Synced outline with ${outline.sections.length} sections to CIM ${cimId}`)
+  } catch (error) {
+    console.error('[syncOutlineToCIM] Error:', error)
+    // Don't throw - this is best-effort persistence
+  }
+}
+
+/**
+ * Story 5.7: Sync workflow progress for session resume
+ */
+async function syncWorkflowProgressToCIM(
+  cimId: string,
+  workflowProgress: WorkflowProgress
+): Promise<void> {
+  try {
+    const supabase = await createClient()
+    // Store workflow progress in the CIM record's workflow_state column
+    // Cast to Json for Supabase type compatibility
+    await supabase
+      .from('cims')
+      .update({ workflow_state: workflowProgress as unknown as Json })
+      .eq('id', cimId)
+
+    console.log(`[syncWorkflowProgressToCIM] Synced workflow progress (stage: ${workflowProgress.currentStage}) to CIM ${cimId}`)
+  } catch (error) {
+    console.error('[syncWorkflowProgressToCIM] Error:', error)
+    // Don't throw - this is best-effort persistence
+  }
+}
+
+/**
  * Handle streaming chat request using SSE
+ * Story 5: Enhanced with database sync for outline and workflow progress
  */
 function handleStreamingResponse(
   message: string,
@@ -176,14 +228,46 @@ function handleStreamingResponse(
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
+        // Track latest state for end-of-stream sync
+        let latestOutline: CIMOutline | null = null
+        let latestWorkflowProgress: WorkflowProgress | null = null
+
         // Stream events from the CIM MVP agent
         for await (const event of streamCIMMVP(message, threadId, knowledgePath)) {
           const data = `data: ${JSON.stringify(event)}\n\n`
           controller.enqueue(encoder.encode(data))
+
+          // Story 5.6: Sync outline when created or updated
+          if (event.type === 'outline_created' || event.type === 'outline_updated') {
+            latestOutline = { sections: event.data.sections }
+            // Sync immediately for outline creation/updates
+            await syncOutlineToCIM(cimId, latestOutline)
+          }
+
+          // Story 5.7: Track workflow progress for end-of-stream sync
+          if (event.type === 'workflow_progress') {
+            latestWorkflowProgress = {
+              currentStage: event.data.currentStage,
+              completedStages: event.data.completedStages,
+              currentSectionId: event.data.currentSectionId || undefined,
+              sectionProgress: {}, // Will be populated from full state
+            }
+          }
         }
 
-        // After streaming completes, sync conversation to CIM record
+        // After streaming completes, sync conversation and workflow state
         await syncConversationToCIM(cimId, threadId)
+
+        // Sync final workflow progress if changed during stream
+        if (latestWorkflowProgress) {
+          // Get full state for complete workflow progress
+          const graph = await getCIMMVPGraph()
+          const config = { configurable: { thread_id: threadId } }
+          const finalState = await graph.getState(config)
+          if (finalState.values?.workflowProgress) {
+            await syncWorkflowProgressToCIM(cimId, finalState.values.workflowProgress)
+          }
+        }
       } catch (error) {
         console.error('[handleStreamingResponse] Error:', error)
         const errorEvent = {
@@ -263,29 +347,42 @@ export async function GET(request: NextRequest, context: RouteContext) {
       )
     }
 
-    // Return MVP agent info
+    // Return MVP agent info (Story 5: updated with workflow stages)
     return NextResponse.json({
       agent: 'cim-mvp',
-      version: '1.0.0',
-      phases: [
-        'executive_summary',
-        'company_overview',
-        'management_team',
-        'products_services',
-        'market_opportunity',
-        'business_model',
-        'financial_performance',
-        'competitive_landscape',
-        'growth_strategy',
-        'risk_factors',
-        'appendix',
+      version: '2.0.0',
+      workflowStages: [
+        'welcome',
+        'buyer_persona',
+        'hero_concept',
+        'investment_thesis',
+        'outline',
+        'building_sections',
+        'complete',
       ],
       tools: [
         'web_search',
         'knowledge_search',
         'get_section_context',
         'update_slide',
-        'navigate_phase',
+        'advance_workflow',
+        'save_buyer_persona',
+        'save_hero_concept',
+        'create_outline',
+        'update_outline',
+        'start_section',
+        'save_context',
+      ],
+      sseEventTypes: [
+        'token',
+        'slide_update',
+        'workflow_progress',
+        'outline_created',
+        'outline_updated',
+        'section_started',
+        'sources',
+        'done',
+        'error',
       ],
       instructions: 'Send a POST request with { message: "your message" } to chat with the CIM MVP agent.',
     })

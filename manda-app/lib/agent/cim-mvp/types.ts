@@ -145,6 +145,7 @@ export interface KnowledgeFile {
 }
 
 // Stream event types for SSE
+// Story 5: Added workflow_progress, outline_created, outline_updated, section_started
 export type CIMMVPStreamEvent =
   | { type: 'token'; content: string; timestamp: string }
   | { type: 'slide_update'; slide: import('./state').SlideUpdate; timestamp: string }
@@ -154,3 +155,36 @@ export type CIMMVPStreamEvent =
   | { type: 'tool_end'; tool: string; result?: unknown; timestamp: string }
   | { type: 'done'; conversationId: string; timestamp: string }
   | { type: 'error'; message: string; timestamp: string }
+  // New workflow events (Story 5)
+  | {
+      type: 'workflow_progress'
+      data: {
+        currentStage: import('./state').WorkflowStage
+        completedStages: import('./state').WorkflowStage[]
+        currentSectionId: string | null
+        sectionProgressSummary: Record<string, string>
+      }
+      timestamp: string
+    }
+  | {
+      type: 'outline_created'
+      data: {
+        sections: import('./state').CIMSection[]
+      }
+      timestamp: string
+    }
+  | {
+      type: 'outline_updated'
+      data: {
+        sections: import('./state').CIMSection[]
+      }
+      timestamp: string
+    }
+  | {
+      type: 'section_started'
+      data: {
+        sectionId: string
+        sectionTitle: string
+      }
+      timestamp: string
+    }

@@ -224,6 +224,7 @@ export function createInitialState(
           dealId,
           dealName: '', // To be populated by context loader
           projectId: '', // To be populated by context loader
+          organizationId: '', // To be populated by context loader
           status: 'active',
           documentCount: 0,
           createdAt: new Date().toISOString(),
@@ -267,6 +268,7 @@ export function createInitialCIMState(
       dealId,
       dealName: '', // To be populated by context loader
       projectId: '', // To be populated by context loader
+      organizationId: '', // To be populated by context loader
       status: 'active',
       documentCount: 0,
       createdAt: new Date().toISOString(),

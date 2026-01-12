@@ -1,18 +1,27 @@
 /**
  * CIM MVP Graph
  *
- * Simple LangGraph StateGraph for CIM conversations.
- * Always allows chat - knowledge is optional and loaded on demand.
+ * LangGraph StateGraph for workflow-based CIM conversations.
+ * Handles workflow progression, context saving, outline management, and slide creation.
  *
- * Story: CIM MVP Fast Track
+ * Story: CIM MVP Workflow Fix
  */
 
 import { StateGraph, START, END } from '@langchain/langgraph'
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai'
+import { ChatOpenAI } from '@langchain/openai'
 import { ToolNode } from '@langchain/langgraph/prebuilt'
 import { AIMessage } from '@langchain/core/messages'
 
-import { CIMMVPState, type CIMMVPStateType, type CIMPhase } from './state'
+import {
+  CIMMVPState,
+  type CIMMVPStateType,
+  type CIMPhase,
+  type WorkflowStage,
+  type WorkflowProgress,
+  type SectionProgress,
+  type SlideUpdate,
+  type LayoutType,
+} from './state'
 import { cimMVPTools } from './tools'
 import { getSystemPrompt } from './prompts'
 import { loadKnowledge } from './knowledge-loader'
@@ -22,17 +31,17 @@ import { getCheckpointer, type Checkpointer } from '@/lib/agent/checkpointer'
 // LLM Configuration
 // =============================================================================
 
-const baseModel = new ChatGoogleGenerativeAI({
-  model: 'gemini-2.5-flash',
-  apiKey: process.env.GOOGLE_AI_API_KEY,
+const baseModel = new ChatOpenAI({
+  model: 'gpt-4o',
+  apiKey: process.env.OPENAI_API_KEY,
   temperature: 0.7,
-  maxOutputTokens: 4096,
+  maxTokens: 4096,
 })
 
-// Bind tools first, then add config (Gemini SDK requires this order)
+// Bind tools and add config
 const model = baseModel.bindTools(cimMVPTools).withConfig({
   runName: 'cim-mvp-agent',
-  tags: ['cim-mvp', 'gemini-2.5-flash'],
+  tags: ['cim-mvp', 'gpt-4o'],
   metadata: {
     graph: 'cim-mvp',
     version: '1.0.0',
@@ -76,25 +85,17 @@ async function agentNode(
     companyName,
   })
 
-  // Debug: Log message count to verify history is preserved
+  // Debug: Log message count
   console.log(`[CIM-MVP] Agent node invoked with ${state.messages.length} messages`)
-  if (state.messages.length > 0) {
-    const lastMsg = state.messages[state.messages.length - 1]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const msgType = typeof (lastMsg as any)._getType === 'function'
-      ? (lastMsg as any)._getType()
-      : (lastMsg as any).type || 'unknown'
-    const content = typeof lastMsg.content === 'string'
-      ? lastMsg.content.substring(0, 100)
-      : JSON.stringify(lastMsg.content).substring(0, 100)
-    console.log(`[CIM-MVP] Last message (${msgType}): ${content}...`)
-  }
 
-  // Invoke the model
+  // Invoke the model with system prompt and conversation history
+  // OpenAI handles LangChain messages natively
   const response = await model.invoke([
     { role: 'system', content: systemPrompt },
     ...state.messages,
   ])
+
+  console.log(`[CIM-MVP] Model response received, tool_calls: ${response.tool_calls?.length || 0}`)
 
   return {
     messages: [response],
@@ -112,7 +113,14 @@ const toolNode = new ToolNode(cimMVPTools)
 /**
  * Post-tool processing node
  *
- * Handles tool results that affect state (navigation, slide updates).
+ * Handles tool results that affect state:
+ * - Workflow progression (advance_workflow)
+ * - Context saving (save_buyer_persona, save_hero_concept, save_context)
+ * - Outline management (create_outline, update_outline)
+ * - Section tracking (start_section)
+ * - Slide updates (update_slide)
+ *
+ * Story: CIM MVP Workflow Fix (Story 4)
  */
 async function postToolNode(
   state: CIMMVPStateType
@@ -124,48 +132,241 @@ async function postToolNode(
     if (typeof content === 'string') {
       try {
         const result = JSON.parse(content)
+        const updates: Partial<CIMMVPStateType> = {}
 
-        // Handle navigation
+        // =========================================
+        // 4.1: Handle advance_workflow
+        // =========================================
+        if (result.advancedWorkflow && result.targetStage) {
+          const targetStage = result.targetStage as WorkflowStage
+          const currentProgress = state.workflowProgress || {
+            currentStage: 'welcome' as WorkflowStage,
+            completedStages: [] as WorkflowStage[],
+            sectionProgress: {},
+          }
+
+          // Add current stage to completed (if not already there)
+          const completedStages = currentProgress.currentStage !== targetStage
+            ? [...currentProgress.completedStages, currentProgress.currentStage]
+            : currentProgress.completedStages
+
+          updates.workflowProgress = {
+            ...currentProgress,
+            currentStage: targetStage,
+            completedStages: completedStages.filter(
+              (v, i, a) => a.indexOf(v) === i
+            ) as WorkflowStage[], // dedupe
+          }
+
+          console.log(`[postToolNode] Workflow advanced: ${currentProgress.currentStage} → ${targetStage}`)
+        }
+
+        // =========================================
+        // 4.2: Handle save_buyer_persona
+        // =========================================
+        if (result.buyerPersona) {
+          updates.buyerPersona = result.buyerPersona
+          console.log(`[postToolNode] Buyer persona saved: ${result.buyerPersona.type}`)
+        }
+
+        // =========================================
+        // 4.3: Handle save_hero_concept
+        // =========================================
+        if (result.heroContext) {
+          updates.heroContext = result.heroContext
+          console.log(`[postToolNode] Hero context saved: ${result.heroContext.selectedHero}`)
+        }
+
+        // =========================================
+        // 4.4: Handle create_outline
+        // =========================================
+        if (result.cimOutline) {
+          updates.cimOutline = result.cimOutline
+
+          // Initialize section progress for each section
+          const sectionProgress: Record<string, SectionProgress> = {}
+          for (const section of result.cimOutline.sections) {
+            sectionProgress[section.id] = {
+              sectionId: section.id,
+              status: 'pending',
+              slides: [],
+            }
+          }
+
+          // Merge with existing workflowProgress
+          const currentProgress = state.workflowProgress || {
+            currentStage: 'outline' as WorkflowStage,
+            completedStages: [] as WorkflowStage[],
+            sectionProgress: {},
+          }
+
+          updates.workflowProgress = {
+            ...currentProgress,
+            ...(updates.workflowProgress || {}),
+            sectionProgress,
+          }
+
+          console.log(`[postToolNode] Outline created with ${result.cimOutline.sections.length} sections`)
+        }
+
+        // Handle section divider slides from create_outline
+        if (result.sectionDividerSlides && Array.isArray(result.sectionDividerSlides)) {
+          updates.allSlideUpdates = result.sectionDividerSlides
+          console.log(`[postToolNode] Created ${result.sectionDividerSlides.length} section divider slides`)
+        }
+
+        // =========================================
+        // 4.5: Handle update_outline
+        // =========================================
+        if (result.outlineUpdate) {
+          const currentOutline = state.cimOutline || { sections: [] }
+          const currentProgress = state.workflowProgress || {
+            currentStage: 'outline' as WorkflowStage,
+            completedStages: [] as WorkflowStage[],
+            sectionProgress: {},
+          }
+
+          if (result.action === 'add' && result.newSection) {
+            // Add new section
+            updates.cimOutline = {
+              sections: [...currentOutline.sections, result.newSection],
+            }
+            // Initialize progress for new section
+            const newSectionProgress = { ...currentProgress.sectionProgress }
+            newSectionProgress[result.newSection.id] = {
+              sectionId: result.newSection.id,
+              status: 'pending',
+              slides: [],
+            }
+            updates.workflowProgress = {
+              ...currentProgress,
+              sectionProgress: newSectionProgress,
+            }
+            console.log(`[postToolNode] Added section: ${result.newSection.title}`)
+          } else if (result.action === 'remove' && result.removeSectionId) {
+            // Remove section
+            updates.cimOutline = {
+              sections: currentOutline.sections.filter(
+                (s) => s.id !== result.removeSectionId
+              ),
+            }
+            // Remove from progress
+            const newSectionProgress = { ...currentProgress.sectionProgress }
+            delete newSectionProgress[result.removeSectionId]
+            updates.workflowProgress = {
+              ...currentProgress,
+              sectionProgress: newSectionProgress,
+            }
+            console.log(`[postToolNode] Removed section: ${result.removeSectionId}`)
+          } else if (result.action === 'reorder' && result.newOrder) {
+            // Reorder sections
+            const sectionMap = new Map(
+              currentOutline.sections.map((s) => [s.id, s])
+            )
+            updates.cimOutline = {
+              sections: result.newOrder
+                .map((id: string) => sectionMap.get(id))
+                .filter(Boolean),
+            }
+            console.log(`[postToolNode] Reordered sections`)
+          } else if (result.action === 'update' && result.updateSectionId && result.updatedSection) {
+            // Update section
+            updates.cimOutline = {
+              sections: currentOutline.sections.map((s) =>
+                s.id === result.updateSectionId
+                  ? { ...s, ...result.updatedSection }
+                  : s
+              ),
+            }
+            console.log(`[postToolNode] Updated section: ${result.updateSectionId}`)
+          }
+        }
+
+        // =========================================
+        // 4.6: Handle start_section
+        // =========================================
+        if (result.startSection && result.sectionId) {
+          const currentProgress = state.workflowProgress || {
+            currentStage: 'building_sections' as WorkflowStage,
+            completedStages: [] as WorkflowStage[],
+            sectionProgress: {},
+          }
+
+          // Update current section and section status
+          const newSectionProgress = { ...currentProgress.sectionProgress }
+          const existingProgress = newSectionProgress[result.sectionId]
+          if (existingProgress) {
+            newSectionProgress[result.sectionId] = {
+              sectionId: existingProgress.sectionId,
+              status: 'content_development',
+              slides: existingProgress.slides,
+            }
+          } else {
+            // Initialize if not exists
+            newSectionProgress[result.sectionId] = {
+              sectionId: result.sectionId,
+              status: 'content_development',
+              slides: [],
+            }
+          }
+
+          updates.workflowProgress = {
+            ...currentProgress,
+            ...(updates.workflowProgress || {}),
+            currentSectionId: result.sectionId,
+            sectionProgress: newSectionProgress,
+          }
+
+          console.log(`[postToolNode] Started section: ${result.sectionId}`)
+        }
+
+        // =========================================
+        // 4.7: Handle update_slide (enhanced with layouts)
+        // =========================================
+        if (result.slideId && result.sectionId && !result.sectionDividerSlides) {
+          const slideUpdate: SlideUpdate = {
+            slideId: result.slideId,
+            sectionId: result.sectionId,
+            title: result.title || 'Untitled Slide',
+            layoutType: (result.layoutType as LayoutType) || undefined,
+            components: result.components || [],
+            status: 'draft',
+          }
+
+          updates.pendingSlideUpdate = slideUpdate
+          updates.allSlideUpdates = [slideUpdate]
+
+          console.log(`[postToolNode] Slide updated: ${result.slideId} (layout: ${result.layoutType || 'default'})`)
+        }
+
+        // =========================================
+        // Handle save_context (existing functionality)
+        // =========================================
+        if (result.gatheredContext) {
+          updates.gatheredContext = result.gatheredContext
+          console.log('[postToolNode] Gathered context merged')
+        }
+
+        // =========================================
+        // Legacy: Handle navigation (backward compat)
+        // =========================================
         if (result.navigatedTo) {
           const newPhase = result.navigatedTo as CIMPhase
-          const completedPhases = state.currentPhase !== newPhase
-            ? [...state.completedPhases, state.currentPhase]
-            : state.completedPhases
+          const completedPhases =
+            state.currentPhase !== newPhase
+              ? [...(state.completedPhases || []), state.currentPhase]
+              : state.completedPhases || []
 
-          return {
-            currentPhase: newPhase,
-            completedPhases: completedPhases.filter(
-              (p, i, arr) => arr.indexOf(p) === i
-            ),
-          }
+          updates.currentPhase = newPhase
+          updates.completedPhases = completedPhases.filter(
+            (p, i, arr) => arr.indexOf(p) === i
+          )
+          console.log(`[postToolNode] Legacy navigation: → ${newPhase}`)
         }
 
-        // Handle slide update
-        if (result.slideId && result.sectionId) {
-          return {
-            pendingSlideUpdate: {
-              slideId: result.slideId,
-              sectionId: result.sectionId,
-              title: result.title || 'Untitled Slide',
-              components: result.components || [],
-              status: 'draft',
-            },
-            allSlideUpdates: [{
-              slideId: result.slideId,
-              sectionId: result.sectionId,
-              title: result.title || 'Untitled Slide',
-              components: result.components || [],
-              status: 'draft',
-            }],
-          }
-        }
-
-        // Handle save_context tool - merge gathered context into state
-        if (result.gatheredContext) {
-          console.log('[postToolNode] Merging gathered context into state')
-          return {
-            gatheredContext: result.gatheredContext,
-          }
+        // Return updates if any
+        if (Object.keys(updates).length > 0) {
+          return updates
         }
       } catch {
         // Not JSON, ignore
@@ -240,8 +441,9 @@ export async function getCIMMVPGraph() {
 
   const checkpointer = await getCheckpointer()
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cachedGraphWithCheckpointer = workflow.compile({
-    checkpointer: checkpointer as Parameters<typeof workflow.compile>[0]['checkpointer'],
+    checkpointer: checkpointer as any,
   })
 
   return cachedGraphWithCheckpointer
@@ -252,8 +454,9 @@ export async function getCIMMVPGraph() {
  */
 export function createCIMMVPGraph(checkpointer?: Checkpointer) {
   if (checkpointer) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return workflow.compile({
-      checkpointer: checkpointer as Parameters<typeof workflow.compile>[0]['checkpointer'],
+      checkpointer: checkpointer as any,
     })
   }
   return workflow.compile()

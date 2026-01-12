@@ -21,7 +21,7 @@ import { CIMChatInput } from './CIMChatInput'
 import type { ConversationMessage } from '@/lib/types/cim'
 import { useCIMChat } from '@/lib/hooks/useCIMChat'
 import { useCIMMVPChat } from '@/lib/hooks/useCIMMVPChat'
-import type { SlideUpdate, CIMPhase } from '@/lib/agent/cim-mvp'
+import type { SlideUpdate, CIMPhase, WorkflowProgress, CIMOutline } from '@/lib/agent/cim-mvp'
 
 interface ConversationPanelProps {
   projectId: string
@@ -36,6 +36,11 @@ interface ConversationPanelProps {
   knowledgePath?: string // Path to knowledge.json for MVP agent
   onSlideUpdate?: (slide: SlideUpdate) => void // Callback for real-time slide updates
   onPhaseChange?: (phase: CIMPhase) => void // Callback for phase navigation
+  // Story 10: New workflow callbacks
+  onWorkflowProgress?: (progress: WorkflowProgress) => void
+  onOutlineCreated?: (outline: CIMOutline) => void
+  onOutlineUpdated?: (outline: CIMOutline) => void
+  onSectionStarted?: (sectionId: string, sectionTitle: string) => void
 }
 
 // Separate component for MVP agent to avoid hook conflicts
@@ -50,6 +55,11 @@ function MVPConversationPanel({
   knowledgePath,
   onSlideUpdate,
   onPhaseChange,
+  // Story 10: New workflow callbacks
+  onWorkflowProgress,
+  onOutlineCreated,
+  onOutlineUpdated,
+  onSectionStarted,
 }: Omit<ConversationPanelProps, 'useMVPAgent'>) {
   const { messages, isStreaming, currentTool, sendMessage } = useCIMMVPChat({
     projectId,
@@ -60,6 +70,11 @@ function MVPConversationPanel({
     onSlideUpdate,
     onPhaseChange,
     onCIMStateChanged,
+    // Story 10: New workflow callbacks
+    onWorkflowProgress,
+    onOutlineCreated,
+    onOutlineUpdated,
+    onSectionStarted,
   })
 
   // Debug log for message changes
@@ -155,6 +170,11 @@ export function ConversationPanel({
   knowledgePath,
   onSlideUpdate,
   onPhaseChange,
+  // Story 10: New workflow callbacks
+  onWorkflowProgress,
+  onOutlineCreated,
+  onOutlineUpdated,
+  onSectionStarted,
 }: ConversationPanelProps) {
   // Use separate components to avoid hook conflicts between the two chat hooks
   if (useMVPAgent) {
@@ -170,6 +190,11 @@ export function ConversationPanel({
         knowledgePath={knowledgePath}
         onSlideUpdate={onSlideUpdate}
         onPhaseChange={onPhaseChange}
+        // Story 10: New workflow callbacks
+        onWorkflowProgress={onWorkflowProgress}
+        onOutlineCreated={onOutlineCreated}
+        onOutlineUpdated={onOutlineUpdated}
+        onSectionStarted={onSectionStarted}
       />
     )
   }

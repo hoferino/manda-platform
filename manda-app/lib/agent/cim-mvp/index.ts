@@ -33,6 +33,18 @@ export {
   type SlideUpdate,
   type SlideComponent,
   type SourceCitation,
+  type ComponentType,
+  type LayoutType,
+  type WorkflowStage,
+  type WorkflowProgress,
+  type SectionProgress,
+  type SlideProgress,
+  type BuyerPersona,
+  type HeroContext,
+  type CIMSection,
+  type CIMOutline,
+  type ComponentPosition,
+  type ComponentStyle,
 } from './state'
 
 // Types
@@ -77,7 +89,8 @@ import type { CIMMVPStateType } from './state'
 /**
  * Stream CIM MVP agent responses
  *
- * Yields events for tokens, slide updates, sources, and completion.
+ * Yields events for tokens, slide updates, sources, workflow progress, and completion.
+ * Story 5: Added workflow_progress, outline_created, outline_updated, section_started events
  *
  * @param message - User message
  * @param threadId - Conversation thread ID for persistence
@@ -120,8 +133,92 @@ export async function* streamCIMMVP(
     let lastSlideUpdate: string | null = null
     let lastPhase: string | null = null
 
+    // Story 5: Track workflow state for change detection
+    let previousWorkflowStage = currentState.values?.workflowProgress?.currentStage || null
+    let previousOutline = currentState.values?.cimOutline || null
+    let previousSectionId = currentState.values?.workflowProgress?.currentSectionId || null
+    let outlineWasCreated = !!previousOutline
+
     for await (const state of stream) {
       const timestamp = new Date().toISOString()
+
+      // ===========================================
+      // Story 5.1: Detect workflow progress change
+      // ===========================================
+      if (state.workflowProgress?.currentStage &&
+          state.workflowProgress.currentStage !== previousWorkflowStage) {
+        yield {
+          type: 'workflow_progress',
+          data: {
+            currentStage: state.workflowProgress.currentStage,
+            completedStages: state.workflowProgress.completedStages || [],
+            currentSectionId: state.workflowProgress.currentSectionId || null,
+            sectionProgressSummary: Object.fromEntries(
+              Object.entries(state.workflowProgress.sectionProgress || {})
+                .map(([id, p]) => [id, (p as { status: string }).status])
+            ),
+          },
+          timestamp,
+        }
+        console.log(`[streamCIMMVP] Workflow progress: ${previousWorkflowStage} → ${state.workflowProgress.currentStage}`)
+        previousWorkflowStage = state.workflowProgress.currentStage
+      }
+
+      // ===========================================
+      // Story 5.2: Detect outline creation
+      // ===========================================
+      if (state.cimOutline && !outlineWasCreated) {
+        yield {
+          type: 'outline_created',
+          data: {
+            sections: state.cimOutline.sections,
+          },
+          timestamp,
+        }
+        console.log(`[streamCIMMVP] Outline created with ${state.cimOutline.sections.length} sections`)
+        outlineWasCreated = true
+        previousOutline = state.cimOutline
+      }
+
+      // ===========================================
+      // Story 5.3: Detect outline updates (after initial creation)
+      // ===========================================
+      if (state.cimOutline && outlineWasCreated && previousOutline) {
+        const currentSections = JSON.stringify(state.cimOutline.sections)
+        const previousSections = JSON.stringify(previousOutline.sections)
+        if (currentSections !== previousSections) {
+          yield {
+            type: 'outline_updated',
+            data: {
+              sections: state.cimOutline.sections,
+            },
+            timestamp,
+          }
+          console.log(`[streamCIMMVP] Outline updated`)
+          previousOutline = state.cimOutline
+        }
+      }
+
+      // ===========================================
+      // Story 5.4: Detect section start
+      // ===========================================
+      if (state.workflowProgress?.currentSectionId &&
+          state.workflowProgress.currentSectionId !== previousSectionId) {
+        const sectionId = state.workflowProgress.currentSectionId
+        const section = state.cimOutline?.sections?.find(
+          (s: { id: string }) => s.id === sectionId
+        )
+        yield {
+          type: 'section_started',
+          data: {
+            sectionId,
+            sectionTitle: section?.title || 'Unknown Section',
+          },
+          timestamp,
+        }
+        console.log(`[streamCIMMVP] Section started: ${sectionId}`)
+        previousSectionId = sectionId
+      }
 
       // Check for new messages
       if (state.messages && state.messages.length > lastMessageCount) {
@@ -135,12 +232,20 @@ export async function* streamCIMMVP(
           const msgType = typeof msgAny._getType === 'function' ? msgAny._getType() : msgAny.type
           const isAIMessage = msgType === 'ai' || msgType === 'AIMessage' || msg.constructor?.name === 'AIMessage'
 
-          // Only yield AI messages with content (skip tool calls)
+          // Only yield AI messages with content (skip tool calls and empty content)
           const hasToolCalls = msgAny.tool_calls && msgAny.tool_calls.length > 0
           if (isAIMessage && msg.content && !hasToolCalls) {
+            // Convert content to string
             const content = typeof msg.content === 'string'
               ? msg.content
-              : JSON.stringify(msg.content)
+              : Array.isArray(msg.content) && msg.content.length === 0
+                ? '' // Empty array means no text content
+                : JSON.stringify(msg.content)
+
+            // Skip empty content (e.g., when AI only made tool calls)
+            if (!content || content === '[]' || content.trim() === '') {
+              continue
+            }
 
             console.log('[streamCIMMVP] Yielding token:', content.substring(0, 100) + '...')
 
@@ -153,7 +258,7 @@ export async function* streamCIMMVP(
         }
       }
 
-      // Check for phase changes (only yield when changed)
+      // Check for phase changes (legacy, only yield when changed)
       if (state.currentPhase && state.currentPhase !== lastPhase) {
         lastPhase = state.currentPhase
         yield {
@@ -163,7 +268,7 @@ export async function* streamCIMMVP(
         }
       }
 
-      // Check for slide updates
+      // Check for slide updates (Story 5.7: enhanced with layoutType)
       if (state.pendingSlideUpdate) {
         const slideId = state.pendingSlideUpdate.slideId
         if (slideId !== lastSlideUpdate) {

@@ -13,17 +13,28 @@
 import { useState, useCallback, useRef } from 'react'
 
 import type { ConversationMessage } from '@/lib/types/cim'
-import type { SlideUpdate, CIMPhase } from '@/lib/agent/cim-mvp'
+import type {
+  SlideUpdate,
+  CIMPhase,
+  WorkflowProgress,
+  CIMOutline,
+} from '@/lib/agent/cim-mvp'
 
 interface UseCIMMVPChatOptions {
   projectId: string
   cimId: string
   initialMessages?: ConversationMessage[]
   knowledgePath?: string
+  // Existing callbacks
   onMessageComplete?: (message: ConversationMessage) => void
   onSlideUpdate?: (slide: SlideUpdate) => void
   onPhaseChange?: (phase: CIMPhase) => void
   onCIMStateChanged?: () => void
+  // Story 6: New workflow callbacks
+  onWorkflowProgress?: (progress: WorkflowProgress) => void
+  onOutlineCreated?: (outline: CIMOutline) => void
+  onOutlineUpdated?: (outline: CIMOutline) => void
+  onSectionStarted?: (sectionId: string, sectionTitle: string) => void
 }
 
 interface UseCIMMVPChatReturn {
@@ -33,6 +44,10 @@ interface UseCIMMVPChatReturn {
   currentTool: string | null
   currentPhase: CIMPhase
   conversationId: string | null
+  // Story 6: New workflow state
+  workflowProgress: WorkflowProgress | null
+  cimOutline: CIMOutline | null
+  // Methods
   sendMessage: (content: string) => Promise<void>
   retryLastMessage: () => Promise<void>
   clearError: () => void
@@ -47,6 +62,11 @@ export function useCIMMVPChat({
   onSlideUpdate,
   onPhaseChange,
   onCIMStateChanged,
+  // Story 6: New workflow callbacks
+  onWorkflowProgress,
+  onOutlineCreated,
+  onOutlineUpdated,
+  onSectionStarted,
 }: UseCIMMVPChatOptions): UseCIMMVPChatReturn {
   const [messages, setMessages] = useState<ConversationMessage[]>(initialMessages)
   const [isStreaming, setIsStreaming] = useState(false)
@@ -54,6 +74,9 @@ export function useCIMMVPChat({
   const [currentTool, setCurrentTool] = useState<string | null>(null)
   const [currentPhase, setCurrentPhase] = useState<CIMPhase>('executive_summary')
   const [conversationId, setConversationId] = useState<string | null>(null)
+  // Story 6: New workflow state
+  const [workflowProgress, setWorkflowProgress] = useState<WorkflowProgress | null>(null)
+  const [cimOutline, setCimOutline] = useState<CIMOutline | null>(null)
 
   // Track last user message for retry
   const lastUserMessageRef = useRef<string | null>(null)
@@ -203,6 +226,42 @@ export function useCIMMVPChat({
                     // Could add sources to message metadata
                     break
 
+                  // Story 6: New workflow event handlers
+                  case 'workflow_progress': {
+                    const progress = event.data as WorkflowProgress
+                    setWorkflowProgress(progress)
+                    onWorkflowProgress?.(progress)
+                    break
+                  }
+
+                  case 'outline_created': {
+                    const outline = { sections: event.data.sections } as CIMOutline
+                    setCimOutline(outline)
+                    onOutlineCreated?.(outline)
+                    break
+                  }
+
+                  case 'outline_updated': {
+                    const updatedOutline = { sections: event.data.sections } as CIMOutline
+                    setCimOutline(updatedOutline)
+                    onOutlineUpdated?.(updatedOutline)
+                    break
+                  }
+
+                  case 'section_started': {
+                    const { sectionId, sectionTitle } = event.data
+                    setWorkflowProgress((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            currentSectionId: sectionId,
+                          }
+                        : null
+                    )
+                    onSectionStarted?.(sectionId, sectionTitle)
+                    break
+                  }
+
                   case 'done':
                     console.log('[useCIMMVPChat] Received done event')
                     // Store conversation ID for persistence
@@ -284,6 +343,11 @@ export function useCIMMVPChat({
       onSlideUpdate,
       onPhaseChange,
       onCIMStateChanged,
+      // Story 6: New workflow callbacks
+      onWorkflowProgress,
+      onOutlineCreated,
+      onOutlineUpdated,
+      onSectionStarted,
     ]
   )
 
@@ -309,6 +373,10 @@ export function useCIMMVPChat({
     currentTool,
     currentPhase,
     conversationId,
+    // Story 6: New workflow state
+    workflowProgress,
+    cimOutline,
+    // Methods
     sendMessage,
     retryLastMessage,
     clearError,
