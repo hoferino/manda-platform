@@ -9,6 +9,7 @@
  * - Preview Panel: Slide preview with navigation
  *
  * Story: E9.3 - CIM Builder 3-Panel Layout
+ * Story: CIM MVP Fast Track
  * AC: #1-6 - All acceptance criteria
  */
 
@@ -21,20 +22,28 @@ import { ExportButton } from './ExportButton'
 import { useCIMBuilder } from '@/lib/hooks/useCIMBuilder'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { formatComponentReference } from '@/lib/cim/reference-utils'
+import type { SlideUpdate, CIMPhase } from '@/lib/agent/cim-mvp'
 
 interface CIMBuilderPageProps {
   projectId: string
   cimId: string
   initialCIMTitle: string
+  // MVP agent props
+  useMVPAgent?: boolean
+  knowledgePath?: string
 }
 
 export function CIMBuilderPage({
   projectId,
   cimId,
   initialCIMTitle,
+  useMVPAgent: initialUseMVPAgent = true, // Default to MVP agent for testing
+  knowledgePath,
 }: CIMBuilderPageProps) {
   const {
     cim,
@@ -48,6 +57,31 @@ export function CIMBuilderPage({
     updateOutline,
     refresh,
   } = useCIMBuilder(projectId, cimId)
+
+  // MVP agent toggle state
+  const [useMVPAgent, setUseMVPAgent] = React.useState(initialUseMVPAgent)
+
+  // Real-time slide updates from MVP agent
+  const [slideUpdates, setSlideUpdates] = React.useState<Map<string, SlideUpdate>>(new Map())
+
+  // Current CIM phase from MVP agent
+  const [currentPhase, setCurrentPhase] = React.useState<CIMPhase>('executive_summary')
+
+  // Handle slide update from MVP agent
+  const handleSlideUpdate = React.useCallback((slide: SlideUpdate) => {
+    setSlideUpdates((prev) => {
+      const next = new Map(prev)
+      next.set(slide.slideId, slide)
+      return next
+    })
+    // Also trigger refresh to persist
+    refresh()
+  }, [refresh])
+
+  // Handle phase change from MVP agent
+  const handlePhaseChange = React.useCallback((phase: CIMPhase) => {
+    setCurrentPhase(phase)
+  }, [])
 
   // Handle inserting source reference into chat input
   const handleSourceClick = React.useCallback(
@@ -117,7 +151,7 @@ export function CIMBuilderPage({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with back navigation and export button */}
+      {/* Header with back navigation, MVP toggle, and export button */}
       <div className="flex items-center gap-4 px-4 py-3 border-b bg-background flex-shrink-0">
         <Link href={`/projects/${projectId}/cim-builder`}>
           <Button variant="ghost" size="sm">
@@ -129,7 +163,19 @@ export function CIMBuilderPage({
           <h1 className="text-lg font-semibold truncate">{cim.title}</h1>
           <p className="text-xs text-muted-foreground">
             {cim.slides.length} slides | {cim.outline.length} sections
+            {useMVPAgent && ` | Phase: ${currentPhase.replace(/_/g, ' ')}`}
           </p>
+        </div>
+        {/* MVP Agent Toggle */}
+        <div className="flex items-center gap-2">
+          <Switch
+            id="mvp-agent-toggle"
+            checked={useMVPAgent}
+            onCheckedChange={setUseMVPAgent}
+          />
+          <Label htmlFor="mvp-agent-toggle" className="text-sm text-muted-foreground">
+            MVP Agent
+          </Label>
         </div>
         {/* Export Button - E9.14: Wireframe PowerPoint Export */}
         <ExportButton cim={cim} />
@@ -154,7 +200,12 @@ export function CIMBuilderPage({
               sourceRef={sourceRef}
               onSourceRefClear={() => setSourceRef('')}
               onMessageSent={addMessage}
-              onCIMStateChanged={refresh} // Refresh CIM state after tool updates (AC #7)
+              onCIMStateChanged={refresh}
+              // MVP agent props
+              useMVPAgent={useMVPAgent}
+              knowledgePath={knowledgePath}
+              onSlideUpdate={handleSlideUpdate}
+              onPhaseChange={handlePhaseChange}
             />
           }
           previewPanel={

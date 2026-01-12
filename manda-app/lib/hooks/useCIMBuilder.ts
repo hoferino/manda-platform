@@ -54,9 +54,13 @@ export function useCIMBuilder(projectId: string, cimId: string): UseCIMBuilderRe
   const initialLoadRef = useRef(false)
 
   // Fetch CIM data
-  const fetchCIM = useCallback(async () => {
+  const fetchCIM = useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true)
+      // Only show loading state for initial load, not refreshes
+      // This prevents the entire component tree from unmounting during refresh
+      if (!isRefresh) {
+        setIsLoading(true)
+      }
       setError(null)
 
       const response = await fetch(`/api/projects/${projectId}/cims/${cimId}`)
@@ -78,7 +82,9 @@ export function useCIMBuilder(projectId: string, cimId: string): UseCIMBuilderRe
       setError(message)
       toast.error(message)
     } finally {
-      setIsLoading(false)
+      if (!initialLoadRef.current) {
+        setIsLoading(false)
+      }
       initialLoadRef.current = true
     }
   }, [projectId, cimId])
@@ -88,9 +94,9 @@ export function useCIMBuilder(projectId: string, cimId: string): UseCIMBuilderRe
     fetchCIM()
   }, [fetchCIM])
 
-  // Manual refresh
+  // Manual refresh (doesn't trigger loading state to prevent component unmount)
   const refresh = useCallback(async () => {
-    await fetchCIM()
+    await fetchCIM(true)
   }, [fetchCIM])
 
   // Add a message to conversation history (optimistic update)
