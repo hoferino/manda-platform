@@ -82,11 +82,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
+interface IRLItemForGrouping {
+  category?: string
+  subcategory?: string
+  itemName: string
+  priority: string
+}
+
+interface GroupedCategory {
+  name: string
+  subcategories: Record<string, { name: string; items: Array<{ name: string; priority: string }> }>
+  items: Array<{ name: string; priority: string }>
+}
+
 /**
  * Group items by category and subcategory for preview display
  */
-function groupItemsByCategory(items: any[]) {
-  const grouped: Record<string, any> = {}
+function groupItemsByCategory(items: IRLItemForGrouping[]) {
+  const grouped: Record<string, GroupedCategory> = {}
 
   items.forEach((item) => {
     const category = item.category || 'Uncategorized'

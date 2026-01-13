@@ -50,7 +50,7 @@ describe('Organization Context', () => {
         },
       } as unknown as Request
 
-      const result = getOrganizationFromHeaders(mockRequest as any)
+      const result = getOrganizationFromHeaders(mockRequest as Request)
       expect(result).toBe('org-123')
       expect(mockRequest.headers.get).toHaveBeenCalledWith('x-organization-id')
     })
@@ -62,7 +62,7 @@ describe('Organization Context', () => {
         },
       } as unknown as Request
 
-      const result = getOrganizationFromHeaders(mockRequest as any)
+      const result = getOrganizationFromHeaders(mockRequest as Request)
       expect(result).toBeNull()
     })
   })

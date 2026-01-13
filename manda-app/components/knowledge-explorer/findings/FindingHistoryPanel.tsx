@@ -187,7 +187,7 @@ function CorrectionEntry({
                 {/* Reason */}
                 {correction.reason && (
                   <p className="mt-1 text-sm text-muted-foreground italic">
-                    "{correction.reason}"
+                    &quot;{correction.reason}&quot;
                   </p>
                 )}
               </div>
@@ -230,7 +230,7 @@ function CorrectionEntry({
                         Reference:
                       </span>
                       <span className="italic">
-                        "{correction.userSourceReference}"
+                        &quot;{correction.userSourceReference}&quot;
                       </span>
                     </div>
                   )}
@@ -311,7 +311,7 @@ function ValidationEntry({
           {/* Reason for rejection */}
           {validation.reason && (
             <p className="mt-1 text-sm text-muted-foreground italic">
-              "{validation.reason}"
+              &quot;{validation.reason}&quot;
             </p>
           )}
         </div>

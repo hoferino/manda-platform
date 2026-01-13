@@ -57,9 +57,9 @@ const mockTemplates = [
 ]
 
 describe('IRL Templates API', () => {
-  let mockSupabase: any
-  let mockAuth: any
-  let mockQuery: any
+  let mockSupabase: Record<string, unknown>
+  let mockAuth: { getUser: ReturnType<typeof vi.fn> }
+  let mockQuery: Record<string, ReturnType<typeof vi.fn>>
 
   beforeEach(() => {
     vi.clearAllMocks()

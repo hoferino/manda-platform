@@ -168,16 +168,16 @@ function PatternItem({ pattern, onToggle, onDelete }: PatternItemProps) {
         <div className="text-sm">
           {pattern.patternType === 'phrase_removal' ? (
             <span>
-              Remove: <span className="font-mono bg-muted px-1 rounded">"{pattern.originalPattern}"</span>
+              Remove: <span className="font-mono bg-muted px-1 rounded">&quot;{pattern.originalPattern}&quot;</span>
             </span>
           ) : (
             <span>
               <span className="font-mono bg-red-100 dark:bg-red-900/30 px-1 rounded line-through">
-                "{pattern.originalPattern}"
+                &quot;{pattern.originalPattern}&quot;
               </span>
               <span className="mx-2">→</span>
               <span className="font-mono bg-green-100 dark:bg-green-900/30 px-1 rounded">
-                "{pattern.replacementPattern}"
+                &quot;{pattern.replacementPattern}&quot;
               </span>
             </span>
           )}

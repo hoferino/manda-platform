@@ -186,7 +186,7 @@ describe('IRLTemplateCard', () => {
       const template = {
         ...mockTemplate,
         id: dealType,
-        dealType: dealType as any,
+        dealType: dealType as IRLTemplate['dealType'],
       }
 
       render(<IRLTemplateCard template={template} />)

@@ -33,7 +33,7 @@ vi.mock('sonner', () => ({
 
 // Mock UI components that might cause issues in tests
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, onClick, ...props }: any) => (
+  Button: ({ children, onClick, ...props }: React.ComponentPropsWithRef<'button'>) => (
     <button onClick={onClick} {...props}>
       {children}
     </button>
@@ -50,11 +50,11 @@ describe('BucketsView Integration', () => {
     // TD-004: Use shared Supabase test utilities
     const { client, mocks: queryMocks } = createMockSupabaseClient()
     mocks = queryMocks
-    ;(supabaseClient.createClient as any).mockReturnValue(client)
+    vi.mocked(supabaseClient.createClient).mockReturnValue(client)
 
     // Default mock responses
     mocks.order.mockResolvedValue({ data: [], error: null })
-    ;(foldersApi.getFolders as any).mockResolvedValue({ folders: [], error: null })
+    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: [], error: null })
   })
 
   it('renders empty state when no buckets exist', async () => {
@@ -90,7 +90,7 @@ describe('BucketsView Integration', () => {
 
     // Setup mocks
     mocks.order.mockResolvedValue({ data: mockDocuments, error: null })
-    ;(foldersApi.getFolders as any).mockResolvedValue({ folders: mockFolders, error: null })
+    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: mockFolders, error: null })
 
     render(<BucketsView projectId={mockProjectId} />)
 
@@ -114,7 +114,7 @@ describe('BucketsView Integration', () => {
     ]
 
     mocks.order.mockResolvedValue({ data: mockDocuments, error: null })
-    ;(foldersApi.getFolders as any).mockResolvedValue({ folders: [], error: null })
+    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: [], error: null })
 
     render(<BucketsView projectId={mockProjectId} />)
 
@@ -151,8 +151,8 @@ describe('BucketsView Integration', () => {
     ]
 
     mocks.order.mockResolvedValue({ data: [], error: null })
-    ;(foldersApi.getFolders as any).mockResolvedValue({ folders: mockFolders, error: null })
-    ;(documentsApi.uploadDocument as any).mockResolvedValue({ success: true })
+    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: mockFolders, error: null })
+    vi.mocked(documentsApi.uploadDocument).mockResolvedValue({ success: true, document: null })
 
     render(<BucketsView projectId={mockProjectId} />)
 

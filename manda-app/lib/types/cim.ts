@@ -912,8 +912,7 @@ export function mapCIMToDbUpdate(input: UpdateCIMInput) {
   if (input.outline !== undefined) update.outline = input.outline
   if (input.slides !== undefined) update.slides = input.slides
   if (input.dependencyGraph !== undefined) update.dependency_graph = input.dependencyGraph
-  if (input.conversationHistory !== undefined)
-    update.conversation_history = input.conversationHistory
+  if (input.conversationHistory !== undefined) {update.conversation_history = input.conversationHistory}
 
   return update
 }

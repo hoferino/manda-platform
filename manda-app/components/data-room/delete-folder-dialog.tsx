@@ -50,7 +50,7 @@ export function DeleteFolderDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete folder "{folderName}"?</AlertDialogTitle>
+          <AlertDialogTitle>Delete folder &quot;{folderName}&quot;?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. The folder and all its subfolders will
             be removed.

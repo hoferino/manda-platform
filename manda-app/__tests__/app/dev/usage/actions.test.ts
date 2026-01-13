@@ -303,7 +303,7 @@ describe("Dashboard Actions", () => {
         auth: {
           getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
         },
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
 
       const dateRange: DateRange = {
         startDate: new Date("2025-12-01"),
@@ -326,7 +326,7 @@ describe("Dashboard Actions", () => {
             .fn()
             .mockResolvedValue({ data: { user: { id: "user-123" } } }),
         },
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(false);
 
       const dateRange: DateRange = {
@@ -436,7 +436,7 @@ describe("Dashboard Actions", () => {
             .mockResolvedValue({ data: { user: { id: "superadmin-123" } } }),
         },
         rpc: mockRpc,
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(true);
 
       const dateRange: DateRange = {
@@ -492,7 +492,7 @@ describe("Dashboard Actions", () => {
             .mockResolvedValue({ data: { user: { id: "superadmin-123" } } }),
         },
         rpc: mockRpc,
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(true);
 
       const dateRange: DateRange = {
@@ -531,7 +531,7 @@ describe("Dashboard Actions", () => {
             .mockResolvedValue({ data: { user: { id: "superadmin-123" } } }),
         },
         rpc: mockRpc,
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(true);
 
       const dateRange: DateRange = {
@@ -564,7 +564,7 @@ describe("Dashboard Actions", () => {
             .mockResolvedValue({ data: { user: { id: "superadmin-123" } } }),
         },
         rpc: mockRpc,
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(true);
 
       const dateRange: DateRange = {

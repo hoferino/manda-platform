@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { StreamEvent } from '@langchain/core/tracers/log_stream'
 
 import {
   safeInvokeAgent,
@@ -127,7 +128,7 @@ describe('safe-invoke utilities', () => {
 
       vi.mocked(streamAgent).mockImplementation(async function* () {
         for (const event of mockEvents) {
-          yield event as any
+          yield event as StreamEvent
         }
       })
 
@@ -147,7 +148,7 @@ describe('safe-invoke utilities', () => {
       ]
 
       vi.mocked(streamAgent).mockImplementation(async function* () {
-        yield mockEvents[0] as any
+        yield mockEvents[0] as StreamEvent
         throw new Error('Rate limit exceeded')
       })
 
@@ -158,8 +159,8 @@ describe('safe-invoke utilities', () => {
 
       expect(events).toHaveLength(2)
       expect(events[0]).toEqual(mockEvents[0])
-      expect((events[1] as any).type).toBe('error')
-      expect((events[1] as any).error.code).toBe(AgentErrorCode.LLM_ERROR)
+      expect((events[1] as { type: string }).type).toBe('error')
+      expect((events[1] as { error: { code: string } }).error.code).toBe(AgentErrorCode.LLM_ERROR)
     })
 
     it('logs error when stream fails', async () => {

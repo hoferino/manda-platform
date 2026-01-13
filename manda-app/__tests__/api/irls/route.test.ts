@@ -42,12 +42,12 @@ const mockTemplate = {
 }
 
 describe('IRL API', () => {
-  let mockSupabase: any
-  let mockAuth: any
-  let mockProjectQuery: any
-  let mockIRLInsert: any
-  let mockIRLItemsInsert: any
-  let mockIRLSelect: any
+  let mockSupabase: ReturnType<typeof vi.fn>
+  let mockAuth: { getUser: ReturnType<typeof vi.fn> }
+  let mockProjectQuery: Record<string, ReturnType<typeof vi.fn>>
+  let mockIRLInsert: Record<string, ReturnType<typeof vi.fn>>
+  let mockIRLItemsInsert: Record<string, ReturnType<typeof vi.fn>>
+  let mockIRLSelect: Record<string, ReturnType<typeof vi.fn>>
 
   beforeEach(() => {
     vi.clearAllMocks()

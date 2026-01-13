@@ -161,8 +161,7 @@ export function isLLMError(err: unknown): boolean {
     name === 'aborterror' ||
     message.includes('timeout') ||
     message.includes('etimedout')
-  )
-    return true
+  ) {return true}
 
   // Model overload (503)
   if (message.includes('overloaded') || message.includes('503')) return true

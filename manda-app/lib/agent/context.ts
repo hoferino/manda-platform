@@ -241,7 +241,7 @@ export class ConversationContextManager {
     const originalCount = messages.length
 
     // Start with the most recent messages
-    let contextMessages = [...messages].slice(-this.options.maxMessages * 2)
+    const contextMessages = [...messages].slice(-this.options.maxMessages * 2)
 
     // Count tokens
     let tokenCount = this.tokenCounter.countMessagesTokens(contextMessages)
