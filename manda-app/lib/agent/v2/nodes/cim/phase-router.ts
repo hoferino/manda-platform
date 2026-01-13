@@ -1,13 +1,18 @@
 /**
- * Agent System v2.0 - CIM Phase Router Node
+ * CIM Phase Router - PLACEHOLDER
+ *
+ * STATUS: Not implemented (Story 6.1)
+ *
+ * CIM Builder currently uses a STANDALONE implementation:
+ * - API: /api/projects/[id]/cims/[cimId]/chat-mvp
+ * - Code: lib/agent/cim-mvp/
+ * - Hook: lib/hooks/useCIMMVPChat.ts
+ *
+ * This placeholder will be implemented when CIM is integrated into the v2 agent.
+ * Until then, all CIM Builder functionality runs through the cim-mvp implementation.
  *
  * Story: 1-2 Create Base StateGraph Structure (AC: #2)
- *
- * Placeholder implementation that passes state unchanged.
- * Full implementation with CIM workflow routing in Story 6.1.
- *
- * The CIM phase router node manages the multi-phase CIM Builder workflow.
- * It routes to appropriate CIM phases based on current state.
+ * Full implementation: Story 6.1
  *
  * References:
  * - [Source: _bmad-output/planning-artifacts/agent-system-architecture.md#CIM Workflow]

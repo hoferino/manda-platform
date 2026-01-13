@@ -117,11 +117,65 @@ Upload → GCS Storage → Webhook → pg-boss Queue → Workers
 
 ## Key Patterns
 
-### Agent System v2.0 (Single StateGraph + Middleware)
+### Agent System - Current Implementation
 
-> **Story 1.7 Complete:** The legacy 3-path regex router (`lib/agent/orchestrator/`), supervisor module, and executor have been removed. Agent System v2.0 is now the sole implementation. Routes have been consolidated - `/api/projects/[id]/chat` is now the v2 agent endpoint. See `_bmad-output/planning-artifacts/agent-system-architecture.md` for full details.
+> **Implementation Status (2026-01-13)**
+> - **CIM Builder**: `cim-mvp` is the active implementation (standalone)
+> - **Chat**: `v2` agent is active for general chat
+> - **v2 CIM integration**: Pending future work (Story 6.1)
 
-The agent system uses a single LangGraph StateGraph with middleware-based context engineering:
+The platform has two active agent implementations:
+
+#### CIM Builder (Production MVP)
+
+The CIM Builder uses a **standalone implementation** separate from the v2 agent system:
+
+| Component | Details |
+|-----------|---------|
+| **Implementation** | `lib/agent/cim-mvp/` |
+| **API Endpoint** | `/api/projects/[id]/cims/[cimId]/chat-mvp` |
+| **UI Toggle** | Default ON in `CIMBuilderPage.tsx` |
+| **Features** | JSON knowledge file, workflow stages, slide updates, SSE streaming |
+
+**Key Files (CIM MVP):**
+- `lib/agent/cim-mvp/graph.ts` - LangGraph StateGraph for CIM workflow
+- `lib/agent/cim-mvp/state.ts` - CIM-specific state schema
+- `lib/agent/cim-mvp/tools.ts` - CIM tools (save_buyer_persona, create_outline, etc.)
+- `lib/agent/cim-mvp/knowledge-loader.ts` - JSON knowledge file loader
+- `app/api/projects/[id]/cims/[cimId]/chat-mvp/route.ts` - API endpoint
+
+**UI Entry Point:**
+- `components/cim-builder/CIMBuilderPage.tsx` - Main UI with MVP toggle
+- `lib/hooks/useCIMMVPChat.ts` - React hook for CIM MVP chat
+
+#### Chat Agent (v2)
+
+General conversation uses the v2 agent with Graphiti retrieval:
+
+| Component | Details |
+|-----------|---------|
+| **Implementation** | `lib/agent/v2/` |
+| **API Endpoint** | `/api/projects/[id]/chat` |
+| **Features** | Graphiti retrieval, supervisor node, tool calling |
+
+**Key Files (v2 Chat):**
+- `lib/agent/v2/graph.ts` - Single StateGraph definition
+- `lib/agent/v2/state.ts` - Unified AgentState schema
+- `lib/agent/v2/nodes/supervisor.ts` - Main routing node
+- `lib/agent/v2/nodes/retrieval.ts` - Graphiti knowledge graph search
+
+**Supporting Files (shared):**
+- `lib/agent/checkpointer.ts` - PostgresSaver for conversation persistence
+- `lib/agent/streaming.ts` - SSE helpers for response streaming
+- `lib/agent/tools/*.ts` - Tool definitions
+- `lib/agent/retrieval.ts` - Pre-model retrieval hook
+
+### Agent System v2.0 - Future Architecture
+
+> The v2 architecture documents describe the **target state** for unified agent integration.
+> CIM integration into v2 is planned for Story 6.1. Until then, CIM uses the standalone `cim-mvp` implementation.
+
+The v2 architecture envisions a single LangGraph StateGraph with middleware-based context engineering:
 
 ```
 User Message → Middleware Stack → Single StateGraph → Response
@@ -129,47 +183,20 @@ User Message → Middleware Stack → Single StateGraph → Response
     context-loader → workflow-router → tool-selector → summarization (70%)
 ```
 
-| Workflow Mode | Entry Point | Description |
-|---------------|-------------|-------------|
-| **chat** | supervisor node | General conversation + specialist routing |
-| **cim** | cim/phase-router | CIM Builder multi-phase workflow |
-| **irl** | (future) | Information Request List workflow |
-| **qa** | (future) | Q&A Builder workflow |
+| Workflow Mode | Current Status | Description |
+|---------------|----------------|-------------|
+| **chat** | ✅ Active | General conversation via `lib/agent/v2/` |
+| **cim** | ⏳ Pending | Placeholder at `v2/nodes/cim/phase-router.ts` - uses `cim-mvp` instead |
+| **irl** | ⏳ Future | Information Request List workflow |
+| **qa** | ⏳ Future | Q&A Builder workflow |
 
-**Architecture Decisions:**
-- Single graph with conditional entry points (not dual graphs)
-- LLM handles routing via tool-calling (not regex patterns)
-- 70% compression threshold (prevents hallucination in M&A analysis)
-- Specialists as tools, not separate graphs
-- PostgresSaver checkpointing for conversation persistence
-- Redis caching for tool results and deal context
-
-**Key Files (v2):**
-- `lib/agent/v2/graph.ts` - Single StateGraph definition
-- `lib/agent/v2/state.ts` - Unified AgentState schema
-- `lib/agent/v2/middleware/` - Context engineering middleware
-- `lib/agent/v2/nodes/supervisor.ts` - Main routing node
-- `lib/agent/v2/nodes/specialists/` - Financial analyst, document researcher, etc.
-- `lib/agent/v2/nodes/cim/` - CIM workflow nodes
-
-**Supporting Files (shared):**
-- `lib/agent/checkpointer.ts` - PostgresSaver for conversation persistence
-- `lib/agent/streaming.ts` - SSE helpers for response streaming
-- `lib/agent/tools/*.ts` - Tool definitions (18 tools)
-- `lib/agent/intent.ts` - Intent classification (used by retrieval, LLM routing)
-- `lib/agent/retrieval.ts` - Pre-model retrieval hook
-- `lib/agent/summarization.ts` - Conversation summarization
-- `lib/agent/tool-isolation.ts` - Tool result isolation (used by CIM)
-- `lib/agent/cim/` - CIM workflow (intact, uses v2 infrastructure)
-
-**Removed in Story 1.7:**
+**Legacy Code (Removed in Story 1.7):**
 - `lib/agent/orchestrator/` - Legacy 3-path regex router (DELETED)
 - `lib/agent/executor.ts` - Legacy agent executor (DELETED)
 - `lib/agent/supervisor/` - Legacy supervisor module (DELETED)
-- `lib/agent/graph.ts` - Legacy root graph (DELETED)
 
-**API Entry Points:**
-- `app/api/projects/[id]/chat/route.ts` - v2 agent system (sole entry point)
+**Superseded Code:**
+- `lib/agent/cim/` - Original CIM implementation (superseded by `cim-mvp`)
 
 ### LangChain Integration
 
@@ -197,9 +224,44 @@ All database queries must include `project_id` in WHERE clauses. RLS policies en
 - **Tech Specs**: `docs/sprint-artifacts/tech-specs/`
 - **Architecture Decisions**: `docs/architecture-decisions/` (ADRs)
 
-## Agent System v2.0 - Implementation Rules
+## Agent Implementation Rules
 
-When implementing Agent System v2.0 code, follow these patterns exactly:
+When implementing agent code, follow these patterns:
+
+### CIM MVP Patterns
+
+```typescript
+// ✅ CIM MVP thread ID (CIM-scoped)
+`cim-mvp:${cimId}`
+
+// ✅ CIM MVP SSE events
+type CIMMVPStreamEvent =
+  | { type: 'token'; content: string; timestamp: string }
+  | { type: 'workflow_progress'; data: WorkflowProgress; timestamp: string }
+  | { type: 'outline_created'; data: { sections: OutlineSection[] }; timestamp: string }
+  | { type: 'slide_update'; data: SlideUpdate; timestamp: string }
+  | { type: 'done'; timestamp: string }
+  | { type: 'error'; message: string; timestamp: string }
+
+// ✅ Import from cim-mvp barrel
+import { streamCIMMVP, executeCIMMVP } from '@/lib/agent/cim-mvp'
+```
+
+### v2 Chat Patterns
+
+```typescript
+// ✅ v2 thread ID format
+`{workflowMode}:{dealId}:{userId}:{conversationId}`
+
+// ✅ v2 SSE events
+type AgentStreamEvent =
+  | { type: 'token'; content: string; timestamp: string }
+  | { type: 'source_added'; source: SourceCitation; timestamp: string }
+  | { type: 'done'; state: FinalState; timestamp: string }
+
+// ✅ Import from v2 barrel
+import { streamAgentWithTokens, createInitialState } from '@/lib/agent/v2'
+```
 
 ### Naming Conventions
 
@@ -208,82 +270,27 @@ When implementing Agent System v2.0 code, follow these patterns exactly:
 dealContext, workflowMode, cimState, activeSpecialist
 
 // ✅ Files & Directories: kebab-case
-lib/agent/middleware/context-loader.ts
-lib/agent/nodes/cim/phase-router.ts
+lib/agent/cim-mvp/knowledge-loader.ts
+lib/agent/v2/nodes/supervisor.ts
 
-// ✅ Graph Nodes: short descriptive, workflow prefix
-'supervisor', 'retrieval', 'approval'
-'cim/phaseRouter', 'cim/slideCreation'
-
-// ✅ Specialist Tools: kebab-case
-'financial-analyst', 'document-researcher', 'kg-expert'
-```
-
-### Type Patterns
-
-```typescript
-// ✅ Discriminated unions for events (matches existing SSEEvent pattern)
-export type AgentStreamEvent =
-  | { type: 'token'; content: string; timestamp: string }
-  | { type: 'source_added'; source: SourceCitation; timestamp: string }
-  | { type: 'approval_required'; request: ApprovalRequest; timestamp: string }
-  | { type: 'done'; state: FinalState; timestamp: string }
-
-// ✅ Standard specialist result shape
-interface SpecialistResult {
-  answer: string
-  sources: SourceCitation[]
-  confidence?: number
-  data?: unknown
-}
-```
-
-### Middleware Order (Critical)
-
-```typescript
-// ✅ Correct order - dependencies flow left to right
-const middlewareStack = [
-  contextLoaderMiddleware,    // 1. Load deal context first
-  workflowRouterMiddleware,   // 2. Set system prompt by mode
-  toolSelectorMiddleware,     // 3. Filter tools by permissions
-  summarizationMiddleware,    // 4. Compress at 70% (last)
-]
-```
-
-### Cache Keys
-
-```typescript
-// ✅ Pattern: {scope}:{identifier}:{type}:{hash?}
-`deal:${dealId}:context`                          // 1 hour TTL
-`deal:${dealId}:kg:${queryHash}`                  // 30 min TTL
-`deal:${dealId}:specialist:${tool}:${inputHash}`  // 30 min TTL
+// ✅ Graph Nodes: short descriptive
+'supervisor', 'retrieval', 'agent'
 ```
 
 ### Anti-Patterns to Avoid
 
 ```typescript
-// ❌ Don't use old orchestrator code
-import { streamOrchestrator } from '@/lib/agent/orchestrator'  // DEPRECATED
+// ❌ Don't use old orchestrator code (DELETED)
+import { streamOrchestrator } from '@/lib/agent/orchestrator'
 
-// ❌ Don't mix naming conventions
-const deal_context = state.dealContext  // snake_case variable
+// ❌ Don't use original cim/ (superseded by cim-mvp)
+import { executeCIMChat } from '@/lib/agent/cim'
 
-// ❌ Don't skip timestamps in events
+// ❌ Don't skip timestamps in SSE events
 yield { type: 'token', content: '...' }  // Missing timestamp
 
-// ❌ Don't return unstructured tool results
-return { answer: '...' }  // Missing sources array
-
 // ❌ Don't import from deep paths
-import { supervisor } from '@/lib/agent/nodes/supervisor'  // Import from index
-```
-
-### Thread ID Pattern
-
-```typescript
-// Format: {workflowMode}-{dealId}-{userId}-{conversationId}
-'chat-deal123-user456-conv789'
-'cim-deal123-cim001'  // CIM is deal-scoped, not user-scoped
+import { supervisor } from '@/lib/agent/v2/nodes/supervisor'  // Use barrel export
 ```
 
 ## BMAD Framework
