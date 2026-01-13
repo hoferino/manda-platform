@@ -196,13 +196,13 @@ describe.skipIf(!RUN_TESTS)('chat-v2 integration', () => {
       const request1 = createRequest({ message: 'First', conversationId })
       await POST(request1, createContext())
 
-      const threadId1 = mockStreamAgent.mock.calls[mockStreamAgent.mock.calls.length - 1][1]
+      const threadId1 = mockStreamAgent.mock.calls[mockStreamAgent.mock.calls.length - 1]![1]
 
       // Second request with same conversationId
       const request2 = createRequest({ message: 'Second', conversationId })
       await POST(request2, createContext())
 
-      const threadId2 = mockStreamAgent.mock.calls[mockStreamAgent.mock.calls.length - 1][1]
+      const threadId2 = mockStreamAgent.mock.calls[mockStreamAgent.mock.calls.length - 1]![1]
 
       // Thread IDs should be identical
       expect(threadId1).toBe(threadId2)
@@ -226,8 +226,8 @@ describe.skipIf(!RUN_TESTS)('chat-v2 integration', () => {
 
       // Thread IDs should be different
       const callCount = mockStreamAgent.mock.calls.length
-      const threadId1 = mockStreamAgent.mock.calls[callCount - 2][1]
-      const threadId2 = mockStreamAgent.mock.calls[callCount - 1][1]
+      const threadId1 = mockStreamAgent.mock.calls[callCount - 2]![1]
+      const threadId2 = mockStreamAgent.mock.calls[callCount - 1]![1]
 
       expect(threadId1).not.toBe(threadId2)
     })
@@ -242,7 +242,7 @@ describe.skipIf(!RUN_TESTS)('chat-v2 integration', () => {
         workflowMode: 'chat',
       })
       await POST(request1, createContext())
-      const chatThreadId = mockStreamAgent.mock.calls[mockStreamAgent.mock.calls.length - 1][1]
+      const chatThreadId = mockStreamAgent.mock.calls[mockStreamAgent.mock.calls.length - 1]![1]
 
       // CIM mode with same conversation ID (different thread)
       // Note: In production, CIM has different thread format (no userId)
@@ -278,7 +278,7 @@ describe.skipIf(!RUN_TESTS)('chat-v2 integration', () => {
       expect(events.length).toBeGreaterThanOrEqual(1)
 
       // Parse first event
-      const firstEvent = JSON.parse(events[0].replace('data: ', ''))
+      const firstEvent = JSON.parse(events[0]!.replace('data: ', ''))
       expect(firstEvent).toHaveProperty('event')
       expect(firstEvent).toHaveProperty('conversationId')
       expect(firstEvent).toHaveProperty('timestamp')
@@ -291,7 +291,7 @@ describe.skipIf(!RUN_TESTS)('chat-v2 integration', () => {
       const events = await readStream(response)
 
       // Last event should be 'done'
-      const lastEvent = JSON.parse(events[events.length - 1].replace('data: ', ''))
+      const lastEvent = JSON.parse(events[events.length - 1]!.replace('data: ', ''))
       expect(lastEvent.event).toBe('done')
     })
   })

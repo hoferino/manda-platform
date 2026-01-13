@@ -313,7 +313,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       await POST(request, createContext('deal-456'))
 
       // The thread ID should use : as delimiter (not -)
-      const threadId = mockStreamAgent.mock.calls[0][1]
+      const threadId = mockStreamAgent.mock.calls[0]![1]
       expect(threadId).toContain(':')
       expect(threadId.split(':').length).toBe(4) // mode:dealId:userId:conversationId
     })
@@ -360,7 +360,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       const request = createRequest({ message: 'Hello' })
       await POST(request, createContext())
 
-      const threadId = mockStreamAgent.mock.calls[0][1]
+      const threadId = mockStreamAgent.mock.calls[0]![1]
       expect(threadId).toMatch(/^chat:/)
     })
 
@@ -368,7 +368,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       const request = createRequest({ message: 'Hello', workflowMode: 'chat' })
       await POST(request, createContext())
 
-      const threadId = mockStreamAgent.mock.calls[0][1]
+      const threadId = mockStreamAgent.mock.calls[0]![1]
       expect(threadId).toMatch(/^chat:/)
     })
 
@@ -376,7 +376,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       const request = createRequest({ message: 'Hello', workflowMode: 'cim' })
       await POST(request, createContext())
 
-      const threadId = mockStreamAgent.mock.calls[0][1]
+      const threadId = mockStreamAgent.mock.calls[0]![1]
       expect(threadId).toMatch(/^cim:/)
     })
 
@@ -384,7 +384,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       const request = createRequest({ message: 'Hello', workflowMode: 'irl' })
       await POST(request, createContext())
 
-      const threadId = mockStreamAgent.mock.calls[0][1]
+      const threadId = mockStreamAgent.mock.calls[0]![1]
       expect(threadId).toMatch(/^irl:/)
     })
   })

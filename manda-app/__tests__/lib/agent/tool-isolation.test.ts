@@ -512,7 +512,7 @@ describe('createIsolatedTool', () => {
     const mockTool = createMockTool('query_knowledge_base', fullResult)
 
     const isolated = createIsolatedTool(mockTool, cache)
-    await isolated.invoke({ query: 'test' }, { tool_call_id: 'call_abc' })
+    await isolated.invoke({ query: 'test' }, { tool_call_id: 'call_abc' } as Record<string, unknown>)
 
     // Full result should be in cache
     const cached = getToolResult(cache, 'call_abc')
@@ -545,11 +545,11 @@ describe('createIsolatedTool', () => {
     const mockTool = createMockTool('test_tool', { success: true })
 
     const isolated = createIsolatedTool(mockTool, cache)
-    await isolated.invoke({ query: 'my query' }, { tool_call_id: 'call_123' })
+    await isolated.invoke({ query: 'my query' }, { tool_call_id: 'call_123' } as Record<string, unknown>)
 
     expect(mockTool.invoke).toHaveBeenCalledWith(
       { query: 'my query' },
-      { tool_call_id: 'call_123' }
+      { tool_call_id: 'call_123' } as Record<string, unknown>
     )
   })
 
@@ -574,12 +574,12 @@ describe('isolateAllTools', () => {
     const isolated = isolateAllTools([tool1, tool2], cache)
 
     expect(isolated).toHaveLength(2)
-    expect(isolated[0].name).toBe('tool_1')
-    expect(isolated[1].name).toBe('tool_2')
+    expect(isolated[0]!.name).toBe('tool_1')
+    expect(isolated[1]!.name).toBe('tool_2')
 
     // Both should return summaries
-    const result1 = await isolated[0].invoke({})
-    const result2 = await isolated[1].invoke({})
+    const result1 = await isolated[0]!.invoke({})
+    const result2 = await isolated[1]!.invoke({})
 
     expect(typeof result1).toBe('string')
     expect(typeof result2).toBe('string')
@@ -592,8 +592,8 @@ describe('isolateAllTools', () => {
 
     const isolated = isolateAllTools([tool1, tool2], cache)
 
-    await isolated[0].invoke({}, { tool_call_id: 'call_1' })
-    await isolated[1].invoke({}, { tool_call_id: 'call_2' })
+    await isolated[0]!.invoke({}, { tool_call_id: 'call_1' } as Record<string, unknown>)
+    await isolated[1]!.invoke({}, { tool_call_id: 'call_2' } as Record<string, unknown>)
 
     // Both results should be in the same cache
     expect(cache.size).toBe(2)

@@ -46,7 +46,7 @@ describe('CLI Configuration', () => {
   })
 
   it('should read NODE_ENV for environment naming', () => {
-    process.env.NODE_ENV = 'staging'
+    ;(process.env as Record<string, string | undefined>).NODE_ENV = 'staging'
 
     const environment = process.env.NODE_ENV || 'dev'
 
@@ -54,7 +54,7 @@ describe('CLI Configuration', () => {
   })
 
   it('should default to dev environment when NODE_ENV not set', () => {
-    delete process.env.NODE_ENV
+    ;(process.env as Record<string, string | undefined>).NODE_ENV = undefined
 
     const environment = process.env.NODE_ENV || 'dev'
 
@@ -85,7 +85,7 @@ describe('CLI Tier Parsing', () => {
   })
 
   it('should return empty array for empty string', () => {
-    const tierOption = ''
+    const tierOption: string = ''
     const tiers = tierOption ? tierOption.split(',').map((t: string) => t.trim()) : []
 
     expect(tiers).toEqual([])
