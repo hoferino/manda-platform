@@ -221,6 +221,21 @@ export const SlidePreview = memo(function SlidePreview({
     [slide]
   )
 
+  // Get layout-specific classes for the content area (must be before early return)
+  const layoutContentClass = useMemo(() => {
+    if (!slide?.visual_concept) return ''
+    switch (slide.visual_concept.layout_type) {
+      case 'two_column':
+        return 'grid grid-cols-2 gap-4'
+      case 'chart_focus':
+        return 'flex flex-col'
+      case 'image_focus':
+        return 'flex flex-col'
+      default:
+        return ''
+    }
+  }, [slide])
+
   // Empty state when no slide
   if (!slide) {
     return (
@@ -239,21 +254,6 @@ export const SlidePreview = memo(function SlidePreview({
 
   // Determine if visual concept is set
   const hasVisualConcept = slide.visual_concept !== null
-
-  // Get layout-specific classes for the content area
-  const layoutContentClass = useMemo(() => {
-    if (!slide.visual_concept) return ''
-    switch (slide.visual_concept.layout_type) {
-      case 'two_column':
-        return 'grid grid-cols-2 gap-4'
-      case 'chart_focus':
-        return 'flex flex-col'
-      case 'image_focus':
-        return 'flex flex-col'
-      default:
-        return ''
-    }
-  }, [slide.visual_concept])
 
   return (
     <div

@@ -3,6 +3,9 @@
  * Centralized configuration for all E2E tests
  */
 
+/* eslint-disable react-hooks/rules-of-hooks */
+// Note: Playwright fixtures use a `use` function that ESLint mistakes for React's use hook
+
 import { test as base, expect, Page } from '@playwright/test'
 
 // =============================================================================
