@@ -392,7 +392,7 @@ export function verifySummarizationPreservedRecent(
  */
 export function createMockFetch(
   responses: Map<string, { ok: boolean; status: number; data: unknown }>
-) {
+): typeof global.fetch {
   return vi.fn(async (url: string | URL | Request) => {
     const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
 
@@ -403,7 +403,7 @@ export function createMockFetch(
           status: response.status,
           json: async () => response.data,
           text: async () => JSON.stringify(response.data),
-        }
+        } as Response
       }
     }
 
@@ -413,8 +413,8 @@ export function createMockFetch(
       status: 404,
       json: async () => ({ error: 'Not found' }),
       text: async () => 'Not found',
-    }
-  })
+    } as Response
+  }) as typeof global.fetch
 }
 
 // ============================================================================

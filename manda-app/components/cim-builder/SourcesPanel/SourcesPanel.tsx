@@ -22,13 +22,21 @@ import { DocumentsList } from './DocumentsList'
 import { FindingsList } from './FindingsList'
 import { QAList } from './QAList'
 import { StructureTree } from './StructureTree'
+import { OutlineTree } from './OutlineTree'
 import type { OutlineSection } from '@/lib/types/cim'
+import type { CIMOutline, SectionProgress } from '@/lib/agent/cim-mvp'
 
 interface SourcesPanelProps {
   projectId: string
   outline: OutlineSection[]
   onSourceClick: (type: 'document' | 'finding' | 'qa', id: string, title: string) => void
   onSectionClick: (sectionId: string) => void
+  // Story 7: New props for CIM MVP workflow outline
+  cimOutline?: CIMOutline | null
+  sectionProgress?: Record<string, SectionProgress>
+  currentSectionId?: string
+  currentSlideId?: string
+  onSlideClick?: (slideId: string) => void
 }
 
 export function SourcesPanel({
@@ -36,6 +44,12 @@ export function SourcesPanel({
   outline,
   onSourceClick,
   onSectionClick,
+  // Story 7: New props for CIM MVP workflow outline
+  cimOutline,
+  sectionProgress,
+  currentSectionId,
+  currentSlideId,
+  onSlideClick,
 }: SourcesPanelProps) {
   return (
     <ScrollArea className="h-full">
@@ -45,10 +59,22 @@ export function SourcesPanel({
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
             CIM Structure
           </h3>
-          <StructureTree
-            outline={outline}
-            onSectionClick={onSectionClick}
-          />
+          {/* Story 7: Use OutlineTree for CIM MVP workflow, fallback to StructureTree */}
+          {cimOutline ? (
+            <OutlineTree
+              outline={cimOutline}
+              sectionProgress={sectionProgress}
+              currentSectionId={currentSectionId}
+              currentSlideId={currentSlideId}
+              onSectionClick={onSectionClick}
+              onSlideClick={onSlideClick}
+            />
+          ) : (
+            <StructureTree
+              outline={outline}
+              onSectionClick={onSectionClick}
+            />
+          )}
         </section>
 
         <Separator />

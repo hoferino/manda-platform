@@ -84,9 +84,9 @@ export function MessageList({
           </p>
           <div className="text-xs text-muted-foreground pt-4 space-y-1">
             <p className="font-medium">Try asking:</p>
-            <p>"What was the revenue last year?"</p>
-            <p>"Are there any red flags in the contracts?"</p>
-            <p>"Summarize the key financial metrics"</p>
+            <p>&quot;What was the revenue last year?&quot;</p>
+            <p>&quot;Are there any red flags in the contracts?&quot;</p>
+            <p>&quot;Summarize the key financial metrics&quot;</p>
           </div>
         </div>
       </div>

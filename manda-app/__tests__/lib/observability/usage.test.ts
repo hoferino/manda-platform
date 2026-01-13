@@ -27,7 +27,7 @@ describe('Usage Logging Service', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
+    vi.mocked(createClient).mockResolvedValue(mockSupabase as unknown as Awaited<ReturnType<typeof createClient>>)
   })
 
   describe('logLLMUsage', () => {
@@ -101,7 +101,7 @@ describe('Usage Logging Service', () => {
 
       expect(result).toBe('minimal-uuid')
       // Should not include optional fields that weren't provided
-      const insertCall = mockSupabase.insert.mock.calls[0][0]
+      const insertCall = mockSupabase.insert.mock.calls[0]![0]
       expect(insertCall.organization_id).toBeUndefined()
       expect(insertCall.deal_id).toBeUndefined()
       expect(insertCall.user_id).toBeUndefined()

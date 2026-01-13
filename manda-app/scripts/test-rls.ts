@@ -95,7 +95,7 @@ async function runTests() {
   let aliceUserId: string | null = null
   let bobUserId: string | null = null
   let aliceDealIds: string[] = []
-  let bobDealIds: string[] = []
+  const bobDealIds: string[] = []
 
   try {
     // ========================================

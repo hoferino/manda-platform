@@ -1,7 +1,7 @@
 /**
  * Agent Tools Unit Tests
  *
- * Tests for the 17 chat tools with mocked dependencies.
+ * Tests for the 18 chat tools with mocked dependencies.
  * Story: E5.2 - Implement LangChain Agent with 11 Chat Tools
  * Story: E6.3 - Implement AI-Assisted IRL Auto-Generation (+2 tools)
  * Story: E7.1 - Implement Finding Correction via Chat (+3 tools)
@@ -88,9 +88,9 @@ vi.mock('@/lib/llm/client', () => ({
 
 describe('Agent Tools', () => {
   describe('Tool Count Validation', () => {
-    it('should have exactly 17 tools', () => {
-      expect(TOOL_COUNT).toBe(17)
-      expect(allChatTools.length).toBe(17)
+    it('should have exactly 18 tools', () => {
+      expect(TOOL_COUNT).toBe(18)
+      expect(allChatTools.length).toBe(18)
     })
 
     it('should pass tool count validation', () => {
@@ -98,10 +98,10 @@ describe('Agent Tools', () => {
     })
 
     it('should have correct tool categories', () => {
-      expect(TOOL_CATEGORIES.knowledge.length).toBe(4)
+      expect(TOOL_CATEGORIES.knowledge.length).toBe(5)
       expect(TOOL_CATEGORIES.intelligence.length).toBe(2)
       expect(TOOL_CATEGORIES.document.length).toBe(2)
-      expect(TOOL_CATEGORIES.workflow.length).toBe(5) // Updated from 3 to 5
+      expect(TOOL_CATEGORIES.workflow.length).toBe(5)
     })
   })
 

@@ -131,6 +131,7 @@ describe('Workflow Router → Supervisor Integration (AC: #5)', () => {
         dealId: 'deal-integration',
         dealName: 'Integration Test Corp',
         projectId: 'proj-int',
+        organizationId: 'org-int',
         status: 'active',
         documentCount: 10,
         createdAt: '2026-01-01T00:00:00Z',

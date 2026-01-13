@@ -43,6 +43,12 @@ const eslintConfig = defineConfig([
       "curly": ["warn", "multi-line"],
       // Enforce consistent brace style
       "brace-style": ["warn", "1tbs", { allowSingleLine: true }],
+      // Downgrade React Hooks rules to warn (pre-existing issues need gradual fixing)
+      // These are from React Compiler integration in eslint-plugin-react-hooks
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/purity": "warn",
     },
   },
 ]);

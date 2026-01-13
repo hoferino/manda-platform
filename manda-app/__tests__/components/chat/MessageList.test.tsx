@@ -46,10 +46,10 @@ describe('MessageList', () => {
 
   const createMockMessage = (overrides: Partial<Message> = {}): Message => ({
     id: `msg-${Math.random().toString(36).substring(7)}`,
-    conversation_id: 'conv-123',
+    conversationId: 'conv-123',
     role: 'user',
     content: 'Test message',
-    created_at: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
     ...overrides,
   })
 

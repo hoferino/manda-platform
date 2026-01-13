@@ -703,18 +703,22 @@ export function isPhaseCompleted(workflowState: WorkflowState, phase: CIMPhase):
  * Check if the CIM workflow is complete
  */
 export function isCIMComplete(workflowState: WorkflowState): boolean {
-  return workflowState.is_complete
+  return workflowState?.is_complete ?? false
 }
 
 /**
  * Calculate CIM progress as a percentage
  */
 export function calculateCIMProgress(workflowState: WorkflowState): number {
+  if (!workflowState) {
+    return 0
+  }
   if (workflowState.is_complete) {
     return 100
   }
   const totalPhases = CIM_PHASES.length - 1 // Exclude 'complete'
-  const completedCount = workflowState.completed_phases.filter((p) => p !== 'complete').length
+  const completedPhases = workflowState.completed_phases || []
+  const completedCount = completedPhases.filter((p) => p !== 'complete').length
   return Math.round((completedCount / totalPhases) * 100)
 }
 
@@ -722,6 +726,9 @@ export function calculateCIMProgress(workflowState: WorkflowState): number {
  * Get a summary description of the current workflow state
  */
 export function getWorkflowStateDescription(workflowState: WorkflowState): string {
+  if (!workflowState) {
+    return 'Not Started'
+  }
   if (workflowState.is_complete) {
     return 'Complete'
   }
@@ -734,7 +741,7 @@ export function getWorkflowStateDescription(workflowState: WorkflowState): strin
     review: 'In Review',
     complete: 'Complete',
   }
-  return phaseLabels[workflowState.current_phase] || workflowState.current_phase
+  return phaseLabels[workflowState.current_phase] || workflowState.current_phase || 'Not Started'
 }
 
 /**
@@ -905,8 +912,7 @@ export function mapCIMToDbUpdate(input: UpdateCIMInput) {
   if (input.outline !== undefined) update.outline = input.outline
   if (input.slides !== undefined) update.slides = input.slides
   if (input.dependencyGraph !== undefined) update.dependency_graph = input.dependencyGraph
-  if (input.conversationHistory !== undefined)
-    update.conversation_history = input.conversationHistory
+  if (input.conversationHistory !== undefined) {update.conversation_history = input.conversationHistory}
 
   return update
 }

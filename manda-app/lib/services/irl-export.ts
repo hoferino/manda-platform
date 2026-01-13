@@ -583,7 +583,7 @@ export async function generateIRLDocx(
   sections.push(...children.slice(0, 4)) // Project name, title, subtitle, stats
 
   // Add categories with tables
-  let childIndex = 4 // Start after header content
+  const childIndex = 4 // Start after header content
   for (const [category, items] of groupedItems) {
     // Category header
     sections.push(

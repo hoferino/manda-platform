@@ -182,3 +182,40 @@ export function getTemplateIds(): string[] {
 export async function listTemplates(): Promise<IRLTemplate[]> {
   return getAllTemplates()
 }
+
+/**
+ * Check if a template exists by ID
+ */
+export function templateExists(templateId: string): boolean {
+  return templateId in TEMPLATES
+}
+
+/**
+ * Get a summary of a template (id, name, totalItems, categoryCount)
+ */
+export function getTemplateSummary(
+  templateId: string
+): { id: string; name: string; totalItems: number; categoryCount: number } | null {
+  const template = TEMPLATES[templateId]
+  if (!template) return null
+  const totalItems = template.categories.reduce(
+    (sum, cat) => sum + cat.items.length,
+    0
+  )
+  return {
+    id: template.id,
+    name: template.name,
+    totalItems,
+    categoryCount: template.categories.length,
+  }
+}
+
+// Template cache for performance (no-op for in-memory templates)
+let cacheCleared = false
+
+/**
+ * Clear the template cache (no-op for in-memory templates, but useful for testing)
+ */
+export function clearTemplateCache(): void {
+  cacheCleared = true
+}

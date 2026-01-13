@@ -35,18 +35,12 @@ function toSendOptions(options: EnqueueOptions): Record<string, unknown> {
   const sendOptions: Record<string, unknown> = {}
 
   if (options.priority !== undefined) sendOptions.priority = options.priority
-  if (options.retryLimit !== undefined)
-    sendOptions.retryLimit = options.retryLimit
-  if (options.retryDelay !== undefined)
-    sendOptions.retryDelay = options.retryDelay
-  if (options.retryBackoff !== undefined)
-    sendOptions.retryBackoff = options.retryBackoff
-  if (options.startAfter !== undefined)
-    sendOptions.startAfter = options.startAfter
-  if (options.expireInSeconds !== undefined)
-    sendOptions.expireInSeconds = options.expireInSeconds
-  if (options.singletonKey !== undefined)
-    sendOptions.singletonKey = options.singletonKey
+  if (options.retryLimit !== undefined) {sendOptions.retryLimit = options.retryLimit}
+  if (options.retryDelay !== undefined) {sendOptions.retryDelay = options.retryDelay}
+  if (options.retryBackoff !== undefined) {sendOptions.retryBackoff = options.retryBackoff}
+  if (options.startAfter !== undefined) {sendOptions.startAfter = options.startAfter}
+  if (options.expireInSeconds !== undefined) {sendOptions.expireInSeconds = options.expireInSeconds}
+  if (options.singletonKey !== undefined) {sendOptions.singletonKey = options.singletonKey}
 
   return sendOptions
 }

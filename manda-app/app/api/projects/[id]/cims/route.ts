@@ -129,6 +129,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
+    // Get the next version number for this deal
+    const { data: maxVersionResult } = await supabase
+      .from('cims')
+      .select('version')
+      .eq('deal_id', projectId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .single()
+
+    const nextVersion = (maxVersionResult?.version || 0) + 1
+
     // Create initial workflow state
     const workflowState = {
       current_phase: 'persona',
@@ -138,12 +149,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       is_complete: false,
     }
 
-    // Create the CIM
+    // Create the CIM with auto-incremented version
     const { data, error } = await supabase
       .from('cims')
       .insert({
         deal_id: projectId,
         title: input.title,
+        version: nextVersion,
         user_id: user.id,
         workflow_state: workflowState,
         buyer_persona: null,

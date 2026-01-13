@@ -436,7 +436,7 @@ describe('dependency-graph', () => {
     })
 
     it('handles circular dependencies without infinite loop', () => {
-      let graph: DependencyGraph = {
+      const graph: DependencyGraph = {
         dependencies: {
           's1': ['s2'],
           's2': ['s1'], // Circular

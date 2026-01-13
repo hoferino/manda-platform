@@ -66,7 +66,7 @@ describe('generateReport', () => {
     expect(report.successCount).toBe(1)
     expect(report.failureCount).toBe(1)
     expect(report.failures).toHaveLength(1)
-    expect(report.failures[0].error).toBe('Test error')
+    expect(report.failures[0]!.error).toBe('Test error')
   })
 
   it('should calculate overall classification accuracy', () => {

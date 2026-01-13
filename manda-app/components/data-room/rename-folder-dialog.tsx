@@ -80,7 +80,7 @@ export function RenameFolderDialog({
           <DialogHeader>
             <DialogTitle>Rename Folder</DialogTitle>
             <DialogDescription>
-              Enter a new name for "{currentName}"
+              Enter a new name for &quot;{currentName}&quot;
             </DialogDescription>
           </DialogHeader>
 

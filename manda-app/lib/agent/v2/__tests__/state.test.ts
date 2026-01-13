@@ -359,6 +359,7 @@ describe('Replace Reducers', () => {
       dealId: 'new-deal',
       dealName: 'New Deal',
       projectId: 'proj-2',
+      organizationId: 'org-2',
       status: 'closed',
       documentCount: 10,
       createdAt: '2026-01-02T00:00:00Z',
@@ -689,6 +690,7 @@ describe('Edge Cases', () => {
         dealId: 'deal-1',
         dealName: 'Test Deal',
         projectId: 'proj-1',
+        organizationId: 'org-1',
         status: 'active',
         documentCount: 10,
         createdAt: '2026-01-01T00:00:00Z',
@@ -741,17 +743,18 @@ describe('Edge Cases', () => {
       createdAt: '2026-01-01T00:00:00Z',
     }
 
-    const contextWithoutOrg: DealContext = {
+    const contextWithEmptyOrg: DealContext = {
       dealId: 'deal-1',
       dealName: 'Test',
       projectId: 'proj-1',
+      organizationId: '',
       status: 'active',
       documentCount: 0,
       createdAt: '2026-01-01T00:00:00Z',
     }
 
     expect(contextWithOrg.organizationId).toBe('org-123')
-    expect(contextWithoutOrg.organizationId).toBeUndefined()
+    expect(contextWithEmptyOrg.organizationId).toBe('')
   })
 
   it('should handle SourceCitation with optional location', () => {

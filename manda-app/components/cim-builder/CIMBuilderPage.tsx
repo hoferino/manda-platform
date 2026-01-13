@@ -9,6 +9,7 @@
  * - Preview Panel: Slide preview with navigation
  *
  * Story: E9.3 - CIM Builder 3-Panel Layout
+ * Story: CIM MVP Fast Track
  * AC: #1-6 - All acceptance criteria
  */
 
@@ -21,20 +22,107 @@ import { ExportButton } from './ExportButton'
 import { useCIMBuilder } from '@/lib/hooks/useCIMBuilder'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { formatComponentReference } from '@/lib/cim/reference-utils'
+import type { SlideUpdate, CIMPhase, ComponentType as MVPComponentType, WorkflowProgress, CIMOutline } from '@/lib/agent/cim-mvp'
+import type { Slide, ComponentType as LegacyComponentType } from '@/lib/types/cim'
+
+/**
+ * Map MVP component types to legacy component types for database storage
+ * The MVP agent uses an expanded set of 50+ component types, but the database
+ * schema uses a limited set of 7 types. This function maps the expanded types
+ * to the closest legacy equivalent.
+ */
+function mapComponentType(mvpType: MVPComponentType): LegacyComponentType {
+  // Direct mappings
+  if (mvpType === 'title' || mvpType === 'subtitle' || mvpType === 'text' || mvpType === 'table' || mvpType === 'image') {
+    return mvpType as LegacyComponentType
+  }
+
+  // List types -> bullet
+  if (mvpType === 'bullet_list' || mvpType === 'numbered_list') {
+    return 'bullet'
+  }
+
+  // Chart types -> chart
+  if ([
+    'bar_chart', 'horizontal_bar_chart', 'stacked_bar_chart', 'line_chart',
+    'area_chart', 'pie_chart', 'waterfall_chart', 'combo_chart', 'scatter_plot',
+    'gauge', 'progress_bar', 'sparkline', 'funnel', 'gantt_chart',
+    'growth_trajectory', 'revenue_breakdown', 'unit_economics', 'valuation_summary'
+  ].includes(mvpType)) {
+    return 'chart'
+  }
+
+  // Table-like types -> table
+  if ([
+    'comparison_table', 'financial_table', 'feature_comparison',
+    'metric', 'metric_group', 'swot', 'matrix', 'pros_cons'
+  ].includes(mvpType)) {
+    return 'table'
+  }
+
+  // Visual/image types -> image
+  if ([
+    'image_placeholder', 'logo_grid', 'icon_grid', 'screenshot', 'diagram',
+    'map', 'location_list', 'org_chart', 'team_grid', 'hierarchy',
+    'timeline', 'milestone_timeline', 'flowchart', 'pipeline', 'process_steps',
+    'cycle', 'venn', 'versus', 'pyramid', 'hub_spoke'
+  ].includes(mvpType)) {
+    return 'image'
+  }
+
+  // Text-like types -> text
+  if ([
+    'heading', 'quote', 'callout', 'callout_group', 'stat_highlight',
+    'key_takeaway', 'annotation'
+  ].includes(mvpType)) {
+    return 'text'
+  }
+
+  // Default fallback
+  return 'text'
+}
+
+/**
+ * Convert MVP agent SlideUpdate to database Slide format
+ */
+function slideUpdateToSlide(update: SlideUpdate): Slide {
+  return {
+    id: update.slideId,
+    section_id: update.sectionId,
+    title: update.title,
+    components: update.components.map((c) => ({
+      id: c.id,
+      type: mapComponentType(c.type),
+      content: typeof c.content === 'string' ? c.content : JSON.stringify(c.content),
+      metadata: c.data ? { data: c.data } : undefined,
+    })),
+    visual_concept: null,
+    status: update.status === 'approved' ? 'approved' : 'draft',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+}
 
 interface CIMBuilderPageProps {
   projectId: string
   cimId: string
   initialCIMTitle: string
+  // MVP agent props
+  useMVPAgent?: boolean
+  knowledgePath?: string
 }
 
 export function CIMBuilderPage({
   projectId,
   cimId,
   initialCIMTitle,
+  useMVPAgent: initialUseMVPAgent = true, // Default to MVP agent for testing
+  knowledgePath,
 }: CIMBuilderPageProps) {
   const {
     cim,
@@ -48,6 +136,67 @@ export function CIMBuilderPage({
     updateOutline,
     refresh,
   } = useCIMBuilder(projectId, cimId)
+
+  // MVP agent toggle state
+  const [useMVPAgent, setUseMVPAgent] = React.useState(initialUseMVPAgent)
+
+  // Real-time slide updates from MVP agent
+  const [slideUpdates, setSlideUpdates] = React.useState<Map<string, SlideUpdate>>(new Map())
+
+  // Current CIM phase from MVP agent
+  const [currentPhase, setCurrentPhase] = React.useState<CIMPhase>('executive_summary')
+
+  // Story 10: Workflow state from MVP agent
+  const [workflowProgress, setWorkflowProgress] = React.useState<WorkflowProgress | null>(null)
+  const [cimOutline, setCimOutline] = React.useState<CIMOutline | null>(null)
+
+  // Handle slide update from MVP agent
+  const handleSlideUpdate = React.useCallback((slide: SlideUpdate) => {
+    console.log('[CIMBuilderPage] Received slide update:', slide.slideId, slide.title, slide.components.length, 'components')
+    setSlideUpdates((prev) => {
+      const next = new Map(prev)
+      next.set(slide.slideId, slide)
+      console.log('[CIMBuilderPage] Total slides now:', next.size)
+      return next
+    })
+    // Also trigger refresh to persist
+    refresh()
+  }, [refresh])
+
+  // Handle phase change from MVP agent
+  const handlePhaseChange = React.useCallback((phase: CIMPhase) => {
+    setCurrentPhase(phase)
+  }, [])
+
+  // Story 10: Handle workflow progress updates
+  const handleWorkflowProgress = React.useCallback((progress: WorkflowProgress) => {
+    setWorkflowProgress(progress)
+  }, [])
+
+  // Story 10: Handle outline created
+  const handleOutlineCreated = React.useCallback((outline: CIMOutline) => {
+    setCimOutline(outline)
+    refresh() // Sync with database
+  }, [refresh])
+
+  // Story 10: Handle outline updated
+  const handleOutlineUpdated = React.useCallback((outline: CIMOutline) => {
+    setCimOutline(outline)
+    refresh()
+  }, [refresh])
+
+  // Story 10: Handle section started (auto-navigate to section)
+  const handleSectionStarted = React.useCallback((sectionId: string, _sectionTitle: string) => {
+    // Update workflow progress with current section
+    setWorkflowProgress((prev) =>
+      prev
+        ? {
+            ...prev,
+            currentSectionId: sectionId,
+          }
+        : null
+    )
+  }, [])
 
   // Handle inserting source reference into chat input
   const handleSourceClick = React.useCallback(
@@ -87,6 +236,69 @@ export function CIMBuilderPage({
     [setSourceRef]
   )
 
+  // Merge database slides with real-time MVP agent slides
+  // MVP slides take precedence and are appended if new
+  const mergedSlides = React.useMemo(() => {
+    if (!useMVPAgent || slideUpdates.size === 0) {
+      return cim?.slides || []
+    }
+
+    const dbSlides = cim?.slides || []
+    const mvpSlides = Array.from(slideUpdates.values()).map(slideUpdateToSlide)
+
+    // Create a map of all slides, with MVP slides overriding DB slides by ID
+    const slideMap = new Map<string, Slide>()
+    for (const slide of dbSlides) {
+      slideMap.set(slide.id, slide)
+    }
+    for (const slide of mvpSlides) {
+      slideMap.set(slide.id, slide)
+    }
+
+    // Return slides in order: DB slides first, then new MVP slides
+    const result: Slide[] = []
+    const addedIds = new Set<string>()
+
+    // Add DB slides (potentially overridden by MVP)
+    for (const slide of dbSlides) {
+      result.push(slideMap.get(slide.id)!)
+      addedIds.add(slide.id)
+    }
+
+    // Add new MVP slides not in DB
+    for (const slide of mvpSlides) {
+      if (!addedIds.has(slide.id)) {
+        result.push(slide)
+        addedIds.add(slide.id)
+      }
+    }
+
+    return result
+  }, [cim?.slides, slideUpdates, useMVPAgent])
+
+  // Story 10: Handle section click in outline tree (navigate to first slide of section)
+  const handleOutlineSectionClick = React.useCallback(
+    (sectionId: string) => {
+      // Try to find a slide in mergedSlides that belongs to this section
+      const slideIndex = mergedSlides.findIndex((s) => s.section_id === sectionId)
+      if (slideIndex !== -1) {
+        setCurrentSlideIndex(slideIndex)
+      }
+    },
+    [mergedSlides, setCurrentSlideIndex]
+  )
+
+  // Story 10: Handle slide click in outline tree (navigate to specific slide)
+  const handleOutlineSlideClick = React.useCallback(
+    (slideId: string) => {
+      const slideIndex = mergedSlides.findIndex((s) => s.id === slideId)
+      if (slideIndex !== -1) {
+        setCurrentSlideIndex(slideIndex)
+      }
+    },
+    [mergedSlides, setCurrentSlideIndex]
+  )
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -117,7 +329,7 @@ export function CIMBuilderPage({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with back navigation and export button */}
+      {/* Header with back navigation, MVP toggle, and export button */}
       <div className="flex items-center gap-4 px-4 py-3 border-b bg-background flex-shrink-0">
         <Link href={`/projects/${projectId}/cim-builder`}>
           <Button variant="ghost" size="sm">
@@ -128,8 +340,23 @@ export function CIMBuilderPage({
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-semibold truncate">{cim.title}</h1>
           <p className="text-xs text-muted-foreground">
-            {cim.slides.length} slides | {cim.outline.length} sections
+            {mergedSlides.length} slides | {cim.outline.length} sections
+            {useMVPAgent && workflowProgress && ` | Stage: ${workflowProgress.currentStage.replace(/_/g, ' ')}`}
+            {useMVPAgent && workflowProgress?.currentSectionId && ` | Section: ${workflowProgress.currentSectionId}`}
+            {useMVPAgent && !workflowProgress && ` | Phase: ${currentPhase.replace(/_/g, ' ')}`}
+            {useMVPAgent && slideUpdates.size > 0 && ` | ${slideUpdates.size} new`}
           </p>
+        </div>
+        {/* MVP Agent Toggle */}
+        <div className="flex items-center gap-2">
+          <Switch
+            id="mvp-agent-toggle"
+            checked={useMVPAgent}
+            onCheckedChange={setUseMVPAgent}
+          />
+          <Label htmlFor="mvp-agent-toggle" className="text-sm text-muted-foreground">
+            MVP Agent
+          </Label>
         </div>
         {/* Export Button - E9.14: Wireframe PowerPoint Export */}
         <ExportButton cim={cim} />
@@ -144,6 +371,11 @@ export function CIMBuilderPage({
               outline={cim.outline}
               onSourceClick={handleSourceClick}
               onSectionClick={handleSectionClick}
+              // Story 10: Pass outline tree data
+              cimOutline={cimOutline}
+              sectionProgress={workflowProgress?.sectionProgress}
+              currentSectionId={workflowProgress?.currentSectionId}
+              onSlideClick={handleOutlineSlideClick}
             />
           }
           conversationPanel={
@@ -154,12 +386,22 @@ export function CIMBuilderPage({
               sourceRef={sourceRef}
               onSourceRefClear={() => setSourceRef('')}
               onMessageSent={addMessage}
-              onCIMStateChanged={refresh} // Refresh CIM state after tool updates (AC #7)
+              onCIMStateChanged={refresh}
+              // MVP agent props
+              useMVPAgent={useMVPAgent}
+              knowledgePath={knowledgePath}
+              onSlideUpdate={handleSlideUpdate}
+              onPhaseChange={handlePhaseChange}
+              // Story 10: New workflow callbacks
+              onWorkflowProgress={handleWorkflowProgress}
+              onOutlineCreated={handleOutlineCreated}
+              onOutlineUpdated={handleOutlineUpdated}
+              onSectionStarted={handleSectionStarted}
             />
           }
           previewPanel={
             <PreviewPanel
-              slides={cim.slides}
+              slides={mergedSlides}
               currentIndex={currentSlideIndex}
               onIndexChange={setCurrentSlideIndex}
               onComponentSelect={handleComponentSelect}

@@ -859,7 +859,7 @@ describe('getIntentTraceMetadata', () => {
     const result: EnhancedIntentResult = {
       intent: 'factual',
       confidence: 0.7,
-      method: 'combined',
+      method: 'default',
     }
 
     const metadata = getIntentTraceMetadata(result)

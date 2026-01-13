@@ -14,7 +14,7 @@ vi.mock("@/lib/auth/org-context", () => ({
 
 describe("Dashboard Actions", () => {
   describe("exportToCSV", () => {
-    it("generates valid CSV with all sections", () => {
+    it("generates valid CSV with all sections", async () => {
       const mockData: DashboardData = {
         summary: {
           totalCostUsd: 100.5,
@@ -75,7 +75,7 @@ describe("Dashboard Actions", () => {
         },
       };
 
-      const csv = exportToCSV(mockData);
+      const csv = await exportToCSV(mockData);
 
       // Check all sections exist
       expect(csv).toContain("# Usage Summary");
@@ -101,7 +101,7 @@ describe("Dashboard Actions", () => {
       expect(csv).toContain("Rate limit");
     });
 
-    it("handles empty data gracefully", () => {
+    it("handles empty data gracefully", async () => {
       const emptyData: DashboardData = {
         summary: {
           totalCostUsd: 0,
@@ -123,7 +123,7 @@ describe("Dashboard Actions", () => {
         },
       };
 
-      const csv = exportToCSV(emptyData);
+      const csv = await exportToCSV(emptyData);
 
       expect(csv).toContain("Total Cost (USD),0.0000");
       expect(csv).toContain("Total API Calls,0");
@@ -133,7 +133,7 @@ describe("Dashboard Actions", () => {
       expect(csv).toContain("# Cost by Feature");
     });
 
-    it("escapes quotes in error messages", () => {
+    it("escapes quotes in error messages", async () => {
       const dataWithQuotes: DashboardData = {
         summary: {
           totalCostUsd: 0,
@@ -166,12 +166,12 @@ describe("Dashboard Actions", () => {
         },
       };
 
-      const csv = exportToCSV(dataWithQuotes);
+      const csv = await exportToCSV(dataWithQuotes);
       // CSV escaping doubles the quotes
       expect(csv).toContain('""quotes""');
     });
 
-    it("handles null error messages", () => {
+    it("handles null error messages", async () => {
       const dataWithNullError: DashboardData = {
         summary: {
           totalCostUsd: 0,
@@ -204,13 +204,13 @@ describe("Dashboard Actions", () => {
         },
       };
 
-      const csv = exportToCSV(dataWithNullError);
+      const csv = await exportToCSV(dataWithNullError);
       // Should not throw and should include empty string for null
       expect(csv).toContain("# Recent Errors");
       expect(csv).toContain('test,"Deal",""');
     });
 
-    it("formats numbers correctly", () => {
+    it("formats numbers correctly", async () => {
       const data: DashboardData = {
         summary: {
           totalCostUsd: 123.456789,
@@ -242,7 +242,7 @@ describe("Dashboard Actions", () => {
         },
       };
 
-      const csv = exportToCSV(data);
+      const csv = await exportToCSV(data);
 
       // Summary should have 4 decimal places
       expect(csv).toContain("Total Cost (USD),123.4568");
@@ -252,7 +252,7 @@ describe("Dashboard Actions", () => {
       expect(csv).toContain("0.000123");
     });
 
-    it("handles deal names with commas", () => {
+    it("handles deal names with commas", async () => {
       const data: DashboardData = {
         summary: {
           totalCostUsd: 0,
@@ -284,7 +284,7 @@ describe("Dashboard Actions", () => {
         },
       };
 
-      const csv = exportToCSV(data);
+      const csv = await exportToCSV(data);
       // Deal names should be quoted to handle commas
       expect(csv).toContain('"Acme, Inc. Acquisition"');
       expect(csv).toContain('"Tech Corp, LLC"');
@@ -303,7 +303,7 @@ describe("Dashboard Actions", () => {
         auth: {
           getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
         },
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
 
       const dateRange: DateRange = {
         startDate: new Date("2025-12-01"),
@@ -326,7 +326,7 @@ describe("Dashboard Actions", () => {
             .fn()
             .mockResolvedValue({ data: { user: { id: "user-123" } } }),
         },
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(false);
 
       const dateRange: DateRange = {
@@ -436,7 +436,7 @@ describe("Dashboard Actions", () => {
             .mockResolvedValue({ data: { user: { id: "superadmin-123" } } }),
         },
         rpc: mockRpc,
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(true);
 
       const dateRange: DateRange = {
@@ -492,7 +492,7 @@ describe("Dashboard Actions", () => {
             .mockResolvedValue({ data: { user: { id: "superadmin-123" } } }),
         },
         rpc: mockRpc,
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(true);
 
       const dateRange: DateRange = {
@@ -531,7 +531,7 @@ describe("Dashboard Actions", () => {
             .mockResolvedValue({ data: { user: { id: "superadmin-123" } } }),
         },
         rpc: mockRpc,
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(true);
 
       const dateRange: DateRange = {
@@ -564,7 +564,7 @@ describe("Dashboard Actions", () => {
             .mockResolvedValue({ data: { user: { id: "superadmin-123" } } }),
         },
         rpc: mockRpc,
-      } as any);
+      } as unknown as Awaited<ReturnType<typeof createClient>>);
       vi.mocked(isSuperadmin).mockResolvedValue(true);
 
       const dateRange: DateRange = {

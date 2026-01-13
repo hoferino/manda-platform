@@ -42,12 +42,12 @@ const mockTemplate = {
 }
 
 describe('IRL API', () => {
-  let mockSupabase: any
-  let mockAuth: any
-  let mockProjectQuery: any
-  let mockIRLInsert: any
-  let mockIRLItemsInsert: any
-  let mockIRLSelect: any
+  let mockSupabase: () => Promise<Record<string, unknown>>
+  let mockAuth: { getUser: ReturnType<typeof vi.fn> }
+  let mockProjectQuery: Record<string, ReturnType<typeof vi.fn> | undefined>
+  let mockIRLInsert: Record<string, ReturnType<typeof vi.fn> | undefined>
+  let mockIRLItemsInsert: Record<string, ReturnType<typeof vi.fn> | undefined>
+  let mockIRLSelect: Record<string, ReturnType<typeof vi.fn> | undefined>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -140,7 +140,7 @@ describe('IRL API', () => {
     // Track which call number we're on
     let fromCallCount = 0
 
-    mockSupabase = {
+    mockSupabase = async () => ({
       auth: mockAuth,
       from: vi.fn((table: string) => {
         fromCallCount++
@@ -159,9 +159,9 @@ describe('IRL API', () => {
         }
         return mockProjectQuery
       }),
-    }
+    })
 
-    ;(createClient as Mock).mockResolvedValue(mockSupabase)
+    ;(createClient as Mock).mockImplementation(mockSupabase)
   })
 
   describe('POST /api/projects/[id]/irls', () => {
@@ -211,7 +211,7 @@ describe('IRL API', () => {
 
     describe('project access', () => {
       it('should return 404 if project not found', async () => {
-        mockProjectQuery.single.mockResolvedValue({
+        mockProjectQuery.single!.mockResolvedValue({
           data: null,
           error: { message: 'Not found' },
         })
@@ -249,7 +249,7 @@ describe('IRL API', () => {
         ;(getTemplate as Mock).mockResolvedValue(mockTemplate)
 
         // Update mock to return template_type
-        mockIRLInsert.single.mockResolvedValue({
+        mockIRLInsert.single!.mockResolvedValue({
           data: {
             id: 'irl-123',
             deal_id: 'project-123',
@@ -310,7 +310,7 @@ describe('IRL API', () => {
     })
 
     it('should return 404 if project not found', async () => {
-      mockProjectQuery.single.mockResolvedValue({
+      mockProjectQuery.single!.mockResolvedValue({
         data: null,
         error: { message: 'Not found' },
       })

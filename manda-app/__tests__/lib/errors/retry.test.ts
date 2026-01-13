@@ -27,14 +27,14 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue(new RateLimitError('test', 100))
     const resultPromise = withRetry(fn, { maxRetries: 2, initialDelayMs: 100 })
 
-    // Advance timers and expect the promise to reject
-    try {
-      await vi.runAllTimersAsync()
-      await resultPromise
-      expect.fail('Should have thrown')
-    } catch (e) {
-      expect(e).toBeInstanceOf(UserFacingError)
-    }
+    // Set up rejection handler AND advance timers concurrently
+    // This prevents unhandled rejection warnings
+    const [result] = await Promise.allSettled([
+      expect(resultPromise).rejects.toBeInstanceOf(UserFacingError),
+      vi.runAllTimersAsync(),
+    ])
+
+    expect(result.status).toBe('fulfilled')
     expect(fn).toHaveBeenCalledTimes(3)
   })
 
@@ -42,13 +42,13 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValue(new Error('permanent'))
     const resultPromise = withRetry(fn, { maxRetries: 2, retryableErrors: [RateLimitError] })
 
-    try {
-      await vi.runAllTimersAsync()
-      await resultPromise
-      expect.fail('Should have thrown')
-    } catch (e) {
-      expect(e).toBeInstanceOf(UserFacingError)
-    }
+    // Set up rejection handler AND advance timers concurrently
+    const [result] = await Promise.allSettled([
+      expect(resultPromise).rejects.toBeInstanceOf(UserFacingError),
+      vi.runAllTimersAsync(),
+    ])
+
+    expect(result.status).toBe('fulfilled')
     expect(fn).toHaveBeenCalledTimes(1)
   })
 

@@ -213,7 +213,7 @@ describe.skipIf(shouldSkip)('Conversation Summarization Integration', () => {
     expect(shouldSummarize(messages)).toBe(true)
 
     // Act
-    const result = await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1])
+    const result = await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1])
 
     // Assert
     expect(result.metrics.messagesSummarized).toBe(15) // 25 - 10 kept
@@ -227,7 +227,7 @@ describe.skipIf(shouldSkip)('Conversation Summarization Integration', () => {
     const mockLLM = createMockLLM()
 
     // Act
-    const result = await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1])
+    const result = await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1])
 
     // Assert
     const verification = verifySummarizationPreservedRecent(messages, result.messages, 10)
@@ -241,7 +241,7 @@ describe.skipIf(shouldSkip)('Conversation Summarization Integration', () => {
     const mockLLM = createMockLLM(summaryText)
 
     // Act
-    const result = await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1])
+    const result = await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1])
 
     // Assert
     expect(result.messages[0]).toBeInstanceOf(SystemMessage)
@@ -255,11 +255,11 @@ describe.skipIf(shouldSkip)('Conversation Summarization Integration', () => {
     const mockLLM = createMockLLM()
 
     // Act - First call
-    await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1], { dealId: 'deal-123' })
+    await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1], { dealId: 'deal-123' })
     expect(mockLLM.invoke).toHaveBeenCalledTimes(1)
 
     // Act - Second call with same messages
-    const result2 = await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1], { dealId: 'deal-123' })
+    const result2 = await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1], { dealId: 'deal-123' })
 
     // Assert - Cache hit, no additional LLM call
     expect(mockLLM.invoke).toHaveBeenCalledTimes(1)
@@ -272,13 +272,13 @@ describe.skipIf(shouldSkip)('Conversation Summarization Integration', () => {
     const mockLLM = createMockLLM()
 
     // Act - First call
-    await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1], { dealId: 'deal-123' })
+    await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1], { dealId: 'deal-123' })
 
     // Add new message
     messages.push(new HumanMessage('New question about revenue'))
 
     // Act - Second call
-    const result2 = await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1], { dealId: 'deal-123' })
+    const result2 = await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1], { dealId: 'deal-123' })
 
     // Assert - Cache miss, new LLM call
     expect(mockLLM.invoke).toHaveBeenCalledTimes(2)
@@ -299,7 +299,7 @@ describe.skipIf(shouldSkip)('Conversation Summarization Integration', () => {
     )
 
     // Act
-    const result = await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1])
+    const result = await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1])
 
     // Assert - Summary contains key facts from conversation
     expect(result.summaryText).toContain('revenue')
@@ -319,7 +319,7 @@ describe.skipIf(shouldSkip)('Conversation Summarization Integration', () => {
     const mockLLM = createMockLLM('', true) // Will fail
 
     // Act
-    const result = await summarizeConversationHistory(messages, mockLLM as Parameters<typeof summarizeConversationHistory>[1])
+    const result = await summarizeConversationHistory(messages, mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1])
 
     // Assert - Uses fallback method
     expect(result.metrics.success).toBe(false)
@@ -605,7 +605,7 @@ describe.skipIf(shouldSkip)('Complete E10/E11 Pipeline Flow', () => {
     // Act - Summarize
     const summaryResult = await summarizeConversationHistory(
       messages,
-      mockLLM as Parameters<typeof summarizeConversationHistory>[1]
+      mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1]
     )
 
     // Assert - Summarization worked
@@ -653,7 +653,7 @@ describe.skipIf(shouldSkip)('Complete E10/E11 Pipeline Flow', () => {
     // Act - Run summarization
     const result = await summarizeConversationHistory(
       messages,
-      mockLLM as Parameters<typeof summarizeConversationHistory>[1]
+      mockLLM as unknown as Parameters<typeof summarizeConversationHistory>[1]
     )
 
     // Assert - All metrics captured
@@ -744,7 +744,7 @@ describe.skipIf(shouldSkip)('Error Handling', () => {
     // Act
     const result = await summarizeConversationHistory(
       messages,
-      failingLLM as Parameters<typeof summarizeConversationHistory>[1]
+      failingLLM as unknown as Parameters<typeof summarizeConversationHistory>[1]
     )
 
     // Assert - Fallback provides usable context

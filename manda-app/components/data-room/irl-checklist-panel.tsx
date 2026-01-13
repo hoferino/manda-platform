@@ -222,9 +222,9 @@ export function IRLChecklistPanel({
 
       toast.success(`Removed section: ${categoryName}`)
       await loadIRL()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Remove section error:', error)
-      toast.error(error.message || 'Failed to remove section')
+      toast.error(error instanceof Error ? error.message : 'Failed to remove section')
     }
   }, [irl, projectId, loadIRL])
 

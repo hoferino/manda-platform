@@ -100,11 +100,9 @@ function getFileIcon(mimeType: string | null) {
   if (!mimeType) return File
 
   if (mimeType.includes('pdf')) return FileText
-  if (mimeType.includes('spreadsheet') || mimeType.includes('excel'))
-    return FileSpreadsheet
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) {return FileSpreadsheet}
   if (mimeType.includes('word') || mimeType.includes('document')) return FileText
-  if (mimeType.includes('presentation') || mimeType.includes('powerpoint'))
-    return Presentation
+  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {return Presentation}
   if (mimeType.includes('image')) return FileImage
   if (mimeType.includes('text')) return FileText
 

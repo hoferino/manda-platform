@@ -4,7 +4,8 @@
   "dockerfile_lines": [],
   "dependencies": ["."],
   "graphs": {
-    "chat": "./lib/agent/v2/graph.ts:agentGraph"
+    "chat": "./lib/agent/v2/graph.ts:agentGraph",
+    "cim-mvp": "./lib/agent/cim-mvp/graph.ts:cimMVPGraph"
   },
   "env": ".env.local"
 }

@@ -71,9 +71,10 @@ async function runMigration(filename: string): Promise<{ success: boolean; error
 
     console.log(`✅ Migration ${filename} completed successfully`)
     return { success: true }
-  } catch (err: any) {
-    console.error(`❌ Migration ${filename} failed:`, err.message)
-    return { success: false, error: err.message }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`❌ Migration ${filename} failed:`, message)
+    return { success: false, error: message }
   }
 }
 

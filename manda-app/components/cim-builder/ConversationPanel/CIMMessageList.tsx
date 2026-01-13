@@ -73,42 +73,57 @@ export function CIMMessageList({
     }
   }, [])
 
-  // Empty state
-  if (messages.length === 0) {
-    return (
-      <div className={cn('flex-1 flex items-center justify-center', className)}>
-        <div className="text-center space-y-3 max-w-md px-4">
-          <div className="text-4xl">✨</div>
-          <h3 className="text-lg font-medium">Start building your CIM</h3>
-          <p className="text-sm text-muted-foreground">
-            I'll help you create a compelling Confidential Information Memorandum.
-            Start by describing your target buyer or the key investment highlights.
-          </p>
-          <div className="text-xs text-muted-foreground pt-4 space-y-1">
-            <p className="font-medium">Try saying:</p>
-            <p>"Who is the ideal buyer for this company?"</p>
-            <p>"Let's start with the investment thesis"</p>
-            <p>"Create an outline for a strategic acquirer"</p>
-          </div>
-        </div>
-      </div>
-    )
+  // Hardcoded intro message for instant display
+  const introMessage: ConversationMessage = {
+    id: 'intro-message',
+    role: 'assistant',
+    content: `## Welcome to CIM Builder
+
+I'll help you create a professional **Confidential Information Memorandum** - the key document that presents your company to potential buyers.
+
+### We'll build 11 sections together:
+
+| Section | Focus |
+|---------|-------|
+| Executive Summary | Key highlights & metrics |
+| Company Overview | History & milestones |
+| Management Team | Leadership credentials |
+| Products & Services | Your offerings |
+| Market Opportunity | TAM/SAM & growth |
+| Business Model | Revenue & unit economics |
+| Financial Performance | Track record & projections |
+| Competitive Landscape | Positioning & moats |
+| Growth Strategy | Expansion plans |
+| Risk Factors | Risks & mitigations |
+| Appendix | Supporting details |
+
+### Ready to start?
+
+Tell me about your company - **what do you do and what makes you special?**
+
+Or if you've run \`/manda-analyze\`, I can pull insights from your documents.`,
+    timestamp: new Date().toISOString(),
   }
 
+  // Always prepend intro message so it stays visible during conversation
+  const displayMessages = [introMessage, ...messages]
+
   return (
-    <div className={cn('relative flex-1 flex flex-col', className)}>
-      <ScrollArea className="flex-1" onScroll={handleScroll}>
+    <div className={cn('relative flex-1 flex flex-col min-h-0 overflow-hidden', className)}>
+      <ScrollArea className="flex-1 h-full" onScroll={handleScroll}>
         <div ref={scrollRef} className="px-4 py-4 space-y-4">
-          {messages.map((message, index) => {
-            const isLastMessage = index === messages.length - 1
+          {displayMessages.map((message, index) => {
+            const isLastMessage = index === displayMessages.length - 1
             const isLastAssistant = isLastMessage && message.role === 'assistant'
+            // Don't show streaming indicator for the hardcoded intro
+            const showStreaming = isStreaming && isLastAssistant && message.id !== 'intro-message'
 
             return (
               <MessageItem
                 key={message.id}
                 message={message}
-                isStreaming={isStreaming && isLastAssistant}
-                currentTool={isStreaming && isLastAssistant ? currentTool : null}
+                isStreaming={showStreaming}
+                currentTool={showStreaming ? currentTool : null}
               />
             )
           })}
@@ -179,8 +194,58 @@ function MessageItem({ message, isStreaming, currentTool }: MessageItemProps) {
         )}
 
         {/* Message text with markdown */}
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        <div className={cn(
+          'prose prose-sm max-w-none',
+          'dark:prose-invert',
+          // Headings
+          'prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2',
+          // Paragraphs
+          'prose-p:my-2 prose-p:leading-relaxed',
+          // Lists - better spacing and bullets
+          'prose-ul:my-2 prose-ul:pl-4 prose-ol:my-2 prose-ol:pl-4',
+          'prose-li:my-1 prose-li:marker:text-muted-foreground',
+          // Bold text
+          'prose-strong:font-semibold prose-strong:text-foreground',
+          // Code
+          'prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-muted-foreground/20 prose-code:text-sm',
+          // First element no top margin
+          '[&>*:first-child]:mt-0',
+          // User message text color
+          isUser && 'prose-p:text-primary-foreground prose-li:text-primary-foreground prose-strong:text-primary-foreground'
+        )}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Custom heading styles
+              h1: ({ children }) => <h1 className="text-lg font-bold border-b pb-1 mb-3">{children}</h1>,
+              h2: ({ children }) => <h2 className="text-base font-semibold mt-4 mb-2">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-sm font-semibold mt-3 mb-1">{children}</h3>,
+              // Better list rendering
+              ul: ({ children }) => <ul className="list-disc space-y-1 pl-4 my-2">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal space-y-1 pl-4 my-2">{children}</ol>,
+              li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+              // Inline code
+              code: ({ children, className }) => {
+                const isBlock = className?.includes('language-')
+                if (isBlock) {
+                  return <code className={className}>{children}</code>
+                }
+                return <code className="px-1.5 py-0.5 rounded bg-muted-foreground/20 text-sm font-mono">{children}</code>
+              },
+              // Paragraphs
+              p: ({ children }) => <p className="my-2 leading-relaxed">{children}</p>,
+              // Tables
+              table: ({ children }) => (
+                <div className="my-3 overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">{children}</table>
+                </div>
+              ),
+              thead: ({ children }) => <thead className="border-b border-border">{children}</thead>,
+              th: ({ children }) => <th className="text-left py-1.5 pr-4 font-medium text-muted-foreground">{children}</th>,
+              td: ({ children }) => <td className="py-1.5 pr-4">{children}</td>,
+              tr: ({ children }) => <tr className="border-b border-border/50 last:border-0">{children}</tr>,
+            }}
+          >
             {message.content || (isStreaming ? '...' : '')}
           </ReactMarkdown>
         </div>

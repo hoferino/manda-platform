@@ -235,10 +235,10 @@ describe('E9.6 - CIM Tools for Outline Definition', () => {
       expect(toolNames).toContain('reorder_outline_sections')
     })
 
-    it('should have correct tool count (17 total with E9.7, E9.10, and E9.11)', () => {
+    it('should have correct tool count (22 total with E9.7, E9.10, E9.11, E9.12, and E9.13)', () => {
       // Count includes E9.10 visual concept tools and E9.11 dependency/coherence tools
-      expect(CIM_TOOL_COUNT).toBe(17)
-      expect(cimTools.length).toBe(17)
+      expect(CIM_TOOL_COUNT).toBe(22)
+      expect(cimTools.length).toBe(22)
     })
   })
 })
@@ -345,10 +345,10 @@ describe('E9.7 - CIM Tools for Slide Content Creation', () => {
       expect(toolNames).toContain('approve_slide_content')
     })
 
-    it('should have correct tool count (17 total including E9.10 visual + E9.11 dependency/coherence tools)', () => {
+    it('should have correct tool count (22 total including E9.10-E9.13 tools)', () => {
       // 12 base tools + 2 E9.10 visual concept tools + 3 E9.11 dependency/coherence tools
-      expect(CIM_TOOL_COUNT).toBe(17)
-      expect(cimTools.length).toBe(17)
+      expect(CIM_TOOL_COUNT).toBe(22)
+      expect(cimTools.length).toBe(22)
     })
 
     it('should include E9.10 visual concept tools in array', () => {

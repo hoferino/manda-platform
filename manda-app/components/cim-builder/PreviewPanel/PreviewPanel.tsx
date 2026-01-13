@@ -9,20 +9,27 @@
  * - Prev/Next navigation buttons
  * - Slide counter ("Slide X of Y")
  * - Component click handler for chat reference (E9.9)
+ * - Horizontal thumbnail strip (Story 8)
  *
  * Story: E9.3 - CIM Builder 3-Panel Layout
  * Updated: E9.8 - Wireframe Preview Renderer
+ * Updated: Story 8 - Slide Thumbnails
  * AC: #5 - Preview panel with navigation buttons and slide counter
  * AC: #4 (E9.8) - Click-to-select components
  */
 
 import * as React from 'react'
+import { useRef, useEffect } from 'react'
 import { SlidePreview } from './SlidePreview'
 import { SlideNavigation } from './SlideNavigation'
 import { SlideCounter } from './SlideCounter'
+import { SlideThumbnail } from './SlideThumbnail'
+import { WireframeRenderer } from './WireframeRenderer'
 import { useSlideNavigation } from '@/lib/hooks/useSlideNavigation'
 import type { Slide } from '@/lib/types/cim'
+import type { SlideUpdate } from '@/lib/agent/cim-mvp'
 import { Presentation } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export interface PreviewPanelProps {
   slides: Slide[]
@@ -30,6 +37,8 @@ export interface PreviewPanelProps {
   onIndexChange: (index: number) => void
   /** Callback when a component is clicked for chat reference (E9.9 integration) */
   onComponentSelect?: (componentId: string, content: string) => void
+  /** Story 9: Optional MVP-style slides with layout support */
+  mvpSlides?: SlideUpdate[]
 }
 
 export function PreviewPanel({
@@ -37,6 +46,7 @@ export function PreviewPanel({
   currentIndex,
   onIndexChange,
   onComponentSelect,
+  mvpSlides,
 }: PreviewPanelProps) {
   const {
     currentSlide,
@@ -50,6 +60,28 @@ export function PreviewPanel({
     currentIndex,
     onIndexChange,
   })
+
+  // Story 9: Determine if we're using MVP slides
+  const useMVPRenderer = mvpSlides && mvpSlides.length > 0
+  const currentMVPSlide = useMVPRenderer ? mvpSlides[currentIndex] : null
+
+  // Story 8: Ref for thumbnail strip to scroll selected into view
+  const thumbnailsRef = useRef<HTMLDivElement>(null)
+
+  // Story 8: Scroll selected thumbnail into view when currentIndex changes
+  useEffect(() => {
+    const container = thumbnailsRef.current
+    if (container && slides.length > 0) {
+      const selectedThumb = container.children[currentIndex] as HTMLElement
+      if (selectedThumb) {
+        selectedThumb.scrollIntoView({
+          behavior: 'smooth',
+          inline: 'center',
+          block: 'nearest',
+        })
+      }
+    }
+  }, [currentIndex, slides.length])
 
   // Empty state when no slides exist
   if (slides.length === 0) {
@@ -68,9 +100,48 @@ export function PreviewPanel({
 
   return (
     <div className="h-full flex flex-col" data-testid="preview-panel">
+      {/* Story 8: Thumbnail strip */}
+      <div
+        ref={thumbnailsRef}
+        className="flex gap-2 p-2 overflow-x-auto border-b bg-muted/30 flex-shrink-0"
+        role="tablist"
+        aria-label="Slide thumbnails"
+      >
+        {slides.map((slide, index) => (
+          <SlideThumbnail
+            key={slide.id}
+            slide={slide}
+            index={index}
+            isSelected={index === currentIndex}
+            onClick={() => onIndexChange(index)}
+          />
+        ))}
+      </div>
+
       {/* Slide preview area */}
       <div className="flex-1 p-4 overflow-auto">
-        <SlidePreview slide={currentSlide} onComponentClick={onComponentSelect} />
+        {/* Story 9: Use WireframeRenderer for MVP slides, SlidePreview for legacy */}
+        {currentMVPSlide ? (
+          <div
+            className={cn(
+              'aspect-[16/9] w-full',
+              'bg-white dark:bg-slate-900 rounded-lg border shadow-sm',
+              'p-6 overflow-hidden'
+            )}
+            data-testid="wireframe-preview"
+            data-slide-id={currentMVPSlide.slideId}
+          >
+            <WireframeRenderer
+              layoutType={currentMVPSlide.layoutType}
+              components={currentMVPSlide.components}
+              title={currentMVPSlide.title}
+              slideId={currentMVPSlide.slideId}
+              onComponentClick={onComponentSelect}
+            />
+          </div>
+        ) : (
+          <SlidePreview slide={currentSlide} onComponentClick={onComponentSelect} />
+        )}
       </div>
 
       {/* Navigation controls */}

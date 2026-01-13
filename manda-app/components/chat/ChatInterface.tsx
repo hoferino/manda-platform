@@ -258,7 +258,7 @@ export function ChatInterface({ projectId, className }: ChatInterfaceProps) {
           <div className="px-4 py-2 text-xs bg-primary/10 border-b flex items-center gap-2">
             <Loader2 className="h-3 w-3 animate-spin text-primary" />
             <span className="text-primary">
-              Processing response in "{backgroundStreamConversationTitle}"...
+              Processing response in &quot;{backgroundStreamConversationTitle}&quot;...
             </span>
             <Button
               variant="ghost"

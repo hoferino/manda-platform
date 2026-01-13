@@ -82,11 +82,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
+interface IRLItemForGrouping {
+  category?: string
+  subcategory?: string | null
+  itemName: string
+  priority: string
+}
+
+interface GroupedCategory {
+  name: string
+  subcategories: Record<string, { name: string; items: Array<{ name: string; priority: string }> }>
+  items: Array<{ name: string; priority: string }>
+}
+
 /**
  * Group items by category and subcategory for preview display
  */
-function groupItemsByCategory(items: any[]) {
-  const grouped: Record<string, any> = {}
+function groupItemsByCategory(items: IRLItemForGrouping[]) {
+  const grouped: Record<string, GroupedCategory> = {}
 
   items.forEach((item) => {
     const category = item.category || 'Uncategorized'
@@ -100,13 +113,14 @@ function groupItemsByCategory(items: any[]) {
     }
 
     if (item.subcategory) {
-      if (!grouped[category].subcategories[item.subcategory]) {
-        grouped[category].subcategories[item.subcategory] = {
-          name: item.subcategory,
+      const subcategory = item.subcategory
+      if (!grouped[category].subcategories[subcategory]) {
+        grouped[category].subcategories[subcategory] = {
+          name: subcategory,
           items: [],
         }
       }
-      grouped[category].subcategories[item.subcategory].items.push({
+      grouped[category].subcategories[subcategory]!.items.push({
         name: item.itemName,
         priority: item.priority,
       })
