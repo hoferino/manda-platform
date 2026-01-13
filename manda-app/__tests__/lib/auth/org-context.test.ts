@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
 
 // Mock Supabase client
 const mockSupabase = {
@@ -48,9 +49,9 @@ describe('Organization Context', () => {
             return null
           }),
         },
-      } as unknown as Request
+      }
 
-      const result = getOrganizationFromHeaders(mockRequest as Request)
+      const result = getOrganizationFromHeaders(mockRequest as unknown as NextRequest)
       expect(result).toBe('org-123')
       expect(mockRequest.headers.get).toHaveBeenCalledWith('x-organization-id')
     })
@@ -60,9 +61,9 @@ describe('Organization Context', () => {
         headers: {
           get: vi.fn().mockReturnValue(null),
         },
-      } as unknown as Request
+      }
 
-      const result = getOrganizationFromHeaders(mockRequest as Request)
+      const result = getOrganizationFromHeaders(mockRequest as unknown as NextRequest)
       expect(result).toBeNull()
     })
   })

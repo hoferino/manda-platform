@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { BucketsView } from '@/components/data-room/buckets-view'
 import * as documentsApi from '@/lib/api/documents'
 import * as foldersApi from '@/lib/api/folders'
+import type { Folder } from '@/lib/api/folders'
 import * as supabaseClient from '@/lib/supabase/client'
 import {
   createMockSupabaseClient,
@@ -50,11 +51,11 @@ describe('BucketsView Integration', () => {
     // TD-004: Use shared Supabase test utilities
     const { client, mocks: queryMocks } = createMockSupabaseClient()
     mocks = queryMocks
-    vi.mocked(supabaseClient.createClient).mockReturnValue(client)
+    vi.mocked(supabaseClient.createClient).mockReturnValue(client as unknown as ReturnType<typeof supabaseClient.createClient>)
 
     // Default mock responses
-    mocks.order.mockResolvedValue({ data: [], error: null })
-    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: [], error: null })
+    mocks.order.mockResolvedValue({ data: [], error: undefined })
+    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: [], error: undefined })
   })
 
   it('renders empty state when no buckets exist', async () => {
@@ -84,13 +85,13 @@ describe('BucketsView Integration', () => {
         deal_id: mockProjectId,
         name: 'Legal',
         path: 'Legal',
-        parent_path: null,
+        parent_path: undefined,
       }),
     ]
 
     // Setup mocks
-    mocks.order.mockResolvedValue({ data: mockDocuments, error: null })
-    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: mockFolders, error: null })
+    mocks.order.mockResolvedValue({ data: mockDocuments, error: undefined })
+    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: mockFolders as unknown as Folder[], error: undefined })
 
     render(<BucketsView projectId={mockProjectId} />)
 
@@ -113,8 +114,8 @@ describe('BucketsView Integration', () => {
       }),
     ]
 
-    mocks.order.mockResolvedValue({ data: mockDocuments, error: null })
-    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: [], error: null })
+    mocks.order.mockResolvedValue({ data: mockDocuments, error: undefined })
+    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: [], error: undefined })
 
     render(<BucketsView projectId={mockProjectId} />)
 
@@ -146,13 +147,13 @@ describe('BucketsView Integration', () => {
         deal_id: mockProjectId,
         name: 'Uploads',
         path: 'Uploads',
-        parent_path: null,
+        parent_path: undefined,
       }),
     ]
 
-    mocks.order.mockResolvedValue({ data: [], error: null })
-    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: mockFolders, error: null })
-    vi.mocked(documentsApi.uploadDocument).mockResolvedValue({ success: true, document: null })
+    mocks.order.mockResolvedValue({ data: [], error: undefined })
+    vi.mocked(foldersApi.getFolders).mockResolvedValue({ folders: mockFolders as unknown as Folder[], error: undefined })
+    vi.mocked(documentsApi.uploadDocument).mockResolvedValue({ success: true, document: undefined })
 
     render(<BucketsView projectId={mockProjectId} />)
 

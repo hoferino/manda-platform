@@ -129,7 +129,7 @@ describe('IRL Templates API', () => {
     })
 
     it('should verify project access', async () => {
-      mockQuery.single.mockResolvedValue({
+      mockQuery.single!.mockResolvedValue({
         data: null,
         error: { message: 'Not found' },
       })

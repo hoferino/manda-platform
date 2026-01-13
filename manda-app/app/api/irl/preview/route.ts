@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
 interface IRLItemForGrouping {
   category?: string
-  subcategory?: string
+  subcategory?: string | null
   itemName: string
   priority: string
 }
@@ -113,13 +113,14 @@ function groupItemsByCategory(items: IRLItemForGrouping[]) {
     }
 
     if (item.subcategory) {
-      if (!grouped[category].subcategories[item.subcategory]) {
-        grouped[category].subcategories[item.subcategory] = {
-          name: item.subcategory,
+      const subcategory = item.subcategory
+      if (!grouped[category].subcategories[subcategory]) {
+        grouped[category].subcategories[subcategory] = {
+          name: subcategory,
           items: [],
         }
       }
-      grouped[category].subcategories[item.subcategory].items.push({
+      grouped[category].subcategories[subcategory]!.items.push({
         name: item.itemName,
         priority: item.priority,
       })
