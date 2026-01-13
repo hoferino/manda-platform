@@ -37,13 +37,13 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 // Mock v2 agent exports
-const mockStreamAgent = vi.fn()
+const mockSafeStreamAgent = vi.fn()
 
 vi.mock('@/lib/agent/v2', async () => {
   const actual = await vi.importActual('@/lib/agent/v2')
   return {
     ...actual,
-    streamAgent: (...args: unknown[]) => mockStreamAgent(...args),
+    safeStreamAgent: (...args: unknown[]) => mockSafeStreamAgent(...args),
   }
 })
 
@@ -119,7 +119,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Default: streaming works
-    mockStreamAgent.mockImplementation(() => mockStreamGenerator())
+    mockSafeStreamAgent.mockImplementation(() => mockStreamGenerator())
   })
 
   afterEach(() => {
@@ -296,7 +296,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       await POST(request, createContext('deal-456'))
 
       // Verify streamAgent was called with the correct thread ID format
-      expect(mockStreamAgent).toHaveBeenCalledWith(
+      expect(mockSafeStreamAgent).toHaveBeenCalledWith(
         expect.any(Object), // state
         'chat:deal-456:user-123:550e8400-e29b-41d4-a716-446655440000', // thread ID
         expect.any(Object) // config
@@ -313,7 +313,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       await POST(request, createContext('deal-456'))
 
       // The thread ID should use : as delimiter (not -)
-      const threadId = mockStreamAgent.mock.calls[0]![1]
+      const threadId = mockSafeStreamAgent.mock.calls[0]![1]
       expect(threadId).toContain(':')
       expect(threadId.split(':').length).toBe(4) // mode:dealId:userId:conversationId
     })
@@ -360,7 +360,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       const request = createRequest({ message: 'Hello' })
       await POST(request, createContext())
 
-      const threadId = mockStreamAgent.mock.calls[0]![1]
+      const threadId = mockSafeStreamAgent.mock.calls[0]![1]
       expect(threadId).toMatch(/^chat:/)
     })
 
@@ -368,7 +368,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       const request = createRequest({ message: 'Hello', workflowMode: 'chat' })
       await POST(request, createContext())
 
-      const threadId = mockStreamAgent.mock.calls[0]![1]
+      const threadId = mockSafeStreamAgent.mock.calls[0]![1]
       expect(threadId).toMatch(/^chat:/)
     })
 
@@ -376,7 +376,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       const request = createRequest({ message: 'Hello', workflowMode: 'cim' })
       await POST(request, createContext())
 
-      const threadId = mockStreamAgent.mock.calls[0]![1]
+      const threadId = mockSafeStreamAgent.mock.calls[0]![1]
       expect(threadId).toMatch(/^cim:/)
     })
 
@@ -384,7 +384,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
       const request = createRequest({ message: 'Hello', workflowMode: 'irl' })
       await POST(request, createContext())
 
-      const threadId = mockStreamAgent.mock.calls[0]![1]
+      const threadId = mockSafeStreamAgent.mock.calls[0]![1]
       expect(threadId).toMatch(/^irl:/)
     })
   })
@@ -396,7 +396,7 @@ describe('POST /api/projects/[id]/chat-v2', () => {
     })
 
     it('handles stream errors gracefully', async () => {
-      mockStreamAgent.mockImplementation(async function* () {
+      mockSafeStreamAgent.mockImplementation(async function* () {
         yield { event: 'on_chat_model_stream', data: { chunk: 'Hello' } }
         throw new Error('Stream failed')
       })

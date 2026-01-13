@@ -172,7 +172,7 @@ describe('Tool Registration (AC #7)', () => {
   })
 
   it('should have correct total tool count', () => {
-    expect(TOOL_COUNT).toBe(17)
+    expect(TOOL_COUNT).toBe(18)
     expect(validateToolCount()).toBe(true)
   })
 })

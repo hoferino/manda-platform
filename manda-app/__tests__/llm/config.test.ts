@@ -229,9 +229,9 @@ describe('LLM Configuration', () => {
   describe('Constants Export', () => {
     it('exports DEFAULT_MODELS', () => {
       expect(DEFAULT_MODELS).toBeDefined()
-      expect(DEFAULT_MODELS.anthropic).toBe('claude-sonnet-4-5-20250929')
-      expect(DEFAULT_MODELS.openai).toBe('gpt-4-turbo-preview')
-      expect(DEFAULT_MODELS.google).toBe('gemini-1.5-pro')
+      expect(DEFAULT_MODELS.anthropic).toBe('claude-sonnet-4-20250514')
+      expect(DEFAULT_MODELS.openai).toBe('gpt-4o')
+      expect(DEFAULT_MODELS.google).toBe('gemini-2.5-pro')
     })
 
     it('exports TOKEN_COSTS', () => {

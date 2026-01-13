@@ -39,10 +39,11 @@ describe('Model Routing', () => {
   })
 
   describe('MODEL_ROUTING_CONFIG', () => {
+    // Note: Currently using OpenAI models temporarily due to Google GenAI bindTools issue
     it('has correct config for simple tier', () => {
       const config = MODEL_ROUTING_CONFIG.simple
-      expect(config.provider).toBe('google')
-      expect(config.model).toBe('gemini-2.0-flash-lite')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o-mini')
       expect(config.temperature).toBe(0.3)
       expect(config.maxTokens).toBe(500)
       expect(config.timeout).toBe(5000)
@@ -51,8 +52,8 @@ describe('Model Routing', () => {
 
     it('has correct config for medium tier', () => {
       const config = MODEL_ROUTING_CONFIG.medium
-      expect(config.provider).toBe('google')
-      expect(config.model).toBe('gemini-2.5-pro')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o-mini')
       expect(config.temperature).toBe(0.5)
       expect(config.maxTokens).toBe(2000)
       expect(config.timeout).toBe(30000)
@@ -61,8 +62,8 @@ describe('Model Routing', () => {
 
     it('has correct config for complex tier', () => {
       const config = MODEL_ROUTING_CONFIG.complex
-      expect(config.provider).toBe('anthropic')
-      expect(config.model).toBe('claude-sonnet-4-20250514')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o')
       expect(config.temperature).toBe(0.7)
       expect(config.maxTokens).toBe(4096)
       expect(config.timeout).toBe(60000)
@@ -71,52 +72,54 @@ describe('Model Routing', () => {
   })
 
   describe('selectModelForComplexity', () => {
-    it('returns Gemini Flash Lite config for simple complexity', () => {
+    // Note: Currently using OpenAI models temporarily
+    it('returns GPT-4o-mini config for simple complexity', () => {
       const config = selectModelForComplexity('simple')
-      expect(config.provider).toBe('google')
-      expect(config.model).toBe('gemini-2.0-flash-lite')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o-mini')
       expect(config.maxTokens).toBe(500)
       expect(config.timeout).toBe(5000)
     })
 
-    it('returns Gemini Pro config for medium complexity', () => {
+    it('returns GPT-4o-mini config for medium complexity', () => {
       const config = selectModelForComplexity('medium')
-      expect(config.provider).toBe('google')
-      expect(config.model).toBe('gemini-2.5-pro')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o-mini')
       expect(config.maxTokens).toBe(2000)
     })
 
-    it('returns Claude Sonnet config for complex complexity', () => {
+    it('returns GPT-4o config for complex complexity', () => {
       const config = selectModelForComplexity('complex')
-      expect(config.provider).toBe('anthropic')
-      expect(config.model).toBe('claude-sonnet-4-20250514')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o')
       expect(config.maxTokens).toBe(4096)
     })
 
     it('defaults to complex tier when complexity undefined (backward compatibility)', () => {
       const config = selectModelForComplexity(undefined)
-      expect(config.provider).toBe('anthropic')
-      expect(config.model).toBe('claude-sonnet-4-20250514')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o')
     })
   })
 
   describe('getFallbackConfig', () => {
+    // Note: Currently using OpenAI models temporarily
     it('escalates simple to medium on failure', () => {
       const fallback = getFallbackConfig('simple')
-      expect(fallback.model).toBe('gemini-2.5-pro')
-      expect(fallback.provider).toBe('google')
+      expect(fallback.model).toBe('gpt-4o-mini')
+      expect(fallback.provider).toBe('openai')
     })
 
     it('escalates medium to complex on failure', () => {
       const fallback = getFallbackConfig('medium')
-      expect(fallback.model).toBe('claude-sonnet-4-20250514')
-      expect(fallback.provider).toBe('anthropic')
+      expect(fallback.model).toBe('gpt-4o')
+      expect(fallback.provider).toBe('openai')
     })
 
     it('falls back complex to medium (existing E12.6 behavior)', () => {
       const fallback = getFallbackConfig('complex')
-      expect(fallback.model).toBe('gemini-2.5-pro')
-      expect(fallback.provider).toBe('google')
+      expect(fallback.model).toBe('gpt-4o-mini')
+      expect(fallback.provider).toBe('openai')
     })
   })
 
@@ -143,56 +146,40 @@ describe('Model Routing', () => {
   })
 
   describe('getEffectiveModelConfig', () => {
-    it('returns requested tier when Google key available', () => {
-      process.env.GOOGLE_AI_API_KEY = 'test-key'
+    // Note: Currently using OpenAI models, so fallback logic for Google/Anthropic keys doesn't apply
+    it('returns simple tier config', () => {
       const config = getEffectiveModelConfig('simple')
-      expect(config.provider).toBe('google')
-      expect(config.model).toBe('gemini-2.0-flash-lite')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o-mini')
     })
 
-    it('falls back to Claude when Google key missing and simple tier requested', () => {
-      delete process.env.GOOGLE_AI_API_KEY
-      process.env.ANTHROPIC_API_KEY = 'test-key'
-      const config = getEffectiveModelConfig('simple')
-      expect(config.provider).toBe('anthropic')
-      expect(config.model).toBe('claude-sonnet-4-20250514')
-    })
-
-    it('falls back to Claude when Google key missing and medium tier requested', () => {
-      delete process.env.GOOGLE_AI_API_KEY
-      process.env.ANTHROPIC_API_KEY = 'test-key'
+    it('returns medium tier config', () => {
       const config = getEffectiveModelConfig('medium')
-      expect(config.provider).toBe('anthropic')
-      expect(config.model).toBe('claude-sonnet-4-20250514')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o-mini')
     })
 
-    it('falls back to Gemini when Anthropic key missing and complex tier requested', () => {
-      process.env.GOOGLE_AI_API_KEY = 'test-key'
-      delete process.env.ANTHROPIC_API_KEY
+    it('returns complex tier config', () => {
       const config = getEffectiveModelConfig('complex')
-      expect(config.provider).toBe('google')
-      expect(config.model).toBe('gemini-2.5-pro')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o')
     })
 
     it('defaults to complex tier when complexity undefined', () => {
-      process.env.ANTHROPIC_API_KEY = 'test-key'
       const config = getEffectiveModelConfig(undefined)
-      expect(config.provider).toBe('anthropic')
-      expect(config.model).toBe('claude-sonnet-4-20250514')
+      expect(config.provider).toBe('openai')
+      expect(config.model).toBe('gpt-4o')
     })
   })
 
   describe('getTierFromModel', () => {
-    it('returns simple for gemini-2.0-flash-lite', () => {
-      expect(getTierFromModel('gemini-2.0-flash-lite')).toBe('simple')
+    // Note: Currently using OpenAI models temporarily
+    it('returns simple for gpt-4o-mini', () => {
+      expect(getTierFromModel('gpt-4o-mini')).toBe('simple')
     })
 
-    it('returns medium for gemini-2.5-pro', () => {
-      expect(getTierFromModel('gemini-2.5-pro')).toBe('medium')
-    })
-
-    it('returns complex for claude-sonnet-4-20250514', () => {
-      expect(getTierFromModel('claude-sonnet-4-20250514')).toBe('complex')
+    it('returns complex for gpt-4o', () => {
+      expect(getTierFromModel('gpt-4o')).toBe('complex')
     })
 
     it('returns unknown for unrecognized model', () => {
@@ -201,16 +188,17 @@ describe('Model Routing', () => {
   })
 
   describe('formatModelSelection', () => {
+    // Note: Currently using OpenAI models temporarily
     it('formats model selection correctly', () => {
       const config = MODEL_ROUTING_CONFIG.simple
       const formatted = formatModelSelection(config, 'simple')
-      expect(formatted).toBe('google:gemini-2.0-flash-lite (simple tier)')
+      expect(formatted).toBe('openai:gpt-4o-mini (simple tier)')
     })
 
     it('handles undefined complexity', () => {
       const config = MODEL_ROUTING_CONFIG.complex
       const formatted = formatModelSelection(config, undefined)
-      expect(formatted).toBe('anthropic:claude-sonnet-4-20250514 (default tier)')
+      expect(formatted).toBe('openai:gpt-4o (default tier)')
     })
   })
 })

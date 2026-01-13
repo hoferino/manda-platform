@@ -17,12 +17,12 @@ vi.mock('@/lib/supabase/server', () => ({
 
 // Mock the template service
 vi.mock('@/lib/services/irl-templates', () => ({
-  listTemplates: vi.fn(),
+  getAllTemplates: vi.fn(),
   getTemplate: vi.fn(),
 }))
 
 import { createClient } from '@/lib/supabase/server'
-import { listTemplates, getTemplate } from '@/lib/services/irl-templates'
+import { getAllTemplates, getTemplate } from '@/lib/services/irl-templates'
 
 const mockTemplates = [
   {
@@ -93,7 +93,7 @@ describe('IRL Templates API', () => {
 
   describe('GET /api/projects/[id]/irls/templates', () => {
     it('should return all templates (AC4)', async () => {
-      ;(listTemplates as Mock).mockResolvedValue(mockTemplates)
+      ;(getAllTemplates as Mock).mockReturnValue(mockTemplates)
 
       const request = new NextRequest('http://localhost/api/projects/project-123/irls/templates')
       const response = await listTemplatesHandler(request, { params: Promise.resolve({ id: 'project-123' }) })
@@ -106,7 +106,7 @@ describe('IRL Templates API', () => {
     })
 
     it('should include item counts in response', async () => {
-      ;(listTemplates as Mock).mockResolvedValue(mockTemplates)
+      ;(getAllTemplates as Mock).mockReturnValue(mockTemplates)
 
       const request = new NextRequest('http://localhost/api/projects/project-123/irls/templates')
       const response = await listTemplatesHandler(request, { params: Promise.resolve({ id: 'project-123' }) })
@@ -141,7 +141,7 @@ describe('IRL Templates API', () => {
     })
 
     it('should handle service errors gracefully', async () => {
-      ;(listTemplates as Mock).mockRejectedValue(new Error('Service error'))
+      ;(getAllTemplates as Mock).mockRejectedValue(new Error('Service error'))
 
       const request = new NextRequest('http://localhost/api/projects/project-123/irls/templates')
       const response = await listTemplatesHandler(request, { params: Promise.resolve({ id: 'project-123' }) })
