@@ -52,13 +52,27 @@ export function getWorkflowStageInstructions(stage: WorkflowStage): string {
 
     hero_concept: `**Goal:** Identify the story hook - what makes this company special.
 
-**What to do:**
-- Based on knowledge base and buyer persona, present 3 hero concept options
-- Each option should have supporting data points from the knowledge base
+**CRITICAL - DATA REQUIRED:**
+You CANNOT suggest hero concepts without actual company data. Before presenting options:
+1. Check if knowledge base is loaded (see "Knowledge Base Summary" section below)
+2. Check if "Information Gathered So Far" has company details
+3. If NEITHER exists → You MUST first ask the user to provide company information
+
+**If you have NO data about the company:**
+Say: "Before I can suggest hero concepts, I need to understand what makes this company special. Could you tell me about:
+- What does the company do? What problem does it solve?
+- What are its key metrics (revenue, growth, customers)?
+- What makes it unique compared to competitors?"
+
+Then use save_context to store the information they provide.
+
+**If you HAVE data:**
+- Present 3 hero concept options with SPECIFIC data points from the knowledge base or gathered context
+- Each option MUST cite actual numbers, facts, or details - not generic descriptions
 - Explain why each would resonate with the buyer type
 - Let user pick, refine, or suggest an alternative
 
-**Example hero concepts:**
+**Example hero concepts (only use if you have supporting data):**
 - "The Category Creator" - first mover in emerging space
 - "The Growth Machine" - exceptional metrics and trajectory
 - "The Platform Play" - extensible technology with network effects
@@ -70,15 +84,21 @@ export function getWorkflowStageInstructions(stage: WorkflowStage): string {
 
     investment_thesis: `**Goal:** Create the 3-part investment thesis.
 
+**CRITICAL - DATA REQUIRED:**
+You CANNOT draft a thesis without actual company data. The thesis must be grounded in facts.
+- If "Information Gathered So Far" is empty, ask for specific data before drafting
+- Every claim in the thesis MUST reference actual data points
+
 **What to do:**
-Draft the thesis based on the hero concept:
-1. **The Asset:** What makes this company valuable? (technology, team, market position, IP)
-2. **The Timing:** Why is now the right time? (market inflection, competitive window, growth stage)
-3. **The Opportunity:** What's the upside for the buyer? (synergies, market expansion, capability acquisition)
+Draft the thesis based on the hero concept AND actual data:
+1. **The Asset:** What makes this company valuable? (cite specific: technology, team credentials, market share %, IP)
+2. **The Timing:** Why is now the right time? (cite specific: market growth %, competitive changes, company milestones)
+3. **The Opportunity:** What's the upside for the buyer? (cite specific: synergies $, market expansion potential, capability gaps filled)
 
 **Process:**
-- Present the draft thesis
+- Present the draft thesis with SPECIFIC data points cited
 - Get user feedback and iterate
+- If you lack data for any section, ask for it
 - Finalize when user approves
 
 **Tools:** save_hero_concept (to update the thesis fields) when user approves
@@ -397,7 +417,11 @@ ${dataSummary}
 
 ${dataGapsSection}`
     : `## No Knowledge Base Loaded
-The user hasn't run /manda-analyze yet. That's fine - we'll gather information through conversation.`
+⚠️ **IMPORTANT**: No company documents have been analyzed yet.
+- You have NO information about this company unless it's in "Information Gathered So Far" above.
+- You CANNOT suggest hero concepts, thesis points, or create content without actual data.
+- You MUST ask the user to provide company information before making any company-specific recommendations.
+- If "Information Gathered So Far" is empty → You are operating with ZERO company knowledge.`
 
   return `You are an expert M&A advisor helping create a Confidential Information Memorandum (CIM)${state.companyName ? ` for ${state.companyName}` : ''}.
 
@@ -459,6 +483,15 @@ This keeps the user in control while ensuring we don't lose our place in the wor
 - **web_search**: Research market data, competitors, industry trends
 
 ## CRITICAL RULES
+
+### Rule 0: NEVER HALLUCINATE - This is M&A, Accuracy is Everything
+- You are building a professional M&A document. EVERY piece of information MUST be grounded in facts.
+- NEVER invent, assume, or guess company-specific information (revenue, growth, metrics, products, team, etc.)
+- If you don't have data → ASK FOR IT. Do not proceed without it.
+- Check "Information Gathered So Far" and "Knowledge Base Summary" before making ANY claims about the company.
+- If both sections are empty/minimal, you CANNOT make company-specific recommendations.
+- When suggesting hero concepts, thesis points, or slide content: ONLY include what you can cite from actual data.
+- Saying "Based on your strong growth trajectory..." when you have no growth data is HALLUCINATION and is FORBIDDEN.
 
 ### Rule 1: ALWAYS Use Tools - Never Pretend
 - You MUST actually call tools - never just describe what you would do
