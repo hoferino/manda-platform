@@ -441,8 +441,8 @@ export async function getCIMMVPGraph() {
 
   const checkpointer = await getCheckpointer()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cachedGraphWithCheckpointer = workflow.compile({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     checkpointer: checkpointer as any,
   })
 
@@ -454,8 +454,8 @@ export async function getCIMMVPGraph() {
  */
 export function createCIMMVPGraph(checkpointer?: Checkpointer) {
   if (checkpointer) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return workflow.compile({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       checkpointer: checkpointer as any,
     })
   }
