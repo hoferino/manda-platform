@@ -1,0 +1,413 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Login Success",
+    "description": "Verify that a user can successfully log in with valid credentials and a session is persisted.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page"
+      },
+      {
+        "type": "action",
+        "description": "Input valid username/email and password"
+      },
+      {
+        "type": "action",
+        "description": "Click the login button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that login is successful and user is redirected to the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that user session persists on page refresh"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Login Failure with Invalid Credentials",
+    "description": "Verify that login attempt with invalid credentials fails and appropriate error message is shown.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page"
+      },
+      {
+        "type": "action",
+        "description": "Enter invalid username/email and/or password"
+      },
+      {
+        "type": "action",
+        "description": "Click the login button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify login is denied and error message about invalid credentials is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Project Creation and Dashboard Update",
+    "description": "Verify user can create a new M&A deal project and it appears immediately in the dashboard with correct ownership and structure.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in and navigate to the project creation page"
+      },
+      {
+        "type": "action",
+        "description": "Input required project details and submit"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new project is listed on the dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify project ownership and structure details are correct"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Document Upload with Supported Formats",
+    "description": "Validate that users can upload documents in supported formats to the data room and see upload progress.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to project data room page"
+      },
+      {
+        "type": "action",
+        "description": "Select a supported document file for upload"
+      },
+      {
+        "type": "action",
+        "description": "Initiate document upload"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify file is uploaded successfully with visible progress indication"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Document Upload Failure with Oversized File",
+    "description": "Verify that uploading a document exceeding the size limit is prevented with proper error handling.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to project data room page"
+      },
+      {
+        "type": "action",
+        "description": "Select a document file that exceeds the size limit"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to upload the file"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify upload is blocked and an error message about file size limit is shown"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Document Processing Pipeline Updates Status Correctly",
+    "description": "Verify asynchronous document processing updates the document status correctly in the data room UI.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Upload a document to the data room"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify document status shows as queued or processing"
+      },
+      {
+        "type": "assertion",
+        "description": "After processing, verify document status updates to processed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify content is indexed including OCR and formulas are extracted"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Conversational AI Chat Streaming Responses with Context",
+    "description": "Verify that the chat interface streams AI responses in real-time, maintains conversation context and includes knowledge graph citations.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to chat interface within a project"
+      },
+      {
+        "type": "action",
+        "description": "Send a query related to the deal"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify chat AI response streams progressively"
+      },
+      {
+        "type": "assertion",
+        "description": "Send follow-up questions and verify context is maintained correctly"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify presence of knowledge graph sourced citations in responses"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Confidential Information Memorandum (CIM) Creation Workflow",
+    "description": "Validate the CIM builder guides the user through buyer persona creation, content input, slide preview, and allows exporting final pitch decks.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to CIM builder for a project"
+      },
+      {
+        "type": "action",
+        "description": "Follow AI-guided workflow to create buyer persona and add slide content"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify preview accurately reflects slide content"
+      },
+      {
+        "type": "action",
+        "description": "Export the completed CIM as a pitch deck"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify exported deck includes all created slides accurately"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Q&A Import and Export with Excel Files",
+    "description": "Verify that Q&A entries can be imported from and exported to Excel files, including fuzzy matching for data merging.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Q&A management page"
+      },
+      {
+        "type": "action",
+        "description": "Import Q&A entries from a valid Excel file"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify data is merged using fuzzy matching logic"
+      },
+      {
+        "type": "action",
+        "description": "Export Q&A entries to an Excel file"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify exported Excel file contains correct data and formatting"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Knowledge Explorer Contradiction Detection and Resolution",
+    "description": "Verify that contradictions are detected by the knowledge explorer, displayed to the user and that users can resolve or correct them.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to knowledge explorer for a project"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify contradictions are shown in the contradictions panel"
+      },
+      {
+        "type": "action",
+        "description": "Select a contradiction and provide resolution or correction"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify resolution updates UI and knowledge graph state"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Information Request List (IRL) Folder Auto-Generation and Template Use",
+    "description": "Validate that IRL management supports templates for request lists and auto-generates folders accordingly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to IRL management page within a project"
+      },
+      {
+        "type": "action",
+        "description": "Create a new IRL using a provided template"
+      },
+      {
+        "type": "action",
+        "description": "Trigger folder auto-generation based on IRL content"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify folders are created correctly and linked to IRL items"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Review Queue Content Approval Workflow",
+    "description": "Verify that deal team leads can access the review queue, approve or reject AI-generated content, and regenerate items as needed.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the review queue page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify AI-generated content items are listed"
+      },
+      {
+        "type": "action",
+        "description": "Approve one or more AI content items"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify approved items change status accordingly"
+      },
+      {
+        "type": "action",
+        "description": "Reject an item and trigger regeneration"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify item is regenerated and status updates"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Audit Trail Records User Actions Correctly",
+    "description": "Verify that all critical user actions including corrections, validations, and edits are logged in the audit trail and can be exported.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform various actions in the system such as correcting findings, editing Q&A, and validating data"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to audit trail page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all actions are logged with correct timestamps and user info"
+      },
+      {
+        "type": "action",
+        "description": "Export the audit trail log"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify exported data contains the logged actions accurately"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "System Health Checks for Uptime and Service Status",
+    "description": "Verify that health endpoints report correct system status including uptime at or above 99.9%, connectivity to Neo4j and job queues.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Access the system health API endpoint"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the system uptime is 99.9% or higher"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify health endpoint reports Neo4j knowledge graph connectivity status as healthy"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify health endpoint reports job queue service status as healthy"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Accessibility Compliance Verification",
+    "description": "Validate that the platform supports keyboard navigation, screen readers, and high contrast modes for accessibility compliance.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate through application UI using only keyboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all interactive elements are reachable and operable via keyboard"
+      },
+      {
+        "type": "action",
+        "description": "Use screen reader software to navigate key pages"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify screen reader properly announces UI elements and content"
+      },
+      {
+        "type": "action",
+        "description": "Enable high contrast mode"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI is readable and all components maintain usability in high contrast mode"
+      }
+    ]
+  }
+]
