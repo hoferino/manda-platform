@@ -4,7 +4,61 @@
  * Tool definitions for the workflow-based CIM agent.
  * Tools for workflow progression, context saving, outline management, and slide creation.
  *
+ * ## Overview
+ *
+ * This module defines all LangChain tools available to the CIM Builder agent.
+ * Tools are organized into three categories:
+ *
+ * ### Research Tools
+ * - `web_search` - Search external sources for market data, competitors
+ * - `knowledge_search` - Search the uploaded document knowledge base
+ * - `get_section_context` - Get all findings for a CIM section
+ *
+ * ### Workflow Tools
+ * - `advance_workflow` - Move to the next workflow stage
+ * - `navigate_to_stage` - Jump back to a previous stage (non-linear navigation)
+ * - `save_buyer_persona` - Save buyer type, motivations, concerns
+ * - `save_hero_concept` - Save hero concept and investment thesis
+ * - `create_outline` - Create the CIM section structure
+ * - `update_outline` - Modify outline (add/remove/reorder sections)
+ * - `start_section` - Begin working on a specific section
+ *
+ * ### Output Tools
+ * - `update_slide` - Create/update slides with layouts and components
+ * - `save_context` - Save gathered company information to memory
+ *
+ * ## Tool Result Handling
+ *
+ * Tool results are processed by the `postToolNode` in graph.ts which:
+ * - Parses JSON responses from tools
+ * - Updates state based on result fields (e.g., `advancedWorkflow`, `buyerPersona`)
+ * - Handles special cases like navigation vs. advancement
+ *
+ * ## Exported Constants
+ *
+ * - `WORKFLOW_STAGE_ORDER` - Ordered array of all workflow stages
+ * - `NAVIGABLE_STAGES` - Stages that can be navigated to (excludes welcome/complete)
+ * - `cimMVPTools` - Array of all tool instances for binding to the model
+ *
+ * ## Usage
+ *
+ * ```typescript
+ * import { cimMVPTools, WORKFLOW_STAGE_ORDER } from './tools'
+ *
+ * // Bind tools to model
+ * const modelWithTools = baseModel.bindTools(cimMVPTools)
+ *
+ * // Check valid stages
+ * if (WORKFLOW_STAGE_ORDER.includes(targetStage)) { ... }
+ * ```
+ *
+ * @module cim-mvp/tools
+ * @see {@link ./graph.ts} for tool result processing in postToolNode
+ * @see {@link ./prompts.ts} for tool documentation in system prompt
+ * @see {@link ./state.ts} for state types updated by tools
+ *
  * Story: CIM MVP Workflow Fix
+ * Enhancement: Added navigate_to_stage for non-linear workflow
  */
 
 import { tool } from '@langchain/core/tools'
@@ -122,7 +176,7 @@ export const knowledgeSearchTool = tool(
         success: true,
         found: true,
         count: results.length,
-        findings: results.slice(0, 10), // Limit to top 10
+        findings: results.slice(0, MAX_KNOWLEDGE_SEARCH_RESULTS),
       })
     } catch (error) {
       return JSON.stringify({
@@ -322,11 +376,33 @@ export const updateSlideTool = tool(
 // =============================================================================
 // Workflow Tools (Story 2: CIM MVP Workflow Fix)
 // =============================================================================
+//
+// These tools manage the CIM creation workflow:
+// - Stage progression (advance_workflow, navigate_to_stage)
+// - Context capture (save_buyer_persona, save_hero_concept, save_context)
+// - Structure management (create_outline, update_outline, start_section)
+//
+// Tool results are JSON objects that postToolNode parses to update state.
+// Key result fields:
+// - advancedWorkflow + targetStage → updates workflowProgress.currentStage
+// - navigatedToStage → indicates backward navigation (preserves completed stages)
+// - buyerPersona → updates state.buyerPersona
+// - heroContext → updates state.heroContext
+// - cimOutline → updates state.cimOutline
+// - gatheredContext → merges into state.gatheredContext
+// =============================================================================
+
+/**
+ * Maximum number of search results to return from knowledge search.
+ * Limits response size to keep context manageable.
+ */
+const MAX_KNOWLEDGE_SEARCH_RESULTS = 10
 
 /**
  * Workflow stage order for validation
+ * Exported for use in other modules (e.g., prompts.ts)
  */
-const WORKFLOW_STAGE_ORDER: WorkflowStage[] = [
+export const WORKFLOW_STAGE_ORDER: WorkflowStage[] = [
   'welcome',
   'buyer_persona',
   'hero_concept',
@@ -335,6 +411,71 @@ const WORKFLOW_STAGE_ORDER: WorkflowStage[] = [
   'building_sections',
   'complete',
 ]
+
+/**
+ * Navigable stages - stages that can be jumped to via navigate_to_stage
+ * Excludes 'welcome' (starting point) and 'complete' (end state)
+ */
+export const NAVIGABLE_STAGES = [
+  'buyer_persona',
+  'hero_concept',
+  'investment_thesis',
+  'outline',
+  'building_sections',
+] as const
+
+/**
+ * Navigate to Stage Tool
+ *
+ * Allows jumping to a previous workflow stage to revise decisions.
+ * Supports non-linear workflow navigation per v3 spec.
+ *
+ * @remarks
+ * - Cannot navigate to 'welcome' (starting point only)
+ * - Cannot navigate to 'complete' (must advance through workflow)
+ * - Previous work is preserved when navigating backward
+ */
+export const navigateToStageTool = tool(
+  async ({ targetStage, reason }): Promise<string> => {
+    // Note: Schema validation via z.enum already ensures valid stage,
+    // but we keep this check for runtime safety and better error messages
+    if (!NAVIGABLE_STAGES.includes(targetStage as typeof NAVIGABLE_STAGES[number])) {
+      console.error(`[navigateToStageTool] Invalid target stage: ${targetStage}`)
+      return JSON.stringify({
+        success: false,
+        error: `Invalid stage: ${targetStage}`,
+        validStages: NAVIGABLE_STAGES,
+      })
+    }
+
+    console.log(`[navigateToStageTool] Navigating to ${targetStage}: ${reason}`)
+
+    const formattedStageName = targetStage.replace(/_/g, ' ')
+    return JSON.stringify({
+      navigatedToStage: true,
+      targetStage,
+      reason,
+      message: `Navigated to ${formattedStageName} stage. Previous work is preserved - you can revise and continue from here.`,
+      // This triggers state update in postToolNode
+      advancedWorkflow: true,
+    })
+  },
+  {
+    name: 'navigate_to_stage',
+    description:
+      'Jump to a previous workflow stage to revise decisions. Use when user wants to go back and change buyer persona, hero concept, thesis, or outline. Previous work is preserved.',
+    schema: z.object({
+      targetStage: z.enum([
+        'buyer_persona',
+        'hero_concept',
+        'investment_thesis',
+        'outline',
+        'building_sections',
+      ]).describe('Target stage to navigate to (cannot go to welcome or complete via navigation)'),
+      reason: z.string().describe('Why we are revisiting this stage'),
+    }),
+  }
+)
 
 /**
  * Advance Workflow Tool
@@ -673,12 +814,44 @@ export const saveContextTool = tool(
 )
 
 /**
- * All CIM MVP tools
+ * All CIM MVP tools exported as an array for model binding.
  *
- * Organized by category:
- * - Research tools: web search, knowledge search, section context
- * - Workflow tools: advance workflow, save persona, save hero, create/update outline, start section
- * - Output tools: update slide, save context
+ * ## Tool Categories
+ *
+ * ### Research Tools (3)
+ * | Tool | Purpose |
+ * |------|---------|
+ * | `web_search` | External web search via Tavily API |
+ * | `knowledge_search` | Search uploaded document knowledge base |
+ * | `get_section_context` | Get all findings for a CIM section |
+ *
+ * ### Workflow Tools (7)
+ * | Tool | Purpose |
+ * |------|---------|
+ * | `advance_workflow` | Move to next stage |
+ * | `navigate_to_stage` | Jump to previous stage |
+ * | `save_buyer_persona` | Save buyer context |
+ * | `save_hero_concept` | Save hero and thesis |
+ * | `create_outline` | Create CIM structure |
+ * | `update_outline` | Modify CIM structure |
+ * | `start_section` | Begin section work |
+ *
+ * ### Output Tools (2)
+ * | Tool | Purpose |
+ * |------|---------|
+ * | `update_slide` | Create/update slide content |
+ * | `save_context` | Save gathered information |
+ *
+ * ## Usage
+ *
+ * ```typescript
+ * import { cimMVPTools } from './tools'
+ *
+ * const model = new ChatAnthropic({ ... })
+ * const modelWithTools = model.bindTools(cimMVPTools)
+ * ```
+ *
+ * @see {@link ./graph.ts} postToolNode for result processing
  */
 export const cimMVPTools = [
   // Research
@@ -687,6 +860,7 @@ export const cimMVPTools = [
   getSectionContextTool,
   // Workflow progression
   advanceWorkflowTool,
+  navigateToStageTool,
   saveBuyerPersonaTool,
   saveHeroConceptTool,
   createOutlineTool,

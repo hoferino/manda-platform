@@ -427,7 +427,7 @@ describe('Knowledge Loader - Algorithm Tests', () => {
       const results = simulateSearch(mockFindings, 'revenue')
 
       expect(results.length).toBe(1)
-      expect(results[0].content).toContain('Revenue')
+      expect(results[0]!.content).toContain('Revenue')
     })
 
     it('should be case insensitive', () => {
@@ -443,7 +443,7 @@ describe('Knowledge Loader - Algorithm Tests', () => {
       const results = simulateSearch(mockFindings, 'ARR', 'executive_summary')
 
       expect(results.length).toBe(1)
-      expect(results[0].section).toBe('executive_summary')
+      expect(results[0]!.section).toBe('executive_summary')
     })
 
     it('should return empty array when no matches', () => {
@@ -461,7 +461,7 @@ describe('Knowledge Loader - Algorithm Tests', () => {
     it('should include formatted source', () => {
       const results = simulateSearch(mockFindings, 'Revenue')
 
-      expect(results[0].source).toBe('Financials.xlsx, Sheet 1')
+      expect(results[0]!.source).toBe('Financials.xlsx, Sheet 1')
     })
   })
 
@@ -520,21 +520,21 @@ describe('Knowledge Loader - Algorithm Tests', () => {
       const findings = simulateGetFindings(mockSections, 'executive_summary')
 
       expect(findings.length).toBe(1)
-      expect(findings[0].id).toBe('es-1')
+      expect(findings[0]!.id).toBe('es-1')
     })
 
     it('should support dot-notation for nested sections', () => {
       const findings = simulateGetFindings(mockSections, 'company_overview.history')
 
       expect(findings.length).toBe(1)
-      expect(findings[0].content).toBe('History content')
+      expect(findings[0]!.content).toBe('History content')
     })
 
     it('should support deeply nested paths', () => {
       const findings = simulateGetFindings(mockSections, 'financial_performance.revenue')
 
       expect(findings.length).toBe(1)
-      expect(findings[0].content).toBe('Revenue content')
+      expect(findings[0]!.content).toBe('Revenue content')
     })
 
     it('should return empty array for nonexistent path', () => {
