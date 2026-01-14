@@ -25,12 +25,20 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
 
-  // Skip middleware auth for routes that handle their own authentication
-  // This allows these routes to support both cookies and Bearer tokens
-  if (SELF_AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
+  // Check if this is a self-auth route (supports Bearer token)
+  const isSelfAuthRoute = SELF_AUTH_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // If Bearer token is present on self-auth routes, skip middleware entirely
+  // These routes handle their own auth for CLI tools, benchmarks, etc.
+  const authHeader = request.headers.get("authorization");
+  if (isSelfAuthRoute && authHeader?.startsWith("Bearer ")) {
     return supabaseResponse;
   }
 
+  // For all other requests (including cookie-based self-auth routes),
+  // create Supabase client to refresh session
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -70,8 +78,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Skip org check for org management routes
-  if (ORG_EXEMPT_ROUTES.some((route) => pathname.startsWith(route))) {
+  // Skip org check for org management routes and self-auth routes
+  // Self-auth routes verify access themselves via RLS (user_id checks)
+  if (
+    ORG_EXEMPT_ROUTES.some((route) => pathname.startsWith(route)) ||
+    isSelfAuthRoute
+  ) {
     return supabaseResponse;
   }
 
