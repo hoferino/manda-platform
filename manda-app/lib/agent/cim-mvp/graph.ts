@@ -4,7 +4,81 @@
  * LangGraph StateGraph for workflow-based CIM conversations.
  * Handles workflow progression, context saving, outline management, and slide creation.
  *
+ * ## Architecture
+ *
+ * The graph implements a simple agent loop with post-processing:
+ *
+ * ```
+ * START → agent → [tools] → post_tool → agent → ... → END
+ *           ↓         ↓
+ *         (no tools)  ↓
+ *           ↓         ↓
+ *          END    (process tool results)
+ * ```
+ *
+ * ### Nodes
+ *
+ * 1. **agent** - Main reasoning node
+ *    - Loads knowledge on first run (if available)
+ *    - Builds system prompt from current state
+ *    - Invokes Claude model with tools
+ *
+ * 2. **tools** - LangGraph ToolNode
+ *    - Executes tool calls from agent
+ *    - Returns tool results as messages
+ *
+ * 3. **post_tool** - State update node
+ *    - Parses JSON tool results
+ *    - Updates state based on result fields
+ *    - Handles: workflow progression, buyer persona, hero context,
+ *      outline management, section tracking, slide updates, gathered context
+ *
+ * ### Routing
+ *
+ * - `shouldContinue`: agent → tools (if tool calls) or END
+ * - `afterTools`: tools → post_tool (always)
+ * - `afterPostTool`: post_tool → agent (always, continues loop)
+ *
+ * ## State Management
+ *
+ * State is managed via LangGraph Annotations (see state.ts).
+ * Key state fields updated by this graph:
+ *
+ * | Field | Updated By |
+ * |-------|------------|
+ * | `messages` | agentNode (model responses) |
+ * | `workflowProgress` | postToolNode (advance_workflow, navigate_to_stage) |
+ * | `buyerPersona` | postToolNode (save_buyer_persona) |
+ * | `heroContext` | postToolNode (save_hero_concept) |
+ * | `cimOutline` | postToolNode (create_outline, update_outline) |
+ * | `gatheredContext` | postToolNode (save_context) |
+ * | `pendingSlideUpdate` | postToolNode (update_slide) |
+ *
+ * ## Persistence
+ *
+ * The graph supports checkpointing for conversation persistence:
+ *
+ * ```typescript
+ * // Get graph with persistence
+ * const graph = await getCIMMVPGraph()
+ *
+ * // Or create with custom checkpointer
+ * const graph = createCIMMVPGraph(myCheckpointer)
+ * ```
+ *
+ * ## Exports
+ *
+ * - `cimMVPGraph` - Compiled graph without persistence
+ * - `getCIMMVPGraph()` - Get graph with default checkpointer (cached)
+ * - `createCIMMVPGraph(checkpointer?)` - Create graph with optional checkpointer
+ *
+ * @module cim-mvp/graph
+ * @see {@link ./state.ts} for state type definitions
+ * @see {@link ./tools.ts} for tool definitions
+ * @see {@link ./prompts.ts} for system prompt construction
+ *
  * Story: CIM MVP Workflow Fix
+ * Enhancement: Added navigation support in postToolNode
  */
 
 import { StateGraph, START, END } from '@langchain/langgraph'
@@ -26,6 +100,20 @@ import { cimMVPTools } from './tools'
 import { getSystemPrompt } from './prompts'
 import { loadKnowledge } from './knowledge-loader'
 import { getCheckpointer, type Checkpointer } from '@/lib/agent/checkpointer'
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+/**
+ * Default workflow stage when none is set
+ */
+const DEFAULT_WORKFLOW_STAGE: WorkflowStage = 'welcome'
+
+/**
+ * Default slide status for newly created slides
+ */
+const DEFAULT_SLIDE_STATUS = 'draft' as const
 
 // =============================================================================
 // LLM Configuration
@@ -53,10 +141,27 @@ const model = baseModel.bindTools(cimMVPTools).withConfig({
 // =============================================================================
 
 /**
- * Agent node
+ * Agent node - Main reasoning node that processes messages and decides on tool calls.
  *
- * Main reasoning node that processes messages and decides on tool calls.
- * Tries to load knowledge on first run, but continues even if unavailable.
+ * This node:
+ * 1. Attempts to load knowledge base on first invocation (if not already attempted)
+ * 2. Builds a dynamic system prompt based on current state
+ * 3. Invokes the Claude model with conversation history
+ * 4. Returns the model response and any state updates
+ *
+ * Knowledge loading is non-blocking - if no knowledge file exists, the agent
+ * continues in "chat mode" where it gathers information through conversation.
+ *
+ * @param state - Current CIM MVP state
+ * @returns Partial state update with new message and knowledge status
+ *
+ * @example
+ * ```typescript
+ * // Called automatically by the graph
+ * const updates = await agentNode(state)
+ * // updates.messages contains the model response
+ * // updates.knowledgeLoaded indicates if knowledge was loaded
+ * ```
  */
 async function agentNode(
   state: CIMMVPStateType
@@ -111,16 +216,37 @@ async function agentNode(
 const toolNode = new ToolNode(cimMVPTools)
 
 /**
- * Post-tool processing node
+ * Post-tool processing node - Handles tool results that affect state.
  *
- * Handles tool results that affect state:
- * - Workflow progression (advance_workflow)
- * - Context saving (save_buyer_persona, save_hero_concept, save_context)
- * - Outline management (create_outline, update_outline)
- * - Section tracking (start_section)
- * - Slide updates (update_slide)
+ * This node parses JSON tool results and updates state accordingly.
+ * It's the bridge between tool execution and state management.
+ *
+ * ## Handled Tool Results
+ *
+ * | Result Field | Tool | State Update |
+ * |--------------|------|--------------|
+ * | `advancedWorkflow` + `targetStage` | advance_workflow | workflowProgress.currentStage |
+ * | `navigatedToStage` + `targetStage` | navigate_to_stage | workflowProgress.currentStage (preserves completed) |
+ * | `buyerPersona` | save_buyer_persona | buyerPersona |
+ * | `heroContext` | save_hero_concept | heroContext |
+ * | `cimOutline` | create_outline | cimOutline, workflowProgress.sectionProgress |
+ * | `sectionDividerSlides` | create_outline | allSlideUpdates |
+ * | `outlineUpdate` | update_outline | cimOutline (add/remove/reorder/update) |
+ * | `startSection` | start_section | workflowProgress.currentSectionId |
+ * | `slideId` + `sectionId` | update_slide | pendingSlideUpdate, allSlideUpdates |
+ * | `gatheredContext` | save_context | gatheredContext (merged) |
+ *
+ * ## Navigation vs. Advancement
+ *
+ * When processing workflow stage changes:
+ * - **Advancement** (advance_workflow): Adds current stage to completedStages
+ * - **Navigation** (navigate_to_stage): Preserves completedStages, only changes currentStage
+ *
+ * @param state - Current CIM MVP state with tool result messages
+ * @returns Partial state update based on tool results
  *
  * Story: CIM MVP Workflow Fix (Story 4)
+ * Enhancement: Added navigate_to_stage handling
  */
 async function postToolNode(
   state: CIMMVPStateType
@@ -135,30 +261,43 @@ async function postToolNode(
         const updates: Partial<CIMMVPStateType> = {}
 
         // =========================================
-        // 4.1: Handle advance_workflow
+        // 4.1: Handle advance_workflow AND navigate_to_stage
         // =========================================
         if (result.advancedWorkflow && result.targetStage) {
           const targetStage = result.targetStage as WorkflowStage
-          const currentProgress = state.workflowProgress || {
-            currentStage: 'welcome' as WorkflowStage,
-            completedStages: [] as WorkflowStage[],
+          const currentProgress: WorkflowProgress = state.workflowProgress || {
+            currentStage: DEFAULT_WORKFLOW_STAGE,
+            completedStages: [],
             sectionProgress: {},
           }
 
-          // Add current stage to completed (if not already there)
-          const completedStages = currentProgress.currentStage !== targetStage
-            ? [...currentProgress.completedStages, currentProgress.currentStage]
-            : currentProgress.completedStages
+          // Check if this is a navigation (going backward) vs advance (going forward)
+          const isNavigation = result.navigatedToStage === true
 
-          updates.workflowProgress = {
-            ...currentProgress,
-            currentStage: targetStage,
-            completedStages: completedStages.filter(
-              (v, i, a) => a.indexOf(v) === i
-            ) as WorkflowStage[], // dedupe
+          if (isNavigation) {
+            // Navigation: Don't add current to completed, just move to target
+            // This allows revisiting stages without losing the "completed" status of later stages
+            updates.workflowProgress = {
+              ...currentProgress,
+              currentStage: targetStage,
+              // Keep completedStages as-is - we're revisiting, not invalidating
+            }
+            console.log(`[postToolNode] Navigated back to: ${targetStage} (from ${currentProgress.currentStage})`)
+          } else {
+            // Normal advance: Add current stage to completed
+            const completedStages = currentProgress.currentStage !== targetStage
+              ? [...currentProgress.completedStages, currentProgress.currentStage]
+              : currentProgress.completedStages
+
+            updates.workflowProgress = {
+              ...currentProgress,
+              currentStage: targetStage,
+              completedStages: completedStages.filter(
+                (v, i, a) => a.indexOf(v) === i
+              ) as WorkflowStage[], // dedupe
+            }
+            console.log(`[postToolNode] Workflow advanced: ${currentProgress.currentStage} → ${targetStage}`)
           }
-
-          console.log(`[postToolNode] Workflow advanced: ${currentProgress.currentStage} → ${targetStage}`)
         }
 
         // =========================================
@@ -194,9 +333,9 @@ async function postToolNode(
           }
 
           // Merge with existing workflowProgress
-          const currentProgress = state.workflowProgress || {
-            currentStage: 'outline' as WorkflowStage,
-            completedStages: [] as WorkflowStage[],
+          const currentProgress: WorkflowProgress = state.workflowProgress || {
+            currentStage: 'outline',
+            completedStages: [],
             sectionProgress: {},
           }
 
@@ -220,9 +359,9 @@ async function postToolNode(
         // =========================================
         if (result.outlineUpdate) {
           const currentOutline = state.cimOutline || { sections: [] }
-          const currentProgress = state.workflowProgress || {
-            currentStage: 'outline' as WorkflowStage,
-            completedStages: [] as WorkflowStage[],
+          const currentProgress: WorkflowProgress = state.workflowProgress || {
+            currentStage: 'outline',
+            completedStages: [],
             sectionProgress: {},
           }
 
@@ -286,9 +425,9 @@ async function postToolNode(
         // 4.6: Handle start_section
         // =========================================
         if (result.startSection && result.sectionId) {
-          const currentProgress = state.workflowProgress || {
-            currentStage: 'building_sections' as WorkflowStage,
-            completedStages: [] as WorkflowStage[],
+          const currentProgress: WorkflowProgress = state.workflowProgress || {
+            currentStage: 'building_sections',
+            completedStages: [],
             sectionProgress: {},
           }
 
@@ -324,19 +463,21 @@ async function postToolNode(
         // 4.7: Handle update_slide (enhanced with layouts)
         // =========================================
         if (result.slideId && result.sectionId && !result.sectionDividerSlides) {
+          const slideLayoutType = result.layoutType as LayoutType | undefined
           const slideUpdate: SlideUpdate = {
             slideId: result.slideId,
             sectionId: result.sectionId,
             title: result.title || 'Untitled Slide',
-            layoutType: (result.layoutType as LayoutType) || undefined,
+            layoutType: slideLayoutType,
             components: result.components || [],
-            status: 'draft',
+            status: DEFAULT_SLIDE_STATUS,
           }
 
           updates.pendingSlideUpdate = slideUpdate
           updates.allSlideUpdates = [slideUpdate]
 
-          console.log(`[postToolNode] Slide updated: ${result.slideId} (layout: ${result.layoutType || 'default'})`)
+          const layoutDescription = slideLayoutType || 'default'
+          console.log(`[postToolNode] Slide updated: ${result.slideId} (layout: ${layoutDescription})`)
         }
 
         // =========================================
@@ -368,8 +509,12 @@ async function postToolNode(
         if (Object.keys(updates).length > 0) {
           return updates
         }
-      } catch {
-        // Not JSON, ignore
+      } catch (parseError) {
+        // Not valid JSON - this is expected for non-tool-result messages
+        // Only log if it looks like it should have been JSON (starts with { or [)
+        if (typeof content === 'string' && (content.startsWith('{') || content.startsWith('['))) {
+          console.debug('[postToolNode] Failed to parse JSON-like content:', parseError)
+        }
       }
     }
   }
@@ -424,15 +569,33 @@ const workflow = new StateGraph(CIMMVPState)
   })
 
 /**
- * Compiled CIM MVP graph
+ * Compiled CIM MVP graph (without persistence).
+ *
+ * Use this for one-off executions where conversation state doesn't need to persist.
+ * For persistent conversations, use `getCIMMVPGraph()` or `createCIMMVPGraph()`.
  */
 export const cimMVPGraph = workflow.compile()
 
-// Cached graph with checkpointer
+// Cached graph with checkpointer (singleton pattern)
 let cachedGraphWithCheckpointer: ReturnType<typeof workflow.compile> | null = null
 
 /**
- * Get CIM MVP graph with persistence
+ * Get CIM MVP graph with default persistence checkpointer.
+ *
+ * Uses a cached singleton pattern - subsequent calls return the same instance.
+ * The checkpointer is retrieved from the shared checkpointer module.
+ *
+ * @returns Promise resolving to the compiled graph with persistence
+ *
+ * @example
+ * ```typescript
+ * const graph = await getCIMMVPGraph()
+ *
+ * // Use with thread ID for persistence
+ * const result = await graph.invoke(state, {
+ *   configurable: { thread_id: 'conversation-123' }
+ * })
+ * ```
  */
 export async function getCIMMVPGraph() {
   if (cachedGraphWithCheckpointer) {
@@ -450,7 +613,23 @@ export async function getCIMMVPGraph() {
 }
 
 /**
- * Create a graph instance with custom checkpointer
+ * Create a new CIM MVP graph instance with optional custom checkpointer.
+ *
+ * Unlike `getCIMMVPGraph()`, this creates a fresh instance each call.
+ * Use this when you need a custom checkpointer or isolated graph instances.
+ *
+ * @param checkpointer - Optional LangGraph checkpointer for persistence
+ * @returns Compiled graph instance
+ *
+ * @example
+ * ```typescript
+ * // Without persistence
+ * const graph = createCIMMVPGraph()
+ *
+ * // With custom checkpointer
+ * const myCheckpointer = new SqliteSaver(':memory:')
+ * const graph = createCIMMVPGraph(myCheckpointer)
+ * ```
  */
 export function createCIMMVPGraph(checkpointer?: Checkpointer) {
   if (checkpointer) {

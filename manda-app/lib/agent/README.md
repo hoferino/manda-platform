@@ -13,11 +13,12 @@ Quick reference for agent implementations in the Manda platform.
 
 ```
 lib/agent/
-├── cim-mvp/           # CIM Builder - ACTIVE MVP
-│   ├── graph.ts       # LangGraph StateGraph
-│   ├── state.ts       # CIM-specific state
-│   ├── tools.ts       # CIM tools (save_buyer_persona, create_outline, etc.)
-│   ├── prompts.ts     # System prompts
+├── cim-mvp/           # CIM Builder - ACTIVE MVP (v1.1.0)
+│   ├── README.md      # Module documentation (NEW)
+│   ├── graph.ts       # LangGraph StateGraph with post-tool processing
+│   ├── state.ts       # CIM-specific state (Annotations)
+│   ├── tools.ts       # CIM tools (12 tools including navigate_to_stage)
+│   ├── prompts.ts     # v3 conversational prompts with stage instructions
 │   └── knowledge-loader.ts  # JSON knowledge file loader
 │
 ├── v2/                # Chat Agent - PRODUCTION
@@ -111,6 +112,24 @@ for await (const event of streamAgentWithTokens(state, threadId)) {
 ### Project Chat
 - **Route:** `app/projects/[id]/chat/`
 - **Hook:** Uses v2 agent via `/api/projects/[id]/chat`
+
+## Recent Changes
+
+### CIM MVP v1.1.0 (Current)
+- **v3 Conversational Patterns**: Enhanced prompts for more natural interactions
+  - One question at a time approach
+  - Always explain why (connect to buyer/thesis)
+  - Present options with equal detail
+  - Wait for approval before proceeding
+- **Non-Linear Navigation**: New `navigate_to_stage` tool allows jumping back to revise earlier decisions
+- **Enhanced Documentation**: Added comprehensive JSDoc to all modules and new README
+
+### Tool Changes
+| Tool | Change |
+|------|--------|
+| `navigate_to_stage` | **NEW** - Jump to previous workflow stages |
+| All prompt stages | Enhanced with v3 conversational patterns |
+| `postToolNode` | Now handles navigation vs. advancement differently |
 
 ## Future Work
 
