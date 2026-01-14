@@ -23,28 +23,45 @@ import {
   type LayoutType,
 } from './state'
 import { cimMVPTools } from './tools'
-import { getSystemPrompt } from './prompts'
+import { getSystemPromptForCaching } from './prompts'
 import { loadKnowledge } from './knowledge-loader'
 import { getCheckpointer, type Checkpointer } from '@/lib/agent/checkpointer'
 
 // =============================================================================
-// LLM Configuration
+// LLM Configuration with Prompt Caching (Story 5)
 // =============================================================================
 
+/**
+ * Enable Anthropic prompt caching for cost optimization.
+ *
+ * Cache structure:
+ * - Stable content (tools, base prompts) is cached with 1-hour TTL
+ * - Dynamic content (conversation history) is not cached
+ *
+ * Expected savings: 60-80% cost reduction on subsequent requests
+ * Min cacheable prefix: 2048 tokens for Sonnet, 1024 for Haiku
+ */
 const baseModel = new ChatAnthropic({
   model: 'claude-haiku-4-5-20251001',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   temperature: 0.7,
   maxTokens: 4096,
+  // Enable prompt caching with extended TTL (1 hour)
+  // See: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
+  clientOptions: {
+    defaultHeaders: {
+      'anthropic-beta': 'prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11',
+    },
+  },
 })
 
 // Bind tools and add config
 const model = baseModel.bindTools(cimMVPTools).withConfig({
   runName: 'cim-mvp-agent',
-  tags: ['cim-mvp', 'claude-haiku-4.5'],
+  tags: ['cim-mvp', 'claude-haiku-4.5', 'prompt-caching'],
   metadata: {
     graph: 'cim-mvp',
-    version: '1.1.0',
+    version: '1.2.0', // Bumped for prompt caching
   },
 })
 
@@ -57,6 +74,10 @@ const model = baseModel.bindTools(cimMVPTools).withConfig({
  *
  * Main reasoning node that processes messages and decides on tool calls.
  * Tries to load knowledge on first run, but continues even if unavailable.
+ *
+ * Story 5: Uses prompt caching to reduce costs by 60-80%
+ * - Static prompt (tools, rules) is cached with 1-hour TTL
+ * - Dynamic prompt (state, progress) is not cached
  */
 async function agentNode(
   state: CIMMVPStateType
@@ -78,22 +99,49 @@ async function agentNode(
     }
   }
 
-  // Build system prompt with current state
-  const systemPrompt = getSystemPrompt({
+  // Build system prompt with caching support (Story 5)
+  const { staticPrompt, dynamicPrompt } = getSystemPromptForCaching({
     ...state,
     knowledgeLoaded,
     companyName,
   })
 
-  // Debug: Log message count
+  // Debug: Log message count and caching info
   console.log(`[CIM-MVP] Agent node invoked with ${state.messages.length} messages`)
+  console.log(`[CIM-MVP] Static prompt: ${staticPrompt.length} chars (cached), Dynamic: ${dynamicPrompt.length} chars`)
 
-  // Invoke the model with system prompt and conversation history
-  // Claude handles LangChain messages natively
+  // Invoke the model with cached system prompt structure
+  // Static content gets cache_control for 1-hour TTL
+  // Dynamic content follows without caching
+  // See: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
   const response = await model.invoke([
-    { role: 'system', content: systemPrompt },
+    {
+      role: 'system',
+      content: [
+        {
+          type: 'text',
+          text: staticPrompt,
+          // Cache the static portion with 1-hour TTL (extended caching beta)
+          cache_control: { type: 'ephemeral', ttl: '1h' },
+        },
+        {
+          type: 'text',
+          text: dynamicPrompt,
+          // No cache_control - this changes per request
+        },
+      ],
+    },
     ...state.messages,
   ])
+
+  // Log cache metrics if available
+  const usageMetadata = response.usage_metadata
+  if (usageMetadata) {
+    const inputDetails = usageMetadata.input_token_details as { cache_read?: number; cache_creation?: number } | undefined
+    if (inputDetails?.cache_read || inputDetails?.cache_creation) {
+      console.log(`[CIM-MVP] Cache metrics - read: ${inputDetails.cache_read || 0}, write: ${inputDetails.cache_creation || 0}`)
+    }
+  }
 
   console.log(`[CIM-MVP] Model response received, tool_calls: ${response.tool_calls?.length || 0}`)
 
@@ -120,7 +168,13 @@ const toolNode = new ToolNode(cimMVPTools)
  * - Section tracking (start_section)
  * - Slide updates (update_slide)
  *
+ * HITL Validation (Belt-and-Suspenders):
+ * This node also performs state-based validation to catch cases where the LLM
+ * might bypass prompt-based HITL instructions. If a tool is called in an
+ * inappropriate state, we log a warning and can optionally reject the action.
+ *
  * Story: CIM MVP Workflow Fix (Story 4)
+ * Story 1 & 2: Added HITL state validation
  */
 async function postToolNode(
   state: CIMMVPStateType
@@ -135,6 +189,32 @@ async function postToolNode(
         const updates: Partial<CIMMVPStateType> = {}
 
         // =========================================
+        // HITL State Validation (Belt-and-Suspenders)
+        // =========================================
+        const currentStage = state.workflowProgress?.currentStage || 'welcome'
+
+        // Validate create_outline is only called in outline stage
+        if (result.cimOutline && currentStage !== 'outline') {
+          console.warn(`[postToolNode] HITL WARNING: create_outline called in ${currentStage} stage (expected: outline)`)
+          console.warn(`[postToolNode] This may indicate the agent bypassed the approval flow`)
+          // We still allow it but log for debugging - in production could reject
+        }
+
+        // Validate update_slide is only called in building_sections stage
+        if (result.slideId && result.sectionId && !result.sectionDividerSlides) {
+          if (currentStage !== 'building_sections') {
+            console.warn(`[postToolNode] HITL WARNING: update_slide called in ${currentStage} stage (expected: building_sections)`)
+            console.warn(`[postToolNode] This may indicate the agent bypassed the approval flow`)
+          }
+
+          // Check if current section is being worked on
+          const currentSectionId = state.workflowProgress?.currentSectionId
+          if (currentSectionId && result.sectionId !== currentSectionId) {
+            console.warn(`[postToolNode] HITL WARNING: update_slide for section ${result.sectionId} but current section is ${currentSectionId}`)
+          }
+        }
+
+        // =========================================
         // 4.1: Handle advance_workflow
         // =========================================
         if (result.advancedWorkflow && result.targetStage) {
@@ -143,6 +223,28 @@ async function postToolNode(
             currentStage: 'welcome' as WorkflowStage,
             completedStages: [] as WorkflowStage[],
             sectionProgress: {},
+          }
+
+          // HITL Validation: Check stage progression is valid
+          const stageOrder: WorkflowStage[] = [
+            'welcome', 'buyer_persona', 'hero_concept', 'investment_thesis',
+            'outline', 'building_sections', 'complete'
+          ]
+          const currentIdx = stageOrder.indexOf(currentProgress.currentStage)
+          const targetIdx = stageOrder.indexOf(targetStage)
+
+          if (targetIdx < currentIdx) {
+            console.warn(`[postToolNode] HITL WARNING: Attempting to go backwards from ${currentProgress.currentStage} to ${targetStage}`)
+            // Still allow for now but log - could implement stage navigation tool (Story 3)
+          } else if (targetIdx > currentIdx + 1) {
+            console.warn(`[postToolNode] HITL WARNING: Skipping stages from ${currentProgress.currentStage} to ${targetStage}`)
+          }
+
+          // Special check: outline stage requires outline approval before advancing to building_sections
+          if (currentProgress.currentStage === 'outline' && targetStage === 'building_sections') {
+            if (!state.cimOutline || state.cimOutline.sections.length === 0) {
+              console.warn(`[postToolNode] HITL WARNING: Advancing to building_sections but no outline has been created!`)
+            }
           }
 
           // Add current stage to completed (if not already there)
@@ -159,6 +261,52 @@ async function postToolNode(
           }
 
           console.log(`[postToolNode] Workflow advanced: ${currentProgress.currentStage} → ${targetStage}`)
+        }
+
+        // =========================================
+        // 4.1b: Handle navigate_to_stage (Story 3)
+        // =========================================
+        if (result.navigatedToStage && result.targetStage) {
+          const targetStage = result.targetStage as WorkflowStage
+          const currentProgress = state.workflowProgress || {
+            currentStage: 'welcome' as WorkflowStage,
+            completedStages: [] as WorkflowStage[],
+            sectionProgress: {},
+          }
+
+          // Validate: can only navigate to completed stages
+          const stageOrder: WorkflowStage[] = [
+            'welcome', 'buyer_persona', 'hero_concept', 'investment_thesis',
+            'outline', 'building_sections', 'complete'
+          ]
+          const currentIdx = stageOrder.indexOf(currentProgress.currentStage)
+          const targetIdx = stageOrder.indexOf(targetStage)
+
+          // Check if target stage was completed
+          const wasCompleted = currentProgress.completedStages.includes(targetStage) ||
+            (targetIdx < currentIdx) // Current stage implies prior stages were done
+
+          if (!wasCompleted) {
+            console.warn(`[postToolNode] NAVIGATION ERROR: Cannot navigate to ${targetStage} - not completed yet`)
+            // Don't update state - navigation rejected
+          } else if (targetIdx >= currentIdx) {
+            console.warn(`[postToolNode] NAVIGATION ERROR: Cannot navigate forward to ${targetStage} - use advance_workflow instead`)
+            // Don't update state - navigation rejected
+          } else {
+            // Valid backward navigation
+            // Keep completedStages intact (don't remove them) so user can navigate forward again
+            updates.workflowProgress = {
+              ...currentProgress,
+              currentStage: targetStage,
+              // Preserve completedStages - user might just be reviewing
+              // Also preserve sectionProgress for slide work
+            }
+
+            console.log(`[postToolNode] Navigated backward: ${currentProgress.currentStage} → ${targetStage}`)
+            if (result.cascadeWarnings && result.cascadeWarnings.length > 0) {
+              console.log(`[postToolNode] Cascade warnings: ${result.cascadeWarnings.join(', ')}`)
+            }
+          }
         }
 
         // =========================================

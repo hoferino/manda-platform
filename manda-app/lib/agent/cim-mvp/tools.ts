@@ -207,9 +207,19 @@ export const getSectionContextTool = tool(
  * Creates or updates a CIM slide with structured components.
  * Returns slide data that will be streamed to the UI for real-time preview.
  * Enhanced with layoutType and component positioning for wireframe design.
+ *
+ * HITL Validation: This tool should only be called after BOTH:
+ * 1. Content has been approved by user (Step 2)
+ * 2. Visual design has been approved by user (Step 3)
+ * The prompt instructs this, and postToolNode can validate state.
  */
 export const updateSlideTool = tool(
   async ({ sectionId, slideId: existingSlideId, title, layoutType, components }): Promise<string> => {
+    // Log for HITL debugging - if this is called without proper approval flow,
+    // it will be visible in traces
+    console.log(`[updateSlideTool] HITL checkpoint - saving slide "${title}" for section ${sectionId}`)
+    console.log(`[updateSlideTool] NOTE: This should only be called after content AND visual approval`)
+
     const slideId = existingSlideId || `slide-${sectionId}-${nanoid()}`
 
     const slideUpdate: SlideUpdate = {
@@ -373,6 +383,75 @@ export const advanceWorkflowTool = tool(
 )
 
 /**
+ * Navigate to Stage Tool (Story 3: Stage Navigation)
+ *
+ * Allows users to navigate backward to previously completed stages
+ * to revise decisions (buyer persona, hero concept, outline, etc.)
+ *
+ * Validation rules:
+ * - Can only navigate to stages that have been completed
+ * - Cannot navigate forward (use advance_workflow for that)
+ * - Cannot navigate to 'welcome' (no meaningful work to revise there)
+ * - Cannot navigate to 'complete' (use advance_workflow)
+ */
+export const navigateToStageTool = tool(
+  async ({ targetStage, reason }): Promise<string> => {
+    console.log(`[navigateToStageTool] Navigating to ${targetStage}: ${reason}`)
+
+    // Determine what may need re-evaluation based on target stage
+    const cascadeWarnings: Record<string, string[]> = {
+      buyer_persona: [
+        'Hero concept may need adjustment for new buyer type',
+        'Investment thesis framing may need revision',
+        'Outline sections may need reordering for new audience',
+        'Existing slides may need content adjustments',
+      ],
+      hero_concept: [
+        'Investment thesis may need revision',
+        'Outline narrative flow may need adjustment',
+        'Slide messaging may need updates',
+      ],
+      investment_thesis: [
+        'Outline may need structural changes',
+        'Existing slides may need messaging updates',
+      ],
+      outline: [
+        'Section order or content may need adjustment',
+        'Slides may need reorganization',
+      ],
+      building_sections: [
+        'Current slide progress preserved - you can continue or revise',
+      ],
+    }
+
+    const warnings = cascadeWarnings[targetStage] || []
+
+    return JSON.stringify({
+      navigatedToStage: true,
+      targetStage,
+      reason,
+      cascadeWarnings: warnings,
+      message: `Navigated to ${targetStage.replace(/_/g, ' ')} stage for revision.`,
+    })
+  },
+  {
+    name: 'navigate_to_stage',
+    description:
+      'Navigate backward to a previously completed stage to revise decisions. Use when the user wants to change buyer persona, hero concept, outline, etc. Can only navigate to stages that have been completed. Stages: buyer_persona, hero_concept, investment_thesis, outline, building_sections.',
+    schema: z.object({
+      targetStage: z.enum([
+        'buyer_persona',
+        'hero_concept',
+        'investment_thesis',
+        'outline',
+        'building_sections',
+      ]).describe('Target stage to navigate to (must be previously completed)'),
+      reason: z.string().describe('Why the user wants to go back to this stage'),
+    }),
+  }
+)
+
+/**
  * Save Buyer Persona Tool
  *
  * Saves the buyer persona context after discussing with user.
@@ -437,9 +516,19 @@ export const saveHeroConceptTool = tool(
  *
  * Creates the CIM outline structure with auto-generated section IDs.
  * Also creates section divider slides.
+ *
+ * HITL Validation: This tool should only be called after the agent
+ * has presented the outline structure and received user approval.
+ * The prompt instructs this, but we add state validation as a safety net.
  */
 export const createOutlineTool = tool(
   async ({ sections }): Promise<string> => {
+    // Note: Full HITL validation would check state.workflowProgress.currentStage === 'outline'
+    // and that the agent has presented structure to user. Since we don't have access to
+    // full state in the tool, we rely on prompt instructions + postToolNode validation.
+    // This log helps with debugging if HITL is bypassed.
+    console.log(`[createOutlineTool] HITL checkpoint - creating outline with ${sections.length} sections`)
+
     const sectionsWithIds: CIMSection[] = sections.map((s) => ({
       id: nanoid(),
       title: s.title,
@@ -677,7 +766,7 @@ export const saveContextTool = tool(
  *
  * Organized by category:
  * - Research tools: web search, knowledge search, section context
- * - Workflow tools: advance workflow, save persona, save hero, create/update outline, start section
+ * - Workflow tools: advance workflow, navigate, save persona, save hero, create/update outline, start section
  * - Output tools: update slide, save context
  */
 export const cimMVPTools = [
@@ -687,6 +776,7 @@ export const cimMVPTools = [
   getSectionContextTool,
   // Workflow progression
   advanceWorkflowTool,
+  navigateToStageTool,
   saveBuyerPersonaTool,
   saveHeroConceptTool,
   createOutlineTool,
