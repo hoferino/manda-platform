@@ -13,6 +13,7 @@ import {
   formatHeroContext,
   formatCIMOutline,
   getSystemPrompt,
+  getSystemPromptForCaching,
   getPhaseDescription,
   getAllPhases,
 } from '@/lib/agent/cim-mvp/prompts'
@@ -72,22 +73,79 @@ describe('CIM MVP Prompts - getWorkflowStageInstructions', () => {
 
     it('should mention the CIM creation process overview', () => {
       const instructions = getWorkflowStageInstructions('welcome')
-      expect(instructions).toContain('buyer persona')
-      expect(instructions).toContain('hero concept')
+      // Story 6: Updated to match new 5-stage process list
+      expect(instructions).toContain('Buyer Persona')
+      expect(instructions).toContain('Hero Concept')
+      expect(instructions).toContain('Investment Thesis')
+      expect(instructions).toContain('Outline')
+      expect(instructions).toContain('Build Sections')
+    })
+
+    // Story 6: Comprehensive Prompt Review - v3 patterns
+    describe('Story 6: Dynamic Welcome', () => {
+      it('should have dynamic opening based on knowledge availability', () => {
+        const instructions = getWorkflowStageInstructions('welcome')
+        expect(instructions).toContain('DYNAMIC OPENING')
+        expect(instructions).toContain('If knowledge base IS loaded')
+        expect(instructions).toContain('If NO knowledge base')
+      })
+
+      it('should build confidence when knowledge is loaded', () => {
+        const instructions = getWorkflowStageInstructions('welcome')
+        expect(instructions).toContain('What I found')
+        expect(instructions).toContain('Data sufficiency')
+      })
+
+      it('should explain alternative path when no knowledge', () => {
+        const instructions = getWorkflowStageInstructions('welcome')
+        expect(instructions).toContain('Provide documents')
+        expect(instructions).toContain('Share key information verbally')
+      })
     })
   })
 
   describe('buyer_persona stage', () => {
     it('should include buyer type questions', () => {
       const instructions = getWorkflowStageInstructions('buyer_persona')
-      expect(instructions).toContain('target buyer')
-      expect(instructions).toContain('strategic')
-      expect(instructions).toContain('PE')
+      // Story 6: Updated to match new step-by-step approach with examples
+      expect(instructions).toContain('Identify Buyer Type')
+      expect(instructions).toContain('Strategic acquirers')
+      expect(instructions).toContain('Private equity')
     })
 
     it('should mention save_buyer_persona tool', () => {
       const instructions = getWorkflowStageInstructions('buyer_persona')
       expect(instructions).toContain('save_buyer_persona')
+    })
+
+    // Story 6: Comprehensive Prompt Review - v3 patterns
+    describe('Story 6: v3 Prompt Patterns', () => {
+      it('should explain WHY this stage matters', () => {
+        const instructions = getWorkflowStageInstructions('buyer_persona')
+        expect(instructions).toContain('WHY THIS MATTERS')
+        expect(instructions).toContain('shapes EVERYTHING')
+        expect(instructions).toContain('less revision later')
+      })
+
+      it('should use step-by-step approach (one topic at a time)', () => {
+        const instructions = getWorkflowStageInstructions('buyer_persona')
+        expect(instructions).toContain('Step 1: Identify Buyer Type')
+        expect(instructions).toContain('Step 2: Understand Motivations')
+        expect(instructions).toContain('Step 3: Surface Concerns')
+      })
+
+      it('should contextualize questions with data', () => {
+        const instructions = getWorkflowStageInstructions('buyer_persona')
+        expect(instructions).toContain('Contextualize Questions with Company Data')
+        expect(instructions).toContain('reference what you know about the company')
+        expect(instructions).toContain('NexusFlow') // Example with data citation
+      })
+
+      it('should summarize before saving', () => {
+        const instructions = getWorkflowStageInstructions('buyer_persona')
+        expect(instructions).toContain('Let me confirm')
+        expect(instructions).toContain('Does that capture it')
+      })
     })
   })
 
@@ -111,20 +169,83 @@ describe('CIM MVP Prompts - getWorkflowStageInstructions', () => {
       const instructions = getWorkflowStageInstructions('hero_concept')
       expect(instructions).toContain('save_hero_concept')
     })
+
+    // Story 6: Comprehensive Prompt Review - v3 patterns
+    describe('Story 6: v3 Prompt Patterns', () => {
+      it('should explain WHY this stage matters', () => {
+        const instructions = getWorkflowStageInstructions('hero_concept')
+        expect(instructions).toContain('WHY THIS MATTERS')
+        expect(instructions).toContain('first impression')
+      })
+
+      it('should present 3 options with equal depth', () => {
+        const instructions = getWorkflowStageInstructions('hero_concept')
+        expect(instructions).toContain('Option A')
+        expect(instructions).toContain('Option B')
+        expect(instructions).toContain('Option C')
+        // Each option should have hook, supporting data, and buyer connection
+        expect(instructions).toContain('The hook')
+        expect(instructions).toContain('Supporting data')
+        expect(instructions).toContain('Why this works for')
+      })
+
+      it('should connect to buyer context', () => {
+        const instructions = getWorkflowStageInstructions('hero_concept')
+        expect(instructions).toContain('[buyer type]')
+        expect(instructions).toContain('resonate with')
+      })
+
+      it('should confirm choice connects to buyer', () => {
+        const instructions = getWorkflowStageInstructions('hero_concept')
+        expect(instructions).toContain('will resonate with')
+        expect(instructions).toContain('narrative anchor')
+      })
+    })
   })
 
   describe('investment_thesis stage', () => {
     it('should include 3-part thesis structure', () => {
       const instructions = getWorkflowStageInstructions('investment_thesis')
-      expect(instructions).toContain('The Asset')
-      expect(instructions).toContain('The Timing')
-      expect(instructions).toContain('The Opportunity')
+      expect(instructions).toContain('THE ASSET')
+      expect(instructions).toContain('THE TIMING')
+      expect(instructions).toContain('THE OPPORTUNITY')
     })
 
     it('should emphasize data grounding', () => {
       const instructions = getWorkflowStageInstructions('investment_thesis')
       expect(instructions).toContain('DATA REQUIRED')
       expect(instructions).toContain('grounded in facts')
+    })
+
+    // Story 6: Comprehensive Prompt Review - v3 patterns
+    describe('Story 6: v3 Prompt Patterns', () => {
+      it('should explain WHY this stage matters', () => {
+        const instructions = getWorkflowStageInstructions('investment_thesis')
+        expect(instructions).toContain('WHY THIS MATTERS')
+        expect(instructions).toContain('decision framework')
+        expect(instructions).toContain('investment committee')
+      })
+
+      it('should connect to buyer persona', () => {
+        const instructions = getWorkflowStageInstructions('investment_thesis')
+        expect(instructions).toContain('CONNECT TO BUYER PERSONA')
+        expect(instructions).toContain('[buyer type]')
+        expect(instructions).toContain('[motivations]')
+        expect(instructions).toContain('[concerns]')
+      })
+
+      it('should pre-address buyer concerns', () => {
+        const instructions = getWorkflowStageInstructions('investment_thesis')
+        expect(instructions).toContain('Pre-address their concerns')
+        expect(instructions).toContain('Risk-adjusted view')
+        expect(instructions).toContain('mitigation')
+      })
+
+      it('should summarize final thesis', () => {
+        const instructions = getWorkflowStageInstructions('investment_thesis')
+        expect(instructions).toContain('Perfect')
+        expect(instructions).toContain('north star')
+      })
     })
   })
 
@@ -141,13 +262,65 @@ describe('CIM MVP Prompts - getWorkflowStageInstructions', () => {
       const instructions = getWorkflowStageInstructions('outline')
       expect(instructions).toContain('create_outline')
     })
+
+    // Story 1: Fix Outline Stage HITL Flow - Acceptance Criteria Tests
+    describe('Story 1: Outline HITL Flow', () => {
+      it('AC: should require HITL checkpoint before create_outline', () => {
+        const instructions = getWorkflowStageInstructions('outline')
+        expect(instructions).toContain('CRITICAL')
+        expect(instructions).toContain('HITL CHECKPOINT')
+        expect(instructions).toContain('BEFORE calling create_outline')
+      })
+
+      it('AC: should present proposed outline structure before saving', () => {
+        const instructions = getWorkflowStageInstructions('outline')
+        expect(instructions).toContain('Propose Structure')
+        expect(instructions).toContain('DO THIS FIRST')
+        expect(instructions).toContain('Suggested Sections')
+        expect(instructions).toContain('Logical Flow Reasoning')
+      })
+
+      it('AC: should wait for explicit user approval', () => {
+        const instructions = getWorkflowStageInstructions('outline')
+        expect(instructions).toContain('Wait for Explicit Approval')
+        expect(instructions).toContain('Do NOT call create_outline until user explicitly approves')
+        expect(instructions).toContain('looks good')
+        expect(instructions).toContain('approved')
+      })
+
+      it('AC: should only call create_outline after approval', () => {
+        const instructions = getWorkflowStageInstructions('outline')
+        expect(instructions).toContain('ONLY call create_outline after user explicitly approves')
+        expect(instructions).toContain('ONLY AFTER APPROVAL')
+      })
+
+      it('AC: should ask which section first after outline saved', () => {
+        const instructions = getWorkflowStageInstructions('outline')
+        expect(instructions).toContain('Ask Which Section First')
+        expect(instructions).toContain('AFTER OUTLINE SAVED')
+        expect(instructions).toContain('Which section should we tackle first')
+        expect(instructions).toContain('no required order')
+      })
+
+      it('AC: should NOT auto-assume section order', () => {
+        const instructions = getWorkflowStageInstructions('outline')
+        expect(instructions).toContain('Do NOT assume user wants to start with Executive Summary')
+        expect(instructions).toContain('Do NOT auto-start any section')
+        expect(instructions).toContain('Wait for user to choose')
+      })
+
+      it('AC: exit criteria requires both outline created AND section choice', () => {
+        const instructions = getWorkflowStageInstructions('outline')
+        expect(instructions).toContain('Outline created AND user has chosen which section to start')
+        expect(instructions).toContain('Do NOT advance until BOTH conditions are met')
+      })
+    })
   })
 
   describe('building_sections stage', () => {
     it('should describe section workflow', () => {
       const instructions = getWorkflowStageInstructions('building_sections')
       expect(instructions).toContain('start_section')
-      expect(instructions).toContain('Content Development')
       expect(instructions).toContain('update_slide')
     })
 
@@ -158,6 +331,71 @@ describe('CIM MVP Prompts - getWorkflowStageInstructions', () => {
       expect(instructions).toContain('get_section_context')
       expect(instructions).toContain('update_slide')
       expect(instructions).toContain('update_outline')
+    })
+
+    // Story 2: Fix Building Sections Interactive Design Flow - Acceptance Criteria Tests
+    describe('Story 2: Building Sections HITL Flow', () => {
+      it('AC: should enforce content-first, then visuals pattern', () => {
+        const instructions = getWorkflowStageInstructions('building_sections')
+        expect(instructions).toContain('CRITICAL')
+        expect(instructions).toContain('CONTENT FIRST, THEN VISUALS')
+        expect(instructions).toContain('separate content approval from visual design')
+        expect(instructions).toContain('Never combine these into one step')
+      })
+
+      it('AC: Step 1 - should present 2-3 content options', () => {
+        const instructions = getWorkflowStageInstructions('building_sections')
+        expect(instructions).toContain('Step 1: Choose Content Focus')
+        expect(instructions).toContain('Option A')
+        expect(instructions).toContain('Option B')
+        expect(instructions).toContain('Option C')
+        expect(instructions).toContain('Key elements')
+        expect(instructions).toContain('Key message')
+      })
+
+      it('AC: Step 2 - should require explicit content approval before visual', () => {
+        const instructions = getWorkflowStageInstructions('building_sections')
+        expect(instructions).toContain('Step 2: Content Approval Checkpoint')
+        expect(instructions).toContain('Wait for EXPLICIT content approval before designing visuals')
+        expect(instructions).toContain('Content looks good - proceed to visual design')
+      })
+
+      it('AC: Step 3 - should design visual ONLY after content approved', () => {
+        const instructions = getWorkflowStageInstructions('building_sections')
+        expect(instructions).toContain('Step 3: Design Visual Concept')
+        expect(instructions).toContain('ONLY AFTER CONTENT APPROVED')
+        expect(instructions).toContain('Visual Concept')
+        expect(instructions).toContain('Layout')
+        expect(instructions).toContain('Color Scheme')
+        expect(instructions).toContain('Visual Hierarchy')
+      })
+
+      it('AC: Step 4 - should save slide ONLY after both approvals', () => {
+        const instructions = getWorkflowStageInstructions('building_sections')
+        expect(instructions).toContain('Step 4: Save Slide')
+        expect(instructions).toContain('ONLY after BOTH content AND visual are approved')
+        expect(instructions).toContain('Call update_slide')
+      })
+
+      it('AC: should prohibit combining content and visual', () => {
+        const instructions = getWorkflowStageInstructions('building_sections')
+        expect(instructions).toContain('NEVER DO')
+        expect(instructions).toContain('Never combine content and visual into one proposal')
+        expect(instructions).toContain('Never call update_slide before BOTH approvals')
+      })
+
+      it('AC: should ask about next slide after save', () => {
+        const instructions = getWorkflowStageInstructions('building_sections')
+        expect(instructions).toContain('After each slide saved, ask')
+        expect(instructions).toContain('What should come next')
+      })
+
+      it('AC: should build slides one at a time', () => {
+        const instructions = getWorkflowStageInstructions('building_sections')
+        expect(instructions).toContain('one slide at a time')
+        expect(instructions).toContain('ONE AT A TIME')
+        expect(instructions).toContain('Never auto-generate multiple slides at once')
+      })
     })
   })
 
@@ -472,6 +710,39 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
       expect(prompt).toContain('### Workflow Tools')
       expect(prompt).toContain('### Content Tools')
       expect(prompt).toContain('### Research Tools')
+    })
+
+    // Story 3: Stage Navigation Tool - Prompt Tests
+    it('should include navigate_to_stage in workflow tools', () => {
+      const state = {
+        workflowProgress: {
+          currentStage: 'welcome' as WorkflowStage,
+          completedStages: [],
+          sectionProgress: {},
+        },
+      } as CIMMVPStateType
+
+      const prompt = getSystemPrompt(state)
+
+      expect(prompt).toContain('navigate_to_stage')
+      expect(prompt).toContain('Go back to a previous stage')
+    })
+
+    it('should include Stage Navigation guidance section', () => {
+      const state = {
+        workflowProgress: {
+          currentStage: 'building_sections' as WorkflowStage,
+          completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
+          sectionProgress: {},
+        },
+      } as CIMMVPStateType
+
+      const prompt = getSystemPrompt(state)
+
+      expect(prompt).toContain('## Stage Navigation')
+      expect(prompt).toContain('Going Back')
+      expect(prompt).toContain('Acknowledge the cascade')
+      expect(prompt).toContain('Preserve their work')
     })
 
     it('should include critical rules', () => {
@@ -910,6 +1181,233 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
       expect(prompt).toContain('M&A advisor')
       expect(prompt).toContain('## Current Stage: WELCOME')
     })
+  })
+})
+
+// =============================================================================
+// Story 5: Prompt Caching Tests
+// =============================================================================
+
+describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
+  it('should return both static and dynamic prompt portions', () => {
+    const state = {
+      workflowProgress: {
+        currentStage: 'welcome' as WorkflowStage,
+        completedStages: [],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { staticPrompt, dynamicPrompt } = getSystemPromptForCaching(state)
+
+    expect(staticPrompt).toBeDefined()
+    expect(dynamicPrompt).toBeDefined()
+    expect(typeof staticPrompt).toBe('string')
+    expect(typeof dynamicPrompt).toBe('string')
+  })
+
+  it('static prompt should contain tools and rules (cacheable content)', () => {
+    const state = {
+      workflowProgress: {
+        currentStage: 'welcome' as WorkflowStage,
+        completedStages: [],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { staticPrompt } = getSystemPromptForCaching(state)
+
+    // Static prompt should have tools
+    expect(staticPrompt).toContain('## Tools Available')
+    expect(staticPrompt).toContain('advance_workflow')
+    expect(staticPrompt).toContain('save_buyer_persona')
+    expect(staticPrompt).toContain('update_slide')
+    expect(staticPrompt).toContain('knowledge_search')
+
+    // Static prompt should have rules
+    expect(staticPrompt).toContain('## CRITICAL RULES')
+    expect(staticPrompt).toContain('Rule 0: NEVER HALLUCINATE')
+    expect(staticPrompt).toContain('Rule 1: ALWAYS Use Tools')
+
+    // Static prompt should have response style
+    expect(staticPrompt).toContain('## Response Style')
+  })
+
+  it('static prompt should NOT contain state-specific content', () => {
+    const state = {
+      companyName: 'TechCorp',
+      knowledgeLoaded: true,
+      buyerPersona: {
+        type: 'strategic',
+        motivations: ['Growth'],
+        concerns: ['Risk'],
+      },
+      workflowProgress: {
+        currentStage: 'hero_concept' as WorkflowStage,
+        completedStages: ['welcome', 'buyer_persona'] as WorkflowStage[],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { staticPrompt } = getSystemPromptForCaching(state)
+
+    // Static prompt should NOT have company-specific content
+    expect(staticPrompt).not.toContain('TechCorp')
+    expect(staticPrompt).not.toContain('## Workflow Progress')
+    expect(staticPrompt).not.toContain('## Current Stage:')
+    expect(staticPrompt).not.toContain('## Buyer Persona')
+  })
+
+  it('dynamic prompt should contain state-specific content', () => {
+    const state = {
+      companyName: 'TechCorp',
+      knowledgeLoaded: false,
+      buyerPersona: {
+        type: 'strategic',
+        motivations: ['Growth', 'Synergies'],
+        concerns: ['Integration risk'],
+      },
+      heroContext: {
+        selectedHero: 'The Growth Machine',
+        investmentThesis: {
+          asset: 'Strong tech',
+          timing: 'Now',
+          opportunity: 'Big market',
+        },
+      },
+      workflowProgress: {
+        currentStage: 'investment_thesis' as WorkflowStage,
+        completedStages: ['welcome', 'buyer_persona', 'hero_concept'] as WorkflowStage[],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { dynamicPrompt } = getSystemPromptForCaching(state)
+
+    // Dynamic prompt should have company context
+    expect(dynamicPrompt).toContain('TechCorp')
+
+    // Dynamic prompt should have workflow progress
+    expect(dynamicPrompt).toContain('## Workflow Progress')
+    expect(dynamicPrompt).toContain('✅ Welcome')
+    expect(dynamicPrompt).toContain('✅ Buyer Persona')
+
+    // Dynamic prompt should have current stage
+    expect(dynamicPrompt).toContain('## Current Stage: INVESTMENT THESIS')
+
+    // Dynamic prompt should have buyer persona
+    expect(dynamicPrompt).toContain('## Buyer Persona')
+    expect(dynamicPrompt).toContain('**Type:** strategic')
+
+    // Dynamic prompt should have hero context
+    expect(dynamicPrompt).toContain('## Hero Concept & Investment Thesis')
+    expect(dynamicPrompt).toContain('The Growth Machine')
+  })
+
+  it('dynamic prompt should include stage-specific instructions', () => {
+    const state = {
+      workflowProgress: {
+        currentStage: 'building_sections' as WorkflowStage,
+        completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { dynamicPrompt } = getSystemPromptForCaching(state)
+
+    // Should have building_sections stage instructions
+    expect(dynamicPrompt).toContain('## Current Stage: BUILDING SECTIONS')
+    expect(dynamicPrompt).toContain('CONTENT FIRST, THEN VISUALS')
+    expect(dynamicPrompt).toContain('SLIDE CREATION WORKFLOW')
+  })
+
+  it('static prompt should be same regardless of state', () => {
+    const state1 = {
+      companyName: 'Company A',
+      workflowProgress: {
+        currentStage: 'welcome' as WorkflowStage,
+        completedStages: [],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const state2 = {
+      companyName: 'Company B',
+      knowledgeLoaded: true,
+      workflowProgress: {
+        currentStage: 'building_sections' as WorkflowStage,
+        completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { staticPrompt: static1 } = getSystemPromptForCaching(state1)
+    const { staticPrompt: static2 } = getSystemPromptForCaching(state2)
+
+    // Static portions should be identical
+    expect(static1).toBe(static2)
+  })
+
+  it('dynamic prompt should change with state', () => {
+    const state1 = {
+      companyName: 'Company A',
+      workflowProgress: {
+        currentStage: 'welcome' as WorkflowStage,
+        completedStages: [],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const state2 = {
+      companyName: 'Company B',
+      workflowProgress: {
+        currentStage: 'building_sections' as WorkflowStage,
+        completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { dynamicPrompt: dynamic1 } = getSystemPromptForCaching(state1)
+    const { dynamicPrompt: dynamic2 } = getSystemPromptForCaching(state2)
+
+    // Dynamic portions should be different
+    expect(dynamic1).not.toBe(dynamic2)
+    expect(dynamic1).toContain('Company A')
+    expect(dynamic2).toContain('Company B')
+  })
+
+  it('static prompt should be long enough for caching (>1024 tokens for Haiku)', () => {
+    const state = {
+      workflowProgress: {
+        currentStage: 'welcome' as WorkflowStage,
+        completedStages: [],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { staticPrompt } = getSystemPromptForCaching(state)
+
+    // Rough estimate: 1 token ≈ 4 characters for English text
+    // 1024 tokens ≈ 4096 characters (minimum for Haiku caching)
+    // Our static prompt should be well above this
+    expect(staticPrompt.length).toBeGreaterThan(4000)
+  })
+
+  it('should include navigate_to_stage guidance in static prompt', () => {
+    const state = {
+      workflowProgress: {
+        currentStage: 'welcome' as WorkflowStage,
+        completedStages: [],
+        sectionProgress: {},
+      },
+    } as CIMMVPStateType
+
+    const { staticPrompt } = getSystemPromptForCaching(state)
+
+    // Navigation guidance should be in static (it doesn't change)
+    expect(staticPrompt).toContain('Stage Navigation')
+    expect(staticPrompt).toContain('navigate_to_stage')
+    expect(staticPrompt).toContain('Acknowledge the cascade')
   })
 })
 

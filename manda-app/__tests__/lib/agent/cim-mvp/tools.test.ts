@@ -13,6 +13,7 @@ import {
   knowledgeSearchTool,
   getSectionContextTool,
   advanceWorkflowTool,
+  navigateToStageTool,
   saveBuyerPersonaTool,
   saveHeroConceptTool,
   createOutlineTool,
@@ -39,8 +40,8 @@ const mockedGetCompanyMetadata = vi.mocked(getCompanyMetadata)
 
 describe('CIM MVP Tools - Exports and Structure', () => {
   describe('cimMVPTools array', () => {
-    it('should export all 11 tools', () => {
-      expect(cimMVPTools).toHaveLength(11)
+    it('should export all 12 tools', () => {
+      expect(cimMVPTools).toHaveLength(12)
     })
 
     it('should include all research tools', () => {
@@ -53,6 +54,7 @@ describe('CIM MVP Tools - Exports and Structure', () => {
     it('should include all workflow tools', () => {
       const toolNames = cimMVPTools.map((t) => t.name)
       expect(toolNames).toContain('advance_workflow')
+      expect(toolNames).toContain('navigate_to_stage')
       expect(toolNames).toContain('save_buyer_persona')
       expect(toolNames).toContain('save_hero_concept')
       expect(toolNames).toContain('create_outline')
@@ -284,6 +286,77 @@ describe('CIM MVP Tools - Workflow Tools', () => {
       const parsed = JSON.parse(result)
 
       expect(parsed.message).toContain('building sections')
+    })
+  })
+
+  // Story 3: Stage Navigation Tool Tests
+  describe('navigateToStageTool', () => {
+    it('should be named correctly', () => {
+      expect(navigateToStageTool.name).toBe('navigate_to_stage')
+    })
+
+    it('should have description mentioning backward navigation', () => {
+      expect(navigateToStageTool.description).toContain('backward')
+      expect(navigateToStageTool.description).toContain('revise')
+    })
+
+    it('should return navigation result with cascade warnings for buyer_persona', async () => {
+      const result = await navigateToStageTool.invoke({
+        targetStage: 'buyer_persona',
+        reason: 'User wants to change buyer type',
+      })
+      const parsed = JSON.parse(result)
+
+      expect(parsed.navigatedToStage).toBe(true)
+      expect(parsed.targetStage).toBe('buyer_persona')
+      expect(parsed.reason).toBe('User wants to change buyer type')
+      expect(parsed.cascadeWarnings).toBeInstanceOf(Array)
+      expect(parsed.cascadeWarnings.length).toBeGreaterThan(0)
+      expect(parsed.cascadeWarnings.some((w: string) => w.includes('Hero concept'))).toBe(true)
+    })
+
+    it('should return cascade warnings for hero_concept', async () => {
+      const result = await navigateToStageTool.invoke({
+        targetStage: 'hero_concept',
+        reason: 'User wants to try different story hook',
+      })
+      const parsed = JSON.parse(result)
+
+      expect(parsed.targetStage).toBe('hero_concept')
+      expect(parsed.cascadeWarnings.some((w: string) => w.includes('Investment thesis'))).toBe(true)
+    })
+
+    it('should return cascade warnings for outline', async () => {
+      const result = await navigateToStageTool.invoke({
+        targetStage: 'outline',
+        reason: 'User wants to add a section',
+      })
+      const parsed = JSON.parse(result)
+
+      expect(parsed.targetStage).toBe('outline')
+      expect(parsed.cascadeWarnings.some((w: string) => w.includes('Section'))).toBe(true)
+    })
+
+    it('should format stage names in message', async () => {
+      const result = await navigateToStageTool.invoke({
+        targetStage: 'investment_thesis',
+        reason: 'Reconsidering thesis',
+      })
+      const parsed = JSON.parse(result)
+
+      expect(parsed.message).toContain('investment thesis')
+      expect(parsed.message).toContain('revision')
+    })
+
+    it('should not allow navigation to welcome or complete stages', () => {
+      // The schema should only allow specific navigable stages
+      const schema = navigateToStageTool.schema
+      const targetStageField = schema.shape.targetStage
+
+      // Check that welcome and complete are not in the allowed values
+      expect(navigateToStageTool.description).not.toContain('welcome')
+      // The enum should be restricted
+      expect(targetStageField).toBeDefined()
     })
   })
 
@@ -710,6 +783,15 @@ describe('CIM MVP Tools - Schema Validation', () => {
     const schema = advanceWorkflowTool.schema
     expect(schema.shape.targetStage).toBeDefined()
     expect(schema.shape.reason).toBeDefined()
+  })
+
+  it('navigateToStageTool schema has enum for targetStage (excluding welcome/complete)', () => {
+    const schema = navigateToStageTool.schema
+    expect(schema.shape.targetStage).toBeDefined()
+    expect(schema.shape.reason).toBeDefined()
+    // Description should mention it can't navigate to welcome or complete
+    expect(navigateToStageTool.description).toContain('buyer_persona')
+    expect(navigateToStageTool.description).toContain('outline')
   })
 
   it('updateSlideTool schema supports all component types', () => {

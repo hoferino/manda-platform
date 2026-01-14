@@ -330,11 +330,15 @@ describe('ComponentRenderer', () => {
       expect(screen.getByText('Image placeholder')).toBeInTheDocument()
     })
 
-    it('should show Data table for empty table content', () => {
+    it('should show wireframe grid for empty table content', () => {
       const component = createComponent('table', '')
       render(<ComponentRenderer component={component} {...defaultProps} />)
 
-      expect(screen.getByText('Data table')).toBeInTheDocument()
+      // Story 4: Empty table now shows wireframe grid instead of "Data table" text
+      const wrapper = screen.getByTestId('component-s1_table')
+      expect(wrapper).toBeInTheDocument()
+      // Should have the dashed border indicating a wireframe placeholder
+      expect(wrapper.querySelector('.border-dashed')).toBeInTheDocument()
     })
   })
 
@@ -345,6 +349,273 @@ describe('ComponentRenderer', () => {
 
       const wrapper = screen.getByTestId('component-s1_text')
       expect(wrapper).toHaveClass('min-h-[32px]')
+    })
+  })
+
+  // ============================================================================
+  // Story 4: Extended Component Types for CIM MVP
+  // ============================================================================
+  describe('Story 4: CIM MVP extended component types', () => {
+    describe('metric rendering', () => {
+      it('should render metric component with JSON array content', () => {
+        const component = {
+          ...createComponent('metric' as ComponentType, ''),
+          content: JSON.stringify([
+            { label: 'ARR', value: '$28.5M', subtext: '+42% YoY' },
+            { label: 'Customers', value: '150+' },
+          ]),
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('ARR')).toBeInTheDocument()
+        expect(screen.getByText('$28.5M')).toBeInTheDocument()
+        expect(screen.getByText('+42% YoY')).toBeInTheDocument()
+        expect(screen.getByText('Customers')).toBeInTheDocument()
+        expect(screen.getByText('150+')).toBeInTheDocument()
+      })
+
+      it('should render metric_group type', () => {
+        const component = {
+          ...createComponent('metric_group' as ComponentType, ''),
+          content: [{ label: 'Revenue', value: '$10M' }],
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Revenue')).toBeInTheDocument()
+        expect(screen.getByText('$10M')).toBeInTheDocument()
+      })
+    })
+
+    describe('bullet_list rendering', () => {
+      it('should render bullet_list with array content', () => {
+        const component = {
+          ...createComponent('bullet_list' as ComponentType, ''),
+          content: ['First point', 'Second point', 'Third point'],
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('First point')).toBeInTheDocument()
+        expect(screen.getByText('Second point')).toBeInTheDocument()
+        expect(screen.getByText('Third point')).toBeInTheDocument()
+      })
+
+      it('should render bullet_list with JSON string content', () => {
+        const component = createComponent(
+          'bullet_list' as ComponentType,
+          JSON.stringify(['Item A', 'Item B'])
+        )
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Item A')).toBeInTheDocument()
+        expect(screen.getByText('Item B')).toBeInTheDocument()
+      })
+    })
+
+    describe('numbered_list rendering', () => {
+      it('should render numbered_list with numbers', () => {
+        const component = {
+          ...createComponent('numbered_list' as ComponentType, ''),
+          content: ['Step one', 'Step two'],
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('1.')).toBeInTheDocument()
+        expect(screen.getByText('Step one')).toBeInTheDocument()
+        expect(screen.getByText('2.')).toBeInTheDocument()
+        expect(screen.getByText('Step two')).toBeInTheDocument()
+      })
+    })
+
+    describe('timeline rendering', () => {
+      it('should render timeline with events', () => {
+        const component = {
+          ...createComponent('timeline' as ComponentType, ''),
+          content: JSON.stringify([
+            { date: '2020', title: 'Founded', description: 'Company started' },
+            { date: '2023', title: 'Series A' },
+          ]),
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('2020')).toBeInTheDocument()
+        expect(screen.getByText('Founded')).toBeInTheDocument()
+        expect(screen.getByText('Company started')).toBeInTheDocument()
+        expect(screen.getByText('2023')).toBeInTheDocument()
+        expect(screen.getByText('Series A')).toBeInTheDocument()
+      })
+
+      it('should render wireframe for empty timeline', () => {
+        const component = createComponent('timeline' as ComponentType, '')
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        // Should show wireframe with placeholder circles
+        const wrapper = screen.getByTestId('component-s1_timeline')
+        expect(wrapper.querySelector('.border-dashed')).toBeInTheDocument()
+      })
+    })
+
+    describe('callout rendering', () => {
+      it('should render callout with content', () => {
+        const component = createComponent(
+          'callout' as ComponentType,
+          'Important information here'
+        )
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Important information here')).toBeInTheDocument()
+        // Callouts have left border styling
+        const wrapper = screen.getByTestId('component-s1_callout')
+        expect(wrapper.querySelector('.border-l-4')).toBeInTheDocument()
+      })
+
+      it('should render key_takeaway type', () => {
+        const component = createComponent(
+          'key_takeaway' as ComponentType,
+          'Key insight'
+        )
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Key insight')).toBeInTheDocument()
+      })
+    })
+
+    describe('chart type variants', () => {
+      it('should render bar_chart type', () => {
+        const component = createComponent('bar_chart' as ComponentType, 'Revenue by year')
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Revenue by year')).toBeInTheDocument()
+        expect(screen.getByLabelText('Bar chart')).toBeInTheDocument()
+      })
+
+      it('should render pie_chart type', () => {
+        const component = createComponent('pie_chart' as ComponentType, 'Market share')
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Market share')).toBeInTheDocument()
+        expect(screen.getByLabelText('Pie chart')).toBeInTheDocument()
+      })
+
+      it('should render line_chart type', () => {
+        const component = createComponent('line_chart' as ComponentType, 'Growth trend')
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Growth trend')).toBeInTheDocument()
+        expect(screen.getByLabelText('Line chart')).toBeInTheDocument()
+      })
+    })
+
+    describe('process rendering', () => {
+      it('should render flowchart with steps', () => {
+        const component = {
+          ...createComponent('flowchart' as ComponentType, ''),
+          content: ['Step 1', 'Step 2', 'Step 3'],
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Step 1')).toBeInTheDocument()
+        expect(screen.getByText('Step 2')).toBeInTheDocument()
+        expect(screen.getByText('Step 3')).toBeInTheDocument()
+        // Should have arrow separators
+        const arrows = screen.getAllByText('→')
+        expect(arrows.length).toBeGreaterThan(0)
+      })
+    })
+
+    describe('table with data', () => {
+      it('should render table with array of objects', () => {
+        const component = {
+          ...createComponent('table', ''),
+          content: JSON.stringify([
+            { Metric: 'ARR', Value: '$28.5M' },
+            { Metric: 'Customers', Value: '150' },
+          ]),
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        // Should render headers from object keys
+        expect(screen.getByText('Metric')).toBeInTheDocument()
+        expect(screen.getByText('Value')).toBeInTheDocument()
+        // Should render data
+        expect(screen.getByText('ARR')).toBeInTheDocument()
+        expect(screen.getByText('$28.5M')).toBeInTheDocument()
+      })
+
+      it('should render table with 2D array', () => {
+        const component = {
+          ...createComponent('table', ''),
+          content: JSON.stringify([
+            ['Year', 'Revenue'],
+            ['2023', '$10M'],
+            ['2024', '$15M'],
+          ]),
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Year')).toBeInTheDocument()
+        expect(screen.getByText('Revenue')).toBeInTheDocument()
+        expect(screen.getByText('2023')).toBeInTheDocument()
+        expect(screen.getByText('$10M')).toBeInTheDocument()
+      })
+    })
+
+    describe('fallback rendering', () => {
+      it('should render unknown array content as bullet list', () => {
+        const component = {
+          ...createComponent('unknown_type' as ComponentType, ''),
+          content: ['Item 1', 'Item 2'],
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Item 1')).toBeInTheDocument()
+        expect(screen.getByText('Item 2')).toBeInTheDocument()
+      })
+
+      it('should render unknown string content as text', () => {
+        const component = createComponent(
+          'unknown_type' as ComponentType,
+          'Just some text'
+        )
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Just some text')).toBeInTheDocument()
+      })
+
+      it('should render metric-like JSON as metrics for unknown type', () => {
+        const component = createComponent(
+          'custom_metric' as ComponentType,
+          JSON.stringify([{ label: 'Custom', value: '100%' }])
+        )
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        expect(screen.getByText('Custom')).toBeInTheDocument()
+        expect(screen.getByText('100%')).toBeInTheDocument()
+      })
+    })
+
+    describe('non-string content handling', () => {
+      it('should handle object content in title', () => {
+        const component = {
+          ...createComponent('title', ''),
+          content: { text: 'Title Text', style: 'bold' },
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        // Should stringify the object
+        const wrapper = screen.getByTestId('component-s1_title')
+        expect(wrapper).toBeInTheDocument()
+      })
+
+      it('should handle null content gracefully', () => {
+        const component = {
+          ...createComponent('text', ''),
+          content: null as unknown as string,
+        }
+        render(<ComponentRenderer component={component} {...defaultProps} />)
+
+        // Should render fallback
+        expect(screen.getByText('Text content')).toBeInTheDocument()
+      })
     })
   })
 })
