@@ -8,7 +8,7 @@
  */
 
 import { StateGraph, START, END } from '@langchain/langgraph'
-import { ChatOpenAI } from '@langchain/openai'
+import { ChatAnthropic } from '@langchain/anthropic'
 import { ToolNode } from '@langchain/langgraph/prebuilt'
 import { AIMessage } from '@langchain/core/messages'
 
@@ -31,9 +31,9 @@ import { getCheckpointer, type Checkpointer } from '@/lib/agent/checkpointer'
 // LLM Configuration
 // =============================================================================
 
-const baseModel = new ChatOpenAI({
-  model: 'gpt-4o',
-  apiKey: process.env.OPENAI_API_KEY,
+const baseModel = new ChatAnthropic({
+  model: 'claude-haiku-4-5-20251001',
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   temperature: 0.7,
   maxTokens: 4096,
 })
@@ -41,10 +41,10 @@ const baseModel = new ChatOpenAI({
 // Bind tools and add config
 const model = baseModel.bindTools(cimMVPTools).withConfig({
   runName: 'cim-mvp-agent',
-  tags: ['cim-mvp', 'gpt-4o'],
+  tags: ['cim-mvp', 'claude-haiku-4.5'],
   metadata: {
     graph: 'cim-mvp',
-    version: '1.0.0',
+    version: '1.1.0',
   },
 })
 
@@ -89,7 +89,7 @@ async function agentNode(
   console.log(`[CIM-MVP] Agent node invoked with ${state.messages.length} messages`)
 
   // Invoke the model with system prompt and conversation history
-  // OpenAI handles LangChain messages natively
+  // Claude handles LangChain messages natively
   const response = await model.invoke([
     { role: 'system', content: systemPrompt },
     ...state.messages,

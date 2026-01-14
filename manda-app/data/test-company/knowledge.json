@@ -1,0 +1,1181 @@
+{
+  "metadata": {
+    "analyzed_at": "2026-01-12T14:30:00Z",
+    "analyzer_version": "2.0",
+    "documents": [
+      {
+        "name": "company-overview.pdf",
+        "type": "pdf",
+        "pages": 24,
+        "size_kb": 3850
+      },
+      {
+        "name": "financials-2023-2025.xlsx",
+        "type": "xlsx",
+        "sheets": ["P&L", "Balance Sheet", "SaaS Metrics", "Projections"],
+        "size_kb": 1240
+      },
+      {
+        "name": "management-bios.pdf",
+        "type": "pdf",
+        "pages": 8,
+        "size_kb": 1120
+      },
+      {
+        "name": "competitive-analysis.pdf",
+        "type": "pdf",
+        "pages": 15,
+        "size_kb": 2890
+      },
+      {
+        "name": "investor-deck-Q4-2025.pdf",
+        "type": "pdf",
+        "pages": 32,
+        "size_kb": 5670
+      }
+    ],
+    "company_name": "NexusFlow AI",
+    "data_sufficiency_score": 82,
+    "total_findings": 147
+  },
+  "sections": {
+    "executive_summary": {
+      "findings": [
+        {
+          "id": "es-001",
+          "content": "NexusFlow AI is a B2B SaaS company founded in 2020 that provides AI-powered document processing and workflow automation for enterprise finance and legal teams.",
+          "source": {
+            "document": "company-overview.pdf",
+            "location": "page 1, Executive Summary"
+          },
+          "confidence": "high",
+          "category": "company_description"
+        },
+        {
+          "id": "es-002",
+          "content": "$28.5M ARR as of December 2025 with 135% net revenue retention and 82% gross margins.",
+          "source": {
+            "document": "financials-2023-2025.xlsx",
+            "location": "SaaS Metrics sheet, row 3-5"
+          },
+          "confidence": "high",
+          "category": "key_metrics"
+        },
+        {
+          "id": "es-003",
+          "content": "Year-over-year revenue growth of 95% in 2025, accelerating from 78% in 2024.",
+          "source": {
+            "document": "financials-2023-2025.xlsx",
+            "location": "P&L sheet, row 8"
+          },
+          "confidence": "high",
+          "category": "growth"
+        },
+        {
+          "id": "es-004",
+          "content": "Serving 127 enterprise customers including 12 Fortune 500 companies across financial services, legal, and healthcare verticals.",
+          "source": {
+            "document": "investor-deck-Q4-2025.pdf",
+            "location": "page 5, Customer Overview"
+          },
+          "confidence": "high",
+          "category": "customers"
+        },
+        {
+          "id": "es-005",
+          "content": "Investment highlights: (1) AI-native platform with proprietary ML models, (2) Strong NRR driven by expansion, (3) Capital-efficient growth with 18-month CAC payback, (4) Defensible market position in regulated industries.",
+          "source": {
+            "document": "investor-deck-Q4-2025.pdf",
+            "location": "page 3, Investment Thesis"
+          },
+          "confidence": "high",
+          "category": "investment_highlights"
+        },
+        {
+          "id": "es-006",
+          "content": "Team of 156 employees across San Francisco (HQ), New York, and London with plans to expand to 220 by end of 2026.",
+          "source": {
+            "document": "company-overview.pdf",
+            "location": "page 4, paragraph 2"
+          },
+          "confidence": "high",
+          "category": "team_size"
+        }
+      ]
+    },
+    "company_overview": {
+      "history": {
+        "findings": [
+          {
+            "id": "co-hist-001",
+            "content": "Founded in March 2020 by Sarah Chen (CEO) and Michael Torres (CTO) after identifying inefficiencies in document processing workflows at their previous employer, DocuSign.",
+            "source": {"document": "company-overview.pdf", "location": "page 2, Our Story"},
+            "confidence": "high",
+            "category": "founding"
+          },
+          {
+            "id": "co-hist-002",
+            "content": "Initially bootstrapped for 8 months before raising a $3M seed round from Sequoia Scout in November 2020.",
+            "source": {"document": "company-overview.pdf", "location": "page 2, paragraph 3"},
+            "confidence": "high",
+            "category": "funding_history"
+          },
+          {
+            "id": "co-hist-003",
+            "content": "Pivoted from general document automation to focus specifically on finance and legal use cases in Q2 2021 after discovering strong product-market fit with enterprise finance teams.",
+            "source": {"document": "company-overview.pdf", "location": "page 3, Strategic Evolution"},
+            "confidence": "high",
+            "category": "pivot"
+          }
+        ]
+      },
+      "mission_vision": {
+        "findings": [
+          {
+            "id": "co-mv-001",
+            "content": "Mission: 'To eliminate the friction between human expertise and intelligent automation, enabling knowledge workers to focus on high-value decisions.'",
+            "source": {"document": "company-overview.pdf", "location": "page 1, Mission Statement"},
+            "confidence": "high",
+            "category": "mission"
+          },
+          {
+            "id": "co-mv-002",
+            "content": "Vision: 'To become the operating system for enterprise document intelligence, processing over $1 trillion in document-driven transactions annually by 2030.'",
+            "source": {"document": "company-overview.pdf", "location": "page 1, Vision Statement"},
+            "confidence": "high",
+            "category": "vision"
+          }
+        ]
+      },
+      "milestones": {
+        "findings": [
+          {
+            "id": "co-mile-001",
+            "content": "March 2020: Company founded by Sarah Chen and Michael Torres in San Francisco.",
+            "source": {"document": "company-overview.pdf", "location": "page 3, Timeline"},
+            "confidence": "high",
+            "category": "milestone"
+          },
+          {
+            "id": "co-mile-002",
+            "content": "November 2020: $3M seed round led by Sequoia Scout with participation from 5 angel investors.",
+            "source": {"document": "company-overview.pdf", "location": "page 3, Timeline"},
+            "confidence": "high",
+            "category": "milestone"
+          },
+          {
+            "id": "co-mile-003",
+            "content": "June 2021: First enterprise customer (Goldman Sachs) signed, validating enterprise go-to-market strategy.",
+            "source": {"document": "company-overview.pdf", "location": "page 3, Timeline"},
+            "confidence": "high",
+            "category": "milestone"
+          },
+          {
+            "id": "co-mile-004",
+            "content": "February 2022: $18M Series A led by Andreessen Horowitz at $85M valuation.",
+            "source": {"document": "company-overview.pdf", "location": "page 3, Timeline"},
+            "confidence": "high",
+            "category": "milestone"
+          },
+          {
+            "id": "co-mile-005",
+            "content": "September 2022: Crossed $5M ARR milestone with 28 enterprise customers.",
+            "source": {"document": "company-overview.pdf", "location": "page 3, Timeline"},
+            "confidence": "high",
+            "category": "milestone"
+          },
+          {
+            "id": "co-mile-006",
+            "content": "March 2023: Launched NexusFlow Legal product line, expanding TAM by $12B.",
+            "source": {"document": "company-overview.pdf", "location": "page 3, Timeline"},
+            "confidence": "high",
+            "category": "milestone"
+          },
+          {
+            "id": "co-mile-007",
+            "content": "October 2023: $52M Series B led by Lightspeed Venture Partners at $320M valuation.",
+            "source": {"document": "company-overview.pdf", "location": "page 3, Timeline"},
+            "confidence": "high",
+            "category": "milestone"
+          },
+          {
+            "id": "co-mile-008",
+            "content": "Q4 2024: Achieved SOC 2 Type II and HIPAA compliance, enabling healthcare vertical expansion.",
+            "source": {"document": "company-overview.pdf", "location": "page 4, Compliance"},
+            "confidence": "high",
+            "category": "milestone"
+          },
+          {
+            "id": "co-mile-009",
+            "content": "December 2025: Crossed $28M ARR with 127 enterprise customers, achieving Rule of 40 score of 58.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet"},
+            "confidence": "high",
+            "category": "milestone"
+          }
+        ]
+      },
+      "corporate_structure": {
+        "findings": [
+          {
+            "id": "co-corp-001",
+            "content": "NexusFlow AI, Inc. - Delaware C-Corp formed March 2020. HQ in San Francisco, California.",
+            "source": {"document": "company-overview.pdf", "location": "page 7, Legal Structure"},
+            "confidence": "high",
+            "category": "legal_entity"
+          },
+          {
+            "id": "co-corp-002",
+            "content": "Wholly-owned subsidiary: NexusFlow AI Ltd (UK) established September 2024 for EMEA operations.",
+            "source": {"document": "company-overview.pdf", "location": "page 7, Legal Structure"},
+            "confidence": "high",
+            "category": "subsidiary"
+          },
+          {
+            "id": "co-corp-003",
+            "content": "Cap table: Founders 38% (Chen 22%, Torres 16%), Series A investors 25% (a16z 18%, Sequoia 7%), Series B investors 22% (Lightspeed 15%, Tiger Global 7%), Employee pool 15% (10% allocated, 5% reserved).",
+            "source": {"document": "company-overview.pdf", "location": "page 8, Ownership"},
+            "confidence": "high",
+            "category": "ownership"
+          }
+        ]
+      }
+    },
+    "management_team": {
+      "executives": [
+        {
+          "name": "Sarah Chen",
+          "title": "CEO & Co-Founder",
+          "background": "18 years enterprise software experience. Previously VP of Product at DocuSign (2015-2020), led Agreement Cloud product line from $0 to $400M ARR. Earlier, PM leadership roles at Salesforce (2010-2015) on Service Cloud. MBA from Stanford GSB (2010), BS Computer Science MIT (2006).",
+          "achievements": [
+            "Built DocuSign's Agreement Cloud from inception to $400M ARR",
+            "Led product strategy for Salesforce Service Cloud during hypergrowth phase",
+            "Named Forbes 40 Under 40 in Enterprise Tech (2019)"
+          ],
+          "source": {"document": "management-bios.pdf", "location": "page 1-2"}
+        },
+        {
+          "name": "Michael Torres",
+          "title": "CTO & Co-Founder",
+          "background": "20 years engineering and ML experience. Previously Director of Engineering at DocuSign (2016-2020), responsible for AI/ML platform serving 1M+ daily transactions. Earlier, Senior Staff Engineer at Google (2008-2016) on Document AI and Cloud Vision teams. PhD Computer Science Stanford (2008), MS MIT (2004), BS Berkeley (2002).",
+          "achievements": [
+            "12 patents in document processing and machine learning",
+            "Built DocuSign's AI extraction engine processing 500K documents daily",
+            "Core contributor to Google Cloud Vision API"
+          ],
+          "source": {"document": "management-bios.pdf", "location": "page 2-3"}
+        },
+        {
+          "name": "Jennifer Walsh",
+          "title": "CFO",
+          "background": "15 years finance leadership in SaaS companies. Previously VP Finance at Twilio (2017-2023), managed finance through IPO and scaling to $3B revenue. Earlier, Director of FP&A at Box (2013-2017). CPA, MBA Wharton (2013), BS Accounting UCLA (2008).",
+          "achievements": [
+            "Led Twilio's IPO process and post-IPO financial operations",
+            "Implemented FP&A systems supporting 10x revenue growth at Box",
+            "Expertise in SaaS metrics, ARR forecasting, and M&A integration"
+          ],
+          "source": {"document": "management-bios.pdf", "location": "page 3-4"}
+        },
+        {
+          "name": "David Park",
+          "title": "VP Sales",
+          "background": "16 years enterprise sales experience. Previously Regional VP at Workday (2018-2024), led East region team of 85 reps generating $450M annually. Earlier, sales leadership at Oracle (2012-2018). BA Economics Duke (2008).",
+          "achievements": [
+            "Consistently exceeded quota by 120%+ at Workday for 5 consecutive years",
+            "Built and scaled enterprise sales team from 12 to 85 reps",
+            "Closed company's first 8-figure deal with major financial institution"
+          ],
+          "source": {"document": "management-bios.pdf", "location": "page 4-5"}
+        },
+        {
+          "name": "Dr. Priya Sharma",
+          "title": "VP Engineering",
+          "background": "14 years engineering leadership. Previously Engineering Director at Stripe (2019-2024), led infrastructure team of 120 engineers. Earlier, Tech Lead Manager at Google (2014-2019) on Search infrastructure. PhD Computer Science CMU (2014), BTech IIT Delhi (2008).",
+          "achievements": [
+            "Scaled Stripe's payment infrastructure from 100M to 1B daily transactions",
+            "Pioneer in distributed systems reliability engineering",
+            "Author of 15 peer-reviewed papers on distributed computing"
+          ],
+          "source": {"document": "management-bios.pdf", "location": "page 5-6"}
+        },
+        {
+          "name": "Amanda Liu",
+          "title": "VP Marketing",
+          "background": "12 years B2B marketing experience. Previously Head of Product Marketing at Snowflake (2020-2024), led messaging and positioning during company's growth from $500M to $2.5B revenue. Earlier, marketing leadership at Tableau (2016-2020). MBA Kellogg (2016), BA Communications Northwestern (2012).",
+          "achievements": [
+            "Developed Snowflake's category-defining 'Data Cloud' positioning",
+            "Led product launches generating $500M+ in pipeline",
+            "Built and scaled product marketing team from 5 to 35"
+          ],
+          "source": {"document": "management-bios.pdf", "location": "page 6-7"}
+        }
+      ],
+      "board": {
+        "findings": [
+          {
+            "id": "mt-board-001",
+            "content": "Board of Directors: Sarah Chen (CEO, Chair), Martin Casado (a16z General Partner), Nicole Forsgren (Independent - former VP Research at Microsoft), James Smith (Lightspeed Partner), Michael Torres (CTO, Board Observer).",
+            "source": {"document": "company-overview.pdf", "location": "page 9, Governance"},
+            "confidence": "high",
+            "category": "board_composition"
+          }
+        ]
+      }
+    },
+    "products_services": {
+      "findings": [
+        {
+          "id": "ps-001",
+          "content": "NexusFlow Finance: AI-powered document processing platform for finance teams. Automates invoice processing, contract analysis, and financial document extraction with 99.2% accuracy. Processes 50M+ documents annually across customer base.",
+          "source": {"document": "company-overview.pdf", "location": "page 10, Products"},
+          "confidence": "high",
+          "category": "core_product"
+        },
+        {
+          "id": "ps-002",
+          "content": "NexusFlow Legal: Contract lifecycle management and due diligence automation for legal teams. Launched March 2023. Reduces contract review time by 75% and M&A due diligence by 60%. Currently 35% of new ARR.",
+          "source": {"document": "company-overview.pdf", "location": "page 11, Products"},
+          "confidence": "high",
+          "category": "product_line"
+        },
+        {
+          "id": "ps-003",
+          "content": "NexusFlow Healthcare (Beta): HIPAA-compliant document processing for healthcare revenue cycle management. Launched Q1 2025, currently in pilot with 8 health systems. Expected GA Q2 2026.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 18, Product Roadmap"},
+          "confidence": "high",
+          "category": "product_line"
+        },
+        {
+          "id": "ps-004",
+          "content": "Platform capabilities: OCR with 99.5% character accuracy, NLP-based entity extraction, ML classification models (custom-trained per customer), workflow automation engine, integrations with 45+ enterprise systems (Salesforce, SAP, Oracle, Workday, NetSuite).",
+          "source": {"document": "company-overview.pdf", "location": "page 12, Technology"},
+          "confidence": "high",
+          "category": "technology"
+        },
+        {
+          "id": "ps-005",
+          "content": "Deployment options: Cloud-hosted (90% of customers), Private cloud (8%), On-premise (2% - primarily regulated financial institutions).",
+          "source": {"document": "company-overview.pdf", "location": "page 13, Deployment"},
+          "confidence": "high",
+          "category": "deployment"
+        },
+        {
+          "id": "ps-006",
+          "content": "Professional Services: Implementation, training, and custom model development. Typically 15-20% of initial deal value. 95% customer satisfaction rating.",
+          "source": {"document": "company-overview.pdf", "location": "page 14, Services"},
+          "confidence": "high",
+          "category": "services"
+        }
+      ],
+      "pricing": {
+        "findings": [
+          {
+            "id": "ps-price-001",
+            "content": "Platform subscription pricing: Starter ($50K/year, up to 100K documents), Professional ($150K/year, up to 500K documents), Enterprise ($300K+/year, unlimited documents + custom models). Volume discounts for multi-year deals.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 8, Pricing"},
+            "confidence": "high",
+            "category": "pricing"
+          },
+          {
+            "id": "ps-price-002",
+            "content": "Average Contract Value (ACV): $225K for new enterprise deals in 2025, up from $180K in 2024. Expansion deals average $85K incremental ACV.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 12"},
+            "confidence": "high",
+            "category": "acv"
+          }
+        ]
+      },
+      "technology_stack": {
+        "findings": [
+          {
+            "id": "ps-tech-001",
+            "content": "Core ML infrastructure: Proprietary document understanding models built on transformer architecture, fine-tuned on 50M+ enterprise documents. Models run on NVIDIA A100 GPU clusters hosted on AWS.",
+            "source": {"document": "company-overview.pdf", "location": "page 15, Technology Deep Dive"},
+            "confidence": "high",
+            "category": "ml_infrastructure"
+          },
+          {
+            "id": "ps-tech-002",
+            "content": "Tech stack: Python/FastAPI backend, React frontend, PostgreSQL + Redis, Kubernetes on AWS EKS, Terraform for infrastructure, proprietary ML models with PyTorch.",
+            "source": {"document": "company-overview.pdf", "location": "page 15, Technology Deep Dive"},
+            "confidence": "high",
+            "category": "tech_stack"
+          }
+        ]
+      }
+    },
+    "market_opportunity": {
+      "market_size": {
+        "findings": [
+          {
+            "id": "mo-size-001",
+            "content": "Total Addressable Market (TAM): $48B globally for intelligent document processing and workflow automation (2025), growing to $95B by 2030 at 15% CAGR. Source: Gartner Magic Quadrant for IDP 2025.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 2, Market Size"},
+            "confidence": "high",
+            "category": "tam"
+          },
+          {
+            "id": "mo-size-002",
+            "content": "Serviceable Addressable Market (SAM): $18B - Enterprise finance and legal document automation in North America and Europe.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 2, Market Size"},
+            "confidence": "high",
+            "category": "sam"
+          },
+          {
+            "id": "mo-size-003",
+            "content": "Serviceable Obtainable Market (SOM): $2.5B - Mid-market and enterprise customers with 1M+ annual document volume in finance and legal.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 3, Market Size"},
+            "confidence": "medium",
+            "category": "som"
+          }
+        ]
+      },
+      "growth_drivers": {
+        "findings": [
+          {
+            "id": "mo-driver-001",
+            "content": "Digital transformation acceleration: 78% of enterprises plan to increase IDP spending in 2026, up from 65% in 2024. COVID-19 permanently accelerated remote work and digitization initiatives.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 4, Market Trends"},
+            "confidence": "high",
+            "category": "growth_driver"
+          },
+          {
+            "id": "mo-driver-002",
+            "content": "AI advancement: Large language models have dramatically improved document understanding accuracy, with 40% improvement in extraction accuracy since 2023.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 4, Market Trends"},
+            "confidence": "high",
+            "category": "growth_driver"
+          },
+          {
+            "id": "mo-driver-003",
+            "content": "Labor cost pressure: Average fully-loaded cost of document processing clerk is $65K/year in US. Automation provides 10x ROI for high-volume document processing.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 5, Market Trends"},
+            "confidence": "high",
+            "category": "growth_driver"
+          },
+          {
+            "id": "mo-driver-004",
+            "content": "Regulatory compliance: Increasing regulation (GDPR, CCPA, SOX) driving demand for auditable, automated document workflows with full compliance trails.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 5, Market Trends"},
+            "confidence": "high",
+            "category": "growth_driver"
+          }
+        ]
+      },
+      "target_segments": {
+        "findings": [
+          {
+            "id": "mo-seg-001",
+            "content": "Primary verticals: Financial Services (45% of ARR), Legal Services (30% of ARR), Healthcare (10% of ARR), Other Enterprise (15% of ARR).",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 12, Customer Segmentation"},
+            "confidence": "high",
+            "category": "vertical_mix"
+          },
+          {
+            "id": "mo-seg-002",
+            "content": "Ideal Customer Profile (ICP): Companies with 500+ employees, processing 500K+ documents annually, in regulated industries with compliance requirements, budget authority in Finance, Legal, or Operations.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 13, ICP"},
+            "confidence": "high",
+            "category": "icp"
+          },
+          {
+            "id": "mo-seg-003",
+            "content": "Customer size distribution: Enterprise (1000+ employees) 65% of ARR, Mid-market (500-1000) 30% of ARR, Growth (100-500) 5% of ARR.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 12, Customer Segmentation"},
+            "confidence": "high",
+            "category": "customer_size"
+          }
+        ]
+      }
+    },
+    "business_model": {
+      "revenue_model": {
+        "findings": [
+          {
+            "id": "bm-rev-001",
+            "content": "Revenue composition: Subscription revenue 85% ($24.2M), Professional services 15% ($4.3M). Target is 90%+ subscription by 2027.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet, rows 3-5"},
+            "confidence": "high",
+            "category": "revenue_mix"
+          },
+          {
+            "id": "bm-rev-002",
+            "content": "Contract structure: 75% annual contracts, 25% multi-year (2-3 year). Multi-year deals receive 10-15% discount. Average contract length 1.8 years.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet"},
+            "confidence": "high",
+            "category": "contract_terms"
+          },
+          {
+            "id": "bm-rev-003",
+            "content": "Land-and-expand motion: Average customer starts with single department, expands to 2.3 departments within 24 months. Average expansion deal $85K incremental ACV.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 14, GTM Motion"},
+            "confidence": "high",
+            "category": "expansion"
+          }
+        ]
+      },
+      "pricing": {
+        "findings": [
+          {
+            "id": "bm-price-001",
+            "content": "Pricing model: Platform subscription based on document volume tiers + per-seat pricing for power users. Volume tiers: 100K, 500K, 1M, 5M+ documents/year.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 9, Pricing Model"},
+            "confidence": "high",
+            "category": "pricing_structure"
+          },
+          {
+            "id": "bm-price-002",
+            "content": "Price per document: Ranges from $0.08 (high volume) to $0.35 (low volume) depending on tier. Custom models add 20-30% premium.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 9, Pricing Model"},
+            "confidence": "high",
+            "category": "unit_pricing"
+          }
+        ]
+      },
+      "unit_economics": {
+        "findings": [
+          {
+            "id": "bm-unit-001",
+            "content": "Customer Acquisition Cost (CAC): $185K for enterprise deals (fully loaded sales, marketing, SDR costs). $45K for mid-market.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 18"},
+            "confidence": "high",
+            "category": "cac"
+          },
+          {
+            "id": "bm-unit-002",
+            "content": "Lifetime Value (LTV): $1.48M for enterprise customers based on $225K ACV, 135% NRR, 5% logo churn, 82% gross margin.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 20"},
+            "confidence": "high",
+            "category": "ltv"
+          },
+          {
+            "id": "bm-unit-003",
+            "content": "LTV:CAC ratio: 8.0x for enterprise, 7.2x for mid-market. Industry benchmark for best-in-class SaaS is 3-5x.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 22"},
+            "confidence": "high",
+            "category": "ltv_cac"
+          },
+          {
+            "id": "bm-unit-004",
+            "content": "CAC Payback Period: 18 months for enterprise, 14 months for mid-market (based on gross margin-adjusted first year revenue).",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 24"},
+            "confidence": "high",
+            "category": "cac_payback"
+          }
+        ]
+      },
+      "sales_motion": {
+        "findings": [
+          {
+            "id": "bm-sales-001",
+            "content": "Sales organization: 24 quota-carrying AEs (12 Enterprise, 8 Mid-market, 4 Expansion), 18 SDRs, 6 Sales Engineers. Average quota $1.2M/AE for enterprise.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 15, Sales Organization"},
+            "confidence": "high",
+            "category": "sales_team"
+          },
+          {
+            "id": "bm-sales-002",
+            "content": "Sales cycle: 90 days average for mid-market, 180 days for enterprise. Typically involves POC (30 days), procurement (45-60 days for enterprise).",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 15, Sales Cycle"},
+            "confidence": "high",
+            "category": "sales_cycle"
+          }
+        ]
+      }
+    },
+    "financial_performance": {
+      "revenue": {
+        "findings": [
+          {
+            "id": "fp-rev-001",
+            "content": "2025 ARR: $28.5M (up from $14.6M in 2024, 95% growth). Total revenue $26.8M recognized in 2025.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet, row 3"},
+            "confidence": "high",
+            "category": "arr"
+          },
+          {
+            "id": "fp-rev-002",
+            "content": "Revenue by product: NexusFlow Finance $18.5M (65%), NexusFlow Legal $10.0M (35%).",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet, row 6"},
+            "confidence": "high",
+            "category": "product_revenue"
+          },
+          {
+            "id": "fp-rev-003",
+            "content": "Revenue by geography: North America $23.5M (87%), EMEA $3.3M (13%).",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet, row 8"},
+            "confidence": "high",
+            "category": "geo_revenue"
+          }
+        ]
+      },
+      "profitability": {
+        "findings": [
+          {
+            "id": "fp-profit-001",
+            "content": "Gross Margin: 82% in 2025 (up from 79% in 2024). Infrastructure efficiency improvements and scale economies driving expansion.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet, row 12"},
+            "confidence": "high",
+            "category": "gross_margin"
+          },
+          {
+            "id": "fp-profit-002",
+            "content": "Operating Expenses: R&D $12.5M (47% of revenue), S&M $9.8M (37%), G&A $4.2M (16%). Total OpEx $26.5M.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet, rows 14-17"},
+            "confidence": "high",
+            "category": "opex"
+          },
+          {
+            "id": "fp-profit-003",
+            "content": "EBITDA: -$4.5M in 2025 (-17% margin). Path to profitability expected Q4 2026 with operating leverage from revenue scale.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet, row 20"},
+            "confidence": "high",
+            "category": "ebitda"
+          },
+          {
+            "id": "fp-profit-004",
+            "content": "Rule of 40 Score: 58 (95% growth + (-17%) margin = 78, exceeds 40 threshold). Indicates efficient growth profile.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 28"},
+            "confidence": "high",
+            "category": "rule_of_40"
+          }
+        ]
+      },
+      "growth_metrics": {
+        "findings": [
+          {
+            "id": "fp-growth-001",
+            "content": "Net Revenue Retention (NRR): 135% in 2025, up from 128% in 2024. Driven by strong expansion within existing accounts.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 6"},
+            "confidence": "high",
+            "category": "nrr"
+          },
+          {
+            "id": "fp-growth-002",
+            "content": "Gross Revenue Retention (GRR): 95% in 2025, consistent with 2024. Very low churn in enterprise segment.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 7"},
+            "confidence": "high",
+            "category": "grr"
+          },
+          {
+            "id": "fp-growth-003",
+            "content": "Logo churn: 5% annually (6 of 127 customers). All churned customers were in lowest tier; 0% churn in enterprise segment.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 9"},
+            "confidence": "high",
+            "category": "churn"
+          },
+          {
+            "id": "fp-growth-004",
+            "content": "New ARR: $12.5M added in 2025 from 48 new logos. Average new deal ACV $260K.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 11"},
+            "confidence": "high",
+            "category": "new_arr"
+          },
+          {
+            "id": "fp-growth-005",
+            "content": "Expansion ARR: $5.2M from existing customer upsells/cross-sells. 65% of 2024 cohort customers expanded.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 13"},
+            "confidence": "high",
+            "category": "expansion_arr"
+          }
+        ]
+      },
+      "historical_financials": [
+        {
+          "period": "2023",
+          "revenue": 8200000,
+          "growth_yoy": 1.15,
+          "arr": 8200000,
+          "gross_margin": 0.76,
+          "ebitda": -5200000,
+          "ebitda_margin": -0.63,
+          "customers": 52,
+          "nrr": 1.22,
+          "grr": 0.93,
+          "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet"}
+        },
+        {
+          "period": "2024",
+          "revenue": 14600000,
+          "growth_yoy": 0.78,
+          "arr": 14600000,
+          "gross_margin": 0.79,
+          "ebitda": -5800000,
+          "ebitda_margin": -0.40,
+          "customers": 85,
+          "nrr": 1.28,
+          "grr": 0.95,
+          "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet"}
+        },
+        {
+          "period": "2025",
+          "revenue": 26800000,
+          "growth_yoy": 0.95,
+          "arr": 28500000,
+          "gross_margin": 0.82,
+          "ebitda": -4500000,
+          "ebitda_margin": -0.17,
+          "customers": 127,
+          "nrr": 1.35,
+          "grr": 0.95,
+          "source": {"document": "financials-2023-2025.xlsx", "location": "P&L sheet"}
+        },
+        {
+          "period": "2026E",
+          "revenue": 48000000,
+          "growth_yoy": 0.68,
+          "arr": 52000000,
+          "gross_margin": 0.84,
+          "ebitda": 2400000,
+          "ebitda_margin": 0.05,
+          "customers": 185,
+          "nrr": 1.30,
+          "grr": 0.96,
+          "source": {"document": "financials-2023-2025.xlsx", "location": "Projections sheet"}
+        }
+      ],
+      "cash_position": {
+        "findings": [
+          {
+            "id": "fp-cash-001",
+            "content": "Cash and equivalents: $38.2M as of December 2025. Total debt: $0 (no venture debt or credit facilities).",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "Balance Sheet, row 5"},
+            "confidence": "high",
+            "category": "cash"
+          },
+          {
+            "id": "fp-cash-002",
+            "content": "Monthly burn rate: $650K average in Q4 2025. Runway: 59 months at current burn rate.",
+            "source": {"document": "financials-2023-2025.xlsx", "location": "SaaS Metrics sheet, row 32"},
+            "confidence": "high",
+            "category": "burn"
+          },
+          {
+            "id": "fp-cash-003",
+            "content": "Total funding raised: $73M across Seed ($3M), Series A ($18M), and Series B ($52M).",
+            "source": {"document": "company-overview.pdf", "location": "page 8, Funding History"},
+            "confidence": "high",
+            "category": "funding"
+          }
+        ]
+      }
+    },
+    "competitive_landscape": {
+      "competitors": [
+        {
+          "name": "Kofax",
+          "description": "Legacy IDP vendor, $600M revenue, part of Tungsten Automation. Strong in banking and insurance. Older technology stack, less AI-native.",
+          "market_position": "Market leader by revenue, declining market share",
+          "differentiator": "Established enterprise relationships, broad product suite, but aging platform",
+          "source": {"document": "competitive-analysis.pdf", "location": "page 6-7"}
+        },
+        {
+          "name": "ABBYY",
+          "description": "OCR and document capture specialist, $200M+ revenue. Strong in document conversion and data extraction. More horizontal, less vertical focus.",
+          "market_position": "Strong #2 in legacy IDP, growing AI capabilities",
+          "differentiator": "Best-in-class OCR, but less workflow automation and ML customization",
+          "source": {"document": "competitive-analysis.pdf", "location": "page 7-8"}
+        },
+        {
+          "name": "Hyperscience",
+          "description": "AI-native document processing startup, $100M+ revenue, raised $300M. Direct competitor in enterprise market. Strong ML capabilities but less vertical specialization.",
+          "market_position": "Emerging challenger, strong enterprise traction",
+          "differentiator": "Similar AI-native approach, but broader horizontal focus vs our vertical depth",
+          "source": {"document": "competitive-analysis.pdf", "location": "page 8-9"}
+        },
+        {
+          "name": "Rossum",
+          "description": "AI document processing for AP automation, $30M ARR. Strong in accounts payable, narrower focus than NexusFlow.",
+          "market_position": "Niche player, AP automation specialist",
+          "differentiator": "Focused specifically on AP/invoice processing, less breadth",
+          "source": {"document": "competitive-analysis.pdf", "location": "page 9-10"}
+        },
+        {
+          "name": "UiPath Document Understanding",
+          "description": "Part of UiPath's RPA platform. $1B+ revenue company, document processing is component of broader offering.",
+          "market_position": "Platform player, document processing as add-on",
+          "differentiator": "Requires RPA platform investment, less specialized in document AI",
+          "source": {"document": "competitive-analysis.pdf", "location": "page 10-11"}
+        }
+      ],
+      "competitive_advantages": {
+        "findings": [
+          {
+            "id": "cl-adv-001",
+            "content": "AI-native architecture: Purpose-built ML models trained on 50M+ enterprise documents, vs competitors retrofitting AI onto legacy platforms. 15% higher accuracy on complex documents.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 12, Competitive Moat"},
+            "confidence": "high",
+            "category": "technology"
+          },
+          {
+            "id": "cl-adv-002",
+            "content": "Vertical specialization: Deep domain expertise in finance and legal workflows, with pre-built models for 150+ document types specific to these industries.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 12, Competitive Moat"},
+            "confidence": "high",
+            "category": "domain_expertise"
+          },
+          {
+            "id": "cl-adv-003",
+            "content": "Enterprise-grade compliance: SOC 2 Type II, HIPAA, GDPR compliant with audit trails for regulated industries. Many competitors lack healthcare compliance.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 13, Competitive Moat"},
+            "confidence": "high",
+            "category": "compliance"
+          },
+          {
+            "id": "cl-adv-004",
+            "content": "Customer success metrics: 135% NRR vs industry average 110-115%. NPS of 72 vs industry average 35-40. Indicates strong product-market fit.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 13, Competitive Moat"},
+            "confidence": "high",
+            "category": "customer_success"
+          }
+        ]
+      },
+      "market_position": {
+        "findings": [
+          {
+            "id": "cl-pos-001",
+            "content": "Gartner Magic Quadrant position: Visionary (high completeness of vision, moderate ability to execute). Expected to move to Leader quadrant within 18 months based on growth trajectory.",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 14, Analyst Coverage"},
+            "confidence": "high",
+            "category": "analyst_position"
+          },
+          {
+            "id": "cl-pos-002",
+            "content": "Win rate: 45% in competitive deals (up from 35% in 2024). Highest win rate against legacy vendors (55%), lowest against Hyperscience (35%).",
+            "source": {"document": "competitive-analysis.pdf", "location": "page 14, Win/Loss Analysis"},
+            "confidence": "high",
+            "category": "win_rate"
+          }
+        ]
+      }
+    },
+    "growth_strategy": {
+      "findings": [
+        {
+          "id": "gs-001",
+          "content": "Product expansion: Launch NexusFlow Healthcare (GA Q2 2026) to address $8B healthcare document automation market. Currently in pilot with 8 health systems.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 20, Growth Strategy"},
+          "confidence": "high",
+          "category": "product_expansion"
+        },
+        {
+          "id": "gs-002",
+          "content": "Geographic expansion: Scale EMEA from 13% to 25% of ARR by 2027. Open Munich office Q2 2026 to serve DACH region. Evaluate APAC entry in 2027.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 21, Growth Strategy"},
+          "confidence": "high",
+          "category": "geo_expansion"
+        },
+        {
+          "id": "gs-003",
+          "content": "Upmarket motion: Launch Strategic Accounts program targeting Global 2000. Hire 4 dedicated Strategic AEs in 2026. Target 10 $1M+ ACV deals by end of 2026.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 22, Growth Strategy"},
+          "confidence": "high",
+          "category": "upmarket"
+        },
+        {
+          "id": "gs-004",
+          "content": "Partner ecosystem: Build SI partner network with Accenture, Deloitte, and Cognizant. Target 20% of new deals partner-influenced by 2027 (currently 8%).",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 23, Growth Strategy"},
+          "confidence": "high",
+          "category": "partnerships"
+        },
+        {
+          "id": "gs-005",
+          "content": "Platform play: Launch developer API and marketplace in 2026 to enable third-party integrations and custom workflows. Early discussions with 5 ISV partners.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 24, Growth Strategy"},
+          "confidence": "medium",
+          "category": "platform"
+        }
+      ]
+    },
+    "risk_factors": {
+      "findings": [
+        {
+          "id": "rf-001",
+          "content": "Customer concentration: Top 10 customers represent 42% of ARR. Largest customer (major bank) is 8% of ARR. Working to diversify through mid-market expansion.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 26, Risk Factors"},
+          "confidence": "high",
+          "category": "concentration_risk"
+        },
+        {
+          "id": "rf-002",
+          "content": "Competitive pressure: Well-funded competitors (Hyperscience $300M raised, UiPath public company) could accelerate investment in document AI. Monitoring closely.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 26, Risk Factors"},
+          "confidence": "high",
+          "category": "competitive_risk"
+        },
+        {
+          "id": "rf-003",
+          "content": "Key person dependency: Co-founders Sarah Chen and Michael Torres are critical to strategy and technology vision. Succession planning in progress for 2026.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 27, Risk Factors"},
+          "confidence": "high",
+          "category": "key_person_risk"
+        },
+        {
+          "id": "rf-004",
+          "content": "Technology risk: Rapid AI advancement could commoditize document extraction. Mitigation: Focus on workflow automation and vertical expertise, not just OCR/extraction.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 27, Risk Factors"},
+          "confidence": "high",
+          "category": "technology_risk"
+        },
+        {
+          "id": "rf-005",
+          "content": "Regulatory risk: AI regulation (EU AI Act, potential US legislation) could impose compliance requirements. Currently tracking closely, no immediate impact expected.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 28, Risk Factors"},
+          "confidence": "medium",
+          "category": "regulatory_risk"
+        },
+        {
+          "id": "rf-006",
+          "content": "Talent acquisition: Competition for ML/AI engineers remains intense. Current engineering turnover 12% annually. Invested in employer branding and equity refreshes.",
+          "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 28, Risk Factors"},
+          "confidence": "high",
+          "category": "talent_risk"
+        }
+      ]
+    },
+    "geographic_footprint": {
+      "locations": [
+        {
+          "city": "San Francisco",
+          "country": "USA",
+          "type": "HQ",
+          "employees": 95,
+          "functions": ["Executive", "Engineering", "Product", "G&A"],
+          "source": {"document": "company-overview.pdf", "location": "page 20, Offices"}
+        },
+        {
+          "city": "New York",
+          "country": "USA",
+          "type": "Sales Office",
+          "employees": 38,
+          "functions": ["Sales", "Customer Success", "Marketing"],
+          "source": {"document": "company-overview.pdf", "location": "page 20, Offices"}
+        },
+        {
+          "city": "London",
+          "country": "UK",
+          "type": "EMEA HQ",
+          "employees": 23,
+          "functions": ["Sales", "Customer Success", "Engineering"],
+          "source": {"document": "company-overview.pdf", "location": "page 20, Offices"}
+        }
+      ],
+      "employee_distribution": {
+        "findings": [
+          {
+            "id": "geo-emp-001",
+            "content": "Total headcount: 156 FTEs as of December 2025. Distribution: Engineering 58 (37%), Sales 42 (27%), Customer Success 18 (12%), Marketing 12 (8%), G&A 14 (9%), Product 12 (8%).",
+            "source": {"document": "company-overview.pdf", "location": "page 21, Team"},
+            "confidence": "high",
+            "category": "headcount"
+          },
+          {
+            "id": "geo-emp-002",
+            "content": "Remote policy: Hybrid model with 3 days in-office. 15% of employees fully remote (primarily specialized engineers).",
+            "source": {"document": "company-overview.pdf", "location": "page 21, Culture"},
+            "confidence": "high",
+            "category": "remote"
+          },
+          {
+            "id": "geo-emp-003",
+            "content": "2026 hiring plan: 64 new hires planned (220 total). Focus on Engineering (+25), Sales (+20), Customer Success (+10), EMEA expansion (+9).",
+            "source": {"document": "company-overview.pdf", "location": "page 22, Growth Plan"},
+            "confidence": "high",
+            "category": "hiring_plan"
+          }
+        ]
+      }
+    },
+    "additional_info": {
+      "customers": {
+        "findings": [
+          {
+            "id": "add-cust-001",
+            "content": "Notable customers: Goldman Sachs, JPMorgan Chase, Citi, Bank of America, Latham & Watkins, Kirkland & Ellis, Davis Polk, UnitedHealth Group, CVS Health, HCA Healthcare.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 6, Customers"},
+            "confidence": "high",
+            "category": "customer_logos"
+          },
+          {
+            "id": "add-cust-002",
+            "content": "Customer testimonial: 'NexusFlow reduced our contract review time by 70% and improved accuracy. ROI was achieved within 6 months.' - VP Operations, Major Investment Bank.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 7, Testimonials"},
+            "confidence": "high",
+            "category": "testimonial"
+          },
+          {
+            "id": "add-cust-003",
+            "content": "Customer case study: Global law firm processed 2M+ documents for major M&A deal using NexusFlow Legal. Reduced due diligence timeline from 8 weeks to 3 weeks, saving $2M+ in associate hours.",
+            "source": {"document": "investor-deck-Q4-2025.pdf", "location": "page 7, Case Study"},
+            "confidence": "high",
+            "category": "case_study"
+          }
+        ]
+      },
+      "partnerships": {
+        "findings": [
+          {
+            "id": "add-part-001",
+            "content": "Technology partners: AWS (Advanced Technology Partner), Salesforce (AppExchange listing), Microsoft (Azure Marketplace), SAP (certified integration).",
+            "source": {"document": "company-overview.pdf", "location": "page 18, Partnerships"},
+            "confidence": "high",
+            "category": "tech_partners"
+          },
+          {
+            "id": "add-part-002",
+            "content": "SI partnerships: Active relationships with Accenture, Deloitte, PwC, and Cognizant. Joint go-to-market in financial services vertical.",
+            "source": {"document": "company-overview.pdf", "location": "page 18, Partnerships"},
+            "confidence": "high",
+            "category": "si_partners"
+          }
+        ]
+      },
+      "intellectual_property": {
+        "findings": [
+          {
+            "id": "add-ip-001",
+            "content": "Patents: 8 granted patents, 12 pending applications. Key patents cover document classification algorithms, multi-modal extraction, and workflow optimization.",
+            "source": {"document": "company-overview.pdf", "location": "page 16, IP"},
+            "confidence": "high",
+            "category": "patents"
+          },
+          {
+            "id": "add-ip-002",
+            "content": "Trade secrets: Proprietary training datasets (50M+ documents), custom model architectures, and customer-specific fine-tuning methodology.",
+            "source": {"document": "company-overview.pdf", "location": "page 16, IP"},
+            "confidence": "high",
+            "category": "trade_secrets"
+          }
+        ]
+      },
+      "awards_recognition": {
+        "findings": [
+          {
+            "id": "add-award-001",
+            "content": "Awards: Gartner Cool Vendor 2024, Forbes AI 50 2024 & 2025, CB Insights AI 100 2024, Deloitte Fast 500 (#78 in 2025).",
+            "source": {"document": "company-overview.pdf", "location": "page 19, Recognition"},
+            "confidence": "high",
+            "category": "awards"
+          }
+        ]
+      }
+    }
+  },
+  "raw_extractions": {
+    "all_findings": [
+      {
+        "id": "raw-001",
+        "content": "NexusFlow AI, Inc. was incorporated in Delaware on March 15, 2020.",
+        "source": {
+          "document": "company-overview.pdf",
+          "location": "page 7, Legal Structure, paragraph 1"
+        },
+        "extracted_from_section": "company_overview"
+      },
+      {
+        "id": "raw-002",
+        "content": "The company processes an average of 4.2 million documents per month across its customer base, with peak volumes of 6.5 million during quarter-end periods.",
+        "source": {
+          "document": "investor-deck-Q4-2025.pdf",
+          "location": "page 11, Platform Metrics"
+        },
+        "extracted_from_section": "products_services"
+      },
+      {
+        "id": "raw-003",
+        "content": "Average document processing time is 2.3 seconds for standard documents and 8.5 seconds for complex multi-page contracts.",
+        "source": {
+          "document": "investor-deck-Q4-2025.pdf",
+          "location": "page 11, Platform Metrics"
+        },
+        "extracted_from_section": "products_services"
+      },
+      {
+        "id": "raw-004",
+        "content": "Infrastructure costs are $1.2M/month, representing 4.5% of ARR. Expecting 30% reduction with upcoming GPU optimization initiative.",
+        "source": {
+          "document": "financials-2023-2025.xlsx",
+          "location": "P&L sheet, row 10, note"
+        },
+        "extracted_from_section": "financial_performance"
+      },
+      {
+        "id": "raw-005",
+        "content": "Deferred revenue balance: $8.4M as of December 2025, representing strong forward visibility.",
+        "source": {
+          "document": "financials-2023-2025.xlsx",
+          "location": "Balance Sheet, row 12"
+        },
+        "extracted_from_section": "financial_performance"
+      },
+      {
+        "id": "raw-006",
+        "content": "Magic number: 1.4x (net new ARR / S&M spend in prior period). Indicates efficient sales and marketing investment.",
+        "source": {
+          "document": "financials-2023-2025.xlsx",
+          "location": "SaaS Metrics sheet, row 30"
+        },
+        "extracted_from_section": "business_model"
+      },
+      {
+        "id": "raw-007",
+        "content": "Employee satisfaction: 4.2/5.0 on Glassdoor (based on 45 reviews), 'Great Place to Work' certified 2024-2025.",
+        "source": {
+          "document": "company-overview.pdf",
+          "location": "page 22, Culture"
+        },
+        "extracted_from_section": "additional_info"
+      },
+      {
+        "id": "raw-008",
+        "content": "Board meeting frequency: Monthly, with quarterly extended strategy sessions. Audit committee meets quarterly.",
+        "source": {
+          "document": "company-overview.pdf",
+          "location": "page 9, Governance"
+        },
+        "extracted_from_section": "company_overview"
+      },
+      {
+        "id": "raw-009",
+        "content": "D&O insurance coverage: $10M aggregate, renewed annually. Cyber insurance: $5M coverage.",
+        "source": {
+          "document": "company-overview.pdf",
+          "location": "page 9, Risk Management"
+        },
+        "extracted_from_section": "risk_factors"
+      },
+      {
+        "id": "raw-010",
+        "content": "Customer support SLA: 99.9% uptime guaranteed, 4-hour response time for P1 issues, 24-hour for P2. Actual performance: 99.95% uptime in 2025.",
+        "source": {
+          "document": "company-overview.pdf",
+          "location": "page 14, Support"
+        },
+        "extracted_from_section": "products_services"
+      }
+    ]
+  },
+  "data_gaps": {
+    "missing_sections": [],
+    "incomplete_data": [
+      {
+        "section": "management_team",
+        "missing": "VP Customer Success bio not provided - recently hired"
+      },
+      {
+        "section": "financial_performance",
+        "missing": "Detailed balance sheet breakdown not available - only summary provided"
+      },
+      {
+        "section": "competitive_landscape",
+        "missing": "Detailed win/loss analysis by competitor not provided"
+      }
+    ],
+    "recommendations": [
+      "Request detailed balance sheet with asset breakdown for financial deep dive",
+      "Ask for VP Customer Success bio once onboarding complete",
+      "Request competitive win/loss report by competitor for positioning analysis",
+      "Obtain customer reference list for buyer due diligence calls"
+    ]
+  }
+}

@@ -39,14 +39,31 @@ export function getWorkflowStageInstructions(stage: WorkflowStage): string {
 
 **Exit criteria:** User is ready to proceed → call advance_workflow to move to buyer_persona`,
 
-    buyer_persona: `**Goal:** Understand who will be reading this CIM.
+    buyer_persona: `**Goal:** Understand who will be reading this CIM and tailor it to their perspective.
 
-**Questions to ask:**
-- Who is the target buyer? (strategic acquirer, financial/PE, public company, competitor)
-- What are their primary motivations? (growth, synergies, market entry, technology)
-- What concerns should we address proactively? (integration risk, customer concentration, etc.)
+**IMPORTANT - Contextualize Questions with Company Data:**
+The analyst decides the buyer type - your job is to ask smart questions that reference what you know about the company. Don't assume buyer type; instead, make the questions easier to answer by citing relevant data.
 
-**Tools:** save_buyer_persona when user confirms their buyer profile
+**Your approach:**
+
+1. **Ask who the target buyers are** - Let the analyst decide (strategic, PE, specific companies)
+
+2. **When asking about motivations**, reference company strengths:
+   - Instead of: "What are their motivations?"
+   - Say: "Given [company]'s [specific strength from data], which motivations matter most to your target buyers?"
+   - Example: "NexusFlow's 135% NRR and Gartner Visionary status could attract buyers for different reasons - revenue expansion vs. technology gaps. Which resonates more with your targets?"
+
+3. **When asking about concerns**, acknowledge what the data shows:
+   - Instead of: "What concerns might they have?"
+   - Say: "The data shows [positive metric] which addresses [common concern]. But what concerns do YOU expect from buyers?"
+   - Example: "With 127 enterprise customers and 135% NRR, customer concentration seems low-risk. What concerns do you anticipate?"
+
+4. **Reference specific data points** from the Knowledge Base Summary to ground the conversation
+
+**If NO company data is available:**
+Ask directly: "Before we define the buyer persona, could you tell me about the company's key strengths and any known concerns buyers might have?"
+
+**Tools:** save_buyer_persona when user confirms their buyer profile (type, motivations, concerns)
 
 **Exit criteria:** Buyer persona saved → call advance_workflow to move to hero_concept`,
 

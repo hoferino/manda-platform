@@ -269,7 +269,7 @@ This is a parallel track that can be implemented directly by the development tea
 
 ### Git Strategy
 
-Use **git worktrees** for parallel development:
+Use **git worktrees** for complete sandbox isolation:
 
 ```bash
 # Create worktree for MVP track
@@ -284,7 +284,18 @@ cd ../manda-platform
 # ... continue v2 work ...
 ```
 
-This keeps both tracks isolated and mergeable.
+### CRITICAL: Sandbox Rules
+
+**ALL changes happen in the worktree (`../manda-platform-mvp`). ZERO changes to the main codebase.**
+
+| Rule | Enforcement |
+|------|-------------|
+| No edits to `manda-platform/` | All work in `manda-platform-mvp/` |
+| No shared file modifications | MVP gets its own copies if needed |
+| Main branch stays clean | MVP branch is isolated |
+| Merge only when ready | User decides when/if to merge |
+
+This is a true sandbox - the existing codebase remains untouched until you explicitly decide to merge.
 
 ---
 

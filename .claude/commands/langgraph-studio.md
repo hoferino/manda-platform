@@ -4,18 +4,17 @@ Start LangGraph Studio for visual debugging and graph visualization of the Manda
 
 ## Instructions
 
-1. **Kill any existing dev servers on port 3000** (LangGraph Studio uses port 2024)
 
-2. **Start LangGraph Studio CLI** in the manda-app directory:
+1. **Start LangGraph Studio CLI** in the manda-app directory:
    ```bash
    cd manda-app && npx @langchain/langgraph-cli@latest dev
    ```
 
-3. **Report the Studio URL** to the user:
+2. **Report the Studio URL** to the user:
    - API: `http://localhost:2024`
    - Studio UI: `https://eu.smith.langchain.com/studio?baseUrl=http://localhost:2024`
 
-4. **Keep the server running in background** so the user can interact with Studio
+3. **Keep the server running in background** so the user can interact with Studio
 
 ## What LangGraph Studio Provides
 

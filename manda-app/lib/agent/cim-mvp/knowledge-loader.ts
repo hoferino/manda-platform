@@ -182,9 +182,44 @@ export function getDataSummary(): string {
   const findingCount = cachedKnowledge.raw_extractions.all_findings.length
   const score = cachedKnowledge.metadata.data_sufficiency_score
 
-  return `Company: ${cachedKnowledge.metadata.company_name}
-Documents analyzed: ${cachedKnowledge.metadata.documents.length}
-Total findings: ${findingCount}
-Data sufficiency: ${score}/100
-Sections available: ${sections.join(', ')}`
+  // Build a rich summary including key metrics
+  const lines: string[] = [
+    `**Company:** ${cachedKnowledge.metadata.company_name}`,
+    `**Documents analyzed:** ${cachedKnowledge.metadata.documents.length}`,
+    `**Total findings:** ${findingCount}`,
+    `**Data sufficiency:** ${score}/100`,
+    `**Sections available:** ${sections.join(', ')}`,
+    '',
+    '**Key Findings Preview:**',
+  ]
+
+  // Include top findings from each major section (up to 10 total)
+  const keyFindings: string[] = []
+  const prioritySections = ['financial_performance', 'company_overview', 'market_opportunity', 'competitive_landscape']
+
+  for (const section of prioritySections) {
+    const sectionData = cachedKnowledge.sections[section as keyof typeof cachedKnowledge.sections]
+    if (sectionData && typeof sectionData === 'object') {
+      // Try to get findings from subsections
+      for (const [subsection, data] of Object.entries(sectionData)) {
+        if (data && typeof data === 'object' && 'findings' in data) {
+          const findings = (data as { findings: Finding[] }).findings
+          for (const finding of findings.slice(0, 2)) {
+            keyFindings.push(`- [${section}/${subsection}] ${finding.content}`)
+            if (keyFindings.length >= 10) break
+          }
+        }
+        if (keyFindings.length >= 10) break
+      }
+    }
+    if (keyFindings.length >= 10) break
+  }
+
+  if (keyFindings.length > 0) {
+    lines.push(...keyFindings)
+  } else {
+    lines.push('- No detailed findings extracted yet')
+  }
+
+  return lines.join('\n')
 }
