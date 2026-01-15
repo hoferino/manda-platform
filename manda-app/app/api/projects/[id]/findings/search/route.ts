@@ -1,10 +1,8 @@
 /**
  * Findings Search API Route
  * Story: E4.2 - Implement Semantic Search for Findings (AC: #2, #3, #7, #8)
- * Updated: E10.8 - PostgreSQL Cleanup (switched to Graphiti hybrid search)
  *
- * Uses Graphiti hybrid search (vector + BM25 + graph) with Voyage reranking
- * instead of pgvector match_findings RPC.
+ * Uses Graphiti hybrid search (vector + BM25 + graph) with Voyage reranking.
  */
 
 import { NextRequest, NextResponse } from 'next/server'

@@ -323,38 +323,6 @@ async function runTests() {
       }
     }
 
-    // ========================================
-    // TEST 8: Verify pgvector works
-    // ========================================
-    console.log('\n📋 Test 8: pgvector embedding storage...')
-
-    if (aliceDealIds.length > 0) {
-      // Create a finding with a vector embedding
-      const testEmbedding = new Array(1536).fill(0.1).join(',')
-
-      const { data: finding, error: findingError } = await aliceClient.from('findings').insert({
-        deal_id: aliceDealIds[0],
-        text: 'Test finding with embedding',
-        user_id: aliceUserId,
-        embedding: `[${testEmbedding}]`,
-      }).select().single()
-
-      if (findingError) {
-        logTest('Create finding with embedding', false, findingError.message)
-      } else {
-        logTest('Create finding with embedding', true)
-
-        // Verify we can query it back
-        const { data: queryFinding } = await aliceClient
-          .from('findings')
-          .select('*')
-          .eq('id', finding.id)
-          .single()
-
-        logTest('Query finding with embedding', queryFinding !== null)
-      }
-    }
-
   } finally {
     // ========================================
     // CLEANUP: Delete test data

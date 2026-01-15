@@ -90,12 +90,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       chunkData = chunk
     }
 
-    // E10.8: Related findings via semantic similarity
-    // Previously used pgvector match_findings - now uses Graphiti hybrid search
+    // Related findings via semantic similarity
     // TODO: Re-enable with Graphiti hybrid search endpoint
     const relatedFindings: Finding[] = []
-    // E10.8 NOTE: Related findings feature temporarily disabled during migration
-    // The pgvector embedding column has been removed. To re-enable:
+    // NOTE: Related findings feature temporarily disabled
+    // To re-enable:
     // 1. Use POST /api/search/hybrid with the finding text as query
     // 2. Filter out the current finding from results
     // 3. Map Graphiti results to Finding[] format

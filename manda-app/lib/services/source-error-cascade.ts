@@ -146,7 +146,7 @@ export async function flagAllFindingsFromDocument(
 /**
  * Regenerate embedding for a corrected finding (AC: #14)
  *
- * @deprecated E10.8 - pgvector embeddings removed, Graphiti handles embeddings
+ * @deprecated Graphiti handles embeddings via Voyage AI during ingestion
  *
  * This function is now a no-op. Graphiti handles all embeddings via Voyage AI
  * during document ingestion. Corrections to findings should trigger Graphiti
@@ -162,11 +162,9 @@ export async function regenerateFindingEmbedding(
   _findingId: string,
   _correctedText: string
 ): Promise<{ success: boolean; error?: string }> {
-  // E10.8: This function is deprecated.
-  // pgvector embeddings have been removed from findings table.
-  // Graphiti now handles all embeddings via Voyage AI during ingestion.
+  // This function is deprecated - Graphiti handles embeddings via Voyage AI
   // TODO: Implement Graphiti episode update for corrected findings
-  console.info('[source-error-cascade] E10.8: regenerateFindingEmbedding is now a no-op')
+  console.info('[source-error-cascade] regenerateFindingEmbedding is now a no-op')
   return { success: true }
 }
 

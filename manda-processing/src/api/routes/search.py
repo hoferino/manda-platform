@@ -72,22 +72,13 @@ async def search_similar(
     """
     DEPRECATED: Use POST /api/search/hybrid instead.
 
-    E10.8: This endpoint is deprecated. The pgvector embeddings have been removed.
-    Use the new Graphiti hybrid search endpoint (POST /api/search/hybrid) which provides:
+    Use the Graphiti hybrid search endpoint (POST /api/search/hybrid) which provides:
     - Vector + BM25 + graph search
     - Voyage AI reranking (20-35% accuracy improvement)
     - Temporal awareness via invalid_at filtering
     - Deal isolation via namespace
 
     This endpoint will be removed in a future release.
-
-    ---
-
-    [LEGACY] Search for similar document chunks using semantic similarity.
-
-    The query text is converted to an embedding vector using OpenAI's
-    text-embedding-3-large model, then compared against stored chunk
-    embeddings using cosine similarity.
 
     Args:
         query: The search query text

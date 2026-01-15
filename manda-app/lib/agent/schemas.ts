@@ -80,7 +80,7 @@ export type IndexToKnowledgeBaseInput = z.infer<typeof IndexToKnowledgeBaseInput
 
 /**
  * query_knowledge_base - Semantic search for findings
- * AC: #1 - Performs semantic search via pgvector match_findings RPC
+ * AC: #1 - Performs semantic search via Graphiti hybrid search (vector + BM25 + graph)
  */
 export const QueryKnowledgeBaseInputSchema = z.object({
   query: z.string().min(3).max(1000).describe('Search query text (3-1000 chars)'),

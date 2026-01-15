@@ -460,292 +460,6 @@ class SupabaseClient:
                 retryable=self._is_retryable_error(e),
             )
 
-    async def update_chunk_embeddings(
-        self,
-        document_id: UUID,
-        chunk_ids: list[UUID],
-        embeddings: list[list[float]],
-    ) -> int:
-        """
-        Update embeddings for multiple chunks in a single transaction.
-
-        Story: E3.4 - Generate Embeddings for Semantic Search (AC: #3)
-
-        All embeddings for a document are updated together to ensure consistency.
-        Uses pgvector format for embedding storage.
-
-        Args:
-            document_id: UUID of the document (for verification)
-            chunk_ids: List of chunk UUIDs to update
-            embeddings: List of embedding vectors (must match chunk_ids length)
-
-        Returns:
-            Number of chunks updated
-
-        Raises:
-            DatabaseError: If update fails (transaction rolls back)
-            ValueError: If chunk_ids and embeddings lengths don't match
-        """
-        if len(chunk_ids) != len(embeddings):
-            raise ValueError(
-                f"chunk_ids and embeddings must have same length: "
-                f"{len(chunk_ids)} vs {len(embeddings)}"
-            )
-
-        if not chunk_ids:
-            return 0
-
-        pool = await self._get_pool()
-
-        logger.info(
-            "Updating chunk embeddings",
-            document_id=str(document_id),
-            chunk_count=len(chunk_ids),
-        )
-
-        try:
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    updated_count = 0
-
-                    for chunk_id, embedding in zip(chunk_ids, embeddings):
-                        # Skip empty embeddings (from failed batches)
-                        if not embedding:
-                            continue
-
-                        # Convert list to pgvector format string
-                        embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
-
-                        result = await conn.execute(
-                            """
-                            UPDATE document_chunks
-                            SET embedding = $1::vector
-                            WHERE id = $2 AND document_id = $3
-                            """,
-                            embedding_str,
-                            chunk_id,
-                            document_id,
-                        )
-
-                        rows_affected = int(result.split()[-1])
-                        updated_count += rows_affected
-
-                    logger.info(
-                        "Chunk embeddings updated successfully",
-                        document_id=str(document_id),
-                        updated_count=updated_count,
-                    )
-
-                    return updated_count
-
-        except asyncpg.PostgresError as e:
-            logger.error(
-                "Database error updating embeddings",
-                document_id=str(document_id),
-                error=str(e),
-            )
-            raise DatabaseError(
-                f"Failed to update embeddings: {str(e)}",
-                retryable=self._is_retryable_error(e),
-            )
-
-    async def update_embeddings_and_status(
-        self,
-        document_id: UUID,
-        chunk_ids: list[UUID],
-        embeddings: list[list[float]],
-        new_status: str = "embedded",
-    ) -> int:
-        """
-        Update embeddings and document status in a single transaction.
-
-        Story: E3.4 - Generate Embeddings for Semantic Search (AC: #3, #5)
-
-        Ensures atomicity - either all embeddings are stored and status updated,
-        or nothing changes.
-
-        Args:
-            document_id: UUID of the document
-            chunk_ids: List of chunk UUIDs to update
-            embeddings: List of embedding vectors
-            new_status: New document status (default: "embedded")
-
-        Returns:
-            Number of chunks updated
-
-        Raises:
-            DatabaseError: If any operation fails (transaction rolls back)
-        """
-        if len(chunk_ids) != len(embeddings):
-            raise ValueError(
-                f"chunk_ids and embeddings must have same length: "
-                f"{len(chunk_ids)} vs {len(embeddings)}"
-            )
-
-        pool = await self._get_pool()
-
-        logger.info(
-            "Updating embeddings and status (transactional)",
-            document_id=str(document_id),
-            chunk_count=len(chunk_ids),
-            new_status=new_status,
-        )
-
-        try:
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    updated_count = 0
-
-                    for chunk_id, embedding in zip(chunk_ids, embeddings):
-                        if not embedding:
-                            continue
-
-                        embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
-
-                        result = await conn.execute(
-                            """
-                            UPDATE document_chunks
-                            SET embedding = $1::vector
-                            WHERE id = $2 AND document_id = $3
-                            """,
-                            embedding_str,
-                            chunk_id,
-                            document_id,
-                        )
-
-                        rows_affected = int(result.split()[-1])
-                        updated_count += rows_affected
-
-                    # Update document status
-                    await conn.execute(
-                        """
-                        UPDATE documents
-                        SET processing_status = $2,
-                            updated_at = NOW()
-                        WHERE id = $1
-                        """,
-                        document_id,
-                        new_status,
-                    )
-
-                    logger.info(
-                        "Embeddings and status updated",
-                        document_id=str(document_id),
-                        updated_count=updated_count,
-                        new_status=new_status,
-                    )
-
-                    return updated_count
-
-        except asyncpg.PostgresError as e:
-            logger.error(
-                "Database error in transactional embedding update",
-                document_id=str(document_id),
-                error=str(e),
-            )
-            raise DatabaseError(
-                f"Failed to update embeddings and status: {str(e)}",
-                retryable=self._is_retryable_error(e),
-            )
-
-    async def search_similar_chunks(
-        self,
-        query_embedding: list[float],
-        project_id: Optional[UUID] = None,
-        document_id: Optional[UUID] = None,
-        limit: int = 10,
-    ) -> list[dict[str, Any]]:
-        """
-        Search for similar chunks using vector similarity.
-
-        Story: E3.4 - Generate Embeddings for Semantic Search (AC: #4)
-
-        Uses pgvector cosine distance operator (<=>)for similarity search.
-        Similarity = 1 - distance (higher is more similar).
-
-        Args:
-            query_embedding: Query vector (3072 dimensions)
-            project_id: Optional filter by project
-            document_id: Optional filter by specific document
-            limit: Maximum results to return (default: 10)
-
-        Returns:
-            List of chunks with similarity scores, ordered by similarity desc
-
-        Raises:
-            DatabaseError: If search fails
-        """
-        pool = await self._get_pool()
-
-        # Convert embedding to pgvector format
-        embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
-
-        logger.info(
-            "Searching similar chunks",
-            project_id=str(project_id) if project_id else None,
-            document_id=str(document_id) if document_id else None,
-            limit=limit,
-        )
-
-        try:
-            async with pool.acquire() as conn:
-                # Build query with optional filters
-                query = """
-                    SELECT
-                        dc.id as chunk_id,
-                        dc.document_id,
-                        dc.content,
-                        dc.chunk_type,
-                        dc.page_number,
-                        dc.chunk_index,
-                        d.name as document_name,
-                        d.deal_id as project_id,
-                        1 - (dc.embedding <=> $1::vector) as similarity
-                    FROM document_chunks dc
-                    JOIN documents d ON dc.document_id = d.id
-                    WHERE dc.embedding IS NOT NULL
-                """
-
-                params: list[Any] = [embedding_str]
-                param_idx = 2
-
-                if project_id:
-                    query += f" AND d.deal_id = ${param_idx}"
-                    params.append(project_id)
-                    param_idx += 1
-
-                if document_id:
-                    query += f" AND dc.document_id = ${param_idx}"
-                    params.append(document_id)
-                    param_idx += 1
-
-                query += f"""
-                    ORDER BY dc.embedding <=> $1::vector
-                    LIMIT ${param_idx}
-                """
-                params.append(limit)
-
-                rows = await conn.fetch(query, *params)
-
-                results = [dict(row) for row in rows]
-
-                logger.info(
-                    "Similar chunks found",
-                    result_count=len(results),
-                )
-
-                return results
-
-        except asyncpg.PostgresError as e:
-            logger.error(
-                "Database error in similarity search",
-                error=str(e),
-            )
-            raise DatabaseError(
-                f"Failed to search similar chunks: {str(e)}",
-                retryable=self._is_retryable_error(e),
-            )
-
     async def get_document_with_project(
         self,
         document_id: UUID,
@@ -1862,7 +1576,7 @@ class SupabaseClient:
 
         Args:
             document_id: UUID of the document
-            stage: Stage to clear data for (parsed, embedded, analyzed)
+            stage: Stage to clear data for (parsed, analyzed)
 
         Returns:
             True if data was cleared
@@ -1882,7 +1596,7 @@ class SupabaseClient:
             async with pool.acquire() as conn:
                 async with conn.transaction():
                     if stage == "parsed":
-                        # Clear chunks (embeddings will be deleted by CASCADE)
+                        # Clear chunks
                         await conn.execute(
                             """
                             DELETE FROM document_chunks WHERE document_id = $1
@@ -1907,17 +1621,8 @@ class SupabaseClient:
                             document_id,
                         )
 
-                    elif stage == "embedded":
-                        # Clear embeddings from chunks
-                        await conn.execute(
-                            """
-                            UPDATE document_chunks
-                            SET embedding = NULL
-                            WHERE document_id = $1
-                            """,
-                            document_id,
-                        )
-                        # Clear findings
+                    elif stage == "analyzed":
+                        # Clear findings only
                         await conn.execute(
                             """
                             DELETE FROM findings WHERE document_id = $1
@@ -1929,25 +1634,6 @@ class SupabaseClient:
                             """
                             UPDATE documents
                             SET last_completed_stage = 'parsed',
-                                updated_at = NOW()
-                            WHERE id = $1
-                            """,
-                            document_id,
-                        )
-
-                    elif stage == "analyzed":
-                        # Clear findings only
-                        await conn.execute(
-                            """
-                            DELETE FROM findings WHERE document_id = $1
-                            """,
-                            document_id,
-                        )
-                        # Reset stage to embedded
-                        await conn.execute(
-                            """
-                            UPDATE documents
-                            SET last_completed_stage = 'embedded',
                                 updated_at = NOW()
                             WHERE id = $1
                             """,

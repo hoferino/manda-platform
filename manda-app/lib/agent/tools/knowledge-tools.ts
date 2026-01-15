@@ -79,7 +79,7 @@ interface HybridSearchResponse {
  * query_knowledge_base
  *
  * Performs hybrid search on the knowledge base using Graphiti + Voyage reranking.
- * Story: E10.8 - Updated to use Graphiti hybrid search (replaced pgvector match_findings)
+ * Story: E10.8 - Uses Graphiti hybrid search with Voyage reranking
  *
  * Implements hybrid search architecture:
  * 1. Intent detection (fact vs research)
@@ -315,8 +315,7 @@ Requires source document ID and location for proper attribution.`,
  * validate_finding
  *
  * Validates a finding by checking for contradictions with temporal awareness.
- * E10.8: Uses Graphiti hybrid search instead of pgvector match_findings.
- * Graphiti's temporal model (invalid_at) handles superseded fact filtering.
+ * Uses Graphiti hybrid search with temporal model (invalid_at) for superseded fact filtering.
  *
  * AC: #5 - Temporal awareness prevents false contradiction detection
  */

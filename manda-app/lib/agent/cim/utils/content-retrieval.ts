@@ -177,7 +177,7 @@ export async function searchQAItems(
 }
 
 // ============================================================================
-// Graphiti Hybrid Search (E10.8 - replaces pgvector search)
+// Graphiti Hybrid Search
 // ============================================================================
 
 /**
