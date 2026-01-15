@@ -18,13 +18,17 @@ import type {
   CIMPhase,
   WorkflowProgress,
   CIMOutline,
+  KnowledgeMode,
 } from '@/lib/agent/cim-mvp'
 
 interface UseCIMMVPChatOptions {
   projectId: string
   cimId: string
   initialMessages?: ConversationMessage[]
-  knowledgePath?: string
+  // Knowledge source configuration (Story: CIM Knowledge Toggle)
+  knowledgeMode?: KnowledgeMode // 'json' | 'graphiti'
+  knowledgePath?: string // Required if mode === 'json'
+  dealId?: string // Required if mode === 'graphiti'
   // Existing callbacks
   onMessageComplete?: (message: ConversationMessage) => void
   onSlideUpdate?: (slide: SlideUpdate) => void
@@ -57,7 +61,10 @@ export function useCIMMVPChat({
   projectId,
   cimId,
   initialMessages = [],
+  // Knowledge source configuration (Story: CIM Knowledge Toggle)
+  knowledgeMode = 'json', // Default to JSON for safety
   knowledgePath,
+  dealId,
   onMessageComplete,
   onSlideUpdate,
   onPhaseChange,
@@ -120,6 +127,7 @@ export function useCIMMVPChat({
 
       try {
         // Send message to CIM MVP chat API with streaming
+        // Story: CIM Knowledge Toggle - pass knowledgeMode and dealId
         const response = await fetch(
           `/api/projects/${projectId}/cims/${cimId}/chat-mvp`,
           {
@@ -128,7 +136,9 @@ export function useCIMMVPChat({
             body: JSON.stringify({
               message: content,
               stream: true,
-              knowledgePath,
+              knowledgeMode,
+              knowledgePath: knowledgeMode === 'json' ? knowledgePath : undefined,
+              dealId: knowledgeMode === 'graphiti' ? dealId : undefined,
               conversationId,
             }),
             signal: abortControllerRef.current.signal,
@@ -337,7 +347,10 @@ export function useCIMMVPChat({
       projectId,
       cimId,
       isStreaming,
+      // Story: CIM Knowledge Toggle
+      knowledgeMode,
       knowledgePath,
+      dealId,
       conversationId,
       onMessageComplete,
       onSlideUpdate,

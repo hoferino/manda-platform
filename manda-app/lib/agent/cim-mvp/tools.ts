@@ -11,6 +11,46 @@ import { tool } from '@langchain/core/tools'
 import { z } from 'zod'
 import { nanoid } from 'nanoid'
 import { searchKnowledge, getFindingsForSection, getCompanyMetadata } from './knowledge-loader'
+import type { IKnowledgeService, KnowledgeSearchResult } from './knowledge-service'
+
+// =============================================================================
+// Global Knowledge Service (Story: CIM Knowledge Toggle)
+// =============================================================================
+//
+// ARCHITECTURE NOTE: This uses a global singleton pattern for the knowledge service.
+// This approach was chosen because LangChain tools don't have access to LangGraph's
+// configurable state during execution. The service is set by the API route before
+// invoking the graph, and tools read from it during execution.
+//
+// RACE CONDITION CAVEAT: In a high-concurrency serverless environment, concurrent
+// requests could potentially overwrite each other's knowledge service. However:
+// 1. Next.js API routes run in isolated invocations in production (Vercel)
+// 2. Each request sets the service before graph execution and reads within same tick
+// 3. For truly concurrent scenarios, consider request-scoped context or AsyncLocalStorage
+//
+// Future improvement: Pass KnowledgeService via LangGraph's RunnableConfig.configurable
+// when LangChain supports custom configurable fields in tool execution context.
+// =============================================================================
+
+let globalKnowledgeService: IKnowledgeService | null = null
+
+/**
+ * Set the global knowledge service for tools to use.
+ * Called by API route before graph execution.
+ *
+ * @param service - KnowledgeService instance or null to clear
+ */
+export function setGlobalKnowledgeService(service: IKnowledgeService | null): void {
+  globalKnowledgeService = service
+}
+
+/**
+ * Get the global knowledge service.
+ * Returns null if not set (tools will fall back to JSON loader).
+ */
+export function getGlobalKnowledgeService(): IKnowledgeService | null {
+  return globalKnowledgeService
+}
 import type {
   SlideComponent,
   SlideUpdate,
@@ -101,12 +141,47 @@ export const webSearchTool = tool(
 /**
  * Knowledge Search Tool
  *
- * Searches the JSON knowledge base extracted from deal documents.
- * More reliable than reading raw documents.
+ * Searches the knowledge base extracted from deal documents.
+ * Supports both JSON file (dev) and Graphiti/Neo4j (production) modes.
+ *
+ * Story: CIM Knowledge Toggle - uses KnowledgeService when available
  */
 export const knowledgeSearchTool = tool(
   async ({ query, section }): Promise<string> => {
     try {
+      // Use KnowledgeService if available, otherwise fall back to legacy JSON loader
+      if (globalKnowledgeService) {
+        const mode = globalKnowledgeService.getMode()
+        console.log(`[knowledgeSearchTool] Using KnowledgeService in ${mode} mode`)
+
+        const results = await globalKnowledgeService.search(query, { section, limit: 10 })
+
+        if (results.length === 0) {
+          return JSON.stringify({
+            success: true,
+            found: false,
+            message: `No findings matching "${query}"${section ? ` in section ${section}` : ''}`,
+            suggestion: 'Try a different search term or check the data gaps.',
+            mode,
+          })
+        }
+
+        return JSON.stringify({
+          success: true,
+          found: true,
+          count: results.length,
+          findings: results.map((r: KnowledgeSearchResult) => ({
+            content: r.content,
+            source: r.source,
+            section: r.section,
+            relevance: r.relevance,
+          })),
+          mode,
+        })
+      }
+
+      // Legacy fallback: use JSON knowledge loader directly
+      console.log('[knowledgeSearchTool] Using legacy JSON loader (no KnowledgeService)')
       const results = searchKnowledge(query, section)
 
       if (results.length === 0) {
@@ -115,6 +190,7 @@ export const knowledgeSearchTool = tool(
           found: false,
           message: `No findings matching "${query}"${section ? ` in section ${section}` : ''}`,
           suggestion: 'Try a different search term or check the data gaps.',
+          mode: 'json',
         })
       }
 
@@ -122,7 +198,8 @@ export const knowledgeSearchTool = tool(
         success: true,
         found: true,
         count: results.length,
-        findings: results.slice(0, 10), // Limit to top 10
+        findings: results.slice(0, 10),
+        mode: 'json',
       })
     } catch (error) {
       return JSON.stringify({
@@ -150,10 +227,50 @@ export const knowledgeSearchTool = tool(
  *
  * Retrieves all findings for a specific CIM section.
  * Use when building a section and need all available data.
+ *
+ * Story: CIM Knowledge Toggle - uses KnowledgeService when available
  */
 export const getSectionContextTool = tool(
   async ({ sectionPath }): Promise<string> => {
     try {
+      // Use KnowledgeService if available, otherwise fall back to legacy JSON loader
+      if (globalKnowledgeService) {
+        const mode = globalKnowledgeService.getMode()
+        console.log(`[getSectionContextTool] Using KnowledgeService in ${mode} mode for section: ${sectionPath}`)
+
+        const findings = await globalKnowledgeService.getSection(sectionPath)
+        const metadata = await globalKnowledgeService.getMetadata()
+
+        if (findings.length === 0) {
+          return JSON.stringify({
+            success: true,
+            section: sectionPath,
+            found: false,
+            company: metadata.companyName,
+            message: `No findings available for section: ${sectionPath}`,
+            mode,
+          })
+        }
+
+        return JSON.stringify({
+          success: true,
+          section: sectionPath,
+          found: true,
+          company: metadata.companyName,
+          count: findings.length,
+          findings: findings.map((f: KnowledgeSearchResult) => ({
+            id: f.metadata?.id,
+            content: f.content,
+            source: f.source,
+            confidence: f.metadata?.confidence,
+            relevance: f.relevance,
+          })),
+          mode,
+        })
+      }
+
+      // Legacy fallback: use JSON knowledge loader directly
+      console.log('[getSectionContextTool] Using legacy JSON loader (no KnowledgeService)')
       const findings = getFindingsForSection(sectionPath)
       const metadata = getCompanyMetadata()
 
@@ -164,6 +281,7 @@ export const getSectionContextTool = tool(
           found: false,
           company: metadata?.company_name,
           message: `No findings available for section: ${sectionPath}`,
+          mode: 'json',
         })
       }
 
@@ -179,6 +297,7 @@ export const getSectionContextTool = tool(
           source: `${f.source.document}, ${f.source.location}`,
           confidence: f.confidence,
         })),
+        mode: 'json',
       })
     } catch (error) {
       return JSON.stringify({

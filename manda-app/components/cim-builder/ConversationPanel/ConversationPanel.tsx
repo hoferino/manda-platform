@@ -21,7 +21,7 @@ import { CIMChatInput } from './CIMChatInput'
 import type { ConversationMessage } from '@/lib/types/cim'
 import { useCIMChat } from '@/lib/hooks/useCIMChat'
 import { useCIMMVPChat } from '@/lib/hooks/useCIMMVPChat'
-import type { SlideUpdate, CIMPhase, WorkflowProgress, CIMOutline } from '@/lib/agent/cim-mvp'
+import type { SlideUpdate, CIMPhase, WorkflowProgress, CIMOutline, KnowledgeMode } from '@/lib/agent/cim-mvp'
 
 interface ConversationPanelProps {
   projectId: string
@@ -31,9 +31,10 @@ interface ConversationPanelProps {
   onSourceRefClear: () => void
   onMessageSent: (message: ConversationMessage) => void
   onCIMStateChanged?: () => void // Callback to refresh CIM state after tool updates (AC #7)
-  // MVP agent props
-  useMVPAgent?: boolean // Toggle between v2 and MVP agent
-  knowledgePath?: string // Path to knowledge.json for MVP agent
+  // Knowledge source props (Story: CIM Knowledge Toggle)
+  knowledgeMode?: KnowledgeMode // 'json' | 'graphiti'
+  knowledgePath?: string // Path to knowledge.json (required if mode === 'json')
+  dealId?: string // Deal ID for Graphiti mode
   onSlideUpdate?: (slide: SlideUpdate) => void // Callback for real-time slide updates
   onPhaseChange?: (phase: CIMPhase) => void // Callback for phase navigation
   // Story 10: New workflow callbacks
@@ -52,7 +53,10 @@ function MVPConversationPanel({
   onSourceRefClear,
   onMessageSent,
   onCIMStateChanged,
+  // Story: CIM Knowledge Toggle
+  knowledgeMode = 'json',
   knowledgePath,
+  dealId,
   onSlideUpdate,
   onPhaseChange,
   // Story 10: New workflow callbacks
@@ -60,12 +64,15 @@ function MVPConversationPanel({
   onOutlineCreated,
   onOutlineUpdated,
   onSectionStarted,
-}: Omit<ConversationPanelProps, 'useMVPAgent'>) {
+}: ConversationPanelProps) {
   const { messages, isStreaming, currentTool, sendMessage } = useCIMMVPChat({
     projectId,
     cimId,
     initialMessages: conversationHistory,
+    // Story: CIM Knowledge Toggle
+    knowledgeMode,
     knowledgePath,
+    dealId,
     onMessageComplete: onMessageSent,
     onSlideUpdate,
     onPhaseChange,
@@ -166,8 +173,10 @@ export function ConversationPanel({
   onSourceRefClear,
   onMessageSent,
   onCIMStateChanged,
-  useMVPAgent = true, // Default to MVP agent
+  // Story: CIM Knowledge Toggle - always use MVP agent, just with different knowledge sources
+  knowledgeMode = 'json',
   knowledgePath,
+  dealId,
   onSlideUpdate,
   onPhaseChange,
   // Story 10: New workflow callbacks
@@ -176,31 +185,9 @@ export function ConversationPanel({
   onOutlineUpdated,
   onSectionStarted,
 }: ConversationPanelProps) {
-  // Use separate components to avoid hook conflicts between the two chat hooks
-  if (useMVPAgent) {
-    return (
-      <MVPConversationPanel
-        projectId={projectId}
-        cimId={cimId}
-        conversationHistory={conversationHistory}
-        sourceRef={sourceRef}
-        onSourceRefClear={onSourceRefClear}
-        onMessageSent={onMessageSent}
-        onCIMStateChanged={onCIMStateChanged}
-        knowledgePath={knowledgePath}
-        onSlideUpdate={onSlideUpdate}
-        onPhaseChange={onPhaseChange}
-        // Story 10: New workflow callbacks
-        onWorkflowProgress={onWorkflowProgress}
-        onOutlineCreated={onOutlineCreated}
-        onOutlineUpdated={onOutlineUpdated}
-        onSectionStarted={onSectionStarted}
-      />
-    )
-  }
-
+  // Always use MVPConversationPanel - it supports both JSON and Graphiti knowledge modes
   return (
-    <StandardConversationPanel
+    <MVPConversationPanel
       projectId={projectId}
       cimId={cimId}
       conversationHistory={conversationHistory}
@@ -208,6 +195,17 @@ export function ConversationPanel({
       onSourceRefClear={onSourceRefClear}
       onMessageSent={onMessageSent}
       onCIMStateChanged={onCIMStateChanged}
+      // Story: CIM Knowledge Toggle
+      knowledgeMode={knowledgeMode}
+      knowledgePath={knowledgePath}
+      dealId={dealId}
+      onSlideUpdate={onSlideUpdate}
+      onPhaseChange={onPhaseChange}
+      // Story 10: New workflow callbacks
+      onWorkflowProgress={onWorkflowProgress}
+      onOutlineCreated={onOutlineCreated}
+      onOutlineUpdated={onOutlineUpdated}
+      onSectionStarted={onSectionStarted}
     />
   )
 }

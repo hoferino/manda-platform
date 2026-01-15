@@ -76,10 +76,11 @@ export interface PreModelHookResult {
 /**
  * Result from Graphiti hybrid search
  */
-interface HybridSearchResult {
+export interface HybridSearchResult {
   content: string
   score: number
   citation?: {
+    id?: string
     type: string
     title: string
     page?: number
@@ -89,7 +90,7 @@ interface HybridSearchResult {
 /**
  * Response from Graphiti hybrid search API
  */
-interface HybridSearchResponse {
+export interface HybridSearchResponse {
   results: HybridSearchResult[]
   entities: string[]
   latency_ms: number
@@ -322,16 +323,22 @@ export type SearchMethod = 'vector' | 'hybrid' | 'auto'
 /**
  * Call Graphiti hybrid search API
  *
+ * Exported for reuse by CIM MVP knowledge integration (Story: CIM Knowledge Toggle).
+ *
  * @param query - User query
  * @param dealId - Deal UUID for namespace isolation
  * @param searchMethod - Search method: 'vector' (fast), 'hybrid' (full), or 'auto' (default)
+ * @param numResults - Number of results to return (default: 5)
  * @returns HybridSearchResponse or null on error
  */
-async function callGraphitiSearch(
+export async function callGraphitiSearch(
   query: string,
   dealId: string,
-  searchMethod: SearchMethod = 'auto'
+  searchMethod: SearchMethod = 'auto',
+  numResults: number = 5
 ): Promise<HybridSearchResponse | null> {
+  const startTime = performance.now()
+
   try {
     const response = await fetch(`${PROCESSING_API_URL}/api/search/hybrid`, {
       method: 'POST',
@@ -342,19 +349,24 @@ async function callGraphitiSearch(
       body: JSON.stringify({
         query,
         deal_id: dealId,
-        num_results: 5, // Top 5 for context injection
+        num_results: numResults,
         search_method: searchMethod,
       }),
     })
 
+    const latencyMs = Math.round(performance.now() - startTime)
+
     if (!response.ok) {
-      console.warn(`[preModelRetrievalHook] Graphiti search failed: ${response.status}`)
+      console.warn(`[callGraphitiSearch] Search failed: ${response.status} in ${latencyMs}ms`)
       return null
     }
 
-    return await response.json()
+    const result = await response.json()
+    console.log(`[callGraphitiSearch] Search completed in ${latencyMs}ms, ${result?.results?.length || 0} results`)
+
+    return result
   } catch (error) {
-    console.error('[preModelRetrievalHook] Graphiti search error:', error)
+    console.error('[callGraphitiSearch] Search error:', error)
     return null
   }
 }
@@ -506,7 +518,7 @@ export async function preModelRetrievalHook(
 export {
   retrievalCache,
   formatRetrievedContext,
-  callGraphitiSearch,
+  // callGraphitiSearch is now exported at definition (line 334)
   RETRIEVAL_MAX_TOKENS,
   CACHE_TTL_MS,
   MAX_CACHE_SIZE,

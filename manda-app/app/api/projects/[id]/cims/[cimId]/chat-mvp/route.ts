@@ -17,7 +17,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { streamCIMMVP, executeCIMMVP, getCIMMVPGraph } from '@/lib/agent/cim-mvp'
+import {
+  streamCIMMVP,
+  executeCIMMVP,
+  getCIMMVPGraph,
+  createKnowledgeService,
+  type KnowledgeMode,
+} from '@/lib/agent/cim-mvp'
+import { setGlobalKnowledgeService } from '@/lib/agent/cim-mvp/tools'
 import type { CIMOutline, WorkflowProgress, CIMMVPStreamEvent } from '@/lib/agent/cim-mvp'
 import { getSSEHeaders } from '@/lib/agent/streaming'
 import { updateCIM } from '@/lib/services/cim'
@@ -53,7 +60,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const {
       message,
       stream = true,
+      // Story: CIM Knowledge Toggle - accept knowledge mode
+      knowledgeMode: rawKnowledgeMode = 'json',
       knowledgePath,
+      dealId,
       conversationId,
     } = body
 
@@ -63,6 +73,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
         { status: 400 }
       )
     }
+
+    // Validate knowledgeMode - only accept 'json' or 'graphiti' (MEDIUM fix: input validation)
+    const validModes: KnowledgeMode[] = ['json', 'graphiti']
+    const knowledgeMode: KnowledgeMode = validModes.includes(rawKnowledgeMode as KnowledgeMode)
+      ? (rawKnowledgeMode as KnowledgeMode)
+      : 'json'
 
     // Authenticate user
     const supabase = await createClient()
@@ -77,6 +93,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
         { status: 401 }
       )
     }
+
+    // Story: CIM Knowledge Toggle - create and set knowledge service
+    const knowledgeService = createKnowledgeService({
+      mode: knowledgeMode,
+      knowledgePath: knowledgeMode === 'json' ? knowledgePath : undefined,
+      dealId: knowledgeMode === 'graphiti' ? (dealId || projectId) : undefined,
+      groupId: knowledgeMode === 'graphiti' ? projectId : undefined,
+    })
+
+    // Set global knowledge service for tools to use
+    setGlobalKnowledgeService(knowledgeService)
+    console.log(`[api/cims/chat-mvp] Knowledge service created in ${knowledgeMode} mode`)
 
     // Thread ID is deterministic per CIM - ensures each CIM has isolated conversation history
     // Don't use Date.now() as that creates new threads on each request

@@ -20,12 +20,24 @@ import { ConversationPanel } from './ConversationPanel/ConversationPanel'
 import { PreviewPanel } from './PreviewPanel/PreviewPanel'
 import { ExportButton } from './ExportButton'
 import { useCIMBuilder } from '@/lib/hooks/useCIMBuilder'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import type { KnowledgeReadiness } from '@/lib/agent/cim-mvp'
 import { formatComponentReference } from '@/lib/cim/reference-utils'
 import type { SlideUpdate, CIMPhase, ComponentType as MVPComponentType, WorkflowProgress, CIMOutline } from '@/lib/agent/cim-mvp'
 import type { Slide, ComponentType as LegacyComponentType } from '@/lib/types/cim'
@@ -112,17 +124,20 @@ interface CIMBuilderPageProps {
   projectId: string
   cimId: string
   initialCIMTitle: string
-  // MVP agent props
-  useMVPAgent?: boolean
-  knowledgePath?: string
+  // Knowledge source props (Story: CIM Knowledge Toggle)
+  useJsonKnowledge?: boolean // true = JSON file, false = Graphiti/Neo4j
+  knowledgePath?: string // Path to JSON file when in JSON mode
+  dealId?: string // Deal ID for Graphiti mode
 }
 
 export function CIMBuilderPage({
   projectId,
   cimId,
   initialCIMTitle,
-  useMVPAgent: initialUseMVPAgent = true, // Default to MVP agent for testing
+  // Story: CIM Knowledge Toggle - renamed from useJsonKnowledge
+  useJsonKnowledge: initialUseJsonKnowledge = true, // Default to JSON for safety
   knowledgePath,
+  dealId,
 }: CIMBuilderPageProps) {
   const {
     cim,
@@ -137,8 +152,11 @@ export function CIMBuilderPage({
     refresh,
   } = useCIMBuilder(projectId, cimId)
 
-  // MVP agent toggle state
-  const [useMVPAgent, setUseMVPAgent] = React.useState(initialUseMVPAgent)
+  // Story: CIM Knowledge Toggle - knowledge source selection
+  // Toggle ON = JSON knowledge (dev/testing), Toggle OFF = Graphiti/Neo4j (production)
+  // Environment variable NEXT_PUBLIC_CIM_DEFAULT_JSON_MODE controls production default (AC #6)
+  const envDefaultJsonMode = process.env.NEXT_PUBLIC_CIM_DEFAULT_JSON_MODE !== 'false'
+  const [useJsonKnowledge, setUseJsonKnowledge] = React.useState(initialUseJsonKnowledge ?? envDefaultJsonMode)
 
   // Real-time slide updates from MVP agent
   const [slideUpdates, setSlideUpdates] = React.useState<Map<string, SlideUpdate>>(new Map())
@@ -149,6 +167,11 @@ export function CIMBuilderPage({
   // Story 10: Workflow state from MVP agent
   const [workflowProgress, setWorkflowProgress] = React.useState<WorkflowProgress | null>(null)
   const [cimOutline, setCimOutline] = React.useState<CIMOutline | null>(null)
+
+  // Story: CIM Knowledge Toggle - readiness check state
+  const [knowledgeReadiness, setKnowledgeReadiness] = React.useState<KnowledgeReadiness | null>(null)
+  const [showReadinessWarning, setShowReadinessWarning] = React.useState(false)
+  const [isCheckingReadiness, setIsCheckingReadiness] = React.useState(false)
 
   // Handle slide update from MVP agent
   const handleSlideUpdate = React.useCallback((slide: SlideUpdate) => {
@@ -198,6 +221,50 @@ export function CIMBuilderPage({
     )
   }, [])
 
+  // Story: CIM Knowledge Toggle - handle toggle change with readiness check
+  const handleKnowledgeModeToggle = React.useCallback(async (useJson: boolean) => {
+    // If switching to JSON mode, just do it
+    if (useJson) {
+      setUseJsonKnowledge(true)
+      return
+    }
+
+    // If switching to Graphiti mode, check readiness first
+    setIsCheckingReadiness(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/cims/knowledge-readiness`)
+      if (!response.ok) {
+        console.error('[CIMBuilderPage] Readiness check failed:', response.status)
+        // Allow switch but don't show readiness
+        setUseJsonKnowledge(false)
+        return
+      }
+
+      const readiness = await response.json() as KnowledgeReadiness
+      setKnowledgeReadiness(readiness)
+
+      if (readiness.level === 'insufficient') {
+        // Show warning dialog
+        setShowReadinessWarning(true)
+      } else {
+        // Good enough, switch immediately
+        setUseJsonKnowledge(false)
+      }
+    } catch (error) {
+      console.error('[CIMBuilderPage] Readiness check error:', error)
+      // Allow switch on error
+      setUseJsonKnowledge(false)
+    } finally {
+      setIsCheckingReadiness(false)
+    }
+  }, [projectId])
+
+  // Handle confirming switch despite warning
+  const handleConfirmGraphitiSwitch = React.useCallback(() => {
+    setUseJsonKnowledge(false)
+    setShowReadinessWarning(false)
+  }, [])
+
   // Handle inserting source reference into chat input
   const handleSourceClick = React.useCallback(
     (type: 'document' | 'finding' | 'qa', id: string, title: string) => {
@@ -239,7 +306,7 @@ export function CIMBuilderPage({
   // Merge database slides with real-time MVP agent slides
   // MVP slides take precedence and are appended if new
   const mergedSlides = React.useMemo(() => {
-    if (!useMVPAgent || slideUpdates.size === 0) {
+    if (!useJsonKnowledge || slideUpdates.size === 0) {
       return cim?.slides || []
     }
 
@@ -274,7 +341,7 @@ export function CIMBuilderPage({
     }
 
     return result
-  }, [cim?.slides, slideUpdates, useMVPAgent])
+  }, [cim?.slides, slideUpdates, useJsonKnowledge])
 
   // Story 10: Handle section click in outline tree (navigate to first slide of section)
   const handleOutlineSectionClick = React.useCallback(
@@ -341,22 +408,35 @@ export function CIMBuilderPage({
           <h1 className="text-lg font-semibold truncate">{cim.title}</h1>
           <p className="text-xs text-muted-foreground">
             {mergedSlides.length} slides | {cim.outline.length} sections
-            {useMVPAgent && workflowProgress && ` | Stage: ${workflowProgress.currentStage.replace(/_/g, ' ')}`}
-            {useMVPAgent && workflowProgress?.currentSectionId && ` | Section: ${workflowProgress.currentSectionId}`}
-            {useMVPAgent && !workflowProgress && ` | Phase: ${currentPhase.replace(/_/g, ' ')}`}
-            {useMVPAgent && slideUpdates.size > 0 && ` | ${slideUpdates.size} new`}
+            {useJsonKnowledge && workflowProgress && ` | Stage: ${workflowProgress.currentStage.replace(/_/g, ' ')}`}
+            {useJsonKnowledge && workflowProgress?.currentSectionId && ` | Section: ${workflowProgress.currentSectionId}`}
+            {useJsonKnowledge && !workflowProgress && ` | Phase: ${currentPhase.replace(/_/g, ' ')}`}
+            {useJsonKnowledge && slideUpdates.size > 0 && ` | ${slideUpdates.size} new`}
           </p>
         </div>
-        {/* MVP Agent Toggle */}
+        {/* Knowledge Source Toggle (Story: CIM Knowledge Toggle) */}
         <div className="flex items-center gap-2">
           <Switch
-            id="mvp-agent-toggle"
-            checked={useMVPAgent}
-            onCheckedChange={setUseMVPAgent}
+            id="knowledge-mode-toggle"
+            checked={useJsonKnowledge}
+            onCheckedChange={handleKnowledgeModeToggle}
+            disabled={isCheckingReadiness}
           />
-          <Label htmlFor="mvp-agent-toggle" className="text-sm text-muted-foreground">
-            MVP Agent
+          <Label htmlFor="knowledge-mode-toggle" className="text-sm text-muted-foreground">
+            {isCheckingReadiness ? 'Checking...' : useJsonKnowledge ? 'Dev Mode (JSON)' : 'Live Data (Neo4j)'}
           </Label>
+          {/* Readiness badge for Graphiti mode */}
+          {!useJsonKnowledge && knowledgeReadiness && (
+            <Badge
+              variant={
+                knowledgeReadiness.level === 'good' ? 'default' :
+                knowledgeReadiness.level === 'limited' ? 'secondary' : 'destructive'
+              }
+              className="text-xs"
+            >
+              {knowledgeReadiness.score}% ready
+            </Badge>
+          )}
         </div>
         {/* Export Button - E9.14: Wireframe PowerPoint Export */}
         <ExportButton cim={cim} />
@@ -387,9 +467,10 @@ export function CIMBuilderPage({
               onSourceRefClear={() => setSourceRef('')}
               onMessageSent={addMessage}
               onCIMStateChanged={refresh}
-              // MVP agent props
-              useMVPAgent={useMVPAgent}
+              // Knowledge source props (Story: CIM Knowledge Toggle)
+              knowledgeMode={useJsonKnowledge ? 'json' : 'graphiti'}
               knowledgePath={knowledgePath}
+              dealId={dealId || projectId}
               onSlideUpdate={handleSlideUpdate}
               onPhaseChange={handlePhaseChange}
               // Story 10: New workflow callbacks
@@ -409,6 +490,51 @@ export function CIMBuilderPage({
           }
         />
       </div>
+
+      {/* Story: CIM Knowledge Toggle - Readiness Warning Dialog */}
+      <AlertDialog open={showReadinessWarning} onOpenChange={setShowReadinessWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Limited Data Coverage
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                The knowledge graph has limited data for this deal.
+                The AI may not have enough information to create a complete CIM.
+              </p>
+              {knowledgeReadiness && (
+                <div className="bg-muted p-3 rounded-md text-sm space-y-2">
+                  <div className="font-medium">Coverage Details:</div>
+                  <ul className="space-y-1">
+                    <li>Financial data: {knowledgeReadiness.details.financialCoverage}%</li>
+                    <li>Market data: {knowledgeReadiness.details.marketCoverage}%</li>
+                    <li>Company data: {knowledgeReadiness.details.companyCoverage}%</li>
+                    <li>Documents indexed: {knowledgeReadiness.details.documentCount}</li>
+                  </ul>
+                  {knowledgeReadiness.recommendations.length > 0 && (
+                    <>
+                      <div className="font-medium mt-2">Recommendations:</div>
+                      <ul className="list-disc list-inside">
+                        {knowledgeReadiness.recommendations.map((rec, i) => (
+                          <li key={i}>{rec}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay in Dev Mode</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmGraphitiSwitch}>
+              Use Live Data Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

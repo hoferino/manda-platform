@@ -64,7 +64,7 @@ export { cimMVPTools } from './tools'
 // Prompts
 export { getSystemPrompt, getPhaseDescription, getAllPhases } from './prompts'
 
-// Knowledge loader
+// Knowledge loader (legacy - prefer KnowledgeService)
 export {
   loadKnowledge,
   searchKnowledge,
@@ -76,6 +76,27 @@ export {
   formatSectionContext,
   clearKnowledgeCache,
 } from './knowledge-loader'
+
+// Knowledge Service (Story: CIM Knowledge Toggle)
+export {
+  KnowledgeService,
+  createKnowledgeService,
+  type KnowledgeMode,
+  type KnowledgeServiceConfig,
+  type KnowledgeSearchOptions,
+  type KnowledgeSearchResult,
+  type KnowledgeMetadata,
+  type KnowledgeReadiness,
+  type IKnowledgeService,
+} from './knowledge-service'
+
+// Graphiti Knowledge (Story: CIM Knowledge Toggle)
+export {
+  searchGraphiti,
+  getSectionGraphiti,
+  getMetadataGraphiti,
+  getDataSummaryGraphiti,
+} from './graphiti-knowledge'
 
 // =============================================================================
 // Streaming Helper
