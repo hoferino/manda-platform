@@ -108,7 +108,7 @@ export function StructureTree({
   return (
     <div className={cn('space-y-1', className)}>
       {sortedOutline.map((section) => {
-        const StatusIcon = statusIcons[section.status]
+        const StatusIcon = statusIcons[section.status] ?? Circle
         const flaggedInfo = flaggedMap.get(section.id)
         const isFlagged = !!flaggedInfo
         const isCurrent = section.id === currentSectionId  // E9.13
@@ -150,7 +150,7 @@ export function StructureTree({
               <StatusIcon
                 className={cn(
                   'h-4 w-4 flex-shrink-0',
-                  statusColors[section.status],
+                  statusColors[section.status] ?? 'text-muted-foreground',
                   section.status === 'in_progress' && 'animate-spin'
                 )}
               />
