@@ -191,12 +191,19 @@ class IngestGraphitiHandler:
 
             # Ingest chunks to Graphiti
             # E12.9: organization_id is passed for composite group_id
+            # E14-S1: Build document metadata for extraction hints
+            doc_metadata = {
+                "filename": doc["name"],
+                "file_type": doc.get("file_type"),
+                "content_type": doc.get("content_type"),
+            }
             result: IngestionResult = await self.ingestion.ingest_document_chunks(
                 document_id=str(document_id),
                 deal_id=deal_id,
                 organization_id=organization_id,  # E12.9: Multi-tenant isolation
                 document_name=doc["name"],
                 chunks=chunks,
+                doc_metadata=doc_metadata,  # E14-S1: Pass metadata for extraction hints
             )
 
             # Update status to graphiti_ingested

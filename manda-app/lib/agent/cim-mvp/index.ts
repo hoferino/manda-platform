@@ -90,13 +90,30 @@ export {
   type IKnowledgeService,
 } from './knowledge-service'
 
-// Graphiti Knowledge (Story: CIM Knowledge Toggle)
+// Graphiti Knowledge (Story: CIM Knowledge Toggle, E14-S5)
 export {
   searchGraphiti,
   getSectionGraphiti,
   getMetadataGraphiti,
   getDataSummaryGraphiti,
+  STATIC_SECTION_QUERIES,
+  USE_DYNAMIC_QUERIES,
+  type SectionRetrievalOptions,
 } from './graphiti-knowledge'
+
+// Query Generator (Story: E14-S4)
+export {
+  generateDynamicQuery,
+  getQueryForSection,
+  fetchGraphSchema,
+  invalidateQueryCache,
+  invalidateSchemaCache,
+  getSectionDescription,
+  SECTION_DESCRIPTIONS,
+  type GraphSchema,
+  type QueryGeneratorInput,
+  type QueryGenerationResult,
+} from './query-generator'
 
 // =============================================================================
 // Streaming Helper

@@ -39,6 +39,9 @@ export interface KnowledgeServiceConfig {
   // Graphiti mode
   dealId?: string
   groupId?: string
+  // Dynamic query context (E14-S5)
+  buyerPersona?: string
+  userFocus?: string
 }
 
 /**
@@ -312,13 +315,16 @@ export class KnowledgeService implements IKnowledgeService {
   }
 
   private async getSectionGraphiti(sectionPath: string): Promise<KnowledgeSearchResult[]> {
-    const { dealId } = this.config
+    const { dealId, buyerPersona, userFocus } = this.config
     if (!dealId) {
       throw new Error('dealId required for Graphiti mode')
     }
 
     const { getSectionGraphiti } = await import('./graphiti-knowledge')
-    return getSectionGraphiti(sectionPath, dealId)
+    return getSectionGraphiti(sectionPath, dealId, {
+      buyerPersona,
+      userFocus,
+    })
   }
 
   private async getMetadataGraphiti(): Promise<KnowledgeMetadata> {

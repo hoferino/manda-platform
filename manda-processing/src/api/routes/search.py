@@ -457,4 +457,214 @@ async def hybrid_search(
         )
 
 
+# =============================================================================
+# Graph Schema Introspection (E14-S3)
+# =============================================================================
+
+
+class GraphSchema(BaseModel):
+    """Schema information from a deal's knowledge graph."""
+
+    entity_types: list[str] = Field(description="List of entity type labels in the graph")
+    relationship_types: list[str] = Field(description="List of relationship type names")
+    entity_counts: dict[str, int] = Field(description="Count of entities per type")
+    total_entities: int = Field(description="Total entity count")
+    total_relationships: int = Field(description="Total relationship count")
+
+
+# Simple in-memory cache (consider Redis for production multi-instance)
+import time as _time
+_schema_cache: dict[str, tuple[GraphSchema, float]] = {}
+_SCHEMA_CACHE_TTL = 3600  # 1 hour
+
+
+@router.get("/schema/{project_id}", response_model=GraphSchema)
+async def get_graph_schema(
+    project_id: str,
+    api_key: ApiKeyDep,  # Require API key authentication
+    db: SupabaseClient = Depends(get_supabase_client),
+) -> GraphSchema:
+    """
+    Get the knowledge graph schema for a specific project/deal.
+
+    Story: E14-S3 - Graph Schema Introspection Endpoint
+
+    Returns entity types, relationship types, and counts to enable
+    dynamic query generation. Results are cached for 1 hour per deal.
+
+    This endpoint is called by the frontend query generator (E14-S4)
+    to introspect the graph schema before generating CIM retrieval queries.
+
+    Args:
+        project_id: Project/Deal UUID for namespace isolation
+
+    Returns:
+        GraphSchema with entity types, relationship types, and counts
+
+    Raises:
+        HTTPException: On Neo4j connection errors
+    """
+    cache_key = f"schema:{project_id}"
+
+    # Check cache first
+    if cache_key in _schema_cache:
+        cached, timestamp = _schema_cache[cache_key]
+        if _time.time() - timestamp < _SCHEMA_CACHE_TTL:
+            logger.debug(
+                "Graph schema cache hit",
+                project_id=project_id,
+            )
+            return cached
+
+    # Verify deal exists
+    if not await verify_deal_exists(project_id, db):
+        logger.warning(
+            "Schema request for non-existent deal",
+            project_id=project_id,
+        )
+        raise HTTPException(
+            status_code=404,
+            detail=f"Deal not found: {project_id}",
+        )
+
+    try:
+        # Import and get Graphiti client's Neo4j driver
+        from src.graphiti.client import GraphitiClient, GraphitiConnectionError
+
+        client = await GraphitiClient.get_instance()
+        driver = client.driver
+
+        # Build composite group_id (matching GraphitiClient format)
+        # Note: For now, we use project_id as both org_id and deal_id
+        # since the frontend doesn't always have org context
+        composite_group_id = f"{project_id}_{project_id}"
+
+        async with driver.session() as session:
+            # Get entity types and counts
+            entity_result = await session.run("""
+                MATCH (n:Entity)
+                WHERE n.group_id = $group_id
+                WITH labels(n) AS node_labels, count(n) AS count
+                UNWIND node_labels AS label
+                WHERE label <> 'Entity'
+                RETURN label, sum(count) AS entity_count
+                ORDER BY entity_count DESC
+            """, group_id=composite_group_id)
+
+            entity_data = [record async for record in entity_result]
+            entity_types = [r['label'] for r in entity_data]
+            entity_counts = {r['label']: r['entity_count'] for r in entity_data}
+            total_entities = sum(entity_counts.values())
+
+            # Get relationship types
+            rel_result = await session.run("""
+                MATCH (n:Entity)-[r]->(m:Entity)
+                WHERE n.group_id = $group_id
+                RETURN DISTINCT type(r) AS rel_type
+            """, group_id=composite_group_id)
+
+            rel_data = [record async for record in rel_result]
+            relationship_types = [r['rel_type'] for r in rel_data]
+
+            # Get total relationships count
+            rel_count_result = await session.run("""
+                MATCH (n:Entity)-[r]->(m:Entity)
+                WHERE n.group_id = $group_id
+                RETURN count(r) AS total
+            """, group_id=composite_group_id)
+
+            total_rel_record = await rel_count_result.single()
+            total_relationships = total_rel_record['total'] if total_rel_record else 0
+
+        schema = GraphSchema(
+            entity_types=entity_types,
+            relationship_types=relationship_types,
+            entity_counts=entity_counts,
+            total_entities=total_entities,
+            total_relationships=total_relationships,
+        )
+
+        # Cache the result
+        _schema_cache[cache_key] = (schema, _time.time())
+
+        logger.info(
+            "Graph schema retrieved",
+            project_id=project_id,
+            entity_type_count=len(entity_types),
+            relationship_type_count=len(relationship_types),
+            total_entities=total_entities,
+        )
+
+        return schema
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_str = str(e).lower()
+        is_connection_error = any(term in error_str for term in [
+            'neo4j', 'graphiti', 'connection', 'unavailable', 'timeout'
+        ])
+
+        if is_connection_error:
+            logger.warning(
+                "Neo4j unavailable for schema introspection",
+                error=str(e),
+                project_id=project_id,
+            )
+            # Return empty schema for graceful degradation
+            return GraphSchema(
+                entity_types=[],
+                relationship_types=[],
+                entity_counts={},
+                total_entities=0,
+                total_relationships=0,
+            )
+
+        logger.error(
+            "Graph schema introspection failed",
+            error=str(e),
+            error_type=type(e).__name__,
+            project_id=project_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Graph schema service unavailable",
+        )
+
+
+@router.delete("/schema/{project_id}/cache")
+async def invalidate_schema_cache(
+    project_id: str,
+    api_key: ApiKeyDep,
+) -> dict:
+    """
+    Invalidate cached schema for a project.
+
+    Story: E14-S3 - Graph Schema Introspection Endpoint
+
+    Called after document processing completes to ensure
+    freshly ingested entities are reflected in the schema.
+
+    Args:
+        project_id: Project/Deal UUID
+
+    Returns:
+        Status dict indicating if cache was invalidated
+    """
+    cache_key = f"schema:{project_id}"
+    if cache_key in _schema_cache:
+        del _schema_cache[cache_key]
+        logger.info(
+            "Schema cache invalidated",
+            project_id=project_id,
+        )
+        return {"status": "invalidated", "project_id": project_id}
+
+    logger.debug(
+        "Schema cache not found for invalidation",
+        project_id=project_id,
+    )
+    return {"status": "not_cached", "project_id": project_id}
+
+
 __all__ = ["router"]

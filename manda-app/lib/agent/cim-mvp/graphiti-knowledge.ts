@@ -6,6 +6,7 @@
  * Reuses the existing callGraphitiSearch infrastructure from Agent v2.
  *
  * Story: CIM Knowledge Toggle - Story 2
+ * Story: E14-S5 Replace Static SECTION_QUERIES - Dynamic query generation
  */
 
 import type { KnowledgeSearchResult, KnowledgeSearchOptions, KnowledgeMetadata } from './knowledge-service'
@@ -14,16 +15,29 @@ import {
   type HybridSearchResult,
   type SearchMethod,
 } from '@/lib/agent/retrieval'
+import { getQueryForSection } from './query-generator'
 
 // =============================================================================
-// Section Query Mapping
+// Configuration
 // =============================================================================
 
 /**
- * Maps CIM section paths to Graphiti search queries.
- * These queries are optimized for retrieving section-specific information.
+ * Feature flag for dynamic query generation
+ * Set CIM_USE_DYNAMIC_QUERIES=false to disable
  */
-const SECTION_QUERIES: Record<string, string> = {
+const USE_DYNAMIC_QUERIES = process.env.CIM_USE_DYNAMIC_QUERIES !== 'false'
+
+// =============================================================================
+// Section Query Mapping (Static Fallback)
+// =============================================================================
+
+/**
+ * Static section queries used as fallback when dynamic generation fails.
+ * These are generic queries that work for any deal type.
+ *
+ * @deprecated Prefer dynamic queries via query-generator.ts (E14-S4)
+ */
+const STATIC_SECTION_QUERIES: Record<string, string> = {
   // Executive summary
   'executive_summary': 'company overview key highlights investment opportunity value proposition',
 
@@ -77,20 +91,22 @@ const SECTION_QUERIES: Record<string, string> = {
 }
 
 /**
- * Get search query for a CIM section path.
+ * Get static search query for a CIM section path.
  * Falls back to the section path itself if no mapping exists.
+ *
+ * @deprecated Use getQueryForSection from query-generator.ts for dynamic queries
  */
-function getSectionQuery(sectionPath: string): string {
+function getStaticSectionQuery(sectionPath: string): string {
   // Try exact match first
-  if (SECTION_QUERIES[sectionPath]) {
-    return SECTION_QUERIES[sectionPath]
+  if (STATIC_SECTION_QUERIES[sectionPath]) {
+    return STATIC_SECTION_QUERIES[sectionPath]
   }
 
   // Try parent section
   const parts = sectionPath.split('.')
   if (parts.length > 1 && parts[0]) {
     const parentPath = parts[0]
-    const parentQuery = SECTION_QUERIES[parentPath]
+    const parentQuery = STATIC_SECTION_QUERIES[parentPath]
     if (parentQuery) {
       return parentQuery
     }
@@ -142,16 +158,79 @@ export async function searchGraphiti(
 }
 
 /**
+ * Options for section retrieval with dynamic queries
+ */
+export interface SectionRetrievalOptions {
+  buyerPersona?: string
+  userFocus?: string
+  useDynamicQueries?: boolean
+  limit?: number
+}
+
+/**
  * Get findings for a specific CIM section from Graphiti.
- * Constructs a section-aware query to retrieve relevant content.
+ * Uses dynamic query generation based on graph schema when enabled.
+ *
+ * Story: E14-S5 - Dynamic query generation integration
+ *
+ * @param sectionPath - CIM section path (e.g., "financial_performance.revenue")
+ * @param dealId - Deal/project ID for knowledge lookup and schema
+ * @param options - Optional retrieval options
+ * @returns Array of knowledge search results
  */
 export async function getSectionGraphiti(
   sectionPath: string,
-  dealId: string
+  dealId: string,
+  options: SectionRetrievalOptions = {}
 ): Promise<KnowledgeSearchResult[]> {
-  const query = getSectionQuery(sectionPath)
-  console.log(`[graphiti-knowledge] Section query for "${sectionPath}": "${query}"`)
-  return searchGraphiti(query, dealId, { limit: 15 })
+  const {
+    buyerPersona,
+    userFocus,
+    useDynamicQueries = USE_DYNAMIC_QUERIES,
+    limit = 15,
+  } = options
+
+  let query: string
+  let querySource: 'dynamic' | 'static' | 'fallback' = 'static'
+  let cached = false
+
+  if (useDynamicQueries) {
+    try {
+      const result = await getQueryForSection(dealId, sectionPath, {
+        buyerPersona,
+        userFocus,
+        staticFallback: getStaticSectionQuery(sectionPath),
+        useDynamicQueries: true,
+      })
+
+      query = result.query
+      querySource = result.source
+      cached = result.cached
+
+      console.log(
+        `[graphiti-knowledge] Section: "${sectionPath}" | Source: ${querySource} | ` +
+          `Cached: ${cached} | Latency: ${result.latencyMs}ms | Query: "${query.substring(0, 80)}..."`
+      )
+    } catch (error) {
+      console.warn(`[graphiti-knowledge] Dynamic query failed for ${sectionPath}, using static:`, error)
+      query = getStaticSectionQuery(sectionPath)
+      querySource = 'fallback'
+    }
+  } else {
+    query = getStaticSectionQuery(sectionPath)
+    console.log(`[graphiti-knowledge] Section: "${sectionPath}" | Source: static (disabled) | Query: "${query}"`)
+  }
+
+  // Execute the search
+  const results = await searchGraphiti(query, dealId, { limit })
+
+  // Log retrieval summary for monitoring
+  console.log(
+    `[graphiti-knowledge] Retrieved ${results.length} results for "${sectionPath}" ` +
+      `(query source: ${querySource})`
+  )
+
+  return results
 }
 
 /**
@@ -255,3 +334,17 @@ export async function getDataSummaryGraphiti(dealId: string): Promise<string> {
 
   return lines.join('\n')
 }
+
+// =============================================================================
+// Exports for Testing and Configuration
+// =============================================================================
+
+/**
+ * Export static section queries for testing and fallback
+ */
+export { STATIC_SECTION_QUERIES }
+
+/**
+ * Export configuration flag for testing
+ */
+export { USE_DYNAMIC_QUERIES }

@@ -50,6 +50,11 @@ from typing import Any
 import structlog
 
 from src.graphiti.client import GraphitiClient
+from src.graphiti.extraction_hints import (
+    DocumentType,
+    detect_document_type,
+    get_extraction_hints,
+)
 from src.graphiti.schema import get_edge_type_map, get_edge_types, get_entity_types
 
 logger = structlog.get_logger(__name__)
@@ -149,29 +154,64 @@ class GraphitiIngestionService:
     """
 
     def _build_source_description(
-        self, chunk: dict[str, Any], document_name: str
+        self,
+        chunk: dict[str, Any],
+        document_name: str,
+        doc_metadata: dict[str, Any] | None = None,
     ) -> str:
         """
-        Build source description for episode provenance.
+        Build source description with dynamic extraction context for Graphiti.
+
+        Story: E14-S1 - Dynamic Entity Extraction Instructions (AC: #1, #2)
+
+        The source_description influences Graphiti's LLM entity extraction.
+        By including document-type-specific extraction hints, we guide the LLM
+        to extract domain-relevant entities without modifying Graphiti's core.
 
         Args:
             chunk: Chunk data with page_number, sheet_name, chunk_type
             document_name: Name of the source document
+            doc_metadata: Optional document metadata for type detection
 
         Returns:
-            Human-readable source description string
+            Source description string with extraction instructions
         """
-        parts = [f"From: {document_name}"]
+        # Build basic provenance info
+        provenance_parts = [f"From: {document_name}"]
 
         if chunk.get("page_number"):
-            parts.append(f"Page {chunk['page_number']}")
+            provenance_parts.append(f"Page {chunk['page_number']}")
 
         if chunk.get("sheet_name"):
-            parts.append(f"Sheet: {chunk['sheet_name']}")
+            provenance_parts.append(f"Sheet: {chunk['sheet_name']}")
 
-        parts.append(f"Type: {chunk.get('chunk_type', 'text')}")
+        provenance_parts.append(f"Type: {chunk.get('chunk_type', 'text')}")
 
-        return " | ".join(parts)
+        provenance = " | ".join(provenance_parts)
+
+        # E14-S1: Add dynamic extraction hints based on document type
+        metadata = doc_metadata or {"filename": document_name}
+        doc_type = detect_document_type(metadata)
+        extraction_hints = get_extraction_hints(doc_type, metadata)
+
+        # Combine provenance with extraction instructions
+        return f"{provenance}\n\nExtraction Instructions:\n{extraction_hints}"
+
+    def _get_document_type(self, document_name: str, metadata: dict[str, Any] | None = None) -> DocumentType:
+        """
+        Detect document type for logging and metrics.
+
+        Story: E14-S1 - Dynamic Entity Extraction Instructions (AC: #5)
+
+        Args:
+            document_name: Name of the document
+            metadata: Optional additional metadata
+
+        Returns:
+            Detected DocumentType enum
+        """
+        doc_metadata = metadata or {"filename": document_name}
+        return detect_document_type(doc_metadata)
 
     async def ingest_document_chunks(
         self,
@@ -180,16 +220,21 @@ class GraphitiIngestionService:
         organization_id: str,  # E12.9: Required for multi-tenant isolation
         document_name: str,
         chunks: list[dict[str, Any]],
+        doc_metadata: dict[str, Any] | None = None,  # E14-S1: Optional document metadata
     ) -> IngestionResult:
         """
         Ingest document chunks as Graphiti episodes.
 
         Story: E10.4 - Document Ingestion Pipeline (AC: #2, #3, #5)
         Story: E12.9 - Multi-Tenant Data Isolation (AC: #5)
+        Story: E14-S1 - Dynamic Entity Extraction Instructions (AC: #1, #2, #5)
 
         Each chunk becomes an episode in Graphiti. Entity extraction
         happens automatically via Graphiti's LLM pipeline using Gemini Flash.
         Entities are typed using the M&A schema from E10.3.
+
+        E14-S1: Dynamic extraction hints are included in source_description
+        based on document type to guide LLM extraction of domain-specific entities.
 
         AC#5 (Embeddings): Voyage 1024d embeddings are generated internally
         by Graphiti via VoyageAIEmbedder configured in E10.2. The embeddings
@@ -207,6 +252,8 @@ class GraphitiIngestionService:
             chunks: Parsed document chunks from db.get_chunks_by_document()
                    Each chunk has: id, content, chunk_index, page_number,
                    chunk_type, sheet_name, token_count
+            doc_metadata: Optional document metadata for extraction hints (E14-S1)
+                         Keys: filename, file_type, content_type, etc.
 
         Returns:
             IngestionResult with episode_count, elapsed_ms, estimated_cost_usd
@@ -224,6 +271,10 @@ class GraphitiIngestionService:
         episode_count = 0
         total_chars = 0
 
+        # E14-S1: Detect document type for extraction hints and logging
+        metadata = doc_metadata or {"filename": document_name}
+        doc_type = self._get_document_type(document_name, metadata)
+
         logger.info(
             "Starting document ingestion to Graphiti",
             document_id=document_id,
@@ -231,6 +282,7 @@ class GraphitiIngestionService:
             organization_id=organization_id,
             document_name=document_name,
             chunk_count=len(chunks),
+            document_type=doc_type.value,  # E14-S1: Log document type
         )
 
         # NOTE: Sequential processing is intentional here.
@@ -242,7 +294,8 @@ class GraphitiIngestionService:
         for i, chunk in enumerate(chunks):
             # Build episode name with chunk index for uniqueness
             episode_name = f"{document_name}#chunk-{i}"
-            source_desc = self._build_source_description(chunk, document_name)
+            # E14-S1: Pass metadata for dynamic extraction hints
+            source_desc = self._build_source_description(chunk, document_name, metadata)
             content = chunk["content"]
 
             # Add episode to Graphiti - entity extraction happens automatically
@@ -275,6 +328,7 @@ class GraphitiIngestionService:
         # Estimate cost using helper function
         estimated_cost_usd = _estimate_embedding_cost("x" * total_chars)
 
+        # E14-S1: Log extraction completeness metrics
         logger.info(
             "Document ingestion completed",
             document_id=document_id,
@@ -284,6 +338,12 @@ class GraphitiIngestionService:
             elapsed_ms=elapsed_ms,
             estimated_cost_usd=f"${estimated_cost_usd:.6f}",
             total_chars=total_chars,
+            # E14-S1: Extraction completeness metrics
+            document_type=doc_type.value,
+            extraction_hints_applied=True,
+            chunks_processed=len(chunks),
+            chunks_successful=episode_count,
+            extraction_completeness_pct=round(episode_count / len(chunks) * 100, 1) if chunks else 0,
         )
 
         return IngestionResult(

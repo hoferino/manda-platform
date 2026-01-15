@@ -89,6 +89,14 @@ from src.graphiti.resolution import (
     should_merge_persons,
 )
 
+# E14-S2: Document-type extraction hints
+from src.graphiti.extraction_hints import (
+    DocumentType,
+    EXTRACTION_HINTS,
+    detect_document_type,
+    get_extraction_hints,
+)
+
 # Re-export schema module for convenience
 from src.graphiti.schema import (
     EDGE_TYPE_MAP,
@@ -208,4 +216,9 @@ __all__ = [
     "COMPANY_SUFFIX_VARIATIONS",
     "DISTINCT_METRICS",
     "RESOLUTION_THRESHOLDS",
+    # Extraction hints module (E14-S2)
+    "DocumentType",
+    "EXTRACTION_HINTS",
+    "detect_document_type",
+    "get_extraction_hints",
 ]
