@@ -39,7 +39,12 @@ import { getCheckpointer, type Checkpointer } from '@/lib/agent/checkpointer'
  * - Dynamic content (conversation history) is not cached
  *
  * Expected savings: 60-80% cost reduction on subsequent requests
- * Min cacheable prefix: 2048 tokens for Sonnet, 1024 for Haiku
+ *
+ * Min cacheable prefix (Anthropic docs 2025):
+ * - Claude Sonnet 4.5: 1,024 tokens
+ * - Claude Haiku 4.5: 4,096 tokens
+ *
+ * See: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
  */
 const baseModel = new ChatAnthropic({
   model: 'claude-haiku-4-5-20251001',
@@ -134,12 +139,21 @@ async function agentNode(
     ...state.messages,
   ])
 
-  // Log cache metrics if available
+  // Log cache metrics on EVERY request for debugging
+  // This helps identify if caching is working or if static prompt is below threshold
   const usageMetadata = response.usage_metadata
   if (usageMetadata) {
     const inputDetails = usageMetadata.input_token_details as { cache_read?: number; cache_creation?: number } | undefined
-    if (inputDetails?.cache_read || inputDetails?.cache_creation) {
-      console.log(`[CIM-MVP] Cache metrics - read: ${inputDetails.cache_read || 0}, write: ${inputDetails.cache_creation || 0}`)
+    const cacheRead = inputDetails?.cache_read || 0
+    const cacheWrite = inputDetails?.cache_creation || 0
+    const totalInput = usageMetadata.input_tokens || 0
+    const uncachedInput = totalInput - cacheRead
+
+    console.log(`[CIM-MVP] Token usage - total_input: ${totalInput}, cache_read: ${cacheRead}, cache_write: ${cacheWrite}, uncached: ${uncachedInput}`)
+
+    // Warn if no caching is happening (may indicate static prompt below threshold)
+    if (cacheRead === 0 && cacheWrite === 0 && totalInput > 5000) {
+      console.warn(`[CIM-MVP] WARNING: No cache activity detected with ${totalInput} input tokens. Check if static prompt exceeds 4096 tokens for Haiku.`)
     }
   }
 

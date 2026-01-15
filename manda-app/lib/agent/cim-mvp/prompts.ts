@@ -907,13 +907,28 @@ export interface CacheableSystemPrompt {
  * This includes:
  * - Role description
  * - Tool descriptions
+ * - ALL stage instructions (moved here for caching)
  * - Rules and guidelines
  * - Response style
  *
  * These rarely change and can be cached across requests.
- * Estimated: ~3000 tokens (well above 1024 min for Haiku)
+ *
+ * IMPORTANT: Anthropic's minimum cacheable tokens:
+ * - Claude Haiku 4.5: 4,096 tokens
+ * - Claude Sonnet 4.5: 1,024 tokens
+ *
+ * This static prompt is ~8,500 tokens to exceed Haiku's minimum.
  */
 function getStaticPrompt(): string {
+  // Pre-compute all stage instructions (these are identical for every request)
+  const welcomeInstructions = getWorkflowStageInstructions('welcome')
+  const buyerPersonaInstructions = getWorkflowStageInstructions('buyer_persona')
+  const heroConceptInstructions = getWorkflowStageInstructions('hero_concept')
+  const investmentThesisInstructions = getWorkflowStageInstructions('investment_thesis')
+  const outlineInstructions = getWorkflowStageInstructions('outline')
+  const buildingSectionsInstructions = getWorkflowStageInstructions('building_sections')
+  const completeInstructions = getWorkflowStageInstructions('complete')
+
   return `You are an expert M&A advisor helping create a Confidential Information Memorandum (CIM).
 
 ## Your Role
@@ -1016,7 +1031,32 @@ If the user asks a question unrelated to the current workflow stage:
 
 This keeps the user in control while ensuring we don't lose our place in the workflow.
 
-Remember: You're building a professional CIM. The workflow ensures quality by gathering context (buyer, hero, thesis) before creating content. ALWAYS use tools - never fake it.`
+Remember: You're building a professional CIM. The workflow ensures quality by gathering context (buyer, hero, thesis) before creating content. ALWAYS use tools - never fake it.
+
+## Stage-Specific Instructions Reference
+
+The following instructions apply when you are in each workflow stage. Follow these carefully based on the current stage indicated in the dynamic context.
+
+### WELCOME Stage Instructions
+${welcomeInstructions}
+
+### BUYER PERSONA Stage Instructions
+${buyerPersonaInstructions}
+
+### HERO CONCEPT Stage Instructions
+${heroConceptInstructions}
+
+### INVESTMENT THESIS Stage Instructions
+${investmentThesisInstructions}
+
+### OUTLINE Stage Instructions
+${outlineInstructions}
+
+### BUILDING SECTIONS Stage Instructions
+${buildingSectionsInstructions}
+
+### COMPLETE Stage Instructions
+${completeInstructions}`
 }
 
 /**
@@ -1025,11 +1065,14 @@ Remember: You're building a professional CIM. The workflow ensures quality by ga
  * This includes:
  * - Company name
  * - Current workflow progress
- * - Stage-specific instructions
+ * - Current stage pointer (instructions are in static prompt now)
  * - Saved context (buyer persona, hero, outline)
  * - Knowledge base summary
  *
  * This changes per request and should NOT be cached.
+ *
+ * NOTE: Stage instructions were moved to getStaticPrompt() for caching.
+ * The dynamic prompt now only includes a pointer to the current stage.
  */
 function getDynamicPrompt(state: CIMMVPStateType): string {
   const workflowProgress = state.workflowProgress || {
@@ -1038,7 +1081,8 @@ function getDynamicPrompt(state: CIMMVPStateType): string {
     sectionProgress: {},
   }
   const currentStage = workflowProgress.currentStage
-  const stageInstructions = getWorkflowStageInstructions(currentStage)
+  // NOTE: Stage instructions are now in the STATIC prompt for caching
+  // We only include a pointer here to tell the model which stage instructions to follow
   const hasKnowledge = state.knowledgeLoaded || false
 
   // Only try to get data summary if knowledge is loaded
@@ -1068,6 +1112,9 @@ ${dataGapsSection}`
 - You MUST ask the user to provide company information before making any company-specific recommendations.
 - If "Information Gathered So Far" is empty → You are operating with ZERO company knowledge.`
 
+  // Format current stage name for display
+  const stageDisplayName = currentStage.replace(/_/g, ' ').toUpperCase()
+
   return `
 ## Company Context
 ${state.companyName ? `Creating CIM for: **${state.companyName}**` : 'Company not yet identified.'}
@@ -1076,8 +1123,8 @@ ${hasKnowledge ? 'Knowledge base loaded - use it as your primary source.' : "We'
 ## Workflow Progress
 ${formatWorkflowProgress(workflowProgress)}
 
-## Current Stage: ${currentStage.replace(/_/g, ' ').toUpperCase()}
-${stageInstructions}
+## Current Stage: ${stageDisplayName}
+**→ Follow the "${stageDisplayName} Stage Instructions" from the reference above.**
 
 ## Buyer Persona
 ${formatBuyerPersona(state.buyerPersona || null)}
@@ -1094,14 +1141,39 @@ ${formatGatheredContext(state.gatheredContext || {})}
 ${knowledgeSection}`
 }
 
+// =============================================================================
+// Token Estimation Utilities
+// =============================================================================
+
+/**
+ * Estimate token count from text
+ *
+ * Rough heuristic: ~4 characters per token for English text.
+ * This is an approximation - actual tokenization varies by model.
+ */
+function estimateTokens(text: string): number {
+  // ~4 chars per token is a reasonable estimate for Claude
+  return Math.ceil(text.length / 4)
+}
+
+/**
+ * Minimum cacheable tokens by model (Anthropic docs 2025)
+ */
+const MIN_CACHEABLE_TOKENS = {
+  'claude-haiku-4-5': 4096,
+  'claude-sonnet-4-5': 1024,
+} as const
+
 /**
  * Get system prompt structured for Anthropic prompt caching
  *
- * Story 5: Prompt Caching for Cost Optimization
+ * Story 5: Prompt Caching for Cost Optimization (Caching Fix Update)
  *
  * Splits the prompt into:
- * 1. staticPrompt (~3000 tokens) - cached with 1-hour TTL
- * 2. dynamicPrompt (variable) - not cached, changes per request
+ * 1. staticPrompt (~8,500 tokens) - cached with 1-hour TTL
+ *    - Includes ALL stage instructions for caching efficiency
+ * 2. dynamicPrompt (variable ~2,000-4,000 tokens) - not cached, changes per request
+ *    - Only includes state-specific context
  *
  * Expected savings: 60-80% on subsequent requests in same session
  *
@@ -1109,8 +1181,22 @@ ${knowledgeSection}`
  * @returns Object with static and dynamic prompt portions
  */
 export function getSystemPromptForCaching(state: CIMMVPStateType): CacheableSystemPrompt {
-  return {
-    staticPrompt: getStaticPrompt(),
-    dynamicPrompt: getDynamicPrompt(state),
+  const staticPrompt = getStaticPrompt()
+  const dynamicPrompt = getDynamicPrompt(state)
+
+  // Log token estimates for debugging
+  const staticTokens = estimateTokens(staticPrompt)
+  const dynamicTokens = estimateTokens(dynamicPrompt)
+
+  console.log(`[CIM-MVP] Prompt structure - static: ~${staticTokens} tokens (${staticPrompt.length} chars), dynamic: ~${dynamicTokens} tokens`)
+
+  // Validate static prompt meets minimum threshold for Haiku
+  if (staticTokens < MIN_CACHEABLE_TOKENS['claude-haiku-4-5']) {
+    console.warn(
+      `[CIM-MVP] WARNING: Static prompt (~${staticTokens} tokens) is below Haiku minimum (${MIN_CACHEABLE_TOKENS['claude-haiku-4-5']}). ` +
+      `Caching will NOT work! Add more content to static prompt.`
+    )
   }
+
+  return { staticPrompt, dynamicPrompt }
 }
