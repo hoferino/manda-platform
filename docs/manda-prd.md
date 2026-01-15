@@ -1,9 +1,18 @@
+---
+title: Product Requirements Document (PRD)
+version: 2.4
+status: Current
+stream: Main Platform
+last-updated: 2026-01-15
+owner: Max
+---
+
 # Product Requirements Document (PRD)
 # Manda - M&A Intelligence Platform
 
 **Document Status:** In Development
 **Created:** 2025-11-19
-**Last Updated:** 2026-01-06
+**Last Updated:** 2026-01-15
 **Owner:** Max
 **Contributors:** PM John
 **Version:** 2.4 (E10/E11 Complete, E12 In Progress, E13 Planned)
@@ -35,7 +44,7 @@
 
 **Phase 2 Tech Debt:** All resolved (TD-010 through TD-014)
 
-**Reference:** [Sprint Change Proposal 2025-12-14](sprint-change-proposal-2025-12-14.md), [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md)
+**Reference:** [SCP-002](decisions/sprint-change-proposal-2025-12-14.md), [SCP-003](decisions/sprint-change-proposal-2025-12-15.md)
 
 ### Phase 3: Production Readiness (In Progress)
 

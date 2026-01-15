@@ -1,9 +1,18 @@
+---
+title: Architecture Document
+version: 4.3
+status: Current
+stream: Main Platform
+last-updated: 2026-01-15
+owner: Max
+---
+
 # Architecture Document
 # Manda - M&A Intelligence Platform
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-15
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
 **Version:** 4.3 (Chat Orchestrator - 3-path LangGraph routing)
@@ -12,7 +21,7 @@
 
 ## Implementation Status
 
-> **Architecture Evolution (E10 Pivot):** As of E10 completion (2025-12-17), the knowledge architecture was consolidated from pgvector + Neo4j dual-database to unified Graphiti + Neo4j. See [Sprint Change Proposal 2025-12-15](sprint-change-proposal-2025-12-15.md) and [E10 Retrospective](sprint-artifacts/retrospectives/epic-E10-retrospective.md) for full context.
+> **Architecture Evolution (E10 Pivot):** As of E10 completion (2025-12-17), the knowledge architecture was consolidated from pgvector + Neo4j dual-database to unified Graphiti + Neo4j. See [SCP-003](decisions/sprint-change-proposal-2025-12-15.md) and [E10 Retrospective](sprint-artifacts/retrospectives/epic-E10-retrospective.md) for full context.
 
 | Component | Pre-E10 (Historical) | Post-E10 (Current) | Status |
 |-----------|----------------------|-------------------|--------|

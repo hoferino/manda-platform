@@ -1,7 +1,15 @@
 # Manda Platform - Comprehensive Project Index
 
+---
+title: Platform Index (Developer)
+version: 1.1
+status: Current
+audience: Developers, architects, technical team
+last-updated: 2026-01-06
+related: manda-platform-overview.md (Stakeholder-focused overview)
+---
+
 **Generated:** 2025-12-13
-**Last Updated:** 2026-01-06
 **Scan Level:** Exhaustive
 **Project Type:** Multi-part Monorepo (Web + Backend)
 

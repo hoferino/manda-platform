@@ -1,8 +1,17 @@
+---
+title: Epic and Story Breakdown
+version: 2.5
+status: Current
+stream: Main Platform
+last-updated: 2026-01-15
+owner: Max
+---
+
 # Manda - Epic and Story Breakdown
 
 **Document Status:** Complete (MVP E1-E9, Refinement E10-E11, Production E12-E13)
 **Created:** 2025-11-19
-**Last Updated:** 2026-01-06
+**Last Updated:** 2026-01-15
 **Owner:** Max
 **Version:** 2.5 (E10/E11 Complete, E12 In Progress, Added E13 Agent Orchestration Optimization)
 

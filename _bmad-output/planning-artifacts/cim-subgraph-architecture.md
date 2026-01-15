@@ -1,5 +1,18 @@
 # CIM Workflow: Current vs Subgraph Architecture Comparison
 
+---
+title: CIM Subgraph Architecture Analysis
+version: 1.0
+status: Reference (Superseded by Decision)
+stream: CIM MVP
+last-updated: 2026-01-09
+superseded-by: cim-builder-architecture-evaluation.md (2026-01-14)
+---
+
+> **Note:** This document provides technical analysis of subgraph architecture options.
+> The final decision is documented in [cim-builder-architecture-evaluation.md](cim-builder-architecture-evaluation.md).
+> **Recommendation:** Keep current flat LangGraph + enhanced prompts + Claude model swap.
+
 ## Executive Summary
 
 The current CIM workflow uses a **flat 3-node graph** with LLM-driven routing via tool calls. A **subgraph architecture** would restructure this into hierarchical graphs that map directly to workflow phases, providing better isolation, simpler prompts, and clearer state management.

@@ -10,7 +10,7 @@ Manda is an M&A intelligence platform with two main services:
 
 The services share a Supabase PostgreSQL database and use Graphiti + Neo4j for knowledge graph storage with Voyage embeddings.
 
-> **Architecture Note (E10 Pivot):** As of E10 completion (2025-12-17), all embeddings and semantic search have been consolidated to Graphiti + Neo4j. pgvector was removed. See [Sprint Change Proposal 2025-12-15](docs/sprint-change-proposal-2025-12-15.md) for context.
+> **Architecture Note (E10 Pivot):** As of E10 completion (2025-12-17), all embeddings and semantic search have been consolidated to Graphiti + Neo4j. pgvector was removed. See [SCP-003](docs/decisions/sprint-change-proposal-2025-12-15.md) for context.
 
 ## Commands
 
@@ -119,14 +119,14 @@ Upload → GCS Storage → Webhook → pg-boss Queue → Workers
 
 ### Agent System - Current Implementation
 
-> **Implementation Status (2026-01-13)**
-> - **CIM Builder**: `cim-mvp` is the active implementation (standalone)
+> **Implementation Status (2026-01-15)**
+> - **CIM Builder**: `cim-mvp` is production-ready (6 fix stories completed 2026-01-14)
 > - **Chat**: `v2` agent is active for general chat
 > - **v2 CIM integration**: Pending future work (Story 6.1)
 
 The platform has two active agent implementations:
 
-#### CIM Builder (Production MVP)
+#### CIM Builder (Production Ready)
 
 The CIM Builder uses a **standalone implementation** separate from the v2 agent system:
 
@@ -135,12 +135,14 @@ The CIM Builder uses a **standalone implementation** separate from the v2 agent 
 | **Implementation** | `lib/agent/cim-mvp/` |
 | **API Endpoint** | `/api/projects/[id]/cims/[cimId]/chat-mvp` |
 | **UI Toggle** | Default ON in `CIMBuilderPage.tsx` |
-| **Features** | JSON knowledge file, workflow stages, slide updates, SSE streaming |
+| **Features** | JSON knowledge, workflow stages, HITL checkpoints, slide preview, prompt caching |
+| **Status** | Production-ready (6 fix stories completed 2026-01-14) |
 
 **Key Files (CIM MVP):**
 - `lib/agent/cim-mvp/graph.ts` - LangGraph StateGraph for CIM workflow
 - `lib/agent/cim-mvp/state.ts` - CIM-specific state schema
-- `lib/agent/cim-mvp/tools.ts` - CIM tools (save_buyer_persona, create_outline, etc.)
+- `lib/agent/cim-mvp/tools.ts` - CIM tools (save_buyer_persona, create_outline, navigate_to_stage, etc.)
+- `lib/agent/cim-mvp/prompts.ts` - Stage prompts with v3 HITL patterns
 - `lib/agent/cim-mvp/knowledge-loader.ts` - JSON knowledge file loader
 - `app/api/projects/[id]/cims/[cimId]/chat-mvp/route.ts` - API endpoint
 
@@ -303,7 +305,10 @@ This project uses BMAD (Build Mad Agentic Delivery) for AI-assisted development.
 
 ## Agent System Documentation
 
+- **Agent System Hub**: `docs/agent-system/README.md`
+- **CIM MVP Hub**: `docs/cim-mvp/README.md`
 - **PRD**: `_bmad-output/planning-artifacts/agent-system-prd.md`
 - **Architecture**: `_bmad-output/planning-artifacts/agent-system-architecture.md`
 - **LangGraph Reference**: `docs/langgraph-reference.md`
-- **Behavior Spec**: `docs/agent-behavior-spec.md` (needs update after v2 implementation)
+- **Behavior Spec**: `docs/agent-behavior-spec.md` (v2.0 - current)
+- **Decisions Log**: `docs/decisions/README.md`

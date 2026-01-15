@@ -1,6 +1,17 @@
 # Google Cloud Deployment Guide for Manda Platform
 
-> Research conducted: 2026-01-14
+---
+title: GCP Deployment Strategy
+version: 1.0
+status: Current
+purpose: Strategic planning - service comparison, cost analysis, CDN options
+audience: Technical decision-makers
+last-updated: 2026-01-14
+related: deployment/gcp-setup-guide.md (Step-by-step setup instructions)
+---
+
+> **Note:** This document covers GCP service **evaluation and strategy**.
+> For step-by-step setup instructions, see [GCP Setup Guide](deployment/gcp-setup-guide.md).
 
 ## Executive Summary
 

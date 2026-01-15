@@ -1,8 +1,15 @@
 # LangGraph Reference Guide
 
-**Last Updated:** 2026-01-09
+---
+title: LangGraph Reference
+version: 1.0
+status: Current
+audience: Developers
+last-updated: 2026-01-09
+source: LangGraph Documentation (langchain-ai.github.io/langgraph)
+---
+
 **Purpose:** Quick reference for LangGraph patterns used in Manda Agent System
-**Source:** LangGraph Documentation (langchain-ai.github.io/langgraph)
 
 ---
 

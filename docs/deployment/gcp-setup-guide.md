@@ -1,8 +1,18 @@
 # Manda Platform - Google Cloud Platform Setup Guide
 
-**Version:** 1.0
-**Date:** 2025-12-11
+---
+title: GCP Setup Guide
+version: 1.0
+status: Current
+purpose: Step-by-step deployment instructions
+audience: Developers, DevOps
+last-updated: 2025-12-11
+related: ../gcp-deployment-guide.md (Strategic planning and cost analysis)
+---
+
 **Purpose:** Complete guide to deploy and run Manda M&A Intelligence Platform on Google Cloud
+
+> **Note:** For GCP service comparison and cost analysis, see [GCP Deployment Strategy](../gcp-deployment-guide.md).
 
 ---
 

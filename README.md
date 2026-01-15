@@ -6,9 +6,9 @@
 
 ## 📋 Project Overview
 
-**Status:** In Development - Phase 1 MVP (Epics 1-6 Complete)
-**Version:** PRD 1.9, Architecture 3.3, Epics 2.3
-**Last Updated:** 2025-12-13
+**Status:** In Development - Phase 2 Production Readiness (E12 In Progress)
+**Version:** PRD 2.4, Architecture 4.3, Epics 2.5
+**Last Updated:** 2026-01-15
 
 ### What is Manda?
 
@@ -25,7 +25,7 @@ Manda is an AI-powered M&A intelligence platform designed for investment banking
 
 ```
 manda-platform/
-├── manda-app/                     # Next.js 15 Frontend Application
+├── manda-app/                     # Next.js 16 Frontend Application
 │   ├── app/                       # App Router pages and API routes
 │   ├── components/                # React components (shadcn/ui)
 │   ├── lib/                       # Services, hooks, utilities
@@ -36,9 +36,9 @@ manda-platform/
 │   ├── src/llm/                   # LLM client (Gemini, OpenAI)
 │   └── src/storage/               # GCS, Neo4j clients
 ├── docs/                          # Documentation (see docs/README.md)
-│   ├── manda-prd.md              # Product Requirements Document (v1.9)
-│   ├── manda-architecture.md      # Technical Architecture (v3.3)
-│   ├── epics.md                   # Epic and Story Breakdown (v2.3)
+│   ├── manda-prd.md              # Product Requirements Document (v2.4)
+│   ├── manda-architecture.md      # Technical Architecture (v4.3)
+│   ├── epics.md                   # Epic and Story Breakdown (v2.5)
 │   ├── ux-design-specification.md # UX Design Specification
 │   ├── testing/                   # Testing guide and archives
 │   ├── sprint-artifacts/          # Tech specs, stories, retrospectives
@@ -60,7 +60,7 @@ manda-platform/
 - Multi-source synthesis with confidence indicators
 - Source attribution chains for transparency
 
-> **Architecture Note (E10 - 2025-12-17):** Knowledge architecture consolidated from pgvector + Neo4j dual-database to unified Graphiti + Neo4j. See [Sprint Change Proposal 2025-12-15](docs/sprint-change-proposal-2025-12-15.md).
+> **Architecture Note (E10 - 2025-12-17):** Knowledge architecture uses unified Graphiti + Neo4j with Voyage embeddings for hybrid search. See [SCP-003: Knowledge Architecture Evolution](docs/decisions/sprint-change-proposal-2025-12-15.md).
 
 ### 2. CIM Company Overview Creation (CIM v3 Workflow)
 - **14-phase interactive workflow** for creating Company Overview chapters
@@ -97,9 +97,11 @@ manda-platform/
 ### Core Documents
 
 - **[Documentation Index](docs/README.md)** - Navigation hub for all documentation
-- **[Product Requirements Document](docs/manda-prd.md)** - Complete product requirements (v1.9)
-- **[Architecture Document](docs/manda-architecture.md)** - Technical architecture (v3.3)
-- **[Epics & Stories](docs/epics.md)** - Epic breakdown (v2.3, 9 epics, 86 stories)
+- **[Documentation Map](docs/documentation-map.md)** - Complete documentation index
+- **[Product Requirements Document](docs/manda-prd.md)** - Complete product requirements (v2.4)
+- **[Architecture Document](docs/manda-architecture.md)** - Technical architecture (v4.3)
+- **[Epics & Stories](docs/epics.md)** - Epic breakdown (v2.5, 13 epics)
+- **[Decisions Log](docs/decisions/README.md)** - Sprint change proposals and decisions
 - **[UX Design Specification](docs/ux-design-specification.md)** - Complete UX design
 
 ### Development Resources
@@ -147,7 +149,7 @@ This project is built using the **BMAD Framework** (Build Mad Agentic Delivery) 
 - **LLM Integration:** LangChain adapters (model-agnostic, multi-provider support)
 
 ### Frontend
-- **Framework:** Next.js 15 (App Router) with React 19.2
+- **Framework:** Next.js 16 (App Router) with React 19
 - **UI:** Tailwind CSS 4, shadcn/ui
 - **State:** Zustand + React Query
 - **Real-time:** WebSockets (chat), SSE (background processing)
@@ -179,10 +181,11 @@ This project is built using the **BMAD Framework** (Build Mad Agentic Delivery) 
 | E8 | Q&A Co-Creation Workflow | ✅ Complete | 7/7 |
 | E9 | CIM Builder | ✅ Complete | 15/15 |
 | E10 | Knowledge Graph Foundation | ✅ Complete | 8/8 |
-| E11 | Agent Context Engineering | In Progress | 0/7 |
-| E12 | Testing & Stabilization | In Progress | 0/9 |
+| E11 | Agent Context Engineering | ✅ Complete | 7/7 |
+| E12 | Production Readiness | In Progress | - |
+| E13 | Agent Orchestration Optimization | Planned | - |
 
-**Current Phase:** Phase 2 - Refinement Sprint (E11 Agent Context Engineering, E12 Testing & Stabilization)
+**Current Phase:** Phase 2 - Production Readiness (E12 in progress, E13 planned)
 
 ## 🤝 Contributing
 
@@ -201,4 +204,4 @@ Proprietary - All Rights Reserved
 
 *Built with the BMAD Framework - Agentic delivery for modern software development*
 
-*Last Updated: 2025-12-19*
+*Last Updated: 2026-01-15*

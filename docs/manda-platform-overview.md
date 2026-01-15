@@ -1,6 +1,14 @@
 # Manda Platform - Technical Overview for Co-Founders
 
-**Created:** 2025-12-15
+---
+title: Platform Overview (Stakeholder)
+version: 1.0
+status: Current
+audience: Co-founders, investors, non-technical stakeholders
+last-updated: 2025-12-15
+related: manda-index.md (Developer-focused technical reference)
+---
+
 **Purpose:** Comprehensive platform description for co-founder discussions
 
 ---
