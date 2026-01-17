@@ -61,9 +61,12 @@ export function PreviewPanel({
     onIndexChange,
   })
 
-  // Story 9: Determine if we're using MVP slides
-  const useMVPRenderer = mvpSlides && mvpSlides.length > 0
-  const currentMVPSlide = useMVPRenderer ? mvpSlides[currentIndex] : null
+  // Story 9: Determine if we have MVP slides and find the matching one by ID
+  // MVP slides have layout information that DB slides don't preserve
+  const currentMVPSlide = React.useMemo(() => {
+    if (!mvpSlides || mvpSlides.length === 0 || !currentSlide) return null
+    return mvpSlides.find(s => s.slideId === currentSlide.id) || null
+  }, [mvpSlides, currentSlide])
 
   // Story 8: Ref for thumbnail strip to scroll selected into view
   const thumbnailsRef = useRef<HTMLDivElement>(null)

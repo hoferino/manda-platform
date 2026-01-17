@@ -7,6 +7,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { AIMessage, HumanMessage, ToolMessage } from '@langchain/core/messages'
 
+// Mock ChatAnthropic before importing graph module
+vi.mock('@langchain/anthropic', () => {
+  const MockChatAnthropic = class {
+    bindTools() { return this }
+    withConfig() { return this }
+    invoke() { return Promise.resolve({ content: 'Mock response' }) }
+    withStructuredOutput() { return this }
+  }
+  return { ChatAnthropic: MockChatAnthropic }
+})
+
 import {
   cimMVPGraph,
   getCIMMVPGraph,

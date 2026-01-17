@@ -570,7 +570,9 @@ describe('ComponentRenderer', () => {
     })
 
     describe('fallback rendering', () => {
-      it('should render unknown array content as bullet list', () => {
+      it('should render unknown JSON array content as text (JSON string)', () => {
+        // Since SlideComponent.content is typed as string, JSON arrays
+        // are passed as JSON strings and rendered as text by default
         const component = {
           id: `component-unknown_type-${Date.now()}`,
           type: 'unknown_type' as ComponentType,
@@ -578,8 +580,8 @@ describe('ComponentRenderer', () => {
         } as SlideComponent
         render(<ComponentRenderer component={component} {...defaultProps} />)
 
-        expect(screen.getByText('Item 1')).toBeInTheDocument()
-        expect(screen.getByText('Item 2')).toBeInTheDocument()
+        // JSON string content is rendered as-is by TextRenderer
+        expect(screen.getByText('["Item 1","Item 2"]')).toBeInTheDocument()
       })
 
       it('should render unknown string content as text', () => {

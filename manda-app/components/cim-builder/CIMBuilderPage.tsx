@@ -505,6 +505,7 @@ export function CIMBuilderPage({
               currentIndex={currentSlideIndex}
               onIndexChange={setCurrentSlideIndex}
               onComponentSelect={handleComponentSelect}
+              mvpSlides={useJsonKnowledge ? Array.from(slideUpdates.values()) : undefined}
             />
           }
         />

@@ -112,9 +112,29 @@ export const WireframeRenderer = memo(function WireframeRenderer({
   }, [components])
 
   // Components without a position go to default region based on layout
+  // Filter out title/subtitle components that duplicate the slide title (shown in layout header)
   const unpositionedComponents = useMemo(() => {
-    return components.filter((c) => !c.position?.region)
-  }, [components])
+    return components.filter((c) => {
+      if (c.position?.region) return false
+      // Check if this is a duplicate title
+      if (c.type === 'title' || c.type === 'subtitle') {
+        const content = typeof c.content === 'string' ? c.content : ''
+        if (content === title || content.trim() === title.trim()) return false
+      }
+      return true
+    })
+  }, [components, title])
+
+  // All body components (excluding duplicate title/subtitle)
+  const bodyComponents = useMemo(() => {
+    return components.filter((c) => {
+      if (c.type === 'title' || c.type === 'subtitle') {
+        const content = typeof c.content === 'string' ? c.content : ''
+        if (content === title || content.trim() === title.trim()) return false
+      }
+      return true
+    })
+  }, [components, title])
 
   // Render helper
   const render = (comps: SlideComponent[]) => renderComponents(comps, slideId, onComponentClick)
@@ -272,11 +292,11 @@ export const WireframeRenderer = memo(function WireframeRenderer({
 
     case 'title-content':
     default:
-      // Default layout: title at top, all content below
+      // Default layout: title at top, all content below (excluding title/subtitle components)
       return (
         <div className={cn('w-full h-full', className)}>
           <TitleContentLayout title={title}>
-            {render(unpositionedComponents.length > 0 ? unpositionedComponents : components)}
+            {render(unpositionedComponents.length > 0 ? unpositionedComponents : bodyComponents)}
           </TitleContentLayout>
         </div>
       )

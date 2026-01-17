@@ -17,6 +17,7 @@ const {
   mockStreamCIMMVP,
   mockExecuteCIMMVP,
   mockGetCIMMVPGraph,
+  mockCreateKnowledgeService,
   mockUpdateCIM,
 } = vi.hoisted(() => ({
   mockSupabaseClient: {
@@ -32,6 +33,13 @@ const {
   mockStreamCIMMVP: vi.fn(),
   mockExecuteCIMMVP: vi.fn(),
   mockGetCIMMVPGraph: vi.fn(),
+  mockCreateKnowledgeService: vi.fn().mockReturnValue({
+    loadKnowledge: vi.fn().mockResolvedValue(undefined),
+    search: vi.fn().mockResolvedValue([]),
+    getLoadedKnowledge: vi.fn().mockReturnValue(null),
+    isLoaded: vi.fn().mockReturnValue(false),
+    getCacheStatus: vi.fn().mockReturnValue(null),
+  }),
   mockUpdateCIM: vi.fn().mockResolvedValue({ error: null }),
 }))
 
@@ -43,6 +51,7 @@ vi.mock('@/lib/agent/cim-mvp', () => ({
   streamCIMMVP: (...args: unknown[]) => mockStreamCIMMVP(...args),
   executeCIMMVP: (...args: unknown[]) => mockExecuteCIMMVP(...args),
   getCIMMVPGraph: () => mockGetCIMMVPGraph(),
+  createKnowledgeService: (...args: unknown[]) => mockCreateKnowledgeService(...args),
 }))
 
 // Mock streaming helpers
