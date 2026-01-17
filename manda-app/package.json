@@ -29,7 +29,8 @@
     "test:rls": "npx tsx scripts/test-rls.ts",
     "test:performance": "npx tsx scripts/test-performance.ts",
     "test:db": "npm run test:rls && npm run test:performance",
-    "benchmark": "npx tsx scripts/benchmark/cli.ts"
+    "benchmark": "npx tsx scripts/benchmark/cli.ts",
+    "test:cim-chat": "npx tsx scripts/test-cim-chat.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

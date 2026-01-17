@@ -81,27 +81,17 @@ export function CIMMessageList({
 
 I'll help you create a professional **Confidential Information Memorandum** - the key document that presents your company to potential buyers.
 
-### We'll build 11 sections together:
+### Here's How We'll Work Together
 
-| Section | Focus |
-|---------|-------|
-| Executive Summary | Key highlights & metrics |
-| Company Overview | History & milestones |
-| Management Team | Leadership credentials |
-| Products & Services | Your offerings |
-| Market Opportunity | TAM/SAM & growth |
-| Business Model | Revenue & unit economics |
-| Financial Performance | Track record & projections |
-| Competitive Landscape | Positioning & moats |
-| Growth Strategy | Expansion plans |
-| Risk Factors | Risks & mitigations |
-| Appendix | Supporting details |
+We'll move through 5 collaborative stages:
 
-### Ready to start?
+1. **Buyer Persona** — Who are we writing this for? (Strategic buyer? PE firm? Specific company?)
+2. **Hero Concept** — What's the compelling story hook that makes them say "I need to learn more"?
+3. **Investment Thesis** — Why should they buy now?
+4. **Outline** — What sections will tell this story best?
+5. **Build Sections** — Create each slide together, one at a time
 
-Tell me about your company - **what do you do and what makes you special?**
-
-Or if you've run \`/manda-analyze\`, I can pull insights from your documents.`,
+**Send a message to get started!**`,
     timestamp: new Date().toISOString(),
   }
 

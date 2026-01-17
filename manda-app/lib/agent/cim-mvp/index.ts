@@ -2,7 +2,7 @@
  * CIM MVP Agent
  *
  * Simplified CIM workflow agent for MVP testing.
- * Uses JSON knowledge file from manda-analyze skill.
+ * Uses JSON knowledge file from document analysis.
  *
  * Story: CIM MVP Fast Track
  *

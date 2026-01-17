@@ -291,7 +291,7 @@ export class KnowledgeService implements IKnowledgeService {
           documentCount: 0,
           findingCount: 0,
         },
-        recommendations: ['Knowledge file not found. Please run manda-analyze first.'],
+        recommendations: ['No company documents have been analyzed yet. Upload documents to the deal room, or provide information during our conversation.'],
       }
     }
   }

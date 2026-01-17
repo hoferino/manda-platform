@@ -4,7 +4,7 @@
 # ==========================================
 # Stage 1: Dependencies
 # ==========================================
-FROM node:20-alpine AS deps
+FROM node:20.20-alpine AS deps
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN npm ci --legacy-peer-deps
 # ==========================================
 # Stage 2: Builder
 # ==========================================
-FROM node:20-alpine AS builder
+FROM node:20.20-alpine AS builder
 
 WORKDIR /app
 
@@ -38,7 +38,7 @@ RUN npm run build
 # ==========================================
 # Stage 3: Runner (Production)
 # ==========================================
-FROM node:20-alpine AS runner
+FROM node:20.20-alpine AS runner
 
 WORKDIR /app
 
