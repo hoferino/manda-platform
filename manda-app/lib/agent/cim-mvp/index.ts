@@ -168,8 +168,9 @@ export async function* streamCIMMVP(
 
     // Start from existing count + 1 (for the new human message we just sent)
     let lastMessageCount = existingMessageCount + 1
-    let lastSlideUpdate: string | null = null
     let lastPhase: string | null = null
+    // Track which slides we've already yielded to avoid duplicates
+    const yieldedSlideIds = new Set<string>()
 
     // Story 5: Track workflow state for change detection
     let previousWorkflowStage = currentState.values?.workflowProgress?.currentStage || null
@@ -307,10 +308,24 @@ export async function* streamCIMMVP(
       }
 
       // Check for slide updates (Story 5.7: enhanced with layoutType)
-      if (state.pendingSlideUpdate) {
+      // Handle both single pendingSlideUpdate and batch allSlideUpdates (for divider slides)
+      if (state.allSlideUpdates && Array.isArray(state.allSlideUpdates)) {
+        for (const slide of state.allSlideUpdates) {
+          if (!yieldedSlideIds.has(slide.slideId)) {
+            yieldedSlideIds.add(slide.slideId)
+            yield {
+              type: 'slide_update',
+              slide,
+              timestamp,
+            }
+            console.log(`[streamCIMMVP] Yielded slide_update: ${slide.slideId} (${slide.title})`)
+          }
+        }
+      } else if (state.pendingSlideUpdate) {
+        // Fallback for single slide updates (backwards compatibility)
         const slideId = state.pendingSlideUpdate.slideId
-        if (slideId !== lastSlideUpdate) {
-          lastSlideUpdate = slideId
+        if (!yieldedSlideIds.has(slideId)) {
+          yieldedSlideIds.add(slideId)
           yield {
             type: 'slide_update',
             slide: state.pendingSlideUpdate,

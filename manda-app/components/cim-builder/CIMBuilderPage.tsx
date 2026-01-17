@@ -149,6 +149,7 @@ export function CIMBuilderPage({
     setCurrentSlideIndex,
     addMessage,
     updateOutline,
+    updateSlides,
     refresh,
   } = useCIMBuilder(projectId, cimId)
 
@@ -173,18 +174,36 @@ export function CIMBuilderPage({
   const [showReadinessWarning, setShowReadinessWarning] = React.useState(false)
   const [isCheckingReadiness, setIsCheckingReadiness] = React.useState(false)
 
-  // Handle slide update from MVP agent
+  // Handle slide update from MVP agent - persist to database
   const handleSlideUpdate = React.useCallback((slide: SlideUpdate) => {
     console.log('[CIMBuilderPage] Received slide update:', slide.slideId, slide.title, slide.components.length, 'components')
+
+    // Update local state for immediate display
     setSlideUpdates((prev) => {
       const next = new Map(prev)
       next.set(slide.slideId, slide)
       console.log('[CIMBuilderPage] Total slides now:', next.size)
       return next
     })
-    // Also trigger refresh to persist
-    refresh()
-  }, [refresh])
+
+    // Convert to DB format and persist
+    const dbSlide = slideUpdateToSlide(slide)
+    const existingSlides = cim?.slides || []
+
+    // Merge: update existing slide or append new one
+    const slideIndex = existingSlides.findIndex(s => s.id === dbSlide.id)
+    let updatedSlides: Slide[]
+    if (slideIndex >= 0) {
+      updatedSlides = [...existingSlides]
+      updatedSlides[slideIndex] = dbSlide
+    } else {
+      updatedSlides = [...existingSlides, dbSlide]
+    }
+
+    // Persist to database
+    updateSlides(updatedSlides)
+    console.log('[CIMBuilderPage] Persisted slide to database:', slide.slideId)
+  }, [cim?.slides, updateSlides])
 
   // Handle phase change from MVP agent
   const handlePhaseChange = React.useCallback((phase: CIMPhase) => {
