@@ -46,29 +46,38 @@ import { getCheckpointer, type Checkpointer } from '@/lib/agent/checkpointer'
  *
  * See: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
  */
-const baseModel = new ChatAnthropic({
-  model: 'claude-haiku-4-5-20251001',
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
-  temperature: 0.7,
-  maxTokens: 4096,
-  // Enable prompt caching with extended TTL (1 hour)
-  // See: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
-  clientOptions: {
-    defaultHeaders: {
-      'anthropic-beta': 'prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11',
-    },
-  },
-})
 
-// Bind tools and add config
-const model = baseModel.bindTools(cimMVPTools).withConfig({
-  runName: 'cim-mvp-agent',
-  tags: ['cim-mvp', 'claude-haiku-4.5', 'prompt-caching'],
-  metadata: {
-    graph: 'cim-mvp',
-    version: '1.2.0', // Bumped for prompt caching
-  },
-})
+// Lazy-loaded model instance to avoid initialization at build time
+let _model: ReturnType<typeof ChatAnthropic.prototype.bindTools> | null = null
+
+function getModel() {
+  if (!_model) {
+    const baseModel = new ChatAnthropic({
+      model: 'claude-haiku-4-5-20251001',
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+      temperature: 0.7,
+      maxTokens: 4096,
+      // Enable prompt caching with extended TTL (1 hour)
+      // See: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
+      clientOptions: {
+        defaultHeaders: {
+          'anthropic-beta': 'prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11',
+        },
+      },
+    })
+
+    // Bind tools and add config
+    _model = baseModel.bindTools(cimMVPTools).withConfig({
+      runName: 'cim-mvp-agent',
+      tags: ['cim-mvp', 'claude-haiku-4.5', 'prompt-caching'],
+      metadata: {
+        graph: 'cim-mvp',
+        version: '1.2.0', // Bumped for prompt caching
+      },
+    })
+  }
+  return _model
+}
 
 // =============================================================================
 // Graph Nodes
@@ -119,7 +128,7 @@ async function agentNode(
   // Static content gets cache_control for 1-hour TTL
   // Dynamic content follows without caching
   // See: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
-  const response = await model.invoke([
+  const response = await getModel().invoke([
     {
       role: 'system',
       content: [
