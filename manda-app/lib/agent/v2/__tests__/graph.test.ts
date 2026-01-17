@@ -31,9 +31,10 @@ describe('agentGraph', () => {
 
   // ==========================================================================
   // Node Execution Verification Tests (verifies actual routing via stream)
+  // These tests require LLM API keys and are skipped in CI
   // ==========================================================================
 
-  describe('node execution', () => {
+  describe.skip('node execution', () => {
     it('should execute supervisor node for chat mode', async () => {
       const state = createInitialState('chat')
       const events: string[] = []
