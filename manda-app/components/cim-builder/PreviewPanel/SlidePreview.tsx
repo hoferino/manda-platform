@@ -252,6 +252,29 @@ export const SlidePreview = memo(function SlidePreview({
     )
   }
 
+  // Detect section divider slides by ID prefix
+  const isDividerSlide = slide.id.startsWith('divider-')
+
+  // Render divider slides as centered title only
+  if (isDividerSlide) {
+    return (
+      <div
+        className={cn(
+          'aspect-[16/9] w-full',
+          'bg-gradient-to-br from-muted/50 to-muted rounded-lg border shadow-sm',
+          'flex items-center justify-center',
+          className
+        )}
+        data-testid="slide-preview-divider"
+        data-slide-id={slide.id}
+      >
+        <h2 className="text-2xl font-bold text-center text-foreground px-8">
+          {slide.title || 'Untitled Section'}
+        </h2>
+      </div>
+    )
+  }
+
   // Determine if visual concept is set
   const hasVisualConcept = slide.visual_concept !== null
 
@@ -297,6 +320,7 @@ export const SlidePreview = memo(function SlidePreview({
       </div>
 
       {/* Slide components with layout-aware rendering */}
+      {/* Filter out title/subtitle components that duplicate the slide title */}
       <div className={cn('flex-1 space-y-2 overflow-auto min-h-0', layoutContentClass)}>
         {slide.components.length === 0 ? (
           <div className="h-full flex items-center justify-center">
@@ -305,18 +329,29 @@ export const SlidePreview = memo(function SlidePreview({
             </p>
           </div>
         ) : (
-          slide.components.map((component) => {
-            const index = componentIndices.get(component.id) ?? 0
-            return (
-              <ComponentRenderer
-                key={component.id}
-                component={component}
-                slideId={slide.id}
-                index={index}
-                onClick={onComponentClick}
-              />
-            )
-          })
+          slide.components
+            .filter((component) => {
+              // Filter out title/subtitle that duplicates the slide title
+              if (component.type === 'title' || component.type === 'subtitle') {
+                const content = typeof component.content === 'string' ? component.content : ''
+                if (content === slide.title || content.trim() === slide.title?.trim()) {
+                  return false
+                }
+              }
+              return true
+            })
+            .map((component) => {
+              const index = componentIndices.get(component.id) ?? 0
+              return (
+                <ComponentRenderer
+                  key={component.id}
+                  component={component}
+                  slideId={slide.id}
+                  index={index}
+                  onClick={onComponentClick}
+                />
+              )
+            })
         )}
       </div>
 
