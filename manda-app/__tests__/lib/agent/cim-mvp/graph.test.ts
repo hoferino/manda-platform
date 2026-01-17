@@ -18,6 +18,7 @@ import type {
   SectionProgress,
   SlideUpdate,
   CIMPhase,
+  CIMSection,
 } from '@/lib/agent/cim-mvp/state'
 
 // =============================================================================
@@ -89,7 +90,7 @@ describe('CIM MVP Graph - Routing Logic', () => {
 
       const state = {
         messages: [aiMessage],
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       expect(shouldContinue(state)).toBe('tools')
     })
@@ -101,7 +102,7 @@ describe('CIM MVP Graph - Routing Logic', () => {
 
       const state = {
         messages: [aiMessage],
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       expect(shouldContinue(state)).toBe('__end__')
     })
@@ -114,7 +115,7 @@ describe('CIM MVP Graph - Routing Logic', () => {
 
       const state = {
         messages: [aiMessage],
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       expect(shouldContinue(state)).toBe('__end__')
     })
@@ -124,7 +125,7 @@ describe('CIM MVP Graph - Routing Logic', () => {
 
       const state = {
         messages: [humanMessage],
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       expect(shouldContinue(state)).toBe('__end__')
     })
@@ -137,7 +138,7 @@ describe('CIM MVP Graph - Routing Logic', () => {
 
       const state = {
         messages: [toolMessage],
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       expect(shouldContinue(state)).toBe('__end__')
     })
@@ -153,7 +154,7 @@ describe('CIM MVP Graph - Routing Logic', () => {
 
       const state = {
         messages: [aiMessage],
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       expect(shouldContinue(state)).toBe('tools')
     })
@@ -261,7 +262,7 @@ function processToolResult(
 
     if (result.action === 'add' && result.newSection) {
       updates.cimOutline = {
-        sections: [...currentOutline.sections, result.newSection as CIMMVPStateType['cimOutline']['sections'][0]],
+        sections: [...currentOutline.sections, result.newSection as CIMSection],
       }
       const newSectionProgress = { ...currentProgress.sectionProgress }
       const newSection = result.newSection as { id: string }
@@ -291,7 +292,7 @@ function processToolResult(
       updates.cimOutline = {
         sections: (result.newOrder as string[])
           .map((id) => sectionMap.get(id))
-          .filter(Boolean) as CIMMVPStateType['cimOutline']['sections'],
+          .filter(Boolean) as CIMSection[],
       }
     } else if (result.action === 'update' && result.updateSectionId && result.updatedSection) {
       updates.cimOutline = {
@@ -382,7 +383,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
           completedStages: [] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         advancedWorkflow: true,
@@ -403,7 +404,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
           completedStages: ['welcome', 'buyer_persona', 'welcome'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         advancedWorkflow: true,
@@ -426,7 +427,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
           completedStages: ['welcome', 'buyer_persona'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         advancedWorkflow: true,
@@ -439,7 +440,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
     })
 
     it('should handle missing workflowProgress gracefully', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         advancedWorkflow: true,
@@ -456,7 +457,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
 
   describe('save_buyer_persona handling', () => {
     it('should save buyer persona to state', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         buyerPersona: {
@@ -475,7 +476,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
 
   describe('save_hero_concept handling', () => {
     it('should save hero context to state', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         heroContext: {
@@ -492,13 +493,13 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
 
   describe('create_outline handling', () => {
     it('should save outline and initialize section progress', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         cimOutline: {
           sections: [
-            { id: 'exec-summary', title: 'Executive Summary', estimatedSlides: 2 },
-            { id: 'company-overview', title: 'Company Overview', estimatedSlides: 4 },
+            { id: 'exec-summary', title: 'Executive Summary', description: 'Key highlights' },
+            { id: 'company-overview', title: 'Company Overview', description: 'Company background' },
           ],
         },
       }
@@ -509,11 +510,11 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       expect(updates.workflowProgress).toBeDefined()
       expect(updates.workflowProgress!.sectionProgress).toHaveProperty('exec-summary')
       expect(updates.workflowProgress!.sectionProgress).toHaveProperty('company-overview')
-      expect(updates.workflowProgress!.sectionProgress['exec-summary'].status).toBe('pending')
+      expect(updates.workflowProgress!.sectionProgress['exec-summary']!.status).toBe('pending')
     })
 
     it('should handle section divider slides', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         cimOutline: { sections: [] },
@@ -526,15 +527,15 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const updates = processToolResult(state, result)
 
       expect(updates.allSlideUpdates).toHaveLength(2)
-      expect(updates.allSlideUpdates![0].slideId).toBe('divider-1')
+      expect(updates.allSlideUpdates![0]!.slideId).toBe('divider-1')
     })
   })
 
   describe('update_outline handling', () => {
     const existingOutline = {
       sections: [
-        { id: 'sec-1', title: 'Section 1', estimatedSlides: 2 },
-        { id: 'sec-2', title: 'Section 2', estimatedSlides: 3 },
+        { id: 'sec-1', title: 'Section 1', description: 'First section' },
+        { id: 'sec-2', title: 'Section 2', description: 'Second section' },
       ],
     }
 
@@ -551,18 +552,18 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const state = {
         cimOutline: existingOutline,
         workflowProgress: existingProgress,
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         outlineUpdate: true,
         action: 'add',
-        newSection: { id: 'sec-3', title: 'Section 3', estimatedSlides: 2 },
+        newSection: { id: 'sec-3', title: 'Section 3', description: 'Third section' },
       }
 
       const updates = processToolResult(state, result)
 
       expect(updates.cimOutline!.sections).toHaveLength(3)
-      expect(updates.cimOutline!.sections[2].id).toBe('sec-3')
+      expect(updates.cimOutline!.sections[2]!.id).toBe('sec-3')
       expect(updates.workflowProgress!.sectionProgress).toHaveProperty('sec-3')
     })
 
@@ -570,7 +571,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const state = {
         cimOutline: existingOutline,
         workflowProgress: existingProgress,
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         outlineUpdate: true,
@@ -581,7 +582,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const updates = processToolResult(state, result)
 
       expect(updates.cimOutline!.sections).toHaveLength(1)
-      expect(updates.cimOutline!.sections[0].id).toBe('sec-2')
+      expect(updates.cimOutline!.sections[0]!.id).toBe('sec-2')
       expect(updates.workflowProgress!.sectionProgress).not.toHaveProperty('sec-1')
     })
 
@@ -589,7 +590,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const state = {
         cimOutline: existingOutline,
         workflowProgress: existingProgress,
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         outlineUpdate: true,
@@ -599,27 +600,27 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
 
       const updates = processToolResult(state, result)
 
-      expect(updates.cimOutline!.sections[0].id).toBe('sec-2')
-      expect(updates.cimOutline!.sections[1].id).toBe('sec-1')
+      expect(updates.cimOutline!.sections[0]!.id).toBe('sec-2')
+      expect(updates.cimOutline!.sections[1]!.id).toBe('sec-1')
     })
 
     it('should update section', () => {
       const state = {
         cimOutline: existingOutline,
         workflowProgress: existingProgress,
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         outlineUpdate: true,
         action: 'update',
         updateSectionId: 'sec-1',
-        updatedSection: { title: 'Updated Section 1', estimatedSlides: 5 },
+        updatedSection: { title: 'Updated Section 1', description: 'Updated description' },
       }
 
       const updates = processToolResult(state, result)
 
-      expect(updates.cimOutline!.sections[0].title).toBe('Updated Section 1')
-      expect(updates.cimOutline!.sections[0].estimatedSlides).toBe(5)
+      expect(updates.cimOutline!.sections[0]!.title).toBe('Updated Section 1')
+      expect(updates.cimOutline!.sections[0]!.description).toBe('Updated description')
     })
   })
 
@@ -633,7 +634,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
             'sec-1': { sectionId: 'sec-1', status: 'pending' as const, slides: [] },
           },
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         startSection: true,
@@ -643,7 +644,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const updates = processToolResult(state, result)
 
       expect(updates.workflowProgress!.currentSectionId).toBe('sec-1')
-      expect(updates.workflowProgress!.sectionProgress['sec-1'].status).toBe('content_development')
+      expect(updates.workflowProgress!.sectionProgress['sec-1']!.status).toBe('content_development')
     })
 
     it('should initialize section progress if not exists', () => {
@@ -653,7 +654,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
           completedStages: [] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         startSection: true,
@@ -663,13 +664,13 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const updates = processToolResult(state, result)
 
       expect(updates.workflowProgress!.sectionProgress['new-section']).toBeDefined()
-      expect(updates.workflowProgress!.sectionProgress['new-section'].status).toBe('content_development')
+      expect(updates.workflowProgress!.sectionProgress['new-section']!.status).toBe('content_development')
     })
   })
 
   describe('update_slide handling', () => {
     it('should create slide update with all properties', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         slideId: 'slide-1',
@@ -692,7 +693,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
     })
 
     it('should use default title if not provided', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         slideId: 'slide-2',
@@ -705,7 +706,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
     })
 
     it('should not create slide update when sectionDividerSlides present', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         slideId: 'slide-1',
@@ -723,7 +724,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
 
   describe('save_context handling', () => {
     it('should save gathered context', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const result = {
         gatheredContext: {
@@ -744,7 +745,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const state = {
         currentPhase: 'executive_summary' as CIMPhase,
         completedPhases: [] as CIMPhase[],
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         navigatedTo: 'company_overview',
@@ -760,7 +761,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
       const state = {
         currentPhase: 'market_analysis' as CIMPhase,
         completedPhases: ['executive_summary', 'company_overview', 'executive_summary'] as CIMPhase[],
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         navigatedTo: 'financial_performance',
@@ -783,7 +784,7 @@ describe('CIM MVP Graph - PostToolNode Processing', () => {
           completedStages: ['welcome', 'buyer_persona'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const result = {
         advancedWorkflow: true,
@@ -931,7 +932,7 @@ describe('CIM MVP Graph - Workflow Stages', () => {
         completedStages: [] as WorkflowStage[],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     for (let i = 1; i < WORKFLOW_STAGES.length; i++) {
       const result = {
@@ -947,7 +948,7 @@ describe('CIM MVP Graph - Workflow Stages', () => {
       state = {
         ...state,
         workflowProgress: updates.workflowProgress!,
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
     }
 
     // Final state should have all stages except 'complete' in completed
@@ -964,7 +965,7 @@ describe('CIM MVP Graph - Workflow Stages', () => {
         completedStages: [] as WorkflowStage[],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const result = {
       advancedWorkflow: true,

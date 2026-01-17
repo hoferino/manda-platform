@@ -462,7 +462,7 @@ describe('CIM MVP Prompts - formatWorkflowProgress', () => {
     ]
 
     for (let i = 0; i < stageLabels.length; i++) {
-      expect(lines.some((line) => line.includes(stageLabels[i]))).toBe(true)
+      expect(lines.some((line) => line.includes(stageLabels[i]!))).toBe(true)
     }
   })
 
@@ -628,9 +628,9 @@ describe('CIM MVP Prompts - formatCIMOutline', () => {
   it('should format outline with numbered sections', () => {
     const outline: CIMOutline = {
       sections: [
-        { id: 'exec', title: 'Executive Summary', description: 'Key highlights', estimatedSlides: 2 },
-        { id: 'company', title: 'Company Overview', description: 'History and background', estimatedSlides: 4 },
-        { id: 'financials', title: 'Financial Performance', description: 'Revenue and growth', estimatedSlides: 6 },
+        { id: 'exec', title: 'Executive Summary', description: 'Key highlights' },
+        { id: 'company', title: 'Company Overview', description: 'History and background' },
+        { id: 'financials', title: 'Financial Performance', description: 'Revenue and growth' },
       ],
     }
 
@@ -655,7 +655,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -670,7 +670,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: ['welcome'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -686,7 +686,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: ['welcome', 'buyer_persona'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -702,7 +702,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -720,7 +720,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -735,7 +735,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -752,7 +752,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -772,7 +772,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -786,7 +786,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -806,7 +806,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -823,7 +823,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -839,7 +839,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -863,7 +863,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: ['welcome', 'buyer_persona'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -879,7 +879,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: ['welcome'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -904,7 +904,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: ['welcome', 'buyer_persona', 'hero_concept'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -919,8 +919,8 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
       const state = {
         cimOutline: {
           sections: [
-            { id: 'exec', title: 'Executive Summary', description: 'Overview', estimatedSlides: 2 },
-            { id: 'company', title: 'Company Overview', description: 'History', estimatedSlides: 3 },
+            { id: 'exec', title: 'Executive Summary', description: 'Overview' },
+            { id: 'company', title: 'Company Overview', description: 'History' },
           ],
         },
         workflowProgress: {
@@ -928,7 +928,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -953,7 +953,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -974,7 +974,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -998,7 +998,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -1025,7 +1025,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -1053,7 +1053,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -1083,7 +1083,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -1112,7 +1112,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -1139,7 +1139,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -1161,7 +1161,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
           completedStages: [],
           sectionProgress: {},
         },
-      } as CIMMVPStateType
+      } as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -1173,7 +1173,7 @@ describe('CIM MVP Prompts - getSystemPrompt', () => {
 
   describe('default state handling', () => {
     it('should handle completely empty state', () => {
-      const state = {} as CIMMVPStateType
+      const state = {} as unknown as CIMMVPStateType
 
       const prompt = getSystemPrompt(state)
 
@@ -1196,7 +1196,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: [],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { staticPrompt, dynamicPrompt } = getSystemPromptForCaching(state)
 
@@ -1213,7 +1213,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: [],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { staticPrompt } = getSystemPromptForCaching(state)
 
@@ -1247,7 +1247,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: ['welcome', 'buyer_persona'] as WorkflowStage[],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { staticPrompt } = getSystemPromptForCaching(state)
 
@@ -1280,7 +1280,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: ['welcome', 'buyer_persona', 'hero_concept'] as WorkflowStage[],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { dynamicPrompt } = getSystemPromptForCaching(state)
 
@@ -1311,7 +1311,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { dynamicPrompt } = getSystemPromptForCaching(state)
 
@@ -1329,7 +1329,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: [],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const state2 = {
       companyName: 'Company B',
@@ -1339,7 +1339,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { staticPrompt: static1 } = getSystemPromptForCaching(state1)
     const { staticPrompt: static2 } = getSystemPromptForCaching(state2)
@@ -1356,7 +1356,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: [],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const state2 = {
       companyName: 'Company B',
@@ -1365,7 +1365,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: ['welcome', 'buyer_persona', 'hero_concept', 'investment_thesis', 'outline'] as WorkflowStage[],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { dynamicPrompt: dynamic1 } = getSystemPromptForCaching(state1)
     const { dynamicPrompt: dynamic2 } = getSystemPromptForCaching(state2)
@@ -1383,7 +1383,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: [],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { staticPrompt } = getSystemPromptForCaching(state)
 
@@ -1400,7 +1400,7 @@ describe('CIM MVP Prompts - getSystemPromptForCaching (Story 5)', () => {
         completedStages: [],
         sectionProgress: {},
       },
-    } as CIMMVPStateType
+    } as unknown as CIMMVPStateType
 
     const { staticPrompt } = getSystemPromptForCaching(state)
 

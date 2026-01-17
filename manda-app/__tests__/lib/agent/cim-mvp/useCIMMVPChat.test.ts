@@ -198,7 +198,7 @@ describe('useCIMMVPChat - sendMessage', () => {
       await result.current.sendMessage('Hello')
     })
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    const body = JSON.parse(mockFetch.mock.calls[0]![1]!.body as string)
     expect(body.knowledgePath).toBe('/path/to/knowledge.json')
   })
 
@@ -833,7 +833,7 @@ describe('useCIMMVPChat - retryLastMessage', () => {
 
     // Should have retried with same message
     expect(mockFetch).toHaveBeenCalledTimes(2)
-    const secondBody = JSON.parse(mockFetch.mock.calls[1][1].body)
+    const secondBody = JSON.parse(mockFetch.mock.calls[1]![1]!.body as string)
     expect(secondBody.message).toBe('Hello')
   })
 
@@ -928,7 +928,7 @@ describe('useCIMMVPChat - Conversation ID Persistence', () => {
     })
 
     // Check second request includes conversationId
-    const secondBody = JSON.parse(mockFetch.mock.calls[1][1].body)
+    const secondBody = JSON.parse(mockFetch.mock.calls[1]![1]!.body as string)
     expect(secondBody.conversationId).toBe('conv-123')
   })
 })

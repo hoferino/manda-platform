@@ -301,8 +301,8 @@ describe('CIM MVP State - Interfaces', () => {
       }
 
       expect(outline.sections).toHaveLength(2)
-      expect(outline.sections[0].id).toBe('sec-1')
-      expect(outline.sections[0].title).toBe('Executive Summary')
+      expect(outline.sections[0]!.id).toBe('sec-1')
+      expect(outline.sections[0]!.title).toBe('Executive Summary')
     })
   })
 
@@ -432,8 +432,8 @@ describe('CIM MVP State - Reducer Logic', () => {
       const result = messagesReducer(initial, update)
 
       expect(result).toHaveLength(2)
-      expect(result[0].content).toBe('Hello')
-      expect(result[1].content).toBe('Hi there')
+      expect(result[0]!.content).toBe('Hello')
+      expect(result[1]!.content).toBe('Hi there')
     })
 
     it('should handle empty initial array', () => {
@@ -515,8 +515,8 @@ describe('CIM MVP State - Reducer Logic', () => {
       const result = gatheredContextReducer(current, update)
 
       expect(result.founders).toHaveLength(2)
-      expect(result.founders![0].name).toBe('John')
-      expect(result.founders![1].name).toBe('Jane')
+      expect(result.founders![0]!.name).toBe('John')
+      expect(result.founders![1]!.name).toBe('Jane')
       expect(result.products).toHaveLength(2)
     })
 
@@ -668,7 +668,7 @@ describe('CIM MVP State - Reducer Logic', () => {
       const result = allSlideUpdatesReducer(current, update)
 
       expect(result).toHaveLength(1)
-      expect(result[0].slideId).toBe('slide-1')
+      expect(result[0]!.slideId).toBe('slide-1')
     })
 
     it('should merge slides by slideId (upsert behavior)', () => {
@@ -807,8 +807,8 @@ describe('CIM MVP State - Reducer Logic', () => {
       const result = allSlideUpdatesReducer(current, update)
 
       expect(result).toHaveLength(1)
-      expect(result[0].components).toHaveLength(2)
-      expect(result[0].components[0].style?.emphasis).toBe('primary')
+      expect(result[0]!.components).toHaveLength(2)
+      expect(result[0]!.components[0]!.style?.emphasis).toBe('primary')
     })
 
     it('should preserve component data when updating slide', () => {
@@ -836,8 +836,8 @@ describe('CIM MVP State - Reducer Logic', () => {
 
       const result = allSlideUpdatesReducer(current, update)
 
-      expect(result[0].components).toHaveLength(2)
-      expect(result[0].components[0].content).toBe('Updated content')
+      expect(result[0]!.components).toHaveLength(2)
+      expect(result[0]!.components[0]!.content).toBe('Updated content')
     })
   })
 
