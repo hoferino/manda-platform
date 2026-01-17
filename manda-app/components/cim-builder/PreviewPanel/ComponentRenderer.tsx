@@ -645,7 +645,7 @@ const QuoteRenderer = memo(function QuoteRenderer({ component, componentId, onCl
   return (
     <ClickableWrapper componentId={componentId} content={getContentString(component.content)} onClick={onClick}>
       <blockquote className="border-l-4 border-primary/50 pl-4 py-2 italic text-foreground/80">
-        "{getContentString(component.content) || 'Quote'}"
+        &ldquo;{getContentString(component.content) || 'Quote'}&rdquo;
       </blockquote>
     </ClickableWrapper>
   )
@@ -844,12 +844,14 @@ export const ComponentRenderer = memo(function ComponentRenderer({
         return <BulletListRenderer {...rendererProps} />
       }
       if (typeof component.content === 'string') {
+        let isMetricJson = false
         try {
           const parsed = JSON.parse(component.content)
-          if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && 'value' in parsed[0]) {
-            return <MetricRenderer {...rendererProps} />
-          }
+          isMetricJson = Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && 'value' in parsed[0]
         } catch { /* not JSON */ }
+        if (isMetricJson) {
+          return <MetricRenderer {...rendererProps} />
+        }
       }
       // Ultimate fallback: text renderer
       return <TextRenderer {...rendererProps} />
