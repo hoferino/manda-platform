@@ -18,7 +18,7 @@ import type {
   HeroContext,
   CIMOutline,
 } from './state'
-import { getDataSummary, getDataGaps } from './knowledge-loader'
+import { getFullSectionContext, getDataGaps, getCompanyMetadata } from './knowledge-loader'
 
 // =============================================================================
 // Presentation Guidelines (Inline for Caching)
@@ -631,34 +631,39 @@ export function getSystemPrompt(state: CIMMVPStateType): string {
   const stageInstructions = getWorkflowStageInstructions(currentStage)
   const hasKnowledge = state.knowledgeLoaded || false
 
-  // Only try to get data summary if knowledge is loaded
-  let dataSummary = ''
-  let dataGapsSection = ''
+  // Get current date for agent context
+  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+
+  // Build knowledge section with full context for key sections
+  let knowledgeSection = ''
 
   if (hasKnowledge) {
-    dataSummary = getDataSummary()
+    const metadata = getCompanyMetadata()
+    const fullContext = getFullSectionContext(['company_overview', 'financial_performance'])
     const dataGaps = getDataGaps()
-    if (dataGaps) {
-      dataGapsSection = `## Data Gaps Identified
-Missing sections: ${dataGaps.missing_sections?.join(', ') || 'None'}
-Recommendations: ${dataGaps.recommendations?.slice(0, 3).join('; ') || 'None'}`
-    }
-  }
 
-  // Build the prompt based on whether we have knowledge
-  const knowledgeSection = hasKnowledge
-    ? `## Knowledge Base Summary
-${dataSummary}
+    knowledgeSection = `## Knowledge Base
+**Company:** ${metadata?.company_name || 'Unknown'}
+**Documents:** ${metadata?.documents.length || 0} analyzed
+**Data Sufficiency:** ${metadata?.data_sufficiency_score || 0}/100
 
-${dataGapsSection}`
-    : `## No Knowledge Base Loaded
+${fullContext}
+## Data Gaps
+${dataGaps?.missing_sections?.length ? `Missing: ${dataGaps.missing_sections.join(', ')}` : 'No missing sections identified.'}
+${dataGaps?.recommendations?.slice(0, 3).map(r => `- ${r}`).join('\n') || ''}`
+  } else {
+    knowledgeSection = `## No Knowledge Base Loaded
 ⚠️ **IMPORTANT**: No company documents have been analyzed yet.
 - You have NO information about this company unless it's in "Information Gathered So Far" above.
 - You CANNOT suggest hero concepts, thesis points, or create content without actual data.
 - You MUST ask the user to provide company information before making any company-specific recommendations.
 - If "Information Gathered So Far" is empty → You are operating with ZERO company knowledge.`
+  }
 
   return `You are an expert M&A advisor helping create a Confidential Information Memorandum (CIM)${state.companyName ? ` for ${state.companyName}` : ''}.
+
+## Today's Date
+${today}
 
 ## Your Role
 You guide the user through a structured CIM creation workflow:
@@ -1052,37 +1057,42 @@ function getDynamicPrompt(state: CIMMVPStateType): string {
   // We only include a pointer here to tell the model which stage instructions to follow
   const hasKnowledge = state.knowledgeLoaded || false
 
-  // Only try to get data summary if knowledge is loaded
-  let dataSummary = ''
-  let dataGapsSection = ''
+  // Get current date for agent context
+  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+
+  // Build knowledge section with full context for key sections
+  let knowledgeSection = ''
 
   if (hasKnowledge) {
-    dataSummary = getDataSummary()
+    const metadata = getCompanyMetadata()
+    const fullContext = getFullSectionContext(['company_overview', 'financial_performance'])
     const dataGaps = getDataGaps()
-    if (dataGaps) {
-      dataGapsSection = `## Data Gaps Identified
-Missing sections: ${dataGaps.missing_sections?.join(', ') || 'None'}
-Recommendations: ${dataGaps.recommendations?.slice(0, 3).join('; ') || 'None'}`
-    }
-  }
 
-  // Build the prompt based on whether we have knowledge
-  const knowledgeSection = hasKnowledge
-    ? `## Knowledge Base Summary
-${dataSummary}
+    knowledgeSection = `## Knowledge Base
+**Company:** ${metadata?.company_name || 'Unknown'}
+**Documents:** ${metadata?.documents.length || 0} analyzed
+**Data Sufficiency:** ${metadata?.data_sufficiency_score || 0}/100
 
-${dataGapsSection}`
-    : `## No Knowledge Base Loaded
+${fullContext}
+## Data Gaps
+${dataGaps?.missing_sections?.length ? `Missing: ${dataGaps.missing_sections.join(', ')}` : 'No missing sections identified.'}
+${dataGaps?.recommendations?.slice(0, 3).map(r => `- ${r}`).join('\n') || ''}`
+  } else {
+    knowledgeSection = `## No Knowledge Base Loaded
 ⚠️ **IMPORTANT**: No company documents have been analyzed yet.
 - You have NO information about this company unless it's in "Information Gathered So Far" above.
 - You CANNOT suggest hero concepts, thesis points, or create content without actual data.
 - You MUST ask the user to provide company information before making any company-specific recommendations.
 - If "Information Gathered So Far" is empty → You are operating with ZERO company knowledge.`
+  }
 
   // Format current stage name for display
   const stageDisplayName = currentStage.replace(/_/g, ' ').toUpperCase()
 
   return `
+## Today's Date
+${today}
+
 ## Company Context
 ${state.companyName ? `Creating CIM for: **${state.companyName}**` : 'Company not yet identified.'}
 ${hasKnowledge ? 'Knowledge base loaded - use it as your primary source.' : "We'll gather information through conversation as we go."}

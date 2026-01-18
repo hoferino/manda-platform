@@ -171,6 +171,57 @@ export function formatSectionContext(section: string): string {
 }
 
 /**
+ * Get full context for specified sections
+ *
+ * Formats ALL findings from the specified sections for inclusion in the system prompt.
+ * Use this for sections that the agent needs full access to (e.g., company_overview, financial_performance).
+ *
+ * @param sectionNames - Array of section names to include (e.g., ['company_overview', 'financial_performance'])
+ * @returns Formatted string with all findings and sources
+ */
+export function getFullSectionContext(sectionNames: string[]): string {
+  if (!cachedKnowledge) return ''
+
+  const lines: string[] = []
+
+  for (const sectionName of sectionNames) {
+    const sectionData = cachedKnowledge.sections[sectionName as keyof typeof cachedKnowledge.sections]
+    if (!sectionData) continue
+
+    lines.push(`### ${sectionName.replace(/_/g, ' ').toUpperCase()}`)
+
+    // Handle sections with direct findings array (e.g., executive_summary, products_services)
+    if ('findings' in sectionData && Array.isArray(sectionData.findings)) {
+      for (const finding of sectionData.findings) {
+        lines.push(`- ${finding.content} [${finding.source.document}]`)
+      }
+    }
+
+    // Handle nested sections (company_overview, financial_performance have subsections)
+    if (typeof sectionData === 'object') {
+      for (const [subsection, data] of Object.entries(sectionData)) {
+        // Skip non-finding properties like 'executives' in management_team or 'historical_financials'
+        if (subsection === 'findings') continue // Already handled above
+
+        if (data && typeof data === 'object' && 'findings' in data) {
+          const findingsData = data as { findings: Finding[] }
+          if (findingsData.findings?.length > 0) {
+            lines.push(`\n**${subsection.replace(/_/g, ' ')}:**`)
+            for (const finding of findingsData.findings) {
+              lines.push(`- ${finding.content} [${finding.source.document}]`)
+            }
+          }
+        }
+      }
+    }
+
+    lines.push('') // Add spacing between sections
+  }
+
+  return lines.join('\n')
+}
+
+/**
  * Get summary of available data
  */
 export function getDataSummary(): string {
