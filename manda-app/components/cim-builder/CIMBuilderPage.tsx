@@ -39,8 +39,8 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import type { KnowledgeReadiness } from '@/lib/agent/cim-mvp'
 import { formatComponentReference } from '@/lib/cim/reference-utils'
-import type { SlideUpdate, CIMPhase, ComponentType as MVPComponentType, WorkflowProgress, CIMOutline } from '@/lib/agent/cim-mvp'
-import type { Slide, ComponentType as LegacyComponentType } from '@/lib/types/cim'
+import type { SlideUpdate, CIMPhase, ComponentType as MVPComponentType, WorkflowProgress, CIMOutline, LayoutType as MVPLayoutType, SlideComponent as MVPSlideComponent } from '@/lib/agent/cim-mvp'
+import type { Slide, ComponentType as LegacyComponentType, LayoutType as DBLayoutType } from '@/lib/types/cim'
 
 /**
  * Map MVP component types to legacy component types for database storage
@@ -100,7 +100,93 @@ function mapComponentType(mvpType: MVPComponentType): LegacyComponentType {
 }
 
 /**
+ * Map MVP layout types to database layout types
+ * MVP uses kebab-case with many options, DB uses snake_case with 5 options.
+ * We store the original MVP layoutType in visual_concept.notes for lossless restoration.
+ */
+function mapLayoutType(mvpLayoutType: MVPLayoutType): DBLayoutType {
+  switch (mvpLayoutType) {
+    case 'title-only':
+      return 'title_slide'
+    case 'title-content':
+    case 'full':
+    case 'split-vertical':
+    case 'thirds-vertical':
+      return 'content'
+    case 'split-horizontal':
+    case 'split-horizontal-weighted':
+    case 'comparison':
+    case 'sidebar-left':
+    case 'sidebar-right':
+      return 'two_column'
+    case 'quadrant':
+    case 'thirds-horizontal':
+    case 'six-grid':
+    case 'pyramid':
+    case 'hub-spoke':
+      return 'chart_focus'
+    case 'hero-with-details':
+      return 'image_focus'
+    default:
+      return 'content'
+  }
+}
+
+/**
+ * Reverse map DB layout types back to MVP layout types
+ * Uses stored original value from notes if available, otherwise best-guess mapping
+ */
+function mapLayoutTypeReverse(dbLayoutType: DBLayoutType | undefined, originalMvpType?: string): MVPLayoutType {
+  // If we have the original MVP type stored, use it
+  if (originalMvpType) {
+    return originalMvpType as MVPLayoutType
+  }
+
+  // Otherwise, best-guess mapping
+  switch (dbLayoutType) {
+    case 'title_slide':
+      return 'title-only'
+    case 'content':
+      return 'title-content'
+    case 'two_column':
+      return 'split-horizontal'
+    case 'chart_focus':
+      return 'quadrant'
+    case 'image_focus':
+      return 'hero-with-details'
+    default:
+      return 'title-content'
+  }
+}
+
+/**
+ * Reverse map DB component types back to MVP component types
+ * This is a best-effort mapping since DB types are more limited
+ */
+function mapComponentTypeReverse(dbType: LegacyComponentType): MVPComponentType {
+  switch (dbType) {
+    case 'title':
+      return 'title'
+    case 'subtitle':
+      return 'subtitle'
+    case 'text':
+      return 'text'
+    case 'bullet':
+      return 'bullet_list'
+    case 'chart':
+      return 'bar_chart'
+    case 'image':
+      return 'image'
+    case 'table':
+      return 'table'
+    default:
+      return 'text'
+  }
+}
+
+/**
  * Convert MVP agent SlideUpdate to database Slide format
+ * Preserves layoutType in visual_concept for round-trip restoration
  */
 function slideUpdateToSlide(update: SlideUpdate): Slide {
   return {
@@ -111,12 +197,58 @@ function slideUpdateToSlide(update: SlideUpdate): Slide {
       id: c.id,
       type: mapComponentType(c.type),
       content: typeof c.content === 'string' ? c.content : JSON.stringify(c.content),
-      metadata: c.data ? { data: c.data } : undefined,
+      metadata: c.data ? { data: c.data, position: c.position, style: c.style, icon: c.icon, label: c.label } : undefined,
     })),
-    visual_concept: null,
+    visual_concept: update.layoutType ? {
+      layout_type: mapLayoutType(update.layoutType),
+      notes: `mvp_layout:${update.layoutType}`, // Store original for lossless restore
+    } : null,
     status: update.status === 'approved' ? 'approved' : 'draft',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+  }
+}
+
+/**
+ * Convert database Slide back to MVP SlideUpdate format
+ * Used to restore slideUpdates state from DB on page reload
+ */
+function slideToSlideUpdate(slide: Slide): SlideUpdate {
+  // Extract original MVP layout type from notes if available
+  let originalMvpLayoutType: string | undefined
+  if (slide.visual_concept?.notes?.startsWith('mvp_layout:')) {
+    originalMvpLayoutType = slide.visual_concept.notes.replace('mvp_layout:', '')
+  }
+
+  return {
+    slideId: slide.id,
+    sectionId: slide.section_id,
+    title: slide.title,
+    layoutType: mapLayoutTypeReverse(slide.visual_concept?.layout_type, originalMvpLayoutType),
+    components: slide.components.map((c): MVPSlideComponent => {
+      // Try to parse content back to original format
+      let content: string | string[] | Record<string, unknown> = c.content
+      try {
+        const parsed = JSON.parse(c.content)
+        if (typeof parsed === 'object' || Array.isArray(parsed)) {
+          content = parsed
+        }
+      } catch {
+        // Content is already a plain string, keep as-is
+      }
+
+      return {
+        id: c.id,
+        type: mapComponentTypeReverse(c.type),
+        content,
+        data: c.metadata?.data as unknown,
+        position: c.metadata?.position as MVPSlideComponent['position'],
+        style: c.metadata?.style as MVPSlideComponent['style'],
+        icon: c.metadata?.icon as string | undefined,
+        label: c.metadata?.label as string | undefined,
+      }
+    }),
+    status: slide.status === 'approved' ? 'approved' : 'draft',
   }
 }
 
@@ -173,6 +305,30 @@ export function CIMBuilderPage({
   const [knowledgeReadiness, setKnowledgeReadiness] = React.useState<KnowledgeReadiness | null>(null)
   const [showReadinessWarning, setShowReadinessWarning] = React.useState(false)
   const [isCheckingReadiness, setIsCheckingReadiness] = React.useState(false)
+
+  // Track if we've restored slides to avoid re-running effect
+  const [slidesRestored, setSlidesRestored] = React.useState(false)
+
+  // Restore slideUpdates from DB slides on initial page load
+  // This ensures slides persist after page refresh
+  React.useEffect(() => {
+    // Only restore once, when we have slides from DB but slideUpdates is empty
+    if (slidesRestored) return
+    if (!cim?.slides || cim.slides.length === 0) return
+    if (slideUpdates.size > 0) return
+
+    console.log('[CIMBuilderPage] Restoring slides from DB:', cim.slides.length, 'slides')
+
+    const restoredUpdates = new Map<string, SlideUpdate>()
+    for (const slide of cim.slides) {
+      const mvpSlide = slideToSlideUpdate(slide)
+      restoredUpdates.set(slide.id, mvpSlide)
+    }
+
+    setSlideUpdates(restoredUpdates)
+    setSlidesRestored(true)
+    console.log('[CIMBuilderPage] Restored', restoredUpdates.size, 'slides to slideUpdates state')
+  }, [cim?.slides, slidesRestored, slideUpdates.size])
 
   // Handle slide update from MVP agent - persist to database
   const handleSlideUpdate = React.useCallback((slide: SlideUpdate) => {

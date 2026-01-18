@@ -25,10 +25,10 @@ import {
   type KnowledgeMode,
 } from '@/lib/agent/cim-mvp'
 import { setGlobalKnowledgeService } from '@/lib/agent/cim-mvp/tools'
-import type { CIMOutline, WorkflowProgress, CIMMVPStreamEvent } from '@/lib/agent/cim-mvp'
+import type { CIMOutline, WorkflowProgress, SlideUpdate, LayoutType as MVPLayoutType, ComponentType as MVPComponentType } from '@/lib/agent/cim-mvp'
 import { getSSEHeaders } from '@/lib/agent/streaming'
 import { updateCIM } from '@/lib/services/cim'
-import type { ConversationMessage } from '@/lib/types/cim'
+import type { ConversationMessage, Slide, ComponentType as DBComponentType, LayoutType as DBLayoutType, SlideComponent } from '@/lib/types/cim'
 import type { Json } from '@/lib/supabase/types'
 
 interface RouteContext {
@@ -242,6 +242,148 @@ async function syncWorkflowProgressToCIM(
 }
 
 /**
+ * Map MVP component types to database component types
+ */
+function mapComponentType(mvpType: MVPComponentType): DBComponentType {
+  // Direct mappings
+  if (mvpType === 'title' || mvpType === 'subtitle' || mvpType === 'text' || mvpType === 'table' || mvpType === 'image') {
+    return mvpType as DBComponentType
+  }
+
+  // List types -> bullet
+  if (mvpType === 'bullet_list' || mvpType === 'numbered_list') {
+    return 'bullet'
+  }
+
+  // Chart types -> chart
+  if ([
+    'bar_chart', 'horizontal_bar_chart', 'stacked_bar_chart', 'line_chart',
+    'area_chart', 'pie_chart', 'waterfall_chart', 'combo_chart', 'scatter_plot',
+    'gauge', 'progress_bar', 'sparkline', 'funnel', 'gantt_chart',
+    'growth_trajectory', 'revenue_breakdown', 'unit_economics', 'valuation_summary'
+  ].includes(mvpType)) {
+    return 'chart'
+  }
+
+  // Table-like types -> table
+  if ([
+    'comparison_table', 'financial_table', 'feature_comparison',
+    'metric', 'metric_group', 'swot', 'matrix', 'pros_cons'
+  ].includes(mvpType)) {
+    return 'table'
+  }
+
+  // Visual/image types -> image
+  if ([
+    'image_placeholder', 'logo_grid', 'icon_grid', 'screenshot', 'diagram',
+    'map', 'location_list', 'org_chart', 'team_grid', 'hierarchy',
+    'timeline', 'milestone_timeline', 'flowchart', 'pipeline', 'process_steps',
+    'cycle', 'venn', 'versus', 'pyramid', 'hub_spoke'
+  ].includes(mvpType)) {
+    return 'image'
+  }
+
+  // Text-like types -> text
+  if ([
+    'heading', 'quote', 'callout', 'callout_group', 'stat_highlight',
+    'key_takeaway', 'annotation'
+  ].includes(mvpType)) {
+    return 'text'
+  }
+
+  return 'text'
+}
+
+/**
+ * Map MVP layout types to database layout types
+ */
+function mapLayoutType(mvpLayoutType: MVPLayoutType): DBLayoutType {
+  switch (mvpLayoutType) {
+    case 'title-only':
+      return 'title_slide'
+    case 'title-content':
+    case 'full':
+    case 'split-vertical':
+    case 'thirds-vertical':
+      return 'content'
+    case 'split-horizontal':
+    case 'split-horizontal-weighted':
+    case 'comparison':
+    case 'sidebar-left':
+    case 'sidebar-right':
+      return 'two_column'
+    case 'quadrant':
+    case 'thirds-horizontal':
+    case 'six-grid':
+    case 'pyramid':
+    case 'hub-spoke':
+      return 'chart_focus'
+    case 'hero-with-details':
+      return 'image_focus'
+    default:
+      return 'content'
+  }
+}
+
+/**
+ * Convert MVP SlideUpdate to database Slide format
+ */
+function slideUpdateToSlide(update: SlideUpdate): Slide {
+  return {
+    id: update.slideId,
+    section_id: update.sectionId,
+    title: update.title,
+    components: update.components.map((c): SlideComponent => ({
+      id: c.id,
+      type: mapComponentType(c.type),
+      content: typeof c.content === 'string' ? c.content : JSON.stringify(c.content),
+      metadata: c.data ? { data: c.data, position: c.position, style: c.style, icon: c.icon, label: c.label } : undefined,
+    })),
+    visual_concept: update.layoutType ? {
+      layout_type: mapLayoutType(update.layoutType),
+      notes: `mvp_layout:${update.layoutType}`,
+    } : null,
+    status: update.status === 'approved' ? 'approved' : 'draft',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+}
+
+/**
+ * Sync slides from LangGraph state to CIM database record
+ * Defense in depth: backup persistence if client-side persistence fails
+ */
+async function syncSlidesToCIM(
+  cimId: string,
+  threadId: string
+): Promise<void> {
+  try {
+    const graph = await getCIMMVPGraph()
+    const config = { configurable: { thread_id: threadId } }
+    const state = await graph.getState(config)
+
+    if (!state.values?.allSlideUpdates?.length) {
+      console.log('[syncSlidesToCIM] No slides in state to sync')
+      return
+    }
+
+    // Convert SlideUpdate[] to Slide[]
+    const slides = state.values.allSlideUpdates.map(slideUpdateToSlide)
+
+    const supabase = await createClient()
+    await supabase
+      .from('cims')
+      .update({ slides: slides as unknown as Json })
+      .eq('id', cimId)
+
+    console.log(`[syncSlidesToCIM] Synced ${slides.length} slides to CIM ${cimId}`)
+  } catch (error) {
+    console.error('[syncSlidesToCIM] Error:', error)
+    // Don't throw - this is best-effort persistence
+  }
+}
+
+/**
  * Handle streaming chat request using SSE
  * Story 5: Enhanced with database sync for outline and workflow progress
  */
@@ -283,7 +425,7 @@ function handleStreamingResponse(
           }
         }
 
-        // After streaming completes, sync conversation and workflow state
+        // After streaming completes, sync conversation, workflow state, and slides
         await syncConversationToCIM(cimId, threadId)
 
         // Sync final workflow progress if changed during stream
@@ -296,6 +438,9 @@ function handleStreamingResponse(
             await syncWorkflowProgressToCIM(cimId, finalState.values.workflowProgress)
           }
         }
+
+        // Sync slides as backup persistence (defense in depth)
+        await syncSlidesToCIM(cimId, threadId)
       } catch (error) {
         console.error('[handleStreamingResponse] Error:', error)
         const errorEvent = {
@@ -327,8 +472,9 @@ async function handleNonStreamingResponse(
   try {
     const result = await executeCIMMVP(message, threadId, knowledgePath)
 
-    // Sync conversation to CIM record after execution
+    // Sync conversation and slides to CIM record after execution
     await syncConversationToCIM(cimId, threadId)
+    await syncSlidesToCIM(cimId, threadId)
 
     return NextResponse.json({
       messageId: crypto.randomUUID(),
