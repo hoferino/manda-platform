@@ -127,8 +127,15 @@ export function getWorkflowStageInstructions(stage: WorkflowStage): string {
 **If knowledge base IS loaded:**
 "Great! I've analyzed the documents for [Company Name].
 
-**What I found:**
-- [2-3 key highlights from knowledge base - actual numbers, metrics, or facts]
+**Financial Snapshot:**
+Present the key metrics in this format:
+- **Current Year (most recent actuals):** Revenue, EBITDA, EBITDA margin, adjusted EBITDA if available
+- **Forecast (next year):** Revenue forecast, EBITDA forecast - ALWAYS include if available in knowledge base
+- **Trend:** Growth rate or direction (e.g., "Revenue declined -5.6% CAGR 2022-2024")
+- **Capital Structure:** Net debt, leverage ratio if relevant
+
+**Company Highlights:**
+- 1-2 key non-financial facts (founding, certifications, ownership, unique capabilities)
 
 Let's start with **Stage 1: Buyer Persona**. Who are the likely buyers for this CIM?
 - Strategic acquirers (companies looking to expand capabilities)
