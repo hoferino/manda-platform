@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "updated": 1768943956541,
+  "naming": {},
+  "directories": {
+    "__tests__": {
+      "purpose": "Test files",
+      "files": 194
+    },
+    "api": {
+      "purpose": "API endpoints",
+      "files": 107
+    },
+    "components": {
+      "purpose": "UI components",
+      "files": 287
+    },
+    "hooks": {
+      "purpose": "React/custom hooks",
+      "files": 30
+    },
+    "lib": {
+      "purpose": "Utility functions",
+      "files": 266
+    },
+    "utils": {
+      "purpose": "Utility functions",
+      "files": 37
+    },
+    "services": {
+      "purpose": "Service layer",
+      "files": 33
+    },
+    "types": {
+      "purpose": "TypeScript types",
+      "files": 15
+    },
+    "middleware": {
+      "purpose": "Middleware",
+      "files": 3
+    },
+    "config": {
+      "purpose": "Configuration",
+      "files": 1
+    }
+  },
+  "suffixes": {
+    ".test.ts": {
+      "purpose": "Test files",
+      "count": 119
+    },
+    ".test.tsx": {
+      "purpose": "Test files",
+      "count": 76
+    },
+    ".spec.ts": {
+      "purpose": "Test files",
+      "count": 7
+    }
+  }
+}
