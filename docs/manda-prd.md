@@ -3,7 +3,7 @@ title: Product Requirements Document (PRD)
 version: 2.4
 status: Current
 stream: Main Platform
-last-updated: 2026-01-15
+last-updated: 2026-01-20
 owner: Max
 ---
 
@@ -12,7 +12,7 @@ owner: Max
 
 **Document Status:** In Development
 **Created:** 2025-11-19
-**Last Updated:** 2026-01-15
+**Last Updated:** 2026-01-20
 **Owner:** Max
 **Contributors:** PM John
 **Version:** 2.4 (E10/E11 Complete, E12 In Progress, E13 Planned)
@@ -75,22 +75,14 @@ owner: Max
 12. **Sell-Side Spine Schema:** Core Pydantic entity types guide extraction while allowing dynamic discovery.
 13. **Entity Resolution:** Graphiti's built-in resolution tuned for M&A naming variations.
 
-**Phase 2 (E11 Agent Context Engineering) — 📋 PLANNED:**
+**Phase 2 (E11 Agent Context Engineering) — ✅ IMPLEMENTED:**
 
-> These decisions are approved but NOT YET IMPLEMENTED. E11 depends on E10 completion.
-> **Reprioritized (2025-12-17):** Retrieval quality and autonomous persistence are now P0. Token optimization (isolation, summarization) moved to backlog — M&A conversations are typically short sessions.
+> E11 completed 2025-12-18. See [docs/features/agent-v2/](docs/features/agent-v2/) for detailed agent implementation.
 
-**P0 - Critical:**
-14. **Intent-Aware Retrieval (Select strategy):** Pre-model hook retrieves relevant KB context for factual queries. Primary defense against hallucinations.
-15. **Agent-Autonomous Write-Back (Write strategy):** Agent autonomously indexes user-provided facts to Graphiti — no user confirmation needed. Graphiti handles entity extraction, deduplication, and contradiction detection.
-
-**P1 - Important:**
-16. **Type-Safe Agent Tools:** Pydantic AI for Python backend tools.
-17. **Model Configuration:** Provider-agnostic model switching via config.
-
-**P2/P3 - Backlog:**
-18. **Conversation Summarization (Compress strategy):** LangGraph `trimMessages` + LLM summarization for older messages.
-19. **Tool Result Isolation (Isolate strategy):** Tool executions return concise summaries to LLM context. (Lower priority — context window isn't the bottleneck for typical M&A sessions.)
+14. **Intent-Aware Retrieval:** Pre-model hook retrieves relevant KB context for factual queries via Graphiti hybrid search.
+15. **Agent-Autonomous Write-Back:** Agent autonomously indexes user-provided facts to Graphiti with entity extraction and deduplication.
+16. **Type-Safe Agent Tools:** Pydantic AI for Python backend tools with structured validation.
+17. **Model Configuration:** Provider-agnostic model switching via environment configuration.
 
 ---
 
@@ -284,7 +276,7 @@ Unlike generic AI assistants that start fresh each conversation, or traditional 
 
 **Agent Layer (Intelligence & Conversation):**
 
-> **Reference:** See [agent-behavior-spec.md](agent-behavior-spec.md) for detailed agent behavior specifications including search architecture, response formatting, use case behaviors, and testing strategy.
+> **Reference:** See [docs/features/agent-v2/](docs/features/agent-v2/) for current agent implementation architecture, and [agent-behavior-spec.md](agent-behavior-spec.md) for behavior specifications.
 
 1. **Main Conversational Agent**
    - LLM-powered natural language interface
@@ -414,6 +406,8 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
    - Knowledge graph with relationships between findings
    - Semantic search and retrieval
 
+   > **Reference:** See [docs/features/knowledge-graph/](docs/features/knowledge-graph/) for Graphiti + Neo4j architecture details.
+
 4. **Collaborative Workflow**
    - **Collaborative Document Analysis**: Analyst tells system to analyze doc → reads it himself → captures findings via chat → system validates and stores
    - **Finding Capture & Validation**: Direct chat input, upload notes (Excel/Word), system validates against existing knowledge
@@ -434,6 +428,8 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
    - Export as unstyled PowerPoint blueprint or LLM prompt
    - Visual style template extraction and application
    - **Live preview capability** for visual concepts and slide layouts
+
+   > **Reference:** See [docs/features/cim-builder/](docs/features/cim-builder/) for CIM MVP implementation details and workflow architecture.
 
 7. **Financial Model Integration**
    - Extract key financial metrics from Excel models (revenue, EBITDA, cash flow, balance sheet items)
