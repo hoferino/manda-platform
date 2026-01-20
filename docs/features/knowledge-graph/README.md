@@ -31,13 +31,49 @@ Document Upload -> Docling Parsing -> Graphiti Ingestion -> Neo4j Storage
 - **Backend:** `manda-processing/src/jobs/handlers/ingest_graphiti.py`
 - **Frontend retrieval:** `manda-app/lib/agent/v2/nodes/retrieval.ts`
 
+## E10 Migration Context
+
+As of E10 completion (2025-12-17), all embeddings and semantic search were consolidated to Graphiti + Neo4j:
+
+- **Removed:** pgvector and PostgreSQL-based vector storage
+- **Current:** Voyage voyage-3.5 embeddings stored in Neo4j
+- **Decision:** See [SCP-003](../../decisions/sprint-change-proposal-2025-12-15.md)
+
+This means:
+- All vector search goes through Graphiti hybrid search
+- No more dual-storage (PG + Neo4j) complexity
+- Entity resolution and temporal facts in single graph
+
 ## Documentation
 
-> **Note:** Documentation will be consolidated here from `_bmad-output/` and `docs/` directories during Phase 2.
+### Current (Authoritative)
 
-Current documentation sources:
-- `docs/dynamic-knowledge-graph-pipeline-plan.md` - Pipeline design
-- E10 completion notes (2025-12-17) - Migration from pgvector
+The knowledge graph implementation is documented primarily in code:
+
+| Location | Description |
+|----------|-------------|
+| `manda-processing/src/graphiti/` | Graphiti client and ingestion |
+| `manda-processing/src/jobs/handlers/ingest_graphiti.py` | Ingestion job handler |
+| `manda-app/lib/agent/v2/nodes/retrieval.ts` | Frontend retrieval integration |
+| CLAUDE.md | Architecture overview and E10 context |
+
+### Historical (Planning Reference)
+
+These documents capture planning before implementation:
+
+| Document | Purpose | Notes |
+|----------|---------|-------|
+| [Dynamic KG Pipeline PRD](../../../_bmad-output/planning-artifacts/dynamic-kg-pipeline/dynamic-kg-pipeline-prd.md) | Requirements for dynamic extraction | Future enhancement planned |
+| [Dynamic KG Pipeline ADR](../../../_bmad-output/planning-artifacts/dynamic-kg-pipeline/dynamic-kg-pipeline-adr.md) | Architecture decision record | |
+| [Pipeline Plan](../../dynamic-knowledge-graph-pipeline-plan.md) | Initial design document | Pre-implementation spec |
+| [Epic & Stories](../../../_bmad-output/planning-artifacts/dynamic-kg-pipeline/) | E14 epic breakdown | Not yet implemented |
+
+### Dynamic Extraction (Future)
+
+The Dynamic KG Pipeline (E14) is planned but not yet implemented. It will add:
+- Document-type-aware extraction hints
+- Dynamic entity discovery (beyond predefined types)
+- Complexity-based routing
 
 ---
 
