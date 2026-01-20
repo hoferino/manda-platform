@@ -30,12 +30,30 @@ User Message -> Middleware Stack -> Single StateGraph -> Response
 
 ## Documentation
 
-> **Note:** Documentation will be consolidated here from `_bmad-output/` and `docs/` directories during Phase 2.
+### Current (Authoritative)
 
-Current documentation sources:
-- `docs/agent-system/` - Agent system hub
-- `_bmad-output/planning-artifacts/agent-system-prd.md` - PRD
-- `_bmad-output/planning-artifacts/agent-system-architecture.md` - Architecture
+| Document | Description | Last Updated |
+|----------|-------------|--------------|
+| [Behavior Specification](behavior-spec.md) | Single source of truth for agent behavior | 2026-01-15 |
+| [docs/agent-system/README.md](../../agent-system/README.md) | Agent system index and story tracking | 2026-01-15 |
+
+### Historical (Planning Reference)
+
+These documents in `_bmad-output/` capture planning decisions. They remain as reference but the current implementations may have evolved.
+
+| Document | Purpose | Notes |
+|----------|---------|-------|
+| [Agent System PRD](../../../_bmad-output/planning-artifacts/agent-system-prd.md) | Original requirements (64 FRs) | Captures v2.0 requirements |
+| [Agent System Architecture](../../../_bmad-output/planning-artifacts/agent-system-architecture.md) | Architecture decisions | Middleware stack design |
+| [Agent System Epics](../../../_bmad-output/planning-artifacts/agent-system-epics.md) | Epic breakdown | 3 epics, 14 stories |
+| [Agent Framework Strategy](../../agent-framework-strategy.md) | Strategic analysis | Superseded by implementation |
+
+### Superseded
+
+| Document | Superseded By |
+|----------|---------------|
+| `lib/agent/orchestrator/` | Deleted in Story 1.7, replaced by v2 |
+| `lib/agent/supervisor/` | Deleted, replaced by v2/nodes/supervisor.ts |
 
 ---
 
