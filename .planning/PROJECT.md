@@ -71,9 +71,21 @@ docs/
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Consolidate to docs/features/ | Standard location, already has core docs | — Pending |
-| Keep _bmad-output/ | Valuable historical reference for past decisions | — Pending |
-| Curate as we go | Better than just moving files — ensures we know what's current | — Pending |
+| Consolidate to docs/features/ | Standard location, already has core docs | ✓ Validated |
+| Keep _bmad-output/ | Valuable historical reference for past decisions | ✓ Validated |
+| Curate as we go | Better than just moving files — ensures we know what's current | ✓ Validated |
+| Three-tier classification | Current/Historical/Superseded makes navigation clear | ✓ Validated |
+| Core docs link to feature docs | Keep core docs high-level, feature docs have details | ✓ Validated |
+
+## Validated Requirements (v1.0)
+
+- [x] docs/features/ directory structure with topic subfolders
+- [x] Feature folder READMEs with current/historical classification
+- [x] Agent v2 docs consolidated with behavior-spec.md
+- [x] Knowledge graph docs with E10 migration context
+- [x] CIM Builder docs linking to CIM MVP Hub
+- [x] Core docs cleaned (PRD, architecture)
+- [x] CHANGELOG tracking all removals
 
 ---
-*Last updated: 2026-01-20 after initialization*
+*Last updated: 2026-01-21 after v1.0 completion*
