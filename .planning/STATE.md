@@ -12,19 +12,19 @@ See: .planning/PROJECT.md (updated 2026-01-20)
 | Metric | Value |
 |--------|-------|
 | Current Phase | 2 of 3 (Curate Feature Docs) |
-| Phase Progress | 1/? plans complete |
-| Overall Progress | 2/3 phases (1 complete, 1 in progress) |
-| Last Activity | 2026-01-20 - Completed 02-02-PLAN.md |
+| Phase Progress | 3/3 plans complete |
+| Overall Progress | 4/4 plans |
+| Last Activity | 2026-01-20 - Completed 02-03-PLAN.md |
 
-Progress: [====------] 40%
+Progress: [==========] 100%
 
 ## Phase Status
 
 | Phase | Name | Status | Plans |
 |-------|------|--------|-------|
 | 1 | Create Structure | Complete | 1/1 |
-| 2 | Curate Feature Docs | In Progress | 1/? |
-| 3 | Clean Core Docs | Pending | 0/0 |
+| 2 | Curate Feature Docs | Complete | 3/3 |
+| 3 | Clean Core Docs | Not Started | 0/0 |
 
 ## Accumulated Decisions
 
@@ -38,16 +38,19 @@ Progress: [====------] 40%
 | 02-02 | Use 'Current (Authoritative)' for code locations | Code is source of truth for implementation |
 | 02-02 | Use 'Historical (Planning Reference)' for planning artifacts | _bmad-output/ docs capture pre-implementation thinking |
 | 02-02 | Document E10 migration context | Critical architectural decision (pgvector removal) needs visibility |
+| 02-03 | Link to docs/cim-mvp/README.md as authoritative source | CIM MVP Hub is primary documentation |
+| 02-03 | Preserve _bmad-output/ planning artifacts as historical | Planning decisions and architecture evaluation remain valuable |
+| 02-03 | Document Story 6.1 as future work | CIM v2 integration planned but not scheduled |
 
 ## Session Continuity
 
-**Last session:** 2026-01-20T22:32:03Z
-**Stopped at:** Completed 02-02-PLAN.md
+**Last session:** 2026-01-20T22:32:08Z
+**Stopped at:** Completed 02-03-PLAN.md
 **Resume file:** None
 
 ## Next Action
 
-Continue Phase 2 curation with additional feature folders (CIM Builder, Agent System v2) or proceed to Phase 3
+Phase 2 complete. All feature documentation curated with current/historical classification. Run `/gsd:plan-phase 3` to create execution plan for Phase 3: Clean Core Docs (if needed).
 
 ---
 *Last updated: 2026-01-20*
