@@ -28,8 +28,8 @@
 
 ### Core Doc Cleanup
 
-- [ ] **CORE-01**: Review manda-prd.md, identify and remove outdated sections
-- [ ] **CORE-02**: Review manda-architecture.md, identify and remove outdated sections
+- [x] **CORE-01**: Review manda-prd.md, identify and remove outdated sections
+- [x] **CORE-02**: Review manda-architecture.md, identify and remove outdated sections
 
 ## Out of Scope
 
@@ -52,8 +52,8 @@
 | KG-02 | Phase 2 | ✓ Complete |
 | CIM-01 | Phase 2 | ✓ Complete |
 | CIM-02 | Phase 2 | ✓ Complete |
-| CORE-01 | Phase 3 | Pending |
-| CORE-02 | Phase 3 | Pending |
+| CORE-01 | Phase 3 | ✓ Complete |
+| CORE-02 | Phase 3 | ✓ Complete |
 
 **Coverage:**
 - v1 requirements: 11 total
