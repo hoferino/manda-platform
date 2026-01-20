@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-20)
 
 **Core value:** Single source of truth per topic
-**Current focus:** Phase 2 - Curate Feature Docs
+**Current focus:** Phase 3 - Clean Core Docs (Complete)
 
 ## Current Status
 
 | Metric | Value |
 |--------|-------|
-| Current Phase | 2 of 3 (Curate Feature Docs) |
-| Phase Progress | 3/3 plans complete |
-| Overall Progress | 4/4 plans |
-| Last Activity | 2026-01-20 - Completed 02-03-PLAN.md |
+| Current Phase | 3 of 3 (Clean Core Docs) |
+| Phase Progress | 1/1 plans complete |
+| Overall Progress | 5/5 plans |
+| Last Activity | 2026-01-20 - Completed 03-01-PLAN.md |
 
 Progress: [==========] 100%
 
@@ -24,7 +24,7 @@ Progress: [==========] 100%
 |-------|------|--------|-------|
 | 1 | Create Structure | Complete | 1/1 |
 | 2 | Curate Feature Docs | Complete | 3/3 |
-| 3 | Clean Core Docs | Not Started | 0/0 |
+| 3 | Clean Core Docs | Complete | 1/1 |
 
 ## Accumulated Decisions
 
@@ -41,16 +41,24 @@ Progress: [==========] 100%
 | 02-03 | Link to docs/cim-mvp/README.md as authoritative source | CIM MVP Hub is primary documentation |
 | 02-03 | Preserve _bmad-output/ planning artifacts as historical | Planning decisions and architecture evaluation remain valuable |
 | 02-03 | Document Story 6.1 as future work | CIM v2 integration planned but not scheduled |
+| 03-01 | Remove planning artifacts from core docs | E11 planning details (P0-P3 priorities) belong in _bmad-output/, not PRD |
+| 03-01 | Remove deleted code references | Chat Orchestrator section removed from architecture doc - code deleted in Story 1.7 |
+| 03-01 | Link core docs to feature docs for details | Core docs stay high-level, link to docs/features/ for implementation details |
 
 ## Session Continuity
 
-**Last session:** 2026-01-20T22:32:08Z
-**Stopped at:** Completed 02-03-PLAN.md
+**Last session:** 2026-01-20T23:32:36Z
+**Stopped at:** Completed 03-01-PLAN.md
 **Resume file:** None
 
 ## Next Action
 
-Phase 2 complete. All feature documentation curated with current/historical classification. Run `/gsd:plan-phase 3` to create execution plan for Phase 3: Clean Core Docs (if needed).
+**All phases complete!** Documentation consolidation project finished:
+- Phase 1: Created docs/features/ structure with topic subfolders
+- Phase 2: Curated feature documentation with current/historical classification
+- Phase 3: Cleaned core docs (PRD, architecture) with outdated content removed
+
+Documentation now follows consistent pattern: core docs are high-level, feature docs contain details, planning artifacts preserved as historical reference.
 
 ---
 *Last updated: 2026-01-20*
