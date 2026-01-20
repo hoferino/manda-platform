@@ -17,6 +17,11 @@
 
 **Goal:** Set up the docs/features/ directory structure with READMEs
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md - Create directory structure and READMEs
+
 **Requirements:**
 - STRUCT-01: Create `docs/features/` directory with subfolders
 - STRUCT-02: Create `docs/features/README.md`
@@ -32,6 +37,8 @@
 ## Phase 2: Curate Feature Docs
 
 **Goal:** Review scattered docs, consolidate current ones to features/, identify what's outdated
+
+**Plans:** (created by /gsd:plan-phase)
 
 **Requirements:**
 - AGT-01, AGT-02: Agent v2 docs
@@ -71,6 +78,8 @@ CIM Builder:
 
 **Goal:** Remove outdated sections from manda-prd.md and manda-architecture.md
 
+**Plans:** (created by /gsd:plan-phase)
+
 **Requirements:**
 - CORE-01: Review and clean manda-prd.md
 - CORE-02: Review and clean manda-architecture.md
@@ -87,7 +96,7 @@ CIM Builder:
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| 1 | Pending | 0% |
+| 1 | Planned | 0% |
 | 2 | Pending | 0% |
 | 3 | Pending | 0% |
 
