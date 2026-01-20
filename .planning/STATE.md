@@ -32,6 +32,9 @@ Progress: [====------] 40%
 |-------|----------|-----------|
 | 01-01 | Topic subfolders use existing feature naming | Consistency with CLAUDE.md (agent-v2, knowledge-graph, cim-builder) |
 | 01-01 | Each README has placeholder for Phase 2 | Marks where content will be consolidated |
+| 02-01 | Copy behavior-spec.md instead of moving | Maintain backward compatibility for existing links |
+| 02-01 | Link to _bmad-output/ instead of copying | Avoid duplication, keep planning artifacts as historical reference |
+| 02-01 | Three-tier documentation classification | Current (Authoritative), Historical (Planning Reference), Superseded |
 | 02-02 | Use 'Current (Authoritative)' for code locations | Code is source of truth for implementation |
 | 02-02 | Use 'Historical (Planning Reference)' for planning artifacts | _bmad-output/ docs capture pre-implementation thinking |
 | 02-02 | Document E10 migration context | Critical architectural decision (pgvector removal) needs visibility |
