@@ -20,7 +20,7 @@
 **Plans:** 1 plan
 
 Plans:
-- [x] 01-01-PLAN.md - Create directory structure and READMEs ✓
+- [x] 01-01-PLAN.md - Create directory structure and READMEs
 
 **Requirements:**
 - STRUCT-01: Create `docs/features/` directory with subfolders
@@ -38,7 +38,12 @@ Plans:
 
 **Goal:** Review scattered docs, consolidate current ones to features/, identify what's outdated
 
-**Plans:** (created by /gsd:plan-phase)
+**Plans:** 3 plans (Wave 1 - parallel)
+
+Plans:
+- [ ] 02-01-PLAN.md - Curate Agent v2 docs
+- [ ] 02-02-PLAN.md - Curate Knowledge Graph docs
+- [ ] 02-03-PLAN.md - Curate CIM Builder docs
 
 **Requirements:**
 - AGT-01, AGT-02: Agent v2 docs
@@ -96,8 +101,8 @@ CIM Builder:
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| 1 | ✓ Complete | 100% |
-| 2 | Pending | 0% |
+| 1 | Complete | 100% |
+| 2 | Planned | 0% |
 | 3 | Pending | 0% |
 
 ---
