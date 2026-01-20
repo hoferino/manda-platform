@@ -83,7 +83,10 @@ CIM Builder:
 
 **Goal:** Remove outdated sections from manda-prd.md and manda-architecture.md
 
-**Plans:** (created by /gsd:plan-phase)
+**Plans:** 1 plan
+
+Plans:
+- [ ] 03-01-PLAN.md - Clean PRD and architecture docs, document changes
 
 **Requirements:**
 - CORE-01: Review and clean manda-prd.md
@@ -103,7 +106,7 @@ CIM Builder:
 |-------|--------|------------|
 | 1 | Complete | 100% |
 | 2 | Complete | 100% |
-| 3 | Pending | 0% |
+| 3 | Planned | 0% |
 
 ---
 *Roadmap created: 2026-01-20*
