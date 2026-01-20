@@ -22,10 +22,12 @@ Single source of truth per topic — clear where to find current docs, no confus
 - [ ] Curate cim-builder docs — review scattered files, consolidate to `docs/features/cim-builder/`
 - [ ] Create README for each topic folder explaining what's there
 - [ ] Create top-level `docs/features/README.md` explaining the structure
+- [ ] Clean up manda-prd.md — remove outdated sections
+- [ ] Clean up manda-architecture.md — remove outdated sections
 
 ### Out of Scope
 
-- Updating content of core docs (manda-prd.md, manda-architecture.md) — separate work
+- Rewriting doc content — just remove outdated, don't rewrite
 - Deleting `_bmad-output/` — keep as historical reference
 - Reorganizing non-feature docs (testing, deployment, etc.) — not in scope
 
@@ -43,8 +45,8 @@ Single source of truth per topic — clear where to find current docs, no confus
 **Target state:**
 ```
 docs/
-  manda-prd.md (unchanged)
-  manda-architecture.md (unchanged)
+  manda-prd.md (cleaned — outdated sections removed)
+  manda-architecture.md (cleaned — outdated sections removed)
   epics.md (unchanged)
   features/
     README.md
@@ -62,8 +64,8 @@ docs/
 ## Constraints
 
 - **Preserve history**: Keep `_bmad-output/` as historical reference, don't delete
-- **No content rewrites**: Just reorganize and curate, don't rewrite docs
-- **Core docs untouched**: Root-level docs (PRD, architecture) stay as-is
+- **No content rewrites**: Remove outdated sections, don't rewrite remaining content
+- **Document removals**: Track what was removed and why
 
 ## Key Decisions
 
