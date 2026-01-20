@@ -41,9 +41,9 @@ Plans:
 **Plans:** 3 plans (Wave 1 - parallel)
 
 Plans:
-- [ ] 02-01-PLAN.md - Curate Agent v2 docs
-- [ ] 02-02-PLAN.md - Curate Knowledge Graph docs
-- [ ] 02-03-PLAN.md - Curate CIM Builder docs
+- [x] 02-01-PLAN.md - Curate Agent v2 docs
+- [x] 02-02-PLAN.md - Curate Knowledge Graph docs
+- [x] 02-03-PLAN.md - Curate CIM Builder docs
 
 **Requirements:**
 - AGT-01, AGT-02: Agent v2 docs
@@ -102,7 +102,7 @@ CIM Builder:
 | Phase | Status | Completion |
 |-------|--------|------------|
 | 1 | Complete | 100% |
-| 2 | Planned | 0% |
+| 2 | Complete | 100% |
 | 3 | Pending | 0% |
 
 ---

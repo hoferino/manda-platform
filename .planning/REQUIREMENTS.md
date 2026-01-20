@@ -13,18 +13,18 @@
 
 ### Agent v2 Docs
 
-- [ ] **AGT-01**: Review agent-v2 docs from `_bmad-output/` and `docs/`
-- [ ] **AGT-02**: Consolidate current docs to `docs/features/agent-v2/`
+- [x] **AGT-01**: Review agent-v2 docs from `_bmad-output/` and `docs/`
+- [x] **AGT-02**: Consolidate current docs to `docs/features/agent-v2/`
 
 ### Knowledge Graph Docs
 
-- [ ] **KG-01**: Review knowledge-graph docs from `_bmad-output/` and `docs/`
-- [ ] **KG-02**: Consolidate current docs to `docs/features/knowledge-graph/`
+- [x] **KG-01**: Review knowledge-graph docs from `_bmad-output/` and `docs/`
+- [x] **KG-02**: Consolidate current docs to `docs/features/knowledge-graph/`
 
 ### CIM Builder Docs
 
-- [ ] **CIM-01**: Review cim-builder docs from `_bmad-output/` and `docs/`
-- [ ] **CIM-02**: Consolidate current docs to `docs/features/cim-builder/`
+- [x] **CIM-01**: Review cim-builder docs from `_bmad-output/` and `docs/`
+- [x] **CIM-02**: Consolidate current docs to `docs/features/cim-builder/`
 
 ### Core Doc Cleanup
 
@@ -46,12 +46,12 @@
 | STRUCT-01 | Phase 1 | ✓ Complete |
 | STRUCT-02 | Phase 1 | ✓ Complete |
 | STRUCT-03 | Phase 1 | ✓ Complete |
-| AGT-01 | Phase 2 | Pending |
-| AGT-02 | Phase 2 | Pending |
-| KG-01 | Phase 2 | Pending |
-| KG-02 | Phase 2 | Pending |
-| CIM-01 | Phase 2 | Pending |
-| CIM-02 | Phase 2 | Pending |
+| AGT-01 | Phase 2 | ✓ Complete |
+| AGT-02 | Phase 2 | ✓ Complete |
+| KG-01 | Phase 2 | ✓ Complete |
+| KG-02 | Phase 2 | ✓ Complete |
+| CIM-01 | Phase 2 | ✓ Complete |
+| CIM-02 | Phase 2 | ✓ Complete |
 | CORE-01 | Phase 3 | Pending |
 | CORE-02 | Phase 3 | Pending |
 
