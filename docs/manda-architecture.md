@@ -1,9 +1,9 @@
 ---
 title: Architecture Document
-version: 4.3
+version: 4.4
 status: Current
 stream: Main Platform
-last-updated: 2026-01-15
+last-updated: 2026-01-20
 owner: Max
 ---
 
@@ -12,10 +12,10 @@ owner: Max
 
 **Document Status:** Final
 **Created:** 2025-11-19
-**Last Updated:** 2026-01-15
+**Last Updated:** 2026-01-20
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 4.3 (Chat Orchestrator - 3-path LangGraph routing)
+**Version:** 4.4 (v2 Agent System - Supervisor Pattern)
 
 ---
 
@@ -31,7 +31,7 @@ owner: Max
 | **Entity Resolution** | None | Graphiti built-in | ✅ E10.6 |
 | **Schema** | Hardcoded nodes | Dynamic spine + discovery | ✅ E10.3 |
 | **Document Ingestion** | Docling → pgvector | Docling → Graphiti | ✅ E10.4 |
-| **Chat Orchestrator** | Single-path agent | 3-path LangGraph (vanilla/retrieval/analysis) | ✅ v4.3 |
+| **Agent System** | Legacy orchestrator | v2 supervisor pattern with Graphiti retrieval | ✅ v4.4 |
 | **Tool Result Isolation** | None | Summaries in context, full data cached | 📋 E11.1 |
 | **Knowledge Write-Back** | None | Chat → Graphiti | 📋 E11.3 |
 
@@ -1749,130 +1749,51 @@ llm = FallbackLLM(llms=[llm_primary, llm_fallback])
 - **Agent Executor:** Real-time chat where LLM dynamically selects tools
 - **LangGraph:** Multi-phase workflows requiring human approval between steps
 
-### Chat Orchestrator Architecture (v4.3)
+### Agent System Architecture (v2)
 
-> **Architecture Evolution (2026-01-09):** The chat system now uses a 3-path LangGraph orchestrator that routes queries based on intent. This replaces the single-path agent executor with a more efficient design that provides vanilla LLM experience by default and only invokes complexity when needed.
+> **Current Implementation:** The agent system uses a v2 architecture with supervisor pattern and Graphiti retrieval. See [docs/features/agent-v2/](../features/agent-v2/) for complete implementation details.
 
 **Design Philosophy:**
-- **Default to simplicity:** Greetings and general chat get direct LLM response (no tools, no retrieval)
-- **Context on demand:** Document queries trigger Neo4j retrieval with context injection
-- **Specialists for analysis:** Complex analysis routes to specialized subagents
+- **Supervisor pattern:** Central supervisor node routes to specialized agents based on query intent
+- **Graphiti retrieval:** Hybrid search (vector + BM25 + graph) with Voyage reranking
+- **Tool-based architecture:** Agent accesses platform capabilities through well-defined tools
+- **Stateful conversations:** LangGraph checkpoints enable multi-turn conversations with context
 
-**Architecture Diagram:**
+**High-Level Flow:**
 
 ```
 User Message
      │
      ▼
-┌─────────────────┐
-│  Intent Router  │  (~1ms, keyword/regex-based)
-│  - vanilla      │
-│  - retrieval    │
-│  - analysis     │
-└─────────────────┘
-         │
-    ┌────┴────┬───────────┐
-    ▼         ▼           ▼
-┌────────┐ ┌────────┐ ┌──────────┐
-│VANILLA │ │RETRIEVAL│ │ ANALYSIS │
-│  LLM   │ │  PATH  │ │   PATH   │
-│gpt-4o- │ │Neo4j + │ │Supervisor│
-│  mini  │ │ LLM    │ │ Agents   │
-└────────┘ └────────┘ └──────────┘
-    │         │           │
-    │         ▼           ▼
-    │    ┌────────┐   ┌──────────┐
-    │    │Graphiti│   │Subagents │
-    │    │Hybrid  │   │Financial │
-    │    │Search  │   │KnowledgeG│
-    │    └────────┘   └──────────┘
-    │         │           │
-    └─────────┴───────────┘
-              │
-              ▼
-         Response
+┌──────────────┐
+│  Supervisor  │
+│     Node     │
+└──────────────┘
+     │
+     ├─────────► Graphiti Retrieval (if needed)
+     │
+     ├─────────► Tool Execution (query KB, update KB, etc.)
+     │
+     └─────────► LLM Response
 ```
 
-**Three Paths:**
+**Key Components:**
 
-| Path | Trigger | Example Queries | Model | Tools |
-|------|---------|-----------------|-------|-------|
-| **Vanilla** | Greetings, meta, general | "Hello", "What can you do?", "Explain M&A" | gpt-4o-mini | None |
-| **Retrieval** | Document/deal questions | "What's the revenue?", "Who is CEO?" | gpt-4o-mini | None (context injection) |
-| **Analysis** | Complex analysis requests | "Analyze trends", "Find red flags" | Varies by specialist | Supervisor subagents |
+| Component | Description | Reference |
+|-----------|-------------|-----------|
+| **Supervisor** | Routes queries to appropriate handlers | `lib/agent/v2/nodes/supervisor.ts` |
+| **Retrieval** | Graphiti hybrid search with reranking | `lib/agent/v2/nodes/retrieval.ts` |
+| **Tools** | Platform integration (KB queries, document access) | `lib/agent/v2/tools/*.ts` |
+| **Checkpointer** | PostgreSQL-based conversation state | `lib/agent/checkpointer.ts` |
 
-**Lightweight Router (<5ms):**
+**Tool Categories:**
 
-The router uses keyword/regex patterns instead of LLM classification for speed:
+1. **Knowledge Base Tools:** Query and update Graphiti knowledge graph
+2. **Document Tools:** Access document metadata and content
+3. **Analysis Tools:** Trigger background analysis jobs
+4. **Workflow Tools:** IRL, Q&A, CIM operations
 
-```typescript
-// Greeting patterns → vanilla
-/^(hi|hello|hey|howdy|greetings)[\s!.,?]*$/i
-
-// Document keywords → retrieval
-['revenue', 'ebitda', 'company', 'ceo', 'document', 'deal']
-
-// Analysis keywords → analysis
-['analyze', 'compare', 'trend', 'risk', 'red flag', 'contradiction']
-```
-
-**Key Files:**
-
-| File | Purpose |
-|------|---------|
-| `lib/agent/orchestrator/index.ts` | Module exports |
-| `lib/agent/orchestrator/router.ts` | Lightweight intent router (<5ms, regex/keyword-based) |
-| `lib/agent/orchestrator/graph.ts` | Main LangGraph StateGraph orchestrator |
-| `lib/agent/orchestrator/paths/vanilla.ts` | Direct LLM path (gpt-4o-mini, no tools) |
-| `lib/agent/orchestrator/paths/retrieval.ts` | Neo4j/Graphiti context injection + LLM |
-| `lib/agent/orchestrator/paths/analysis.ts` | Subagent routing via supervisor |
-| `app/api/projects/[id]/chat/route.ts` | API endpoint using orchestrator |
-
-**Benefits:**
-
-1. **Cost Efficiency:** Simple queries use cheap gpt-4o-mini without tools
-2. **Low Latency:** Router is <5ms, vanilla path skips retrieval entirely
-3. **Better UX:** Greetings get instant, natural responses (not "No documents uploaded")
-4. **Scalable Complexity:** Analysis path uses full subagent machinery only when needed
-5. **Maintainable:** Clear separation between paths, easy to extend
-
-**Metrics Tracked:**
-
-```typescript
-// From lib/agent/orchestrator/graph.ts
-interface MetricsType {
-  routeLatencyMs?: number      // Router decision time (<5ms)
-  pathLatencyMs?: number       // Path execution time
-  totalLatencyMs?: number      // End-to-end time
-  model?: string               // Model used (e.g., 'gpt-4o-mini')
-  specialists?: string[]       // Subagents invoked (analysis path only)
-  retrievalLatencyMs?: number  // Neo4j query time (retrieval path only)
-  hadContext?: boolean         // Whether retrieval found results
-}
-```
-
-**State Schema:**
-
-```typescript
-// From lib/agent/orchestrator/graph.ts - OrchestratorStateAnnotation
-{
-  // Input
-  message: string              // User's query
-  dealId: string               // Deal UUID for context isolation
-  userId: string               // User UUID for permissions
-  organizationId?: string      // Org UUID for multi-tenant isolation
-  chatHistory: ChatHistoryItem[] // Previous conversation messages
-
-  // Routing
-  routerResult?: RouterResult  // Router decision with confidence
-  selectedPath?: RoutePath     // 'vanilla' | 'retrieval' | 'analysis'
-
-  // Output
-  response: string             // LLM response content
-  sources: SourceItem[]        // Document citations (retrieval/analysis)
-  metrics: MetricsType         // Timing and model info
-}
-```
+> **Reference:** See [docs/features/agent-v2/README.md](../features/agent-v2/README.md) for detailed architecture, state management, and tool specifications.
 
 ### Context Engineering (Phase 2 - E11)
 

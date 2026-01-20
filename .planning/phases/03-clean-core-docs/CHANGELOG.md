@@ -42,3 +42,50 @@ This file documents what was removed from core documentation files during Phase 
 
 ---
 
+## manda-architecture.md Changes
+
+### Date: 2026-01-20
+
+**Frontmatter Updates:**
+- Updated `version` from `4.3` to `4.4`
+- Updated `last-updated` from `2026-01-15` to `2026-01-20`
+- Updated version description from "Chat Orchestrator - 3-path LangGraph routing" to "v2 Agent System - Supervisor Pattern"
+
+**Major Section Removal:**
+
+#### "Chat Orchestrator Architecture (v4.3)" Section (Lines 1752-1876)
+
+**Removed:** Entire section describing 3-path LangGraph orchestrator architecture
+
+**Rationale:**
+- This code was DELETED in Story 1.7 (per CLAUDE.md: "Legacy Code (Removed in Story 1.7)")
+- Files referenced (`lib/agent/orchestrator/*`) no longer exist
+- Replaced by v2 agent system with supervisor pattern
+
+**Removed Content:**
+- Architecture diagram showing vanilla/retrieval/analysis paths
+- "Three Paths" table with path descriptions
+- Lightweight router implementation details
+- Key Files table listing orchestrator files
+- Benefits section
+- Metrics interface
+- State schema (OrchestratorStateAnnotation)
+
+**Replaced With:**
+- New "Agent System Architecture (v2)" section
+- High-level supervisor pattern flow diagram
+- Reference to `docs/features/agent-v2/` for detailed implementation
+- Key Components table with actual current files
+- Tool Categories overview
+
+**Implementation Status Table Updates:**
+- Line 34: Changed "Chat Orchestrator" to "Agent System"
+- Changed description from "3-path LangGraph (vanilla/retrieval/analysis)" to "v2 supervisor pattern with Graphiti retrieval"
+- Updated version from "✅ v4.3" to "✅ v4.4"
+
+**New References Added:**
+- Line 1754: Added pointer to `docs/features/agent-v2/` for complete implementation details
+- Line 1796: Added reference to detailed architecture documentation
+
+---
+
