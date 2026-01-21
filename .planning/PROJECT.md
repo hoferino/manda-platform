@@ -1,71 +1,63 @@
-# Documentation Consolidation
+# Manda Platform
 
 ## What This Is
 
-Consolidate scattered documentation into `docs/features/` with topic subfolders for agent-v2, knowledge-graph, and cim-builder. Review each doc to determine if it's current (move) or outdated (archive). Create a clear structure where developers know exactly where to find current planning docs.
+M&A intelligence platform with document processing, knowledge graph, and CIM (Confidential Information Memorandum) builder. The CIM builder guides users through creating professional M&A pitch documents with an AI-assisted workflow.
 
 ## Core Value
 
-Single source of truth per topic — clear where to find current docs, no confusion about what's active vs historical.
+Help M&A advisors create compelling CIMs faster by combining AI guidance with structured document creation.
+
+## Current Milestone: v2.0 CIM Preview Wireframe
+
+**Goal:** Simplify CIM slide preview to clean wireframes — white background, grayscale styling, no colored emphasis states.
+
+**Target features:**
+- Strip colored backgrounds from component renderers
+- White background with black/gray outlines only
+- Simple box placeholders for charts/images/tables
+- Clean text rendering for discussed content
 
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] CIM MVP workflow (6 fix stories completed 2026-01-14)
+- [x] Slide persistence in Supabase
+- [x] Element selection for chat references
+- [x] Divider slides render correctly
 
 ### Active
 
-- [ ] Create `docs/features/` directory structure with topic subfolders
-- [ ] Curate agent-v2 docs — review scattered files, consolidate current ones to `docs/features/agent-v2/`
-- [ ] Curate knowledge-graph docs — review scattered files, consolidate to `docs/features/knowledge-graph/`
-- [ ] Curate cim-builder docs — review scattered files, consolidate to `docs/features/cim-builder/`
-- [ ] Create README for each topic folder explaining what's there
-- [ ] Create top-level `docs/features/README.md` explaining the structure
-- [ ] Clean up manda-prd.md — remove outdated sections
-- [ ] Clean up manda-architecture.md — remove outdated sections
+- [ ] Wireframe-style preview rendering
+- [ ] Remove colored emphasis states from components
+- [ ] Consistent grayscale styling across all component types
 
 ### Out of Scope
 
-- Rewriting doc content — just remove outdated, don't rewrite
-- Deleting `_bmad-output/` — keep as historical reference
-- Reorganizing non-feature docs (testing, deployment, etc.) — not in scope
+- PPTX export improvements — focus on preview first
+- New component types — simplify existing ones
+- Chat/workflow changes — preview only
 
 ## Context
 
 **Current state:**
-- Documentation scattered between `docs/` and `_bmad-output/`
-- Three major initiative areas with docs in multiple locations:
-  - **Agent v2:** `_bmad-output/planning-artifacts/agent-system-*.md`, `docs/agent-behavior-spec.md`, `docs/agent-framework-strategy.md`, `docs/agent-system/`
-  - **Knowledge Graph:** `_bmad-output/planning-artifacts/dynamic-kg-pipeline/`, `docs/dynamic-knowledge-graph-pipeline-plan.md`
-  - **CIM Builder:** `_bmad-output/planning-artifacts/cim-*.md`, `docs/cim-mvp/`
-- Some docs may be outdated ideas vs current plans
-- Core docs at `docs/` root (manda-prd.md, architecture, epics) stay in place
+- `ComponentRenderer.tsx` has colored backgrounds for emphasis (green/yellow/blue/red)
+- `WireframeComponentRenderer.tsx` also has colored styling
+- Preview works for divider slides but content slides show "weird visuals and colors"
+- Slides persist to Supabase via CIM entity
 
 **Target state:**
-```
-docs/
-  manda-prd.md (cleaned — outdated sections removed)
-  manda-architecture.md (cleaned — outdated sections removed)
-  epics.md (unchanged)
-  features/
-    README.md
-    agent-v2/
-      README.md
-      [current docs]
-    knowledge-graph/
-      README.md
-      [current docs]
-    cim-builder/
-      README.md
-      [current docs]
-```
+- All slide previews render as clean wireframes
+- White background, black/gray lines and text
+- Box placeholders with icons for charts/images
+- Discussed content (titles, bullets, etc.) renders clearly
 
 ## Constraints
 
-- **Preserve history**: Keep `_bmad-output/` as historical reference, don't delete
-- **No content rewrites**: Remove outdated sections, don't rewrite remaining content
-- **Document removals**: Track what was removed and why
+- **Preserve functionality**: Keep click-to-reference working
+- **No data model changes**: Use existing Slide/Component types
+- **Minimal scope**: Preview rendering only, not export
 
 ## Key Decisions
 
@@ -73,19 +65,7 @@ docs/
 |----------|-----------|---------|
 | Consolidate to docs/features/ | Standard location, already has core docs | ✓ Validated |
 | Keep _bmad-output/ | Valuable historical reference for past decisions | ✓ Validated |
-| Curate as we go | Better than just moving files — ensures we know what's current | ✓ Validated |
-| Three-tier classification | Current/Historical/Superseded makes navigation clear | ✓ Validated |
-| Core docs link to feature docs | Keep core docs high-level, feature docs have details | ✓ Validated |
-
-## Validated Requirements (v1.0)
-
-- [x] docs/features/ directory structure with topic subfolders
-- [x] Feature folder READMEs with current/historical classification
-- [x] Agent v2 docs consolidated with behavior-spec.md
-- [x] Knowledge graph docs with E10 migration context
-- [x] CIM Builder docs linking to CIM MVP Hub
-- [x] Core docs cleaned (PRD, architecture)
-- [x] CHANGELOG tracking all removals
+| Wireframe-first preview | Simpler, faster, easier to debug before adding polish | — Pending |
 
 ---
-*Last updated: 2026-01-21 after v1.0 completion*
+*Last updated: 2026-01-21 after milestone v2.0 start*

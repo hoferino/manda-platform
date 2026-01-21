@@ -1,18 +1,21 @@
-# Project State: Documentation Consolidation
+# Project State: Manda Platform
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-01-21)
 
-**Core value:** Single source of truth per topic
+**Core value:** Help M&A advisors create compelling CIMs faster
 
-## Current Status
+## Current Position
 
-| Metric | Value |
-|--------|-------|
-| Last Milestone | v1.0 (Complete) |
-| Next Milestone | Not started |
-| Last Activity | 2026-01-21 - Milestone v1.0 completed |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-01-21 — Milestone v2.0 started
+
+## Current Milestone: v2.0 CIM Preview Wireframe
+
+**Goal:** Simplify CIM slide preview to clean wireframes
 
 ## Completed Milestones
 
@@ -25,16 +28,21 @@ See: .planning/MILESTONES.md
 ## Session Continuity
 
 **Last session:** 2026-01-21
-**Stopped at:** Milestone v1.0 completed and archived
+**Stopped at:** Defining requirements for v2.0
 **Resume file:** None
 
-## Next Action
+## Accumulated Context
 
-Project goal achieved! Documentation is now consolidated with clear structure.
+**Key files identified:**
+- `manda-app/components/cim-builder/PreviewPanel/ComponentRenderer.tsx` — main component renderer with colored styling
+- `manda-app/components/cim-builder/PreviewPanel/WireframeComponentRenderer.tsx` — wireframe renderer also with colors
+- `manda-app/components/cim-builder/PreviewPanel/SlidePreview.tsx` — slide preview container
+- `manda-app/lib/types/cim.ts` — type definitions
 
-To continue with new work:
-- `/gsd:new-milestone` — Define next milestone goals
-- `/gsd:progress` — Check current state
+**Issue identified:**
+- ComponentRenderer has emphasisColors with green/yellow/blue/red backgrounds
+- These colored backgrounds cause "weird visuals" in content slides
+- Divider slides work because they bypass component rendering
 
 ---
 *Last updated: 2026-01-21*
