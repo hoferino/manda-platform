@@ -45,9 +45,9 @@ interface StatusBadgeProps {
 }
 
 const statusStyles = {
-  draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  locked: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  draft: 'bg-gray-100 text-gray-600',
+  approved: 'bg-gray-200 text-gray-700',
+  locked: 'bg-gray-100 text-gray-500',
 }
 
 const statusLabels = {
@@ -96,7 +96,7 @@ interface LayoutBadgeProps {
 const LayoutBadge = memo(function LayoutBadge({ layoutType }: LayoutBadgeProps) {
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
       data-testid="layout-badge"
     >
       {layoutIcons[layoutType]}
@@ -157,13 +157,13 @@ const narrativeRoleLabels: Record<NarrativeRole, string> = {
 }
 
 const narrativeRoleColors: Record<NarrativeRole, string> = {
-  introduction: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  context: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400',
-  evidence: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-  analysis: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  implications: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
-  projections: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
-  conclusion: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400',
+  introduction: 'bg-gray-100 text-gray-700',
+  context: 'bg-gray-100 text-gray-700',
+  evidence: 'bg-gray-100 text-gray-700',
+  analysis: 'bg-gray-100 text-gray-700',
+  implications: 'bg-gray-100 text-gray-700',
+  projections: 'bg-gray-100 text-gray-700',
+  conclusion: 'bg-gray-100 text-gray-700',
 }
 
 interface NarrativeRoleBadgeProps {
@@ -288,7 +288,7 @@ export const SlidePreview = memo(function SlidePreview({
         // Internal layout
         'p-6 flex flex-col overflow-hidden',
         // Visual concept border indicator
-        hasVisualConcept && 'border-blue-300 dark:border-blue-700',
+        hasVisualConcept && 'border-gray-400',
         className
       )}
       data-testid="slide-preview"
@@ -372,7 +372,7 @@ export const SlidePreview = memo(function SlidePreview({
         <div className="flex items-center gap-2">
           <StatusBadge status={slide.status} />
           {hasVisualConcept && (
-            <span className="text-xs text-blue-600 dark:text-blue-400" data-testid="visual-concept-indicator">
+            <span className="text-xs text-gray-600" data-testid="visual-concept-indicator">
               Visual ✓
             </span>
           )}
