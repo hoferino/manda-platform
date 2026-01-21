@@ -8,11 +8,16 @@
 
 | # | Phase | Goal | Requirements | Status |
 |---|-------|------|--------------|--------|
-| 4 | Wireframe Preview | Strip colors, simplify to grayscale wireframes | STYLE-01-04, PLACE-01-03, TEXT-01-04, KEEP-01-02 | Pending |
+| 4 | Wireframe Preview | Strip colors, simplify to grayscale wireframes | STYLE-01-04, PLACE-01-03, TEXT-01-04, KEEP-01-02 | Planned |
 
 ## Phase 4: Wireframe Preview
 
 **Goal:** Transform CIM slide preview from colored components to clean grayscale wireframes
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04-01-PLAN.md - Convert all preview renderers to grayscale styling
 
 **Requirements:**
 - STYLE-01, STYLE-02, STYLE-03, STYLE-04
@@ -45,7 +50,8 @@
 
 **Total phases:** 1
 **Total requirements:** 13
-**Estimated plans:** 1-2
+**Total plans:** 1
 
 ---
 *Created: 2026-01-21*
+*Updated: 2026-01-21 - Phase 4 planned*
