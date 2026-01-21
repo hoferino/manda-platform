@@ -8,10 +8,10 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-01-21 — Milestone v2.0 started
+Phase: 4 (Wireframe Preview)
+Plan: Not yet created
+Status: Ready to plan
+Last activity: 2026-01-21 — Roadmap created
 
 ## Current Milestone: v2.0 CIM Preview Wireframe
 
