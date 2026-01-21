@@ -60,13 +60,13 @@ function generateComponentId(slideId: string, type: ComponentType, index: number
 // ============================================================================
 
 const emphasisColors: Record<NonNullable<ComponentStyle['emphasis']>, string> = {
-  primary: 'border-primary/50 bg-primary/5',
-  secondary: 'border-secondary/50 bg-secondary/5',
-  muted: 'border-muted-foreground/30 bg-muted/30',
-  accent: 'border-accent/50 bg-accent/5',
-  success: 'border-green-500/50 bg-green-500/5',
-  warning: 'border-yellow-500/50 bg-yellow-500/5',
-  danger: 'border-red-500/50 bg-red-500/5',
+  primary: 'border-gray-300 bg-white',
+  secondary: 'border-gray-300 bg-white',
+  muted: 'border-gray-200 bg-gray-50',
+  accent: 'border-gray-300 bg-white',
+  success: 'border-gray-300 bg-white',
+  warning: 'border-gray-300 bg-white',
+  danger: 'border-gray-300 bg-white',
 }
 
 const sizeClasses: Record<NonNullable<ComponentStyle['size']>, string> = {
@@ -171,7 +171,7 @@ function BulletListComponent({ content, style }: { content: string | string[]; s
     <ul className={cn('space-y-1 py-1', getStyleClasses(style))}>
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-2 pl-2 text-sm">
-          <span className="text-primary mt-1.5 text-xs">•</span>
+          <span className="text-gray-600 mt-1.5 text-xs">•</span>
           <span className="text-foreground/90">{item}</span>
         </li>
       ))}
@@ -185,7 +185,7 @@ function NumberedListComponent({ content, style }: { content: string | string[];
     <ol className={cn('space-y-1 py-1', getStyleClasses(style))}>
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-2 pl-2 text-sm">
-          <span className="text-primary font-medium">{i + 1}.</span>
+          <span className="text-gray-600 font-medium">{i + 1}.</span>
           <span className="text-foreground/90">{item}</span>
         </li>
       ))}
@@ -195,7 +195,7 @@ function NumberedListComponent({ content, style }: { content: string | string[];
 
 function QuoteComponent({ content, style }: { content: string; style?: ComponentStyle }) {
   return (
-    <blockquote className={cn('border-l-4 border-primary/50 pl-4 py-2 italic text-sm text-muted-foreground', getStyleClasses(style))}>
+    <blockquote className={cn('border-l-4 border-gray-300 pl-4 py-2 italic text-sm text-muted-foreground', getStyleClasses(style))}>
       <Quote className="h-4 w-4 inline-block mr-2 opacity-50" />
       {content || 'Quote'}
     </blockquote>
@@ -235,7 +235,7 @@ function MetricComponent({ content, label, style }: { content: string | Record<s
 
   return (
     <div className={cn('text-center py-3', getStyleClasses(style))}>
-      <div className="text-3xl font-bold text-primary">{value}</div>
+      <div className="text-3xl font-bold text-gray-900">{value}</div>
       {metricLabel && <div className="text-sm text-muted-foreground mt-1">{metricLabel}</div>}
     </div>
   )
@@ -273,7 +273,7 @@ function TimelineComponent({ content, style }: { content: string | string[]; sty
     <div className={cn('flex items-center gap-2 py-2 overflow-x-auto', getStyleClasses(style))}>
       {items.map((item, i) => (
         <React.Fragment key={i}>
-          <div className="flex-shrink-0 px-3 py-1.5 bg-primary/10 rounded-full text-xs font-medium">
+          <div className="flex-shrink-0 px-3 py-1.5 bg-gray-100 rounded-full text-xs font-medium">
             {item}
           </div>
           {i < items.length - 1 && (
@@ -291,7 +291,7 @@ function ProcessStepsComponent({ content, style }: { content: string | string[];
     <div className={cn('space-y-2 py-2', getStyleClasses(style))}>
       {steps.map((step, i) => (
         <div key={i} className="flex items-start gap-3">
-          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-400 text-white text-xs font-bold flex items-center justify-center">
             {i + 1}
           </div>
           <span className="text-sm text-foreground/90 pt-0.5">{step}</span>
@@ -318,8 +318,8 @@ function FlowchartPlaceholder({ content, style }: { content: string; style?: Com
 
 function CalloutComponent({ content, icon, style }: { content: string; icon?: string; style?: ComponentStyle }) {
   return (
-    <div className={cn('border-l-4 border-primary bg-primary/5 rounded-r-lg p-3 flex items-start gap-2', getStyleClasses(style))}>
-      <AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+    <div className={cn('border-l-4 border-gray-300 bg-gray-50 rounded-r-lg p-3 flex items-start gap-2', getStyleClasses(style))}>
+      <AlertCircle className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
       <p className="text-sm text-foreground/90">{content || 'Callout'}</p>
     </div>
   )
@@ -328,8 +328,8 @@ function CalloutComponent({ content, icon, style }: { content: string; icon?: st
 function StatHighlightComponent({ content, label, style }: { content: string | Record<string, unknown>; label?: string; style?: ComponentStyle }) {
   const value = typeof content === 'string' ? content : (content as Record<string, unknown>)?.value?.toString() || '--'
   return (
-    <div className={cn('bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4 text-center', getStyleClasses(style))}>
-      <div className="text-2xl font-bold text-primary">{value}</div>
+    <div className={cn('bg-gray-50 rounded-lg p-4 text-center', getStyleClasses(style))}>
+      <div className="text-2xl font-bold text-gray-900">{value}</div>
       {label && <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">{label}</div>}
     </div>
   )
@@ -337,8 +337,8 @@ function StatHighlightComponent({ content, label, style }: { content: string | R
 
 function KeyTakeawayComponent({ content, style }: { content: string; style?: ComponentStyle }) {
   return (
-    <div className={cn('bg-accent/10 border border-accent/30 rounded-lg p-3 flex items-start gap-2', getStyleClasses(style))}>
-      <Lightbulb className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
+    <div className={cn('bg-gray-50 border border-gray-300 rounded-lg p-3 flex items-start gap-2', getStyleClasses(style))}>
+      <Lightbulb className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
       <p className="text-sm font-medium text-foreground">{content || 'Key Takeaway'}</p>
     </div>
   )
