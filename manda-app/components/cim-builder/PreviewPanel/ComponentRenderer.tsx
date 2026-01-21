@@ -170,7 +170,7 @@ const BulletRenderer = memo(function BulletRenderer({
   return (
     <ClickableWrapper componentId={componentId} content={content} onClick={onClick}>
       <div className="flex items-start gap-2 pl-2 py-1">
-        <span className="text-primary mt-1.5 text-xs">•</span>
+        <span className="text-gray-600 mt-1.5 text-xs">•</span>
         <p className="text-sm text-foreground/90 leading-relaxed flex-1">
           {content || 'Bullet point'}
         </p>
@@ -449,7 +449,7 @@ const MetricRenderer = memo(function MetricRenderer({ component, componentId, on
   if (metrics.length === 0) {
     return (
       <ClickableWrapper componentId={componentId} content={contentStr} onClick={onClick}>
-        <div className="px-4 py-3 bg-primary/5 rounded-lg border border-primary/20">
+        <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
           <span className="text-lg font-bold text-foreground">{contentStr || 'Metric'}</span>
         </div>
       </ClickableWrapper>
@@ -497,11 +497,11 @@ function parseMetricData(component: SlideComponent): Array<{ label?: string; val
 
 function getMetricStyle(emphasis?: string): string {
   switch (emphasis) {
-    case 'success': return 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-    case 'warning': return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-    case 'danger': return 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-    case 'accent': return 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
-    case 'primary': return 'bg-primary/10 border-primary/30'
+    case 'success': return 'bg-white border-gray-300'
+    case 'warning': return 'bg-white border-gray-300'
+    case 'danger': return 'bg-white border-gray-300'
+    case 'accent': return 'bg-white border-gray-300'
+    case 'primary': return 'bg-gray-50 border-gray-200'
     default: return 'bg-muted/50 border-muted-foreground/20'
   }
 }
@@ -514,7 +514,7 @@ const BulletListRenderer = memo(function BulletListRenderer({ component, compone
       <ul className="space-y-1.5 pl-2">
         {items.map((item, idx) => (
           <li key={idx} className="flex items-start gap-2">
-            <span className="text-primary mt-1.5 text-xs">•</span>
+            <span className="text-gray-600 mt-1.5 text-xs">•</span>
             <span className="text-sm text-foreground/90 leading-relaxed">{item}</span>
           </li>
         ))}
@@ -531,7 +531,7 @@ const NumberedListRenderer = memo(function NumberedListRenderer({ component, com
       <ol className="space-y-1.5 pl-2">
         {items.map((item, idx) => (
           <li key={idx} className="flex items-start gap-2">
-            <span className="text-muted-foreground font-medium text-sm min-w-[1.5rem]">{idx + 1}.</span>
+            <span className="text-gray-600 font-medium text-sm min-w-[1.5rem]">{idx + 1}.</span>
             <span className="text-sm text-foreground/90 leading-relaxed">{item}</span>
           </li>
         ))}
@@ -567,7 +567,7 @@ const TimelineRenderer = memo(function TimelineRenderer({ component, componentId
             <div className="flex items-center gap-4">
               {[1, 2, 3, 4].map(i => (
                 <React.Fragment key={i}>
-                  <div className="w-4 h-4 rounded-full bg-primary/30 border-2 border-primary/50" />
+                  <div className="w-4 h-4 rounded-full bg-gray-200 border-2 border-gray-400" />
                   {i < 4 && <div className="w-12 h-0.5 bg-muted-foreground/20" />}
                 </React.Fragment>
               ))}
@@ -581,10 +581,10 @@ const TimelineRenderer = memo(function TimelineRenderer({ component, componentId
 
   return (
     <ClickableWrapper componentId={componentId} content={contentStr} onClick={onClick}>
-      <div className="relative pl-6 border-l-2 border-primary/30 space-y-4 py-2">
+      <div className="relative pl-6 border-l-2 border-gray-300 space-y-4 py-2">
         {events.map((event, idx) => (
           <div key={idx} className="relative">
-            <div className="absolute -left-[1.65rem] w-3 h-3 rounded-full bg-primary border-2 border-background" />
+            <div className="absolute -left-[1.65rem] w-3 h-3 rounded-full bg-gray-400 border-2 border-background" />
             <div className="pl-2">
               {event.date && <p className="text-xs text-muted-foreground uppercase tracking-wide">{event.date}</p>}
               <p className="text-sm font-medium text-foreground">{event.title}</p>
@@ -623,8 +623,8 @@ const CalloutRenderer = memo(function CalloutRenderer({ component, componentId, 
   const label = component.metadata?.label as string | undefined
   return (
     <ClickableWrapper componentId={componentId} content={contentStr} onClick={onClick}>
-      <div className={cn('px-4 py-3 rounded-lg border-l-4', componentType === 'key_takeaway' ? 'bg-amber-50 border-amber-500 dark:bg-amber-900/20' : componentType === 'stat_highlight' ? 'bg-blue-50 border-blue-500 dark:bg-blue-900/20' : 'bg-muted border-primary')}>
-        {label && <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">{label}</p>}
+      <div className={cn('px-4 py-3 rounded-lg border-l-4', 'bg-gray-50 border-gray-300')}>
+        {label && <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">{label}</p>}
         <p className="text-sm text-foreground leading-relaxed">{contentStr}</p>
       </div>
     </ClickableWrapper>
@@ -684,7 +684,7 @@ const ProcessRenderer = memo(function ProcessRenderer({ component, componentId, 
         <div className="flex items-center justify-center gap-2 py-3">
           {steps.map((step, idx) => (
             <React.Fragment key={idx}>
-              <div className="px-3 py-2 bg-primary/10 border border-primary/30 rounded text-xs font-medium text-foreground text-center min-w-[60px]">
+              <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded text-xs font-medium text-foreground text-center min-w-[60px]">
                 {step.length > 20 ? step.substring(0, 20) + '...' : step}
               </div>
               {idx < steps.length - 1 && <span className="text-muted-foreground">→</span>}
@@ -701,7 +701,7 @@ const ProcessRenderer = memo(function ProcessRenderer({ component, componentId, 
         <div className="flex items-center justify-center gap-3">
           {[1, 2, 3, 4].map(i => (
             <React.Fragment key={i}>
-              <div className="w-10 h-10 rounded bg-primary/20 border border-primary/30" />
+              <div className="w-10 h-10 rounded bg-gray-100 border border-gray-300" />
               {i < 4 && <span className="text-muted-foreground">→</span>}
             </React.Fragment>
           ))}
