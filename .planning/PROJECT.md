@@ -2,21 +2,19 @@
 
 ## What This Is
 
-M&A intelligence platform with document processing, knowledge graph, and CIM (Confidential Information Memorandum) builder. The CIM builder guides users through creating professional M&A pitch documents with an AI-assisted workflow.
+M&A intelligence platform with document processing, knowledge graph, and CIM (Confidential Information Memorandum) builder. The CIM builder guides users through creating professional M&A pitch documents with an AI-assisted workflow and clean wireframe previews.
 
 ## Core Value
 
 Help M&A advisors create compelling CIMs faster by combining AI guidance with structured document creation.
 
-## Current Milestone: v2.0 CIM Preview Wireframe
+## Current State
 
-**Goal:** Simplify CIM slide preview to clean wireframes — white background, grayscale styling, no colored emphasis states.
+**Version:** v2.0 (shipped 2026-01-22)
 
-**Target features:**
-- Strip colored backgrounds from component renderers
-- White background with black/gray outlines only
-- Simple box placeholders for charts/images/tables
-- Clean text rendering for discussed content
+**CIM Preview:** Clean grayscale wireframes with white backgrounds, gray borders, and black/gray text. Click-to-reference functionality preserved.
+
+**Tech stack:** Next.js 16, React 19, Tailwind CSS 4, Supabase, Graphiti + Neo4j
 
 ## Requirements
 
@@ -26,32 +24,19 @@ Help M&A advisors create compelling CIMs faster by combining AI guidance with st
 - [x] Slide persistence in Supabase
 - [x] Element selection for chat references
 - [x] Divider slides render correctly
+- [x] Wireframe-style preview rendering — v2.0
+- [x] Remove colored emphasis states from components — v2.0
+- [x] Consistent grayscale styling across all component types — v2.0
 
 ### Active
 
-- [ ] Wireframe-style preview rendering
-- [ ] Remove colored emphasis states from components
-- [ ] Consistent grayscale styling across all component types
+(No active requirements — awaiting next milestone)
 
 ### Out of Scope
 
-- PPTX export improvements — focus on preview first
-- New component types — simplify existing ones
-- Chat/workflow changes — preview only
-
-## Context
-
-**Current state:**
-- `ComponentRenderer.tsx` has colored backgrounds for emphasis (green/yellow/blue/red)
-- `WireframeComponentRenderer.tsx` also has colored styling
-- Preview works for divider slides but content slides show "weird visuals and colors"
-- Slides persist to Supabase via CIM entity
-
-**Target state:**
-- All slide previews render as clean wireframes
-- White background, black/gray lines and text
-- Box placeholders with icons for charts/images
-- Discussed content (titles, bullets, etc.) renders clearly
+- PPTX export improvements — preview-first approach validated
+- New component types — current components cover needs
+- Chat/workflow changes — CIM MVP workflow stable
 
 ## Constraints
 
@@ -65,7 +50,9 @@ Help M&A advisors create compelling CIMs faster by combining AI guidance with st
 |----------|-----------|---------|
 | Consolidate to docs/features/ | Standard location, already has core docs | ✓ Validated |
 | Keep _bmad-output/ | Valuable historical reference for past decisions | ✓ Validated |
-| Wireframe-first preview | Simpler, faster, easier to debug before adding polish | — Pending |
+| Wireframe-first preview | Simpler, faster, easier to debug before adding polish | ✓ Validated |
+| Grayscale-only styling | Colored emphasis states caused visual confusion | ✓ Validated |
+| Preserve hover states | Interactive feedback needed for click-to-reference UX | ✓ Validated |
 
 ---
-*Last updated: 2026-01-21 after milestone v2.0 start*
+*Last updated: 2026-01-22 after v2.0 milestone complete*
