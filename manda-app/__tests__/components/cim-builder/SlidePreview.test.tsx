@@ -310,14 +310,14 @@ describe('SlidePreview', () => {
       expect(screen.getByTestId('slide-preview')).toHaveAttribute('data-layout-type', 'two_column')
     })
 
-    it('should apply blue border when visual_concept is set', () => {
+    it('should apply gray border when visual_concept is set', () => {
       const slide = createSlide({
         visual_concept: createVisualConcept(),
       })
       render(<SlidePreview slide={slide} />)
 
       const preview = screen.getByTestId('slide-preview')
-      expect(preview).toHaveClass('border-blue-300')
+      expect(preview).toHaveClass('border-gray-400')
     })
 
     describe('layout type badges', () => {

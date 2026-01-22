@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": 1768944891725,
+  "updated": 1769041343365,
   "files": {
     "/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/_bmad/bmb/workflows/create-module/templates/installer.template.js": {
       "exports": [
@@ -341,7 +341,7 @@
         "@testing-library/react",
         "@/components/cim-builder/PreviewPanel/SlidePreview"
       ],
-      "indexed": 1768943855561
+      "indexed": 1769041343365
     },
     "/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/manda-app/__tests__/components/cim-builder/SourceItem.test.tsx": {
       "exports": [],
@@ -3686,7 +3686,7 @@
         "@/lib/utils",
         "lucide-react"
       ],
-      "indexed": 1768943855606
+      "indexed": 1769035333108
     },
     "/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/manda-app/components/cim-builder/PreviewPanel/PreviewPanel.tsx": {
       "exports": [
@@ -3739,7 +3739,7 @@
         "lucide-react",
         "./ComponentRenderer"
       ],
-      "indexed": 1768943855607
+      "indexed": 1769035483971
     },
     "/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/manda-app/components/cim-builder/PreviewPanel/SlideThumbnail.tsx": {
       "exports": [
@@ -3763,7 +3763,7 @@
         "@/lib/utils",
         "lucide-react"
       ],
-      "indexed": 1768943855607
+      "indexed": 1769035432692
     },
     "/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/manda-app/components/cim-builder/PreviewPanel/WireframeRenderer.tsx": {
       "exports": [

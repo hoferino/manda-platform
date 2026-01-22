@@ -1,24 +1,20 @@
-# Codebase Intelligence
+# Codebase Intelligence Summary
 
-**Indexed entities:** 53
-**Last updated:** 2026-01-20
+Last updated: 2026-01-22T00:22:23.377Z
+Indexed files: 755
 
-## Dependency Hotspots
+## Key Directories
 
-Files with most dependents (change carefully):
-1. `/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/manda-app/lib/utils.ts` (16 dependents) [util]
-1. `/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/manda-app/lib/agent/cim-mvp/knowledge-loader.ts` (4 dependents) [service]
-1. `/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/manda-app/lib/agent/cim-mvp/state.ts` (4 dependents) [model]
-1. `/Users/maxhofer/Documents/Business/Dev/M&A_Agent/manda_platform/manda-platform/manda-app/lib/agent/checkpointer.ts` (2 dependents) [service]
-1. `manda-app-lib-agent-cim-mvp-knowledge-service` (2 dependents)
+- `__tests__/`: Test files (194 files)
+- `api/`: API endpoints (107 files)
+- `components/`: UI components (287 files)
+- `hooks/`: React/custom hooks (30 files)
+- `lib/`: Utility functions (266 files)
 
-## Module Types
+## File Patterns
 
-- **Component**: 16 files
-- **Service**: 11 files
-- **Model**: 11 files
-- **Module**: 8 files
-- **Util**: 4 files
-- **Api**: 3 files
+- `*.test.ts`: Test files (119 files)
+- `*.test.tsx`: Test files (76 files)
+- `*.spec.ts`: Test files (7 files)
 
-**Relationships tracked:** 103
+Total exports: 3181
