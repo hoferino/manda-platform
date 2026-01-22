@@ -37,7 +37,7 @@ export function RegionPlaceholder({ label, className }: { label: string; classNa
     <div
       className={cn(
         'flex items-center justify-center h-full min-h-[60px]',
-        'text-xs text-muted-foreground/50 uppercase tracking-wide',
+        'text-xs text-gray-400 uppercase tracking-wide',
         className
       )}
     >
@@ -56,9 +56,10 @@ export function Region({ children, label, className, style }: RegionProps) {
   return (
     <div
       className={cn(
-        'border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg',
-        'bg-gray-50/50 dark:bg-gray-800/30 p-3',
+        'rounded-lg p-2',
         'flex flex-col gap-2 overflow-auto',
+        // Only show placeholder styling when empty
+        !hasChildren && 'border-2 border-dashed border-gray-200 bg-gray-50/50',
         className
       )}
       style={style}
@@ -414,10 +415,10 @@ export function ComparisonLayout({
   return (
     <div className={cn('w-full h-full flex flex-col gap-2', className)}>
       <div className="flex gap-3">
-        <div className="flex-1 text-center font-semibold text-sm text-muted-foreground">
+        <div className="flex-1 text-center font-semibold text-sm text-gray-500">
           {leftHeader}
         </div>
-        <div className="flex-1 text-center font-semibold text-sm text-muted-foreground">
+        <div className="flex-1 text-center font-semibold text-sm text-gray-500">
           {rightHeader}
         </div>
       </div>

@@ -187,6 +187,10 @@ function mapComponentTypeReverse(dbType: LegacyComponentType): MVPComponentType 
 /**
  * Convert MVP agent SlideUpdate to database Slide format
  * Preserves layoutType in visual_concept for round-trip restoration
+ *
+ * IMPORTANT: We always store MVP metadata (type, position, style, etc.) so we can
+ * reconstruct the full SlideUpdate on page load. This enables proper wireframe
+ * rendering with correct layouts and component placement.
  */
 function slideUpdateToSlide(update: SlideUpdate): Slide {
   return {
@@ -197,7 +201,15 @@ function slideUpdateToSlide(update: SlideUpdate): Slide {
       id: c.id,
       type: mapComponentType(c.type),
       content: typeof c.content === 'string' ? c.content : JSON.stringify(c.content),
-      metadata: c.data ? { data: c.data, position: c.position, style: c.style, icon: c.icon, label: c.label } : undefined,
+      // Always store MVP metadata for reconstruction on page load
+      metadata: {
+        mvpType: c.type,  // Original MVP component type (e.g., 'metric_group', 'callout_group')
+        position: c.position,  // Region placement (e.g., { region: 'left', weight: 0.4 })
+        style: c.style,  // Emphasis, size, alignment
+        icon: c.icon,  // Icon name for callouts
+        label: c.label,  // Label for metrics/stats
+        data: c.data,  // Structured data if present
+      },
     })),
     visual_concept: update.layoutType ? {
       layout_type: mapLayoutType(update.layoutType),
@@ -210,8 +222,105 @@ function slideUpdateToSlide(update: SlideUpdate): Slide {
 }
 
 /**
+ * Infer MVP component type from content structure
+ * Used when mvpType isn't stored in metadata (legacy data)
+ */
+function inferMvpTypeFromContent(dbType: LegacyComponentType, content: unknown): MVPComponentType {
+  // If content is a JSON array, try to infer the type from its structure
+  if (Array.isArray(content) && content.length > 0) {
+    const firstItem = content[0] as Record<string, unknown>
+
+    // Array of {label, content/value} → metric_group
+    if (firstItem.label && (firstItem.content || firstItem.value)) {
+      return 'metric_group'
+    }
+
+    // Array of {icon, content} → callout_group
+    if (firstItem.icon && firstItem.content) {
+      return 'callout_group'
+    }
+
+    // Array of {year, milestone} → timeline (milestone_timeline)
+    if (firstItem.year && firstItem.milestone) {
+      return 'milestone_timeline'
+    }
+  }
+
+  // Fall back to reverse mapping
+  return mapComponentTypeReverse(dbType)
+}
+
+/**
+ * Infer component position from layout type, component type, and content
+ * Used when position isn't stored in metadata (legacy data)
+ *
+ * Strategy for split-horizontal layouts:
+ * - metric_group, table with label/content data → LEFT (data panel)
+ * - callout_group, callout → RIGHT (narrative panel)
+ * - text containing "Sources:" or "Source:" → BOTTOM (footer)
+ * - Other text → RIGHT (narrative panel)
+ */
+function inferPositionFromLayout(
+  layoutType: MVPLayoutType | undefined,
+  componentType: MVPComponentType,
+  content: unknown,
+  componentIndex: number,
+  totalComponents: number
+): MVPSlideComponent['position'] | undefined {
+  if (!layoutType) return undefined
+
+  // For split layouts, use content-aware assignment
+  if (layoutType === 'split-horizontal' || layoutType === 'split-horizontal-weighted') {
+    // Check if this is a footer (sources text)
+    if (componentType === 'text' && typeof content === 'string') {
+      const lowerContent = content.toLowerCase()
+      if (lowerContent.startsWith('sources:') || lowerContent.startsWith('source:')) {
+        return { region: 'bottom' }
+      }
+    }
+
+    // Data components go LEFT
+    if (componentType === 'metric_group' || componentType === 'table' ||
+        componentType === 'metric' || componentType === 'financial_table') {
+      return { region: 'left' }
+    }
+
+    // Callouts and narrative go RIGHT
+    if (componentType === 'callout_group' || componentType === 'callout' ||
+        componentType === 'key_takeaway' || componentType === 'stat_highlight') {
+      return { region: 'right' }
+    }
+
+    // Default text goes right (narrative side)
+    if (componentType === 'text' || componentType === 'bullet_list') {
+      return { region: 'right' }
+    }
+
+    // Fallback: first component left, rest right
+    return componentIndex === 0 ? { region: 'left' } : { region: 'right' }
+  }
+
+  // For split-vertical, alternate between top and bottom
+  if (layoutType === 'split-vertical') {
+    if (componentIndex < Math.ceil(totalComponents / 2)) {
+      return { region: 'top' }
+    }
+    return { region: 'bottom' }
+  }
+
+  return undefined
+}
+
+/**
  * Convert database Slide back to MVP SlideUpdate format
  * Used to restore slideUpdates state from DB on page reload
+ *
+ * This function reconstructs the full MVP slide data from:
+ * - visual_concept.notes: original MVP layout type (e.g., 'mvp_layout:split-horizontal-weighted')
+ * - component.metadata.mvpType: original MVP component type (e.g., 'metric_group')
+ * - component.metadata.position: region placement (e.g., { region: 'left' })
+ *
+ * For legacy data without metadata, it infers types from content structure
  */
 function slideToSlideUpdate(slide: Slide): SlideUpdate {
   // Extract original MVP layout type from notes if available
@@ -220,12 +329,15 @@ function slideToSlideUpdate(slide: Slide): SlideUpdate {
     originalMvpLayoutType = slide.visual_concept.notes.replace('mvp_layout:', '')
   }
 
+  const layoutType = mapLayoutTypeReverse(slide.visual_concept?.layout_type, originalMvpLayoutType)
+  const totalComponents = slide.components.length
+
   return {
     slideId: slide.id,
     sectionId: slide.section_id,
     title: slide.title,
-    layoutType: mapLayoutTypeReverse(slide.visual_concept?.layout_type, originalMvpLayoutType),
-    components: slide.components.map((c): MVPSlideComponent => {
+    layoutType,
+    components: slide.components.map((c, index): MVPSlideComponent => {
       // Try to parse content back to original format
       let content: string | string[] | Record<string, unknown> = c.content
       try {
@@ -237,12 +349,20 @@ function slideToSlideUpdate(slide: Slide): SlideUpdate {
         // Content is already a plain string, keep as-is
       }
 
+      // Use stored mvpType if available, otherwise infer from content structure
+      const mvpType = (c.metadata?.mvpType as MVPComponentType)
+        || inferMvpTypeFromContent(c.type, content)
+
+      // Use stored position if available, otherwise infer from layout + content
+      const position = (c.metadata?.position as MVPSlideComponent['position'])
+        || inferPositionFromLayout(layoutType, mvpType, content, index, totalComponents)
+
       return {
         id: c.id,
-        type: mapComponentTypeReverse(c.type),
+        type: mvpType,
         content,
         data: c.metadata?.data as unknown,
-        position: c.metadata?.position as MVPSlideComponent['position'],
+        position,
         style: c.metadata?.style as MVPSlideComponent['style'],
         icon: c.metadata?.icon as string | undefined,
         label: c.metadata?.label as string | undefined,

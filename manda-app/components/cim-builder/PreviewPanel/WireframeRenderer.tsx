@@ -159,22 +159,46 @@ export const WireframeRenderer = memo(function WireframeRenderer({
 
     case 'split-horizontal':
       return (
-        <div className={cn('w-full h-full', className)}>
-          <SplitHorizontalLayout
-            left={render(regionComponents.left.length > 0 ? regionComponents.left : unpositionedComponents.slice(0, Math.ceil(unpositionedComponents.length / 2)))}
-            right={render(regionComponents.right.length > 0 ? regionComponents.right : unpositionedComponents.slice(Math.ceil(unpositionedComponents.length / 2)))}
-          />
+        <div className={cn('w-full h-full flex flex-col gap-2', className)}>
+          {/* Title header */}
+          <div className="flex-shrink-0">
+            <h2 className="text-lg font-bold text-gray-900 leading-tight">{title}</h2>
+          </div>
+          {/* Split content */}
+          <div className="flex-1 min-h-0">
+            <SplitHorizontalLayout
+              left={render(regionComponents.left.length > 0 ? regionComponents.left : unpositionedComponents.slice(0, Math.ceil(unpositionedComponents.length / 2)))}
+              right={render(regionComponents.right.length > 0 ? regionComponents.right : unpositionedComponents.slice(Math.ceil(unpositionedComponents.length / 2)))}
+            />
+          </div>
         </div>
       )
 
     case 'split-horizontal-weighted':
       return (
-        <div className={cn('w-full h-full', className)}>
-          <SplitHorizontalWeightedLayout
-            left={render(regionComponents.left)}
-            right={render(regionComponents.right.length > 0 ? regionComponents.right : unpositionedComponents)}
-            leftWeight={1}
-          />
+        <div className={cn('w-full h-full flex flex-col gap-2', className)}>
+          {/* Title header */}
+          <div className="flex-shrink-0">
+            <h2 className="text-lg font-bold text-gray-900 leading-tight">{title}</h2>
+          </div>
+          {/* Weighted split content */}
+          <div className="flex-1 min-h-0">
+            <SplitHorizontalWeightedLayout
+              left={render(regionComponents.left.length > 0 ? regionComponents.left : unpositionedComponents.slice(0, 1))}
+              right={render(regionComponents.right.length > 0 ? regionComponents.right : unpositionedComponents.slice(1).filter(c => {
+                // Exclude footer-like text from right panel
+                const content = typeof c.content === 'string' ? c.content.toLowerCase() : ''
+                return !content.startsWith('sources:') && !content.startsWith('source:')
+              }))}
+              leftWeight={1}
+            />
+          </div>
+          {/* Footer for sources/citations */}
+          {regionComponents.bottom.length > 0 && (
+            <div className="flex-shrink-0 pt-2 border-t border-gray-200 text-xs text-muted-foreground">
+              {render(regionComponents.bottom)}
+            </div>
+          )}
         </div>
       )
 

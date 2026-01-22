@@ -327,6 +327,10 @@ function mapLayoutType(mvpLayoutType: MVPLayoutType): DBLayoutType {
 
 /**
  * Convert MVP SlideUpdate to database Slide format
+ *
+ * IMPORTANT: We preserve the original MVP component type and position in metadata
+ * so we can reconstruct the full SlideUpdate on page load. This enables proper
+ * wireframe rendering with correct layouts and component placement.
  */
 function slideUpdateToSlide(update: SlideUpdate): Slide {
   return {
@@ -337,7 +341,16 @@ function slideUpdateToSlide(update: SlideUpdate): Slide {
       id: c.id,
       type: mapComponentType(c.type),
       content: typeof c.content === 'string' ? c.content : JSON.stringify(c.content),
-      metadata: c.data ? { data: c.data, position: c.position, style: c.style, icon: c.icon, label: c.label } : undefined,
+      // Always store MVP metadata for reconstruction on page load
+      // This includes: original type, position, style, icon, label, and any data
+      metadata: {
+        mvpType: c.type,  // Original MVP component type (e.g., 'metric_group', 'callout_group')
+        position: c.position,  // Region placement (e.g., { region: 'left', weight: 0.4 })
+        style: c.style,  // Emphasis, size, alignment
+        icon: c.icon,  // Icon name for callouts
+        label: c.label,  // Label for metrics/stats
+        data: c.data,  // Structured data if present
+      },
     })),
     visual_concept: update.layoutType ? {
       layout_type: mapLayoutType(update.layoutType),

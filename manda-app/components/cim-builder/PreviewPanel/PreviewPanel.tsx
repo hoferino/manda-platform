@@ -19,7 +19,7 @@
  */
 
 import * as React from 'react'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import { SlidePreview } from './SlidePreview'
 import { SlideNavigation } from './SlideNavigation'
 import { SlideCounter } from './SlideCounter'
@@ -29,7 +29,71 @@ import { useSlideNavigation } from '@/lib/hooks/useSlideNavigation'
 import type { Slide } from '@/lib/types/cim'
 import type { SlideUpdate } from '@/lib/agent/cim-mvp'
 import { Presentation } from 'lucide-react'
-import { cn } from '@/lib/utils'
+
+/**
+ * Scaled Slide Canvas - mimics PowerPoint slide sizing
+ *
+ * Uses a fixed internal canvas (960x540 = 16:9) and CSS transform
+ * to scale the entire slide proportionally. When you resize the panel,
+ * the slide zooms in/out rather than reflowing content.
+ */
+function ScaledSlideCanvas({ children }: { children: React.ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+
+  // PowerPoint standard slide size (16:9 aspect ratio)
+  const SLIDE_WIDTH = 960
+  const SLIDE_HEIGHT = 540
+
+  const updateScale = useCallback(() => {
+    if (!containerRef.current) return
+
+    const container = containerRef.current
+    const containerWidth = container.clientWidth
+    const containerHeight = container.clientHeight
+
+    // Calculate scale to fit slide into container with some padding
+    const padding = 32 // 16px on each side
+    const availableWidth = containerWidth - padding
+    const availableHeight = containerHeight - padding
+
+    const scaleX = availableWidth / SLIDE_WIDTH
+    const scaleY = availableHeight / SLIDE_HEIGHT
+    const newScale = Math.min(scaleX, scaleY, 1) // Never scale up beyond 100%
+
+    setScale(newScale)
+  }, [])
+
+  useEffect(() => {
+    updateScale()
+
+    const observer = new ResizeObserver(updateScale)
+    if (containerRef.current) {
+      observer.observe(containerRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [updateScale])
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-full flex items-center justify-center"
+    >
+      <div
+        style={{
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
+          transform: `scale(${scale})`,
+          transformOrigin: 'center center',
+        }}
+        className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 flex-shrink-0"
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
 
 export interface PreviewPanelProps {
   slides: Slide[]
@@ -121,27 +185,25 @@ export function PreviewPanel({
         ))}
       </div>
 
-      {/* Slide preview area */}
-      <div className="flex-1 p-4 overflow-auto">
+      {/* Slide preview area - uses fixed canvas with CSS transform scaling */}
+      <div className="flex-1 overflow-hidden">
         {/* Story 9: Use WireframeRenderer for MVP slides, SlidePreview for legacy */}
         {currentMVPSlide ? (
-          <div
-            className={cn(
-              'aspect-[16/9] w-full',
-              'bg-white dark:bg-slate-900 rounded-lg border shadow-sm',
-              'p-6 overflow-hidden'
-            )}
-            data-testid="wireframe-preview"
-            data-slide-id={currentMVPSlide.slideId}
-          >
-            <WireframeRenderer
-              layoutType={currentMVPSlide.layoutType}
-              components={currentMVPSlide.components}
-              title={currentMVPSlide.title}
-              slideId={currentMVPSlide.slideId}
-              onComponentClick={onComponentSelect}
-            />
-          </div>
+          <ScaledSlideCanvas>
+            <div
+              className="w-full h-full"
+              data-testid="wireframe-preview"
+              data-slide-id={currentMVPSlide.slideId}
+            >
+              <WireframeRenderer
+                layoutType={currentMVPSlide.layoutType}
+                components={currentMVPSlide.components}
+                title={currentMVPSlide.title}
+                slideId={currentMVPSlide.slideId}
+                onComponentClick={onComponentSelect}
+              />
+            </div>
+          </ScaledSlideCanvas>
         ) : (
           <SlidePreview slide={currentSlide} onComponentClick={onComponentSelect} />
         )}
