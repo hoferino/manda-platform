@@ -1,9 +1,9 @@
 ---
 title: Architecture Document
-version: 4.4
+version: 4.5
 status: Current
 stream: Main Platform
-last-updated: 2026-01-20
+last-updated: 2026-01-25
 owner: Max
 ---
 
@@ -15,7 +15,7 @@ owner: Max
 **Last Updated:** 2026-01-20
 **Owner:** Max
 **Architects:** Max, Claude (Architecture Workflow)
-**Version:** 4.4 (v2 Agent System - Supervisor Pattern)
+**Version:** 4.5 (v2 Agent System - Supervisor Pattern, Convex CIM State Proposed)
 
 ---
 
@@ -34,6 +34,7 @@ owner: Max
 | **Agent System** | Legacy orchestrator | v2 supervisor pattern with Graphiti retrieval | ✅ v4.4 |
 | **Tool Result Isolation** | None | Summaries in context, full data cached | 📋 E11.1 |
 | **Knowledge Write-Back** | None | Chat → Graphiti | 📋 E11.3 |
+| **CIM State Management** | PostgresSaver + Supabase JSONB | Convex (proposed) | 📋 ADR-002 |
 
 **Legend:** ✅ Implemented | 📋 Planned (see epic file)
 
@@ -78,6 +79,7 @@ Manda is a **conversational knowledge synthesizer** for M&A intelligence—a pla
 | **Frontend** | Next.js 15 (React 19.2) | ✅ | shadcn/ui, Turbopack |
 | **Observability** | LangSmith + LangGraph Studio | ✅ E12.11 | Token tracking, cost, visual debugging |
 | **Development Environment** | Docker Compose | ✅ | Local Supabase + Neo4j orchestration |
+| **CIM Workflow State** | Convex | 📋 Proposed | Real-time, durable workflows, cascade invalidation |
 
 ---
 
@@ -133,6 +135,14 @@ Data Layer:
   auth_database: Supabase Auth (built-in)
   file_storage: Google Cloud Storage
 
+  cim_state: Convex (proposed)
+  # - Real-time reactive database for CIM workflow state
+  # - Durable workflows with automatic recovery
+  # - Cascade invalidation on backward navigation
+  # - ConvexSaver replaces PostgresSaver for CIM checkpointing
+  # - Supabase auth bridge for permissions
+  # - See ADR-002 for architecture decision
+
 Document Processing:
   parser: Docling (IBM open source)
   irl_parser: ExcelJS with intelligent column detection (v2.7, 2025-12-12)
@@ -165,19 +175,24 @@ Caching Layer:
 
 Checkpoint Persistence:
   provider: PostgreSQL (Supabase) via @langchain/langgraph-checkpoint-postgres
-  # - Durable workflow state for CIM Builder and Supervisor graphs
+  # - Durable workflow state for Supervisor graphs
   # - Survives server restarts and browser session changes
-  # - Enables multi-day CIM creation workflows
   tables:
     - langgraph_checkpoints: Primary state storage (thread_id, checkpoint JSONB)
     - langgraph_checkpoint_writes: Atomic write buffer for state updates
     - langgraph_checkpoint_blobs: Binary data storage for large state values
   thread_id_formats:
-    - CIM workflow: cim-{dealId}-{cimId}
     - Supervisor: supervisor-{dealId}-{timestamp}
   rls: Enabled (extract deal_id from thread_id for tenant isolation)
   retention: 30 days (cleanup via scheduled job)
   fallback: In-memory MemorySaver if PostgreSQL unavailable (graceful degradation)
+
+  # CIM checkpointing (proposed migration to Convex)
+  cim_provider: Convex (proposed)
+  # - ConvexSaver implements LangGraph checkpointer interface
+  # - Real-time state sync for multi-day workflows
+  # - Cascade invalidation on backward navigation
+  # - See ADR-002 for migration plan
 
 Intelligence Layer:
   ai_framework: LangChain 1.0 + LangGraph 1.0

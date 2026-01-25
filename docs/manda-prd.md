@@ -84,6 +84,10 @@ owner: Max
 16. **Type-Safe Agent Tools:** Pydantic AI for Python backend tools with structured validation.
 17. **Model Configuration:** Provider-agnostic model switching via environment configuration.
 
+**Phase 3 (Proposed) — 📋 PENDING:**
+
+18. **CIM Workflow State (Convex):** Real-time reactive database for CIM workflow state, replacing PostgresSaver + Supabase JSONB. Enables cascade invalidation, durable workflows, and direct slide navigation. Supabase remains for auth/permissions. See [ADR-002](architecture-decisions/adr-002-convex-cim-state.md).
+
 ---
 
 ## 1. Vision & Alignment

@@ -27,6 +27,7 @@ All 6 fix stories completed on 2026-01-14. The CIM MVP is now production-ready w
 | **CIM MVP Agent** | `manda-app/lib/agent/cim-mvp/` | ✅ Production Ready |
 | **API Endpoint** | `/api/projects/[id]/cims/[cimId]/chat-mvp` | Active |
 | **UI Component** | `components/cim-builder/CIMBuilderPage.tsx` | Active |
+| **State Storage** | PostgresSaver + Supabase JSONB | Active (Convex migration proposed) |
 
 ## Primary Documentation
 
@@ -98,6 +99,38 @@ type CIMMVPStreamEvent =
 | Story 6 | v3 Prompt Patterns | ✅ Complete |
 
 See [CIM MVP Fix Stories](../../_bmad-output/sprint-artifacts/cim-mvp-fix-stories.md) for implementation details.
+
+## State Management Architecture
+
+### Current State (PostgreSQL)
+
+| Layer | Technology | Data |
+|-------|------------|------|
+| **LangGraph Checkpoints** | PostgresSaver | Conversation thread state |
+| **Workflow State** | Supabase JSONB | Stage, slides, outline, artifacts |
+| **Permissions** | Supabase RLS | User/deal access control |
+| **Auth** | Supabase Auth | User sessions |
+
+### Proposed State (Convex Migration)
+
+> **Status:** Proposed - see [ADR-002](../architecture-decisions/adr-002-convex-cim-state.md)
+
+| Layer | Technology | Data |
+|-------|------------|------|
+| **Workflow State** | Convex | Stage, slides, outline, artifacts |
+| **Conversations** | Convex | Messages with vector embeddings |
+| **LangGraph Checkpoints** | Convex (ConvexSaver) | Thread state |
+| **Permissions** | Supabase RLS | User/deal access control (unchanged) |
+| **Auth** | Supabase Auth | User sessions (unchanged) |
+
+### Benefits of Convex Migration
+
+- **Real-time updates**: Automatic UI push on state changes
+- **Cascade invalidation**: Navigate backward → downstream slides marked stale
+- **Durable workflows**: Survives crashes, multi-day sessions
+- **Direct navigation**: Jump to any slide (not just sequential)
+
+See [tech-spec-convex-cim-migration.md](../sprint-artifacts/tech-specs/tech-spec-convex-cim-migration.md) for implementation details.
 
 ## Future Work
 

@@ -12,6 +12,8 @@ The services share a Supabase PostgreSQL database and use Graphiti + Neo4j for k
 
 > **Architecture Note (E10 Pivot):** As of E10 completion (2025-12-17), all embeddings and semantic search have been consolidated to Graphiti + Neo4j. pgvector was removed. See [SCP-003](docs/decisions/sprint-change-proposal-2025-12-15.md) for context.
 
+> **Architecture Note (Convex Migration - Proposed):** CIM workflow state is proposed to migrate to Convex for real-time updates and workflow durability. Supabase remains for auth/permissions. See [ADR-002](docs/architecture-decisions/adr-002-convex-cim-state.md) for context.
+
 ## Commands
 
 ### Frontend (manda-app)
@@ -167,10 +169,12 @@ General conversation uses the v2 agent with Graphiti retrieval:
 - `lib/agent/v2/nodes/retrieval.ts` - Graphiti knowledge graph search
 
 **Supporting Files (shared):**
-- `lib/agent/checkpointer.ts` - PostgresSaver for conversation persistence
+- `lib/agent/checkpointer.ts` - PostgresSaver for conversation persistence (v2 chat)
 - `lib/agent/streaming.ts` - SSE helpers for response streaming
 - `lib/agent/tools/*.ts` - Tool definitions
 - `lib/agent/retrieval.ts` - Pre-model retrieval hook
+
+> **Note:** CIM checkpointing proposed to migrate to ConvexSaver. See [ADR-002](docs/architecture-decisions/adr-002-convex-cim-state.md).
 
 ### Agent System v2.0 - Future Architecture
 
@@ -247,6 +251,27 @@ type CIMMVPStreamEvent =
 
 // ✅ Import from cim-mvp barrel
 import { streamCIMMVP, executeCIMMVP } from '@/lib/agent/cim-mvp'
+```
+
+### CIM State Management (Proposed Convex Migration)
+
+> **Status:** Proposed - see [ADR-002](docs/architecture-decisions/adr-002-convex-cim-state.md)
+
+```typescript
+// ✅ Convex mutations for CIM state (future)
+import { useMutation, useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
+
+// Real-time CIM subscription
+const cim = useQuery(api.cims.get, { cimId })
+
+// Mutations trigger cascade invalidation automatically
+const saveBuyerPersona = useMutation(api.cims.saveBuyerPersona)
+const navigateToStage = useMutation(api.cims.navigateToStage)
+
+// ✅ ConvexSaver for LangGraph checkpointing (future)
+import { ConvexSaver } from "@/convex/checkpointer"
+const checkpointer = new ConvexSaver(convexClient)
 ```
 
 ### v2 Chat Patterns

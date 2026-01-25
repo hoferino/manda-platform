@@ -2,10 +2,10 @@
 
 ---
 title: Decision Log
-version: 1.0
+version: 1.1
 status: Current
 purpose: Central index of all sprint change proposals and architectural decisions
-last-updated: 2026-01-15
+last-updated: 2026-01-25
 ---
 
 This folder contains all sprint change proposals and major decisions made during development. Change proposals document pivots, scope changes, and architectural decisions that impact the project.
@@ -38,6 +38,7 @@ This folder contains all sprint change proposals and major decisions made during
 |----------|------|---------|
 | SCP-003 | 2025-12-15 | **E10 Pivot**: pgvector → Graphiti + Neo4j, Voyage embeddings |
 | [ADR-001](../architecture-decisions/adr-001-graphiti-migration.md) | 2025-12-15 | Formal ADR documenting E10 architecture |
+| [ADR-002](../architecture-decisions/adr-002-convex-cim-state.md) | 2026-01-25 | **Convex for CIM State**: Real-time workflow state, cascade invalidation |
 
 ### Product/UX
 

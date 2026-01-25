@@ -47,7 +47,8 @@ This document is the **single source of truth** for how the Manda conversational
 - **Graphiti + Neo4j**: Knowledge graph with hybrid search (vector + BM25 + graph)
 - **Voyage voyage-3.5**: 1024-dimension embeddings
 - **Voyage rerank-2.5**: Result reranking for improved accuracy
-- **PostgresSaver**: Conversation checkpointing and persistence
+- **PostgresSaver**: Conversation checkpointing and persistence (v2 chat)
+- **Convex** (proposed): CIM workflow state and checkpointing - see [ADR-002](architecture-decisions/adr-002-convex-cim-state.md)
 - **Vertex AI (Claude Sonnet 4)**: Primary LLM for agent responses
 
 ### Knowledge Architecture (Post-E10)
@@ -188,6 +189,14 @@ CIM MVP loads knowledge from JSON files:
 const knowledge = await loadKnowledge(knowledgePath)
 // Returns structured company data, financials, narrative
 ```
+
+### State Persistence
+
+**Current:** PostgresSaver + Supabase JSONB columns in `cims` table
+
+**Proposed:** Convex for real-time updates and cascade invalidation
+- See [ADR-002](architecture-decisions/adr-002-convex-cim-state.md) for architecture decision
+- See [tech-spec-convex-cim-migration.md](sprint-artifacts/tech-specs/tech-spec-convex-cim-migration.md) for implementation
 
 ---
 
