@@ -52,8 +52,9 @@ Central documentation hub for the Manda M&A Intelligence Platform.
 | Guide | Purpose |
 |-------|---------|
 | [testing/testing-guide.md](testing/testing-guide.md) | Comprehensive test reference |
+| [testing/test-design-system.md](testing/test-design-system.md) | System testability assessment |
 | [deployment/gcp-setup-guide.md](deployment/gcp-setup-guide.md) | GCP setup instructions |
-| [gcp-deployment-guide.md](gcp-deployment-guide.md) | GCP strategy & cost analysis |
+| [deployment/gcp-deployment-guide.md](deployment/gcp-deployment-guide.md) | GCP strategy & cost analysis |
 
 ---
 
@@ -61,10 +62,10 @@ Central documentation hub for the Manda M&A Intelligence Platform.
 
 | Location | Contents |
 |----------|----------|
+| [sprint-artifacts/README.md](sprint-artifacts/README.md) | Sprint artifacts structure guide |
 | [sprint-artifacts/epics/](sprint-artifacts/epics/) | Epic definitions (E1-E13) |
-| [sprint-artifacts/stories/](sprint-artifacts/stories/) | 130+ story files |
-| [sprint-artifacts/tech-specs/](sprint-artifacts/tech-specs/) | Technical specifications |
-| [sprint-artifacts/retrospectives/](sprint-artifacts/retrospectives/) | Sprint retrospectives |
+| [sprint-artifacts/active/](sprint-artifacts/active/) | Current work (E12-E13 stories) |
+| [sprint-artifacts/archive/](sprint-artifacts/archive/) | Completed work (E1-E11 stories, specs, retros) |
 
 ---
 
