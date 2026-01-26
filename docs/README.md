@@ -2,75 +2,29 @@
 
 ---
 title: Documentation Hub
-version: 1.1
+version: 2.0
 status: Current
-last-updated: 2026-01-15
+last-updated: 2026-01-26
 ---
 
-This directory contains all documentation for the Manda M&A Intelligence Platform.
+Central documentation hub for the Manda M&A Intelligence Platform.
 
----
+## Quick Navigation
 
-## Quick Links
-
-| Document | Description | Version |
-|----------|-------------|---------|
-| [manda-prd.md](manda-prd.md) | Product Requirements Document | v2.4 |
-| [manda-architecture.md](manda-architecture.md) | Technical Architecture | v4.3 |
-| [epics.md](epics.md) | Epic and Story Breakdown | v2.5 |
-| [documentation-map.md](documentation-map.md) | Full documentation index | v1.0 |
-| [testing/testing-guide.md](testing/testing-guide.md) | Testing & Operations Guide | - |
-
----
-
-## Documentation Structure
-
-```
-docs/
-├── README.md                     # This file - documentation hub
-├── documentation-map.md          # Complete documentation index
-│
-├── # Core Planning
-├── manda-prd.md                  # Product Requirements Document (v2.4)
-├── manda-architecture.md         # Technical Architecture (v4.3)
-├── epics.md                      # Epic and Story Breakdown (v2.5)
-├── ux-design-specification.md    # UX Design Specification
-│
-├── # Audience-Specific
-├── manda-index.md                # Developer technical index
-├── manda-platform-overview.md    # Stakeholder overview
-│
-├── # Agent System (NEW)
-├── agent-system/                 # Agent v2 documentation hub
-│   └── README.md
-├── cim-mvp/                      # CIM MVP documentation hub
-│   └── README.md
-├── agent-behavior-spec.md        # Agent behavior (v2.0)
-├── langgraph-reference.md        # LangGraph patterns
-│
-├── # Infrastructure
-├── deployment/                   # Deployment guides
-│   └── gcp-setup-guide.md        # GCP setup instructions
-├── gcp-deployment-guide.md       # GCP strategy & cost analysis
-│
-├── # Sprint Work
-├── sprint-artifacts/             # Epics, stories, tech specs
-│   ├── epics/
-│   ├── stories/
-│   ├── tech-specs/
-│   └── retrospectives/
-├── testing/                      # Test plans and results
-├── architecture-decisions/       # ADRs
-├── decisions/                    # Sprint change proposals (centralized)
-│
-└── archived/                     # Superseded documentation
-```
+| I want to... | Go to... |
+|--------------|----------|
+| Understand the product | [PRD](manda-prd.md) (v2.4) |
+| See the architecture | [Architecture](manda-architecture.md) (v4.3) |
+| Work on agent code | [features/agent-system/](features/agent-system/) |
+| Review a decision | [decisions/](decisions/) |
+| Check project status | [../.planning/PROJECT.md](../.planning/PROJECT.md) |
+| Set up development | [CLAUDE.md](../CLAUDE.md) |
+| Deploy to GCP | [deployment/gcp-setup-guide.md](deployment/gcp-setup-guide.md) |
+| Work on a sprint story | [sprint-artifacts/](sprint-artifacts/) |
 
 ---
 
-## Core Documentation
-
-### Product & Architecture
+## Core Documents
 
 | Document | Version | Description |
 |----------|---------|-------------|
@@ -79,70 +33,68 @@ docs/
 | [epics.md](epics.md) | v2.5 | Epic/story breakdown with BDD criteria |
 | [ux-design-specification.md](ux-design-specification.md) | - | UX design system |
 
-### Agent System
+---
 
-| Document | Version | Description |
-|----------|---------|-------------|
-| [agent-system/README.md](agent-system/README.md) | v1.0 | Agent v2 documentation hub |
-| [cim-mvp/README.md](cim-mvp/README.md) | v1.0 | CIM MVP documentation hub |
-| [agent-behavior-spec.md](agent-behavior-spec.md) | v2.0 | Agent behavior rules |
-| [langgraph-reference.md](langgraph-reference.md) | v1.0 | LangGraph patterns |
+## Features
+
+| Feature | Documentation |
+|---------|---------------|
+| **Agent System** | [features/agent-system/](features/agent-system/) |
+| └─ Chat v2 | [behavior-spec.md](features/agent-system/behavior-spec.md) |
+| └─ CIM Builder | [cim-builder.md](features/agent-system/cim-builder.md) |
+| └─ LangGraph patterns | [langgraph.md](features/agent-system/langgraph.md) |
+| **Knowledge Graph** | [features/knowledge-graph/](features/knowledge-graph/) |
+
+---
+
+## Guides
+
+| Guide | Purpose |
+|-------|---------|
+| [testing/testing-guide.md](testing/testing-guide.md) | Comprehensive test reference |
+| [deployment/gcp-setup-guide.md](deployment/gcp-setup-guide.md) | GCP setup instructions |
+| [gcp-deployment-guide.md](gcp-deployment-guide.md) | GCP strategy & cost analysis |
+
+---
+
+## Sprint Work
+
+| Location | Contents |
+|----------|----------|
+| [sprint-artifacts/epics/](sprint-artifacts/epics/) | Epic definitions (E1-E13) |
+| [sprint-artifacts/stories/](sprint-artifacts/stories/) | 130+ story files |
+| [sprint-artifacts/tech-specs/](sprint-artifacts/tech-specs/) | Technical specifications |
+| [sprint-artifacts/retrospectives/](sprint-artifacts/retrospectives/) | Sprint retrospectives |
+
+---
+
+## Decisions
+
+All architecture decisions and change proposals are in [decisions/](decisions/).
+
+| Type | Prefix | Purpose |
+|------|--------|---------|
+| Sprint Change Proposal | SCP-* | Scope changes, pivots |
+| Change Proposal | CP-* | Model/design changes |
+| Architecture Decision Record | ADR-* | Technical architecture |
+
+Recent decisions:
+- [SCP-003](decisions/sprint-change-proposal-2025-12-15.md) - Knowledge Architecture Evolution (E10)
+- [ADR-002](decisions/adr-002-convex-cim-state.md) - Convex CIM State Management (proposed)
 
 ---
 
 ## Implementation Status
 
-| Epic | Name | Status | Completed |
-|------|------|--------|-----------|
-| E1-E9 | MVP Phase | Complete | 2025-12-11 |
-| E10 | Knowledge Graph Foundation | Complete | 2025-12-17 |
-| E11 | Agent Context Engineering | Complete | 2025-12-18 |
-| E12 | Production Readiness | In Progress | - |
-| E13 | Agent Orchestration Optimization | Planned | - |
+| Epic | Name | Status |
+|------|------|--------|
+| E1-E9 | MVP Phase | Complete |
+| E10 | Knowledge Graph Foundation | Complete |
+| E11 | Agent Context Engineering | Complete |
+| E12 | Production Readiness | In Progress |
+| E13 | Agent Orchestration Optimization | Planned |
 
 **Current Phase:** Production Readiness (E12-E13)
-
----
-
-## Recent Updates
-
-### 2026-01-15: Documentation Restructure
-
-- **Phase 1 (Immediate):**
-  - Updated `agent-behavior-spec.md` to v2.0 (reflects current implementation)
-  - Closed Q&A as Skill change proposal (approved)
-  - Archived legacy `AGENTS.md`
-
-- **Phase 2 (Consolidation):**
-  - Clarified CIM architecture docs (evaluation vs analysis)
-  - Distinguished platform overview (stakeholder) vs index (developer)
-  - Cross-referenced GCP guides (setup vs strategy)
-
-- **Phase 3 (Structure):**
-  - Created `docs/agent-system/` hub
-  - Created `docs/cim-mvp/` hub
-  - Created `docs/archived/` for superseded docs
-
-- **Phase 4 (Index):**
-  - Added `documentation-map.md` as central index
-  - Added metadata headers to primary docs
-
-- **Phase 5 (Consolidation):**
-  - Created `docs/decisions/` for centralized change proposals
-  - Consolidated 7 SCPs from 4 scattered locations
-  - Updated `_bmad-output/README.md` with multi-stream structure
-
-### 2026-01-06: Repository Cleanup
-
-- Removed deprecated pgvector/embeddings code (E10.8 cleanup)
-- Created [ADR-001](architecture-decisions/adr-001-graphiti-migration.md)
-- Updated documentation versions
-
-### 2025-12-17: E10 Knowledge Graph Foundation
-
-- Architecture pivot: pgvector → Graphiti + Neo4j
-- Voyage embeddings (1024d)
-- Hybrid search with reranking
 
 ---
 
@@ -150,21 +102,40 @@ docs/
 
 This project uses BMAD (Build Mad Agentic Delivery) for AI-assisted development.
 
-### BMAD Output Locations
-
 | Artifact Type | Location |
 |---------------|----------|
 | Planning artifacts | `_bmad-output/planning-artifacts/` |
 | Implementation artifacts | `_bmad-output/implementation-artifacts/` |
 | Workflow status | `_bmad-output/planning-artifacts/bmm-workflow-status.yaml` |
 
-### Active BMAD Streams
+---
 
-| Stream | Status | Description |
-|--------|--------|-------------|
-| Main Platform (E1-E13) | E12 In Progress | Primary development |
-| Agent System v2.0 | Epic 3 Complete | BMAD cycle for agent work |
-| CIM MVP | Active | Fast-track parallel development |
+## Directory Structure
+
+```
+docs/
+├── README.md                     # This file - documentation hub
+│
+├── # Core Planning
+├── manda-prd.md                  # Product Requirements (v2.4)
+├── manda-architecture.md         # Technical Architecture (v4.3)
+├── epics.md                      # Epic/Story Breakdown (v2.5)
+│
+├── # Features (consolidated)
+├── features/
+│   ├── agent-system/             # All agent docs (chat, CIM, LangGraph)
+│   └── knowledge-graph/          # Graphiti + Neo4j
+│
+├── # Sprint Work
+├── sprint-artifacts/             # Epics, stories, tech specs
+├── testing/                      # Test plans and guides
+├── decisions/                    # SCPs, ADRs (centralized)
+│
+├── # Infrastructure
+├── deployment/                   # Deployment guides
+│
+└── archived/                     # Superseded documentation
+```
 
 ---
 
@@ -173,8 +144,22 @@ This project uses BMAD (Build Mad Agentic Delivery) for AI-assisted development.
 When adding documentation:
 
 1. **Core docs** (PRD, Architecture) - Edit in place, update version
-2. **Agent docs** - Add to `agent-system/` or `cim-mvp/`
+2. **Agent docs** - Add to `features/agent-system/`
 3. **Sprint artifacts** - Add to `sprint-artifacts/`
 4. **Superseded docs** - Move to `archived/`
 5. **Update this README** when adding new folders
-6. **Update [documentation-map.md](documentation-map.md)** for major changes
+
+---
+
+## Document Status Legend
+
+| Status | Meaning |
+|--------|---------|
+| **Current** | Actively maintained, up-to-date |
+| **In Progress** | Being worked on |
+| **Historical** | Accurate but not frequently updated |
+| **Archived** | Superseded, kept for history |
+
+---
+
+*Last updated: 2026-01-26*

@@ -36,11 +36,11 @@ implements: E9, E10  # Epic references
 
 | Starting Point | Use For |
 |----------------|---------|
-| `documentation-map.md` | Full index of all docs |
+| `README.md` | Documentation hub and full index |
+| `features/agent-system/` | All agent documentation |
 | `decisions/README.md` | Decision history |
 | `.planning/PROJECT.md` | Current project state |
 | `.planning/MILESTONES.md` | Completed milestone history |
-| `claude-md-hierarchy.md` | How CLAUDE.md files work (human reference) |
 
 ## Decision Types
 
