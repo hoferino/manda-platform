@@ -109,9 +109,17 @@ Track workflow progress in:
 - `planning-artifacts/bmm-workflow-status.yaml` - BMAD method status
 - `implementation-artifacts/agent-system-v2/sprint-status.yaml` - Sprint tracking
 
+## Purpose
+
+This directory holds **BMAD workflow session artifacts** - historical planning context from AI-assisted development cycles.
+
+**During BMAD cycles:** Canonical source for stories and specs being worked on.
+
+**After completion:** Reference material. Active documentation moves to `docs/features/` or `docs/sprint-artifacts/`.
+
 ## Related Documentation
 
-- **[Documentation Map](../docs/documentation-map.md)** - Full project documentation index
-- **[Agent System Hub](../docs/agent-system/README.md)** - Agent documentation
-- **[CIM MVP Hub](../docs/cim-mvp/README.md)** - CIM documentation
+- **[Documentation Hub](../docs/README.md)** - Full project documentation index
+- **[Agent System](../docs/features/agent-system/)** - Consolidated agent documentation
 - **[Decisions Log](../docs/decisions/README.md)** - Change proposals index
+- **[GSD Planning](.planning/)** - Current project state (GSD-managed)

@@ -103,6 +103,17 @@ Claude automatically loads context from subdirectory CLAUDE.md files based on wh
 - **Testing Guide**: `docs/testing/testing-guide.md`
 - **Decisions**: `docs/decisions/README.md`
 
+## Planning Directories
+
+| Directory | Purpose | When to Use |
+|-----------|---------|-------------|
+| `.planning/` | GSD execution state | Check current project state, milestones |
+| `_bmad-output/` | BMAD workflow artifacts | Reference historical planning context |
+| `docs/sprint-artifacts/` | Completed sprint work | Final home for stories, specs |
+| `docs/features/` | Feature documentation | Authoritative feature docs |
+
+**Key rule:** `.planning/` is GSD-managed (don't manually edit). `_bmad-output/` contains historical planning artifacts.
+
 ## BMAD Framework
 
 This project uses BMAD for AI-assisted development:
