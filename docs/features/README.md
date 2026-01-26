@@ -1,32 +1,37 @@
 # Feature Documentation
 
-This directory is the home for current feature planning and implementation documentation.
+This directory contains documentation for each major product feature.
 
-## Directory Structure
+## Features
 
-| Folder | Description |
-|--------|-------------|
-| [agent-system/](agent-system/) | **All agent documentation** - Chat v2, CIM Builder, LangGraph patterns, behavior spec |
-| [knowledge-graph/](knowledge-graph/) | Knowledge graph and Graphiti integration - entity extraction and semantic search |
+| Feature | Description | Epics |
+|---------|-------------|-------|
+| **[agent-system/](agent-system/)** | Chat agent, CIM Builder, LangGraph patterns | E8, E11, E13 |
+| **[knowledge-graph/](knowledge-graph/)** | Graphiti + Neo4j, embeddings, hybrid search | E10 |
+| **[document-processing/](document-processing/)** | Upload, parsing, extraction pipeline | E2, E3, E4 |
+| **[data-room/](data-room/)** | Secure document storage, GCS | E2 |
+| **[q-and-a/](q-and-a/)** | Conversational Q&A, chat interface | E8, E11 |
+| **[cim-export/](cim-export/)** | PowerPoint and PDF export | E9 |
 
 ## Organization Principles
 
-- **One topic per folder** - Each feature has its own subdirectory
-- **README.md as landing page** - Each folder's README explains what belongs there
-- **Cross-references over duplication** - Link to authoritative sources rather than copying content
+- **One feature per folder** - Each feature has its own subdirectory
+- **README.md as landing page** - Each folder's README explains the feature
+- **Cross-references over duplication** - Link to authoritative sources
 
 ## Related Documentation
 
-- **Core docs** remain at `docs/` root:
-  - `manda-prd.md` - Product Requirements Document
-  - `manda-architecture.md` - System Architecture
-  - `epics.md` - Epic definitions and sprint planning
+- **[PRD](../manda-prd.md)** - Product requirements
+- **[Architecture](../manda-architecture.md)** - System architecture
+- **[Sprint Artifacts](../sprint-artifacts/)** - Implementation stories
+- **[Decisions](../decisions/)** - Architecture decisions
 
-- **Historical planning docs** in `_bmad-output/`:
-  - Contains original planning artifacts
-  - Kept as reference for context and decisions
-  - Superseded content will be archived during consolidation
+## Navigation Tips
 
-## Navigation
-
-Use this directory as your starting point for feature-specific documentation. Each subfolder contains implementation details, design decisions, and integration guides for its respective feature.
+| Starting from | Best path |
+|---------------|-----------|
+| Agent/chat questions | `agent-system/` |
+| Document upload issues | `data-room/` → `document-processing/` |
+| Search/retrieval | `knowledge-graph/` |
+| CIM workflow | `agent-system/cim-builder.md` |
+| Export issues | `cim-export/` |
