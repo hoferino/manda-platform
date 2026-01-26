@@ -12,15 +12,15 @@ This folder contains all sprint change proposals and major decisions made during
 
 ## Decision Index
 
-| Date | ID | Title | Status | Scope | Impact |
-|------|-----|-------|--------|-------|--------|
-| 2025-12-11 | SCP-001 | [IRL Feature UX Pivot](sprint-change-proposal-2025-12-11.md) | **Approved** | Minor | E6 UX changes |
-| 2025-12-14 | SCP-002 | [PRD/Architecture Refinements](sprint-change-proposal-2025-12-14.md) | **Approved** | Minor | PRD v2.3, E9/E10 scope |
-| 2025-12-15 | SCP-003 | [Knowledge Architecture Evolution](sprint-change-proposal-2025-12-15.md) | **Approved** | **Major** | E10 pgvector→Graphiti pivot |
-| 2026-01-05 | SCP-004 | [Fast Path Document Retrieval](sprint-change-proposal-2026-01-05.md) | Pending | Minor | Document query timing |
-| 2026-01-10 | SCP-005 | [Redis Postponement](sprint-change-proposal-2026-01-10.md) | **Approved** | Minor | Deferred Redis requirement |
-| 2026-01-10 | CP-001 | [Q&A as Cross-Cutting Skill](change-proposal-qa-as-skill-2026-01-10.md) | **Approved** | Minor | Q&A model change |
-| 2026-01-11 | SCP-006 | [CIM MVP Fast Track](sprint-change-proposal-2026-01-11.md) | Draft | Moderate | Parallel CIM MVP track |
+| Date | ID | Title | Status | Implemented | Scope | Impact |
+|------|-----|-------|--------|-------------|-------|--------|
+| 2025-12-11 | SCP-001 | [IRL Feature UX Pivot](sprint-change-proposal-2025-12-11.md) | **Approved** | ✅ E6 | Minor | E6 UX changes |
+| 2025-12-14 | SCP-002 | [PRD/Architecture Refinements](sprint-change-proposal-2025-12-14.md) | **Approved** | ✅ E9/E10 | Minor | PRD v2.3, E9/E10 scope |
+| 2025-12-15 | SCP-003 | [Knowledge Architecture Evolution](sprint-change-proposal-2025-12-15.md) | **Approved** | ✅ E10 | **Major** | E10 pgvector→Graphiti pivot |
+| 2026-01-05 | SCP-004 | [Fast Path Document Retrieval](sprint-change-proposal-2026-01-05.md) | Pending | ⏳ | Minor | Document query timing |
+| 2026-01-10 | SCP-005 | [Redis Postponement](sprint-change-proposal-2026-01-10.md) | **Approved** | ✅ Deferred | Minor | Deferred Redis requirement |
+| 2026-01-10 | CP-001 | [Q&A as Cross-Cutting Skill](change-proposal-qa-as-skill-2026-01-10.md) | **Approved** | ✅ E11 | Minor | Q&A model change |
+| 2026-01-11 | SCP-006 | [CIM MVP Fast Track](sprint-change-proposal-2026-01-11.md) | Draft | ✅ CIM MVP | Moderate | Parallel CIM MVP track |
 
 ## Decision Types
 
@@ -63,6 +63,13 @@ This folder contains all sprint change proposals and major decisions made during
 | **Pending** | Awaiting review/approval |
 | **Draft** | Proposal in development |
 | **Rejected** | Decision not accepted (with rationale) |
+
+| Implemented | Meaning |
+|-------------|---------|
+| ✅ E{n} | Fully implemented in epic |
+| ✅ CIM MVP | Implemented in CIM MVP track |
+| ✅ Deferred | Deliberately postponed |
+| ⏳ | Pending implementation |
 
 ## Creating a New Decision
 

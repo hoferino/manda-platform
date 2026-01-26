@@ -54,5 +54,14 @@ Help M&A advisors create compelling CIMs faster by combining AI guidance with st
 | Grayscale-only styling | Colored emphasis states caused visual confusion | ✓ Validated |
 | Preserve hover states | Interactive feedback needed for click-to-reference UX | ✓ Validated |
 
+## Documentation
+
+| Resource | Location | Purpose |
+|----------|----------|---------|
+| Root context | `CLAUDE.md` | Essential project info, commands, links |
+| Epic status | `docs/manda-prd.md` | E1-E13 implementation status |
+| Decisions | `docs/decisions/README.md` | SCPs, ADRs with implementation tracking |
+| Agent patterns | `manda-app/lib/agent/CLAUDE.md` | Agent development context |
+
 ---
-*Last updated: 2026-01-22 after v2.0 milestone complete*
+*Last updated: 2026-01-26 after documentation reorganization*
