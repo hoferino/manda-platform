@@ -47,7 +47,8 @@ This document is the **single source of truth** for how the Manda conversational
 - **Graphiti + Neo4j**: Knowledge graph with hybrid search (vector + BM25 + graph)
 - **Voyage voyage-3.5**: 1024-dimension embeddings
 - **Voyage rerank-2.5**: Result reranking for improved accuracy
-- **PostgresSaver**: Conversation checkpointing and persistence
+- **PostgresSaver**: Conversation checkpointing and persistence (v2 chat)
+- **Convex** (proposed): CIM workflow state and checkpointing - see [ADR-002](../../decisions/adr-002-convex-cim-state.md)
 - **Vertex AI (Claude Sonnet 4)**: Primary LLM for agent responses
 
 ### Knowledge Architecture (Post-E10)
@@ -189,6 +190,14 @@ const knowledge = await loadKnowledge(knowledgePath)
 // Returns structured company data, financials, narrative
 ```
 
+### State Persistence
+
+**Current:** PostgresSaver + Supabase JSONB columns in `cims` table
+
+**Proposed:** Convex for real-time updates and cascade invalidation
+- See [ADR-002](architecture-decisions/adr-002-convex-cim-state.md) for architecture decision
+- See [tech-spec-convex-cim-migration.md](sprint-artifacts/tech-specs/tech-spec-convex-cim-migration.md) for implementation
+
 ---
 
 ## Response Formatting Rules
@@ -321,8 +330,9 @@ import { streamCIMMVP, executeCIMMVP } from '@/lib/agent/cim-mvp'
 
 ## Related Documentation
 
+- **Agent System Hub**: [README.md](README.md)
+- **LangGraph Patterns**: [langgraph.md](langgraph.md)
+- **CIM Builder**: [cim-builder.md](cim-builder.md)
 - **Agent API Reference**: `manda-app/lib/agent/README.md`
-- **LangGraph Patterns**: `docs/langgraph-reference.md`
-- **Architecture**: `docs/manda-architecture.md` (v4.3)
-- **Agent System PRD**: `_bmad-output/planning-artifacts/agent-system-prd.md`
-- **CLAUDE.md**: Project root (implementation patterns)
+- **Architecture**: `../../manda-architecture.md` (v4.3)
+- **Agent System PRD**: `../../../_bmad-output/planning-artifacts/agent-system-prd.md`

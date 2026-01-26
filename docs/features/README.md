@@ -6,9 +6,8 @@ This directory is the home for current feature planning and implementation docum
 
 | Folder | Description |
 |--------|-------------|
-| [agent-v2/](agent-v2/) | Agent system v2 documentation - LangGraph-based architecture with supervisor pattern |
+| [agent-system/](agent-system/) | **All agent documentation** - Chat v2, CIM Builder, LangGraph patterns, behavior spec |
 | [knowledge-graph/](knowledge-graph/) | Knowledge graph and Graphiti integration - entity extraction and semantic search |
-| [cim-builder/](cim-builder/) | CIM Builder workflow documentation - creating Confidential Information Memorandums |
 
 ## Organization Principles
 

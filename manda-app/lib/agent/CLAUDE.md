@@ -132,10 +132,10 @@ import { supervisor } from '@/lib/agent/v2/nodes/supervisor'
 
 ## Documentation
 
-- **Agent System Hub**: `docs/agent-system/README.md`
-- **CIM MVP Hub**: `docs/cim-mvp/README.md`
-- **LangGraph Reference**: `docs/langgraph-reference.md`
-- **Behavior Spec**: `docs/agent-behavior-spec.md` (v2.0)
+- **Agent System Hub**: `docs/features/agent-system/README.md` (consolidated)
+- **Behavior Spec**: `docs/features/agent-system/behavior-spec.md` (v2.0)
+- **LangGraph Reference**: `docs/features/agent-system/langgraph.md`
+- **CIM Builder**: `docs/features/agent-system/cim-builder.md`
 - **Decisions**: `docs/decisions/README.md`
 
 ## Future Architecture

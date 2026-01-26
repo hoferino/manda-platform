@@ -99,8 +99,7 @@ Claude automatically loads context from subdirectory CLAUDE.md files based on wh
 
 - **PRD**: `docs/manda-prd.md` (v2.4)
 - **Architecture**: `docs/manda-architecture.md` (v4.3)
-- **Agent System**: `docs/agent-system/README.md`
-- **CIM MVP**: `docs/cim-mvp/README.md`
+- **Agent System**: `docs/features/agent-system/README.md` (consolidates all agent docs)
 - **Testing Guide**: `docs/testing/testing-guide.md`
 - **Decisions**: `docs/decisions/README.md`
 
