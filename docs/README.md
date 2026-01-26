@@ -13,13 +13,15 @@ Central documentation hub for the Manda M&A Intelligence Platform.
 
 | I want to... | Go to... |
 |--------------|----------|
+| **I'm new to the project** | [GETTING_STARTED.md](GETTING_STARTED.md) |
 | Understand the product | [PRD](manda-prd.md) (v2.4) |
 | See the architecture | [Architecture](manda-architecture.md) (v4.3) |
 | Work on agent code | [features/agent-system/](features/agent-system/) |
 | Review a decision | [decisions/](decisions/) |
 | Check project status | [../.planning/PROJECT.md](../.planning/PROJECT.md) |
 | Set up development | [CLAUDE.md](../CLAUDE.md) |
-| Deploy to GCP | [deployment/gcp-setup-guide.md](deployment/gcp-setup-guide.md) |
+| Deploy to GCP | [deployment/](deployment/) |
+| Run tests | [testing/](testing/) |
 | Work on a sprint story | [sprint-artifacts/](sprint-artifacts/) |
 
 ---
