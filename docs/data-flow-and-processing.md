@@ -2,8 +2,16 @@
 
 > Detailed technical documentation describing the complete journey of data through the Manda platform - from document upload to knowledge retrieval. Designed for creating interactive 3D visualizations.
 
-**Version:** 1.1
-**Last Updated:** December 16, 2025
+**Version:** 1.2
+**Last Updated:** January 26, 2026
+
+---
+
+> **E10 Architecture Update (2025-12-17):** This document has been updated to reflect the E10 migration:
+> - **Embeddings:** Now use Voyage voyage-3.5 (1024 dimensions) instead of OpenAI text-embedding-3-large
+> - **Vector storage:** Moved from PostgreSQL pgvector to Neo4j via Graphiti
+> - **Search:** Hybrid retrieval (vector + BM25 + graph traversal) replaces pure vector similarity
+> - See [SCP-003](decisions/sprint-change-proposal-2025-12-15.md) and [ADR-001](architecture-decisions/adr-001-graphiti-migration.md) for details.
 
 ---
 
@@ -708,18 +716,18 @@ Next.js API (POST /api/projects/{id}/findings/search)
     │
     │ [1] Generate query embedding (OpenAI)
     ▼
-OpenAI API
+Voyage API
     │
-    │ [2] Query vector (3072-dim)
+    │ [2] Query vector (1024-dim, voyage-3.5)
     ▼
-PostgreSQL (pgvector similarity search)
+Graphiti + Neo4j (hybrid search)
     │
-    │ [3] SELECT * FROM findings
-    │     WHERE deal_id = ?
-    │     ORDER BY embedding <=> query_vector
-    │     LIMIT 10
+    │ [3] Hybrid retrieval:
+    │     - Vector similarity (Voyage embeddings)
+    │     - BM25 keyword search
+    │     - Graph traversal for related entities
     ▼
-Top-k Findings
+Top-k Findings (with reranking)
     │
     │ [4] Return findings with similarity scores
     ▼
@@ -742,13 +750,13 @@ LangGraph Agent
     │
     │ [2] Select tool: search_findings
     ▼
-OpenAI API (embedding)
+Voyage API (embedding)
     │
-    │ [3] Query vector
+    │ [3] Query vector (voyage-3.5)
     ▼
-PostgreSQL (pgvector search)
+Graphiti + Neo4j (hybrid search)
     │
-    │ [4] Top-k findings as context
+    │ [4] Top-k findings as context (vector + BM25 + graph)
     ▼
 Claude/Gemini (LLM)
     │
@@ -790,12 +798,12 @@ PostgreSQL (conversations, messages tables)
 │  GOOGLE CLOUD   │ │   POSTGRESQL    │ │    OPENAI       │ │ CLAUDE/GEMINI   │
 │    STORAGE      │ │   (SUPABASE)    │ │ (Embeddings)    │ │   (Chat LLM)    │
 │                 │ │                 │ │                 │ │                 │
-│ • Raw documents │ │ • documents     │ │ • text-embed-   │ │ • Streaming     │
-│ • Signed URLs   │ │ • chunks        │ │   ding-3-large  │ │   responses     │
-│                 │ │ • findings      │ │ • 3072 dims     │ │                 │
+│ • Raw documents │ │ • documents     │ │ • voyage-3.5    │ │ • Streaming     │
+│ • Signed URLs   │ │ • chunks        │ │ • 1024 dims     │ │   responses     │
+│                 │ │ • findings      │ │                 │ │                 │
 │                 │ │ • contradictions│ │                 │ │                 │
-│                 │ │ • pgvector      │ │                 │ │                 │
 │                 │ │ • pg-boss queue │ │                 │ │                 │
+│                 │ │                 │ │                 │ │                 │
 └─────────────────┘ └─────────────────┘ └─────────────────┘ └─────────────────┘
                            │
                            │ Webhook
@@ -881,12 +889,12 @@ For creating an interactive 3D visualization, here are the key nodes and connect
       "size": "large"
     },
     {
-      "id": "pgvector",
+      "id": "graphiti",
       "type": "index",
-      "label": "pgvector (HNSW)",
+      "label": "Graphiti (Hybrid Search)",
       "color": "#9C27B0",
-      "size": "small",
-      "parent": "postgresql"
+      "size": "medium",
+      "parent": "neo4j"
     },
     {
       "id": "pgboss",
@@ -1013,10 +1021,10 @@ For creating an interactive 3D visualization, here are the key nodes and connect
     },
     {
       "id": "e8",
-      "source": "openai",
-      "target": "pgvector",
-      "label": "8. Store vectors",
-      "type": "sql",
+      "source": "voyage",
+      "target": "graphiti",
+      "label": "8. Store vectors in Neo4j",
+      "type": "api",
       "animated": true,
       "color": "#9C27B0"
     },
@@ -1059,9 +1067,9 @@ For creating an interactive 3D visualization, here are the key nodes and connect
     {
       "id": "e13",
       "source": "nextjs",
-      "target": "pgvector",
-      "label": "13. Vector search",
-      "type": "sql",
+      "target": "graphiti",
+      "label": "13. Hybrid search (Graphiti)",
+      "type": "api",
       "animated": true,
       "color": "#9C27B0"
     },
@@ -1099,7 +1107,7 @@ For creating an interactive 3D visualization, here are the key nodes and connect
     {"step": 5, "edges": ["e5"], "duration_ms": 600, "description": "Worker downloads from GCS"},
     {"step": 6, "edges": ["e6"], "duration_ms": 1000, "description": "Docling parses → chunks stored"},
     {"step": 7, "edges": ["e7"], "duration_ms": 800, "description": "Chunks sent to OpenAI"},
-    {"step": 8, "edges": ["e8"], "duration_ms": 400, "description": "Embeddings stored in pgvector"},
+    {"step": 8, "edges": ["e8"], "duration_ms": 400, "description": "Embeddings stored in Neo4j via Graphiti"},
     {"step": 9, "edges": ["e9"], "duration_ms": 1200, "description": "Gemini extracts findings"},
     {"step": 10, "edges": ["e10"], "duration_ms": 500, "description": "Findings stored in PostgreSQL"},
     {"step": 11, "edges": ["e11"], "duration_ms": 600, "description": "Knowledge graph synced to Neo4j"},

@@ -88,5 +88,5 @@ When proposing a change:
 ## Related Documentation
 
 - **[Architecture Decisions (ADRs)](../architecture-decisions/)** - Formal architectural decision records
-- **[Documentation Map](../documentation-map.md)** - Full documentation index
+- **[Documentation Hub](../README.md)** - Full documentation index
 - **[Sprint Artifacts](../sprint-artifacts/)** - Implementation artifacts

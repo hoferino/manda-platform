@@ -67,7 +67,7 @@ Documents are organized by:
 
 ## GCS Configuration
 
-See `manda-app/docs/GCS-SETUP.md` for storage configuration.
+See [GCP Setup Guide](../../deployment/gcp-setup-guide.md) for storage configuration.
 
 ## Related Documentation
 

@@ -77,7 +77,7 @@ owner: Max
 
 **Phase 2 (E11 Agent Context Engineering) — ✅ IMPLEMENTED:**
 
-> E11 completed 2025-12-18. See [docs/features/agent-v2/](docs/features/agent-v2/) for detailed agent implementation.
+> E11 completed 2025-12-18. See [docs/features/agent-system/](docs/features/agent-system/) for detailed agent implementation.
 
 14. **Intent-Aware Retrieval:** Pre-model hook retrieves relevant KB context for factual queries via Graphiti hybrid search.
 15. **Agent-Autonomous Write-Back:** Agent autonomously indexes user-provided facts to Graphiti with entity extraction and deduplication.
@@ -280,7 +280,7 @@ Unlike generic AI assistants that start fresh each conversation, or traditional 
 
 **Agent Layer (Intelligence & Conversation):**
 
-> **Reference:** See [docs/features/agent-v2/](docs/features/agent-v2/) for current agent implementation architecture, and [agent-behavior-spec.md](agent-behavior-spec.md) for behavior specifications.
+> **Reference:** See [docs/features/agent-system/](docs/features/agent-system/) for current agent implementation architecture, and [docs/features/agent-system/behavior-spec.md](docs/features/agent-system/behavior-spec.md) for behavior specifications.
 
 1. **Main Conversational Agent**
    - LLM-powered natural language interface
@@ -433,7 +433,7 @@ User exports as unstyled PowerPoint storybook, then applies visual style templat
    - Visual style template extraction and application
    - **Live preview capability** for visual concepts and slide layouts
 
-   > **Reference:** See [docs/features/cim-builder/](docs/features/cim-builder/) for CIM MVP implementation details and workflow architecture.
+   > **Reference:** See [docs/features/agent-system/cim-builder.md](docs/features/agent-system/cim-builder.md) for CIM MVP implementation details and workflow architecture.
 
 7. **Financial Model Integration**
    - Extract key financial metrics from Excel models (revenue, EBITDA, cash flow, balance sheet items)
