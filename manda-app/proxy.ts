@@ -1,5 +1,5 @@
 /**
- * Next.js Root Middleware
+ * Next.js Root Proxy
  * Story: E12.9 - Multi-Tenant Data Isolation (AC: #6)
  *
  * Handles:
@@ -21,7 +21,7 @@ const ORG_EXEMPT_ROUTES = ["/api/organizations", "/api/user/organizations"];
 // These routes can accept Authorization header for CLI tools, benchmarks, etc.
 const SELF_AUTH_ROUTES = ["/api/projects"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
 
@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  // If Bearer token is present on self-auth routes, skip middleware entirely
+  // If Bearer token is present on self-auth routes, skip proxy entirely
   // These routes handle their own auth for CLI tools, benchmarks, etc.
   const authHeader = request.headers.get("authorization");
   if (isSelfAuthRoute && authHeader?.startsWith("Bearer ")) {
